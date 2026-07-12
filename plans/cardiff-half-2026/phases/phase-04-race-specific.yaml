@@ -1,0 +1,11 @@
+id: race-specific
+number: 4
+title: Race-Specific
+date_range:
+  start: 2026-08-03
+  end: 2026-09-06
+weeks: [13, 14, 15, 16, 17]
+goals:
+  - Convert fitness into half-marathon specificity.
+  - Practice HM rhythm under controlled fatigue.
+accent: "#ff4d6d"

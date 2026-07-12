@@ -1,0 +1,52 @@
+{
+  "id": "2026-05-20-wed-10k-tt",
+  "date": "2026-05-20",
+  "day": "Wed",
+  "title": "10k TT \u2014 Test 1",
+  "type": "test",
+  "phase": "foundation",
+  "week": 2,
+  "tags": [
+    "test",
+    "quality",
+    "non-negotiable"
+  ],
+  "estimated_distance_km": 13,
+  "priority": "high",
+  "summary": "WU 15 min + strides \u2192 10k effort \u2192 CD 10 min",
+  "pace_guide": "See testing protocol",
+  "intervals": [
+    {
+      "id": "warmup",
+      "type": "warmup",
+      "value": 15,
+      "unit": "minutes",
+      "intensity": "easy",
+      "recovery_or_pace": "5:15-5:30/km"
+    },
+    {
+      "id": "strides",
+      "type": "strides",
+      "value": 4,
+      "unit": "80m",
+      "intensity": "fast relaxed",
+      "recovery_or_pace": "full walk recovery"
+    },
+    {
+      "id": "main",
+      "type": "time_trial",
+      "value": 10,
+      "unit": "km",
+      "intensity": "10k race effort",
+      "recovery_or_pace": "even splits"
+    },
+    {
+      "id": "cooldown",
+      "type": "cooldown",
+      "value": 10,
+      "unit": "minutes",
+      "intensity": "easy",
+      "recovery_or_pace": "5:15-5:30/km"
+    }
+  ]
+}

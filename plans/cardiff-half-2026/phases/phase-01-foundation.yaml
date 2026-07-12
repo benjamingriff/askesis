@@ -1,0 +1,14 @@
+id: foundation
+number: 1
+title: Foundation
+date_range:
+  start: 2026-05-11
+  end: 2026-06-07
+weeks: [1, 2, 3, 4]
+goals:
+  - Establish weekly routine with Tuesday non-optional easy run.
+  - Build aerobic base.
+  - Introduce hills on Wednesday.
+  - Keep long runs purely easy, building to 75 min.
+deload_weeks: [4]
+accent: "#b8ff4d"

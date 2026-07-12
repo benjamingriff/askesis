@@ -1,0 +1,21 @@
+{
+  "id": "week-01",
+  "number": 1,
+  "date_range": {
+    "start": "2026-05-11",
+    "end": "2026-05-17"
+  },
+  "phase": "foundation",
+  "theme": "Settling in; legs light ahead of Week 2 TT",
+  "target_volume_km": 39,
+  "sessions": [
+    "2026-05-11-mon-easy-strides",
+    "2026-05-12-tue-easy",
+    "2026-05-13-wed-hills",
+    "2026-05-15-fri-easy",
+    "2026-05-16-sat-long-run"
+  ],
+  "notes": [
+    "First vertical slice imported from training-plan.md"
+  ]
+}

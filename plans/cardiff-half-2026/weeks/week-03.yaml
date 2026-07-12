@@ -1,0 +1,21 @@
+{
+  "id": "week-03",
+  "number": 3,
+  "date_range": {
+    "start": "2026-05-25",
+    "end": "2026-05-31"
+  },
+  "phase": "foundation",
+  "theme": "Building hills; apply updated zones",
+  "target_volume_km": 42.5,
+  "sessions": [
+    "2026-05-25-mon-easy-strides",
+    "2026-05-26-tue-easy",
+    "2026-05-27-wed-hills",
+    "2026-05-29-fri-easy",
+    "2026-05-30-sat-long-run"
+  ],
+  "notes": [
+    "First vertical slice imported from training-plan.md"
+  ]
+}

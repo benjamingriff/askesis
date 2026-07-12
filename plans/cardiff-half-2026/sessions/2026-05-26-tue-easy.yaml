@@ -1,0 +1,26 @@
+{
+  "id": "2026-05-26-tue-easy",
+  "date": "2026-05-26",
+  "day": "Tue",
+  "title": "Easy run",
+  "type": "easy",
+  "phase": "foundation",
+  "week": 3,
+  "tags": [
+    "easy"
+  ],
+  "estimated_distance_km": 5.5,
+  "priority": "low",
+  "summary": "30 min easy",
+  "pace_guide": "5:15-5:35/km",
+  "intervals": [
+    {
+      "id": "main",
+      "type": "run",
+      "value": 30,
+      "unit": "minutes",
+      "intensity": "easy",
+      "recovery_or_pace": "5:15-5:35/km"
+    }
+  ]
+}

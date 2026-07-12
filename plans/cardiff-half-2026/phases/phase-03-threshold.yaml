@@ -1,0 +1,11 @@
+id: threshold-development
+number: 3
+title: Threshold Development
+date_range:
+  start: 2026-07-06
+  end: 2026-08-02
+weeks: [9, 10, 11, 12]
+goals:
+  - Test mid-block fitness.
+  - Build sustained threshold capacity.
+accent: "#ffb84d"

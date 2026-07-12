@@ -1,0 +1,21 @@
+{
+  "id": "week-04",
+  "number": 4,
+  "date_range": {
+    "start": "2026-06-01",
+    "end": "2026-06-07"
+  },
+  "phase": "foundation",
+  "theme": "DELOAD (-30% volume)",
+  "target_volume_km": 33,
+  "sessions": [
+    "2026-06-01-mon-easy-strides",
+    "2026-06-02-tue-easy",
+    "2026-06-03-wed-steady",
+    "2026-06-05-fri-easy",
+    "2026-06-06-sat-long-run"
+  ],
+  "notes": [
+    "First vertical slice imported from training-plan.md"
+  ]
+}

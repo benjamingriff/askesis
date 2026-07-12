@@ -1,0 +1,21 @@
+{
+  "id": "week-02",
+  "number": 2,
+  "date_range": {
+    "start": "2026-05-18",
+    "end": "2026-05-24"
+  },
+  "phase": "foundation",
+  "theme": "10k TT; preserve legs Mon-Tue",
+  "target_volume_km": 41.5,
+  "sessions": [
+    "2026-05-18-mon-easy-strides",
+    "2026-05-19-tue-easy",
+    "2026-05-20-wed-10k-tt",
+    "2026-05-22-fri-recovery",
+    "2026-05-23-sat-long-run"
+  ],
+  "notes": [
+    "First vertical slice imported from training-plan.md"
+  ]
+}

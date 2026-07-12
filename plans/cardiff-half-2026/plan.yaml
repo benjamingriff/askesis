@@ -1,0 +1,56 @@
+id: cardiff-half-2026
+title: Cardiff Half Marathon
+athlete: Ben
+race:
+  name: Cardiff Half Marathon
+  date: 2026-10-04
+  distance: half-marathon
+dates:
+  start: 2026-05-11
+  end: 2026-10-04
+goals:
+  primary:
+    label: Sub-1:17:30
+    time: "1:17:30"
+    pace_per_km: "3:41"
+  stretch:
+    label: Sub-1:15:00
+    time: "1:15:00"
+    pace_per_km: "3:33"
+vdot:
+  baseline: 58
+  current: 58
+  notes: Based on 17:50 5k on a twisty course; update after tests.
+zones:
+  easy:
+    label: Recovery
+    pace_per_km: "5:05-5:35"
+    feel: Full conversation, nasal breathing only
+  marathon:
+    label: Steady effort
+    pace_per_km: "4:12-4:20"
+    feel: Short sentences
+  threshold:
+    label: LT intervals and tempo
+    pace_per_km: "3:51-3:55"
+    feel: Comfortably hard
+  interval:
+    label: VO2max reps
+    pace_per_km: "3:33-3:37"
+    feel: Hard, controlled
+  hm:
+    label: Half-marathon race pace
+    pace_per_km: "3:41"
+    feel: Controlled discomfort
+weekly_structure:
+  monday: Easy + strides
+  tuesday: Quality/easy depending phase
+  wednesday: Primary quality
+  thursday: Rest
+  friday: Easy
+  saturday: Long run
+  sunday: Rest
+guardrails:
+  - Easy runs must stay genuinely easy; do not drift above LT1.
+  - Tuesday quality is short and controlled.
+  - If Wednesday feels terrible after warm-up, convert to 30 min easy.

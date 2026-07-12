@@ -1,0 +1,51 @@
+{
+  "id": "2026-05-27-wed-hills",
+  "date": "2026-05-27",
+  "day": "Wed",
+  "title": "Uphill reps",
+  "type": "hills",
+  "phase": "foundation",
+  "week": 3,
+  "tags": [
+    "quality",
+    "hills"
+  ],
+  "estimated_distance_km": 10,
+  "priority": "high",
+  "summary": "WU 12 min + strides \u2192 8 \u00d7 75s uphill @ RPE 8 \u2192 CD 10 min",
+  "pace_guide": "Effort not pace",
+  "intervals": [
+    {
+      "id": "warmup",
+      "type": "warmup",
+      "value": 12,
+      "unit": "minutes",
+      "intensity": "easy",
+      "recovery_or_pace": "5:10-5:30/km"
+    },
+    {
+      "id": "strides",
+      "type": "strides",
+      "value": 4,
+      "unit": "80m",
+      "intensity": "fast relaxed",
+      "recovery_or_pace": "full walk recovery"
+    },
+    {
+      "id": "main",
+      "type": "hill_reps",
+      "value": 8,
+      "unit": "75s",
+      "intensity": "RPE 8",
+      "recovery_or_pace": "walk/jog back"
+    },
+    {
+      "id": "cooldown",
+      "type": "cooldown",
+      "value": 10,
+      "unit": "minutes",
+      "intensity": "easy",
+      "recovery_or_pace": "5:10-5:30/km"
+    }
+  ]
+}

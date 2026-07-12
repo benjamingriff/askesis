@@ -1,0 +1,11 @@
+id: taper
+number: 5
+title: Taper
+date_range:
+  start: 2026-09-07
+  end: 2026-10-04
+weeks: [18, 19, 20, 21]
+goals:
+  - Reduce volume while preserving rhythm.
+  - Arrive sharp, calm, and hungry.
+accent: "#d89cff"

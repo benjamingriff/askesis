@@ -1,0 +1,44 @@
+{
+  "id": "2026-06-03-wed-steady",
+  "date": "2026-06-03",
+  "day": "Wed",
+  "title": "Steady marathon-effort run",
+  "type": "steady",
+  "phase": "foundation",
+  "week": 4,
+  "tags": [
+    "quality",
+    "steady",
+    "deload"
+  ],
+  "estimated_distance_km": 8.5,
+  "priority": "high",
+  "summary": "WU 10 min \u2192 20 min steady @ marathon effort \u2192 CD 10 min",
+  "pace_guide": "Controlled \u2014 not a time trial",
+  "intervals": [
+    {
+      "id": "warmup",
+      "type": "warmup",
+      "value": 10,
+      "unit": "minutes",
+      "intensity": "easy",
+      "recovery_or_pace": "5:20-5:35/km"
+    },
+    {
+      "id": "main",
+      "type": "steady",
+      "value": 20,
+      "unit": "minutes",
+      "intensity": "marathon",
+      "recovery_or_pace": "4:12-4:20/km"
+    },
+    {
+      "id": "cooldown",
+      "type": "cooldown",
+      "value": 10,
+      "unit": "minutes",
+      "intensity": "easy",
+      "recovery_or_pace": "5:20-5:35/km"
+    }
+  ]
+}

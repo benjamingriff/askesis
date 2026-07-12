@@ -1,0 +1,28 @@
+{
+  "id": "2026-05-16-sat-long-run",
+  "date": "2026-05-16",
+  "day": "Sat",
+  "title": "Long run",
+  "type": "long",
+  "phase": "foundation",
+  "week": 1,
+  "tags": [
+    "long",
+    "easy",
+    "loic"
+  ],
+  "estimated_distance_km": 12,
+  "priority": "medium",
+  "summary": "65 min easy",
+  "pace_guide": "5:10-5:30/km",
+  "intervals": [
+    {
+      "id": "main",
+      "type": "long_run",
+      "value": 65,
+      "unit": "minutes",
+      "intensity": "easy",
+      "recovery_or_pace": "5:10-5:30/km"
+    }
+  ]
+}

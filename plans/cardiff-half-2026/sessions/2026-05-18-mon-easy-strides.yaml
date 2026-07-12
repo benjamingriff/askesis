@@ -1,0 +1,35 @@
+{
+  "id": "2026-05-18-mon-easy-strides",
+  "date": "2026-05-18",
+  "day": "Mon",
+  "title": "Light easy + strides",
+  "type": "easy",
+  "phase": "foundation",
+  "week": 2,
+  "tags": [
+    "easy",
+    "strides"
+  ],
+  "estimated_distance_km": 6.5,
+  "priority": "low",
+  "summary": "35 min easy + 4 strides",
+  "pace_guide": "Keep it very gentle",
+  "intervals": [
+    {
+      "id": "main",
+      "type": "run",
+      "value": 35,
+      "unit": "minutes",
+      "intensity": "easy",
+      "recovery_or_pace": "5:15-5:35/km"
+    },
+    {
+      "id": "strides",
+      "type": "strides",
+      "value": 4,
+      "unit": "80m",
+      "intensity": "light",
+      "recovery_or_pace": "full walk recovery"
+    }
+  ]
+}

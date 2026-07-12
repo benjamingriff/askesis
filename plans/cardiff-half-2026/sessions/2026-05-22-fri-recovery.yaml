@@ -1,0 +1,27 @@
+{
+  "id": "2026-05-22-fri-recovery",
+  "date": "2026-05-22",
+  "day": "Fri",
+  "title": "Recovery easy",
+  "type": "recovery",
+  "phase": "foundation",
+  "week": 2,
+  "tags": [
+    "easy",
+    "recovery"
+  ],
+  "estimated_distance_km": 5.5,
+  "priority": "low",
+  "summary": "30 min easy recovery",
+  "pace_guide": "Very easy \u2014 flush fatigue",
+  "intervals": [
+    {
+      "id": "main",
+      "type": "run",
+      "value": 30,
+      "unit": "minutes",
+      "intensity": "recovery",
+      "recovery_or_pace": "very easy"
+    }
+  ]
+}
