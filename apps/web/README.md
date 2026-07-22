@@ -29,7 +29,11 @@ TanStack Query is intentionally deferred until cross-route caching, polling, opt
 
 ## Current vertical slice
 
-The root route uses a React Router loader and the generated OpenAPI client to render scheduled workouts from the Hono API in chronological order. Each row can be expanded using a React Router fetcher to show its nested sequence, repeated steps, completions, targets, instructions, tags, and date-appropriate resolved zones.
+The application uses a Grok-inspired persistent shell with three prototype areas:
+
+- `/plan` renders a compact calendar and scheduled workouts from the Hono API. Each workout expands through a React Router fetcher to show its nested sequence, repeats, completions, targets, instructions, tags, and date-appropriate resolved zones.
+- `/chat` provides a cosmetic coaching-chat interface with hardcoded conversation history and local mock replies. It does not call an agent or persist messages yet.
+- `/settings` displays placeholder account information while authentication is deferred.
 
 Run it locally from the repository root:
 

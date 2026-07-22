@@ -14,7 +14,7 @@ Hono API
 PostgreSQL
 ```
 
-The web application displays the ten workouts from the seeded two-week Cardiff example in chronological order. Workouts unfold on demand to show their nested prescription, repeats, recoveries, completion conditions, targets, and resolved training zones.
+The web application provides a dashboard-style plan calendar, an expandable workout schedule, a cosmetic mock coaching chat, and placeholder account settings. The ten workouts from the seeded Cardiff example unfold on demand to show their nested prescription, repeats, recoveries, completion conditions, targets, and resolved training zones.
 
 ## Run with Docker
 

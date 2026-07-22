@@ -1,5 +1,15 @@
 import type { StepTarget, WorkoutStep, WorkoutSummary } from '@askesis/api-client';
-import { useState } from 'react';
+import {
+  CalendarDays,
+  ChevronLeft,
+  ChevronRight,
+  Footprints,
+  PanelTopClose,
+  PanelTopOpen,
+  Route,
+  Timer,
+} from 'lucide-react';
+import { useMemo, useState } from 'react';
 import { type LoaderFunctionArgs, useFetcher, useLoaderData } from 'react-router';
 import { api } from '../api';
 
@@ -162,7 +172,7 @@ function WorkoutBreakdown({ detail }: { detail: Awaited<ReturnType<typeof workou
   );
 }
 
-function WorkoutRow({ workout }: { workout: WorkoutSummary }) {
+function WorkoutRow({ workout, selected }: { workout: WorkoutSummary; selected: boolean }) {
   const scheduled = formatDate(workout.scheduledDate);
   const [expanded, setExpanded] = useState(false);
   const detailFetcher = useFetcher<typeof workoutDetailLoader>();
@@ -177,7 +187,7 @@ function WorkoutRow({ workout }: { workout: WorkoutSummary }) {
   }
 
   return (
-    <li className={`workout-item${expanded ? ' expanded' : ''}`}>
+    <li id={`workout-${workout.scheduledDate}`} className={`workout-item${expanded ? ' expanded' : ''}${selected ? ' selected' : ''}`}>
       <div className="workout-row">
         <time dateTime={workout.scheduledDate} className="workout-date">
           <span>{scheduled.day}</span>
@@ -193,11 +203,11 @@ function WorkoutRow({ workout }: { workout: WorkoutSummary }) {
         </div>
         <dl className="workout-metrics">
           <div>
-            <dt>Distance</dt>
+            <dt><Route size={14} /> Distance</dt>
             <dd>{formatDistance(workout.estimatedDistanceMetres)}</dd>
           </div>
           <div>
-            <dt>Duration</dt>
+            <dt><Timer size={14} /> Duration</dt>
             <dd>{formatDuration(workout.estimatedDurationSeconds)}</dd>
           </div>
         </dl>
@@ -223,31 +233,133 @@ function WorkoutRow({ workout }: { workout: WorkoutSummary }) {
   );
 }
 
+function WorkoutCalendar({
+  workouts,
+  selectedDate,
+  onSelectDate,
+}: {
+  workouts: WorkoutSummary[];
+  selectedDate: string | null;
+  onSelectDate: (date: string) => void;
+}) {
+  const firstWorkout = workouts.at(0)?.scheduledDate ?? new Date().toISOString().slice(0, 10);
+  const [visibleMonth, setVisibleMonth] = useState(() => firstWorkout.slice(0, 7));
+  const [year, month] = visibleMonth.split('-').map(Number) as [number, number];
+  const firstDay = new Date(Date.UTC(year, month - 1, 1));
+  const gridStart = new Date(firstDay);
+  gridStart.setUTCDate(1 - ((firstDay.getUTCDay() + 6) % 7));
+  const workoutsByDate = useMemo(() => {
+    const result = new Map<string, WorkoutSummary[]>();
+    for (const workout of workouts) {
+      const values = result.get(workout.scheduledDate) ?? [];
+      values.push(workout);
+      result.set(workout.scheduledDate, values);
+    }
+    return result;
+  }, [workouts]);
+  const days = Array.from({ length: 42 }, (_, index) => {
+    const date = new Date(gridStart);
+    date.setUTCDate(gridStart.getUTCDate() + index);
+    return date;
+  });
+  const monthLabel = new Intl.DateTimeFormat('en-GB', { month: 'long', year: 'numeric', timeZone: 'UTC' }).format(firstDay);
+
+  function changeMonth(offset: number) {
+    const next = new Date(Date.UTC(year, month - 1 + offset, 1));
+    setVisibleMonth(`${next.getUTCFullYear()}-${String(next.getUTCMonth() + 1).padStart(2, '0')}`);
+  }
+
+  return (
+    <section className="plan-calendar" aria-label="Training calendar">
+      <header className="calendar-header">
+        <div><CalendarDays size={18} /><strong>{monthLabel}</strong></div>
+        <div>
+          <button type="button" onClick={() => changeMonth(-1)} aria-label="Previous month"><ChevronLeft size={17} /></button>
+          <button type="button" onClick={() => setVisibleMonth(firstWorkout.slice(0, 7))}>Plan start</button>
+          <button type="button" onClick={() => changeMonth(1)} aria-label="Next month"><ChevronRight size={17} /></button>
+        </div>
+      </header>
+      <div className="calendar-weekdays">{['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((day) => <span key={day}>{day}</span>)}</div>
+      <div className="calendar-grid">
+        {days.map((date) => {
+          const dateKey = date.toISOString().slice(0, 10);
+          const dayWorkouts = workoutsByDate.get(dateKey) ?? [];
+          const outsideMonth = date.getUTCMonth() !== month - 1;
+          return (
+            <button
+              type="button"
+              className={`${outsideMonth ? 'outside-month ' : ''}${selectedDate === dateKey ? 'selected' : ''}`}
+              key={dateKey}
+              onClick={() => dayWorkouts.length > 0 && onSelectDate(dateKey)}
+              title={dayWorkouts.map((workout) => workout.title).join(', ') || undefined}
+              aria-label={`${dateKey}${dayWorkouts.length > 0 ? `, ${dayWorkouts.map((workout) => workout.title).join(', ')}` : ''}`}
+            >
+              <span>{date.getUTCDate()}</span>
+              <div className="calendar-activities">
+                {dayWorkouts.map((workout) => <i className={`activity-marker priority-${workout.priority}`} key={workout.id}><Footprints size={13} /></i>)}
+              </div>
+            </button>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
 export function WorkoutsPage() {
   const { workouts } = useLoaderData<typeof workoutsLoader>();
   const planTitle = workouts.at(0)?.planTitle ?? 'Training plan';
+  const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  const [calendarVisible, setCalendarVisible] = useState(() => window.localStorage.getItem('askesis-calendar-visible') !== 'false');
+  const weeks = useMemo(() => {
+    const grouped = new Map<number, WorkoutSummary[]>();
+    for (const workout of workouts) grouped.set(workout.weekNumber, [...(grouped.get(workout.weekNumber) ?? []), workout]);
+    return [...grouped.entries()];
+  }, [workouts]);
+
+  function selectDate(date: string) {
+    setSelectedDate(date);
+    window.setTimeout(() => document.getElementById(`workout-${date}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 50);
+  }
+
+  function toggleCalendar() {
+    setCalendarVisible((visible) => {
+      window.localStorage.setItem('askesis-calendar-visible', String(!visible));
+      return !visible;
+    });
+  }
 
   return (
-    <main>
-      <header className="page-header">
+    <main className="plan-page">
+      <header className="plan-header">
         <div>
-          <p className="eyebrow">Askesis · API vertical slice</p>
+          <p className="page-kicker">Training plan</p>
           <h1>{planTitle}</h1>
-          <p>Select a workout to inspect its ordered efforts, repeats, recoveries, targets, and resolved training zones.</p>
+          <p>Two-week foundation block · {workouts.length} scheduled workouts</p>
         </div>
-        <a href="/api/docs" className="api-link">Open API docs</a>
+        <button className="secondary-button" type="button" onClick={toggleCalendar}>
+          {calendarVisible ? <PanelTopClose size={17} /> : <PanelTopOpen size={17} />}
+          {calendarVisible ? 'Hide calendar' : 'Show calendar'}
+        </button>
       </header>
 
-      <section aria-labelledby="workouts-heading">
+      {calendarVisible && <WorkoutCalendar workouts={workouts} selectedDate={selectedDate} onSelectDate={selectDate} />}
+
+      <section className="schedule" aria-labelledby="workouts-heading">
         <div className="section-heading">
-          <h2 id="workouts-heading">Workout schedule</h2>
-          <span>{workouts.length} workouts</span>
+          <div><h2 id="workouts-heading">Schedule</h2><p>Your upcoming training, ordered by date.</p></div>
+          {selectedDate !== null && <button type="button" onClick={() => setSelectedDate(null)}>Clear selected day</button>}
         </div>
         {workouts.length === 0
           ? <p className="empty-state">No workouts have been scheduled.</p>
-          : <ol className="workout-list">{workouts.map((workout) => (
-              <WorkoutRow workout={workout} key={workout.id} />
-            ))}</ol>}
+          : weeks.map(([weekNumber, weekWorkouts]) => (
+            <section className="training-week" key={weekNumber}>
+              <header><span>Week {weekNumber}</span><strong>{weekWorkouts.reduce((total, workout) => total + (workout.estimatedDistanceMetres ?? 0), 0) / 1000} km</strong></header>
+              <ol className="workout-list">{weekWorkouts.map((workout) => (
+                <WorkoutRow workout={workout} selected={selectedDate === workout.scheduledDate} key={workout.id} />
+              ))}</ol>
+            </section>
+          ))}
       </section>
     </main>
   );
