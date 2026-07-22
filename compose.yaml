@@ -1,0 +1,84 @@
+name: askesis
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-askesis}
+      POSTGRES_USER: ${POSTGRES_USER:-askesis}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-askesis}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-askesis} -d ${POSTGRES_DB:-askesis}"]
+      interval: 2s
+      timeout: 5s
+      retries: 20
+
+  migrate:
+    image: arigaio/atlas:1.2.3
+    user: "${LOCAL_UID:-1000}:${LOCAL_GID:-1000}"
+    working_dir: /workspace/database
+    environment:
+      HOME: /tmp
+      DATABASE_URL: postgres://${POSTGRES_USER:-askesis}:${POSTGRES_PASSWORD:-askesis}@postgres:5432/${POSTGRES_DB:-askesis}?sslmode=disable
+    volumes:
+      - ./database:/workspace/database
+    command: ["migrate", "apply", "--env", "local"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  seed:
+    image: postgres:17-alpine
+    working_dir: /workspace
+    environment:
+      PGHOST: postgres
+      PGPORT: 5432
+      PGDATABASE: ${POSTGRES_DB:-askesis}
+      PGUSER: ${POSTGRES_USER:-askesis}
+      PGPASSWORD: ${POSTGRES_PASSWORD:-askesis}
+    volumes:
+      - ./database/seed:/workspace/database/seed:ro
+    command: ["sh", "/workspace/database/seed/seed.sh"]
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    environment:
+      PORT: 3000
+      DATABASE_URL: postgres://${POSTGRES_USER:-askesis}:${POSTGRES_PASSWORD:-askesis}@postgres:5432/${POSTGRES_DB:-askesis}
+    ports:
+      - "${API_PORT:-3000}:3000"
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://localhost:3000/api/health').then(r => { if (!r.ok) process.exit(1) })"]
+      interval: 3s
+      timeout: 5s
+      retries: 20
+    depends_on:
+      seed:
+        condition: service_completed_successfully
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+    ports:
+      - "${WEB_PORT:-8080}:80"
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://127.0.0.1/"]
+      interval: 3s
+      timeout: 5s
+      retries: 20
+    depends_on:
+      api:
+        condition: service_healthy
+
+volumes:
+  postgres_data:

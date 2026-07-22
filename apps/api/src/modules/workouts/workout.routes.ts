@@ -1,0 +1,62 @@
+import { createRoute, OpenAPIHono, z } from '@hono/zod-openapi';
+import { getWorkoutDetail, listWorkouts } from './workout.repository.js';
+import {
+  DatabaseIdSchema,
+  ErrorSchema,
+  WorkoutDetailSchema,
+  WorkoutListQuerySchema,
+  WorkoutListSchema,
+} from './workout.schemas.js';
+
+const listWorkoutsRoute = createRoute({
+  method: 'get',
+  path: '/api/v1/workouts',
+  request: {
+    query: WorkoutListQuerySchema,
+  },
+  responses: {
+    200: {
+      description: 'Scheduled workouts in chronological order.',
+      content: {
+        'application/json': {
+          schema: WorkoutListSchema,
+        },
+      },
+    },
+  },
+  tags: ['Workouts'],
+});
+
+const getWorkoutRoute = createRoute({
+  method: 'get',
+  path: '/api/v1/workouts/{workoutId}',
+  request: {
+    params: z.object({ workoutId: DatabaseIdSchema }),
+  },
+  responses: {
+    200: {
+      description: 'A workout and its nested prescription tree.',
+      content: { 'application/json': { schema: WorkoutDetailSchema } },
+    },
+    404: {
+      description: 'Workout not found.',
+      content: { 'application/json': { schema: ErrorSchema } },
+    },
+  },
+  tags: ['Workouts'],
+});
+
+export function registerWorkoutRoutes(app: OpenAPIHono): void {
+  app.openapi(listWorkoutsRoute, async (context) => {
+    const { planId } = context.req.valid('query');
+    const workouts = await listWorkouts(planId);
+    return context.json({ workouts }, 200);
+  });
+
+  app.openapi(getWorkoutRoute, async (context) => {
+    const { workoutId } = context.req.valid('param');
+    const detail = await getWorkoutDetail(workoutId);
+    if (detail === null) return context.json({ error: 'Workout not found' }, 404);
+    return context.json(detail, 200);
+  });
+}

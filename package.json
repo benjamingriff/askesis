@@ -1,25 +1,22 @@
 {
-  "name": "training-plan-platform",
+  "name": "askesis",
   "private": true,
   "version": "0.1.0",
   "type": "module",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
   "scripts": {
-    "dev": "vite",
-    "build": "tsc -b && vite build",
-    "preview": "vite preview"
-  },
-  "dependencies": {
-    "@vitejs/plugin-react": "latest",
-    "lucide-react": "latest",
-    "react": "latest",
-    "react-dom": "latest",
-    "typescript": "latest",
-    "vite": "latest",
-    "yaml": "latest",
-    "zod": "latest"
+    "build": "npm run build --workspaces --if-present",
+    "dev:api": "npm run dev --workspace @askesis/api",
+    "dev:web": "npm run dev --workspace @askesis/web",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "generate:db-types": "npm run generate:db-types --workspace @askesis/api",
+    "generate:openapi": "npm run generate:openapi --workspace @askesis/api && openapi-typescript packages/api-client/openapi.json -o packages/api-client/src/schema.ts"
   },
   "devDependencies": {
-    "@types/react": "^19.2.15",
-    "@types/react-dom": "^19.2.3"
+    "openapi-typescript": "^7.10.1",
+    "typescript": "^5.9.3"
   }
 }

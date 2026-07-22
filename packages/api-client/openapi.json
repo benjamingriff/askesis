@@ -1,0 +1,458 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Askesis API",
+    "version": "0.1.0",
+    "description": "Domain API for structured training plans."
+  },
+  "components": {
+    "schemas": {
+      "WorkoutList": {
+        "type": "object",
+        "properties": {
+          "workouts": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/WorkoutSummary"
+            }
+          }
+        },
+        "required": [
+          "workouts"
+        ]
+      },
+      "WorkoutSummary": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i"
+          },
+          "planId": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i"
+          },
+          "planTitle": {
+            "type": "string"
+          },
+          "weekNumber": {
+            "type": "integer",
+            "minimum": 0,
+            "exclusiveMinimum": true
+          },
+          "scheduledDate": {
+            "type": "string",
+            "format": "date"
+          },
+          "title": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string",
+            "nullable": true
+          },
+          "purpose": {
+            "type": "string",
+            "nullable": true
+          },
+          "discipline": {
+            "type": "string"
+          },
+          "priority": {
+            "$ref": "#/components/schemas/WorkoutPriority"
+          },
+          "estimatedDurationSeconds": {
+            "type": "integer",
+            "nullable": true,
+            "minimum": 0,
+            "exclusiveMinimum": true
+          },
+          "estimatedDistanceMetres": {
+            "type": "number",
+            "nullable": true,
+            "minimum": 0,
+            "exclusiveMinimum": true
+          }
+        },
+        "required": [
+          "id",
+          "planId",
+          "planTitle",
+          "weekNumber",
+          "scheduledDate",
+          "title",
+          "description",
+          "purpose",
+          "discipline",
+          "priority",
+          "estimatedDurationSeconds",
+          "estimatedDistanceMetres"
+        ]
+      },
+      "WorkoutPriority": {
+        "type": "string",
+        "enum": [
+          "low",
+          "medium",
+          "high"
+        ]
+      },
+      "WorkoutDetail": {
+        "type": "object",
+        "properties": {
+          "workout": {
+            "$ref": "#/components/schemas/WorkoutSummary"
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "prescription": {
+            "$ref": "#/components/schemas/WorkoutStep"
+          }
+        },
+        "required": [
+          "workout",
+          "tags",
+          "prescription"
+        ]
+      },
+      "WorkoutStep": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/WorkoutStepKind"
+          },
+          "role": {
+            "type": "string",
+            "nullable": true
+          },
+          "discipline": {
+            "type": "string",
+            "nullable": true
+          },
+          "repeatCount": {
+            "type": "integer",
+            "nullable": true,
+            "minimum": 0,
+            "exclusiveMinimum": true
+          },
+          "label": {
+            "type": "string",
+            "nullable": true
+          },
+          "instructions": {
+            "type": "string",
+            "nullable": true
+          },
+          "movement": {
+            "type": "object",
+            "nullable": true,
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid",
+                "pattern": "^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i"
+              },
+              "name": {
+                "type": "string"
+              },
+              "category": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "id",
+              "name",
+              "category"
+            ]
+          },
+          "completion": {
+            "$ref": "#/components/schemas/StepCompletion"
+          },
+          "targets": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/StepTarget"
+            }
+          },
+          "steps": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/WorkoutStep"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "role",
+          "discipline",
+          "repeatCount",
+          "label",
+          "instructions",
+          "movement",
+          "completion",
+          "targets",
+          "steps"
+        ]
+      },
+      "WorkoutStepKind": {
+        "type": "string",
+        "enum": [
+          "sequence",
+          "repeat",
+          "effort"
+        ]
+      },
+      "StepCompletion": {
+        "type": "object",
+        "nullable": true,
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "duration",
+              "distance",
+              "repetitions",
+              "energy",
+              "until_lap",
+              "until_condition",
+              "open"
+            ]
+          },
+          "value": {
+            "type": "number",
+            "nullable": true,
+            "minimum": 0,
+            "exclusiveMinimum": true
+          },
+          "unit": {
+            "type": "string",
+            "nullable": true
+          },
+          "conditionType": {
+            "type": "string",
+            "nullable": true
+          },
+          "conditionValue": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "type",
+          "value",
+          "unit",
+          "conditionType",
+          "conditionValue"
+        ]
+      },
+      "StepTarget": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "zone",
+              "pace",
+              "speed",
+              "heart_rate",
+              "power",
+              "cadence",
+              "rpe",
+              "load",
+              "percentage_1rm",
+              "rir",
+              "tempo",
+              "instruction"
+            ]
+          },
+          "minimumValue": {
+            "type": "number",
+            "nullable": true
+          },
+          "targetValue": {
+            "type": "number",
+            "nullable": true
+          },
+          "maximumValue": {
+            "type": "number",
+            "nullable": true
+          },
+          "unit": {
+            "type": "string",
+            "nullable": true
+          },
+          "zoneSystem": {
+            "type": "string",
+            "nullable": true
+          },
+          "zoneKey": {
+            "type": "string",
+            "nullable": true
+          },
+          "text": {
+            "type": "string",
+            "nullable": true
+          },
+          "resolvedZone": {
+            "$ref": "#/components/schemas/ResolvedZone"
+          }
+        },
+        "required": [
+          "type",
+          "minimumValue",
+          "targetValue",
+          "maximumValue",
+          "unit",
+          "zoneSystem",
+          "zoneKey",
+          "text",
+          "resolvedZone"
+        ]
+      },
+      "ResolvedZone": {
+        "type": "object",
+        "nullable": true,
+        "properties": {
+          "profileId": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i"
+          },
+          "method": {
+            "type": "string"
+          },
+          "fitnessValue": {
+            "type": "number",
+            "nullable": true
+          },
+          "metric": {
+            "type": "string"
+          },
+          "minimumValue": {
+            "type": "number",
+            "nullable": true
+          },
+          "targetValue": {
+            "type": "number",
+            "nullable": true
+          },
+          "maximumValue": {
+            "type": "number",
+            "nullable": true
+          },
+          "unit": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "profileId",
+          "method",
+          "fitnessValue",
+          "metric",
+          "minimumValue",
+          "targetValue",
+          "maximumValue",
+          "unit"
+        ]
+      },
+      "Error": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "error"
+        ]
+      }
+    },
+    "parameters": {}
+  },
+  "paths": {
+    "/api/v1/workouts": {
+      "get": {
+        "tags": [
+          "Workouts"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i"
+            },
+            "required": false,
+            "name": "planId",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Scheduled workouts in chronological order.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkoutList"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/workouts/{workoutId}": {
+      "get": {
+        "tags": [
+          "Workouts"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i"
+            },
+            "required": true,
+            "name": "workoutId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A workout and its nested prescription tree.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkoutDetail"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Workout not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

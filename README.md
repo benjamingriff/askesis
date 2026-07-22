@@ -1,77 +1,76 @@
-# Blocksmith — AI-Assisted Training Plan Prototype
+# Askesis
 
-A local-first prototype for storing and viewing structured training plans as files.
+Askesis is an early-stage platform for creating, storing, validating, and eventually adapting structured training plans.
 
-This repo currently contains a Cardiff Half Marathon 2026 plan imported from `training-plan.md` into agent-editable YAML files, plus a Vite/React frontend for browsing the plan.
+## Current vertical slice
 
-## What this is
+The repository now contains an end-to-end read path:
 
-- Training plans are stored as plain files, not a database.
-- Plan metadata, phases, weeks, and sessions are separated.
-- Each session is a standalone file with intervals for warm-up, main set, strides, recoveries, and cool-down.
-- Tags are the primary organisation mechanism.
-- The frontend renders the plan as a training cockpit: overview, phases, weeks, sessions, intervals, zones, and guardrails.
+```text
+React + React Router
+        ↓ generated OpenAPI client
+Hono API
+        ↓ Kysely
+PostgreSQL
+```
 
-## Stack
+The web application displays the ten workouts from the seeded two-week Cardiff example in chronological order. Workouts unfold on demand to show their nested prescription, repeats, recoveries, completion conditions, targets, and resolved training zones.
 
-- Vite
-- React
-- TypeScript
-- YAML
-- Zod
+## Run with Docker
 
-## Run locally
+Build and start PostgreSQL, Atlas migrations, the development seed, API, and web application:
 
 ```bash
-npm install
-npm run dev
+docker compose up --build -d
 ```
 
-Build:
+Open:
+
+- Web: <http://localhost:8080>
+- API documentation: <http://localhost:3000/api/docs>
+- Workout endpoint: <http://localhost:3000/api/v1/workouts>
+
+Inspect service state:
 
 ```bash
-npm run build
+docker compose ps -a
 ```
 
-Preview production build:
+Stop the stack without deleting database data:
 
 ```bash
-npm run preview
+docker compose down
 ```
 
-## File structure
+See [`docs/local-development.md`](./docs/local-development.md) for local development and type-generation commands.
 
-```txt
-plans/cardiff-half-2026/
-  plan.yaml
-  AGENT_GUIDE.md
-  phases/
-  weeks/
-  sessions/
+## Architecture
 
-src/
-  data/
-    schema.ts
-    loadPlan.ts
-  main.tsx
-  styles.css
+- PostgreSQL is the source of truth.
+- Atlas owns schema migrations.
+- Kysely provides typed database queries.
+- Hono exposes a REST/OpenAPI domain API.
+- React Router loaders and actions handle initial frontend data flow.
+- The generated API client is shared with the web application and future Pi worker.
+- Only the API accesses PostgreSQL.
+
+See [`docs/README.md`](./docs/README.md) for architecture decisions, the data model, and the implementation roadmap.
+
+## Repository structure
+
+```text
+apps/
+  api/          Hono API and Kysely repositories
+  web/          React, Vite, and React Router
+packages/
+  api-client/   Generated OpenAPI types and client factory
+database/
+  migrations/   Atlas migrations
+  seed/         Idempotent development seed
+  fixtures/     Legacy source plan material
+docs/
 ```
 
-## Current coverage
+## Existing fixtures
 
-The first vertical slice has been implemented:
-
-- Global plan metadata
-- Five phase files
-- Weeks 1–4
-- 20 standalone session files
-
-Weeks 5–21 still live in `training-plan.md` and can be imported next.
-
-## Agent editing rules
-
-See:
-
-```txt
-plans/cardiff-half-2026/AGENT_GUIDE.md
-```
+`database/fixtures/cardiff-half-2026/` contains artefacts from the original file-backed prototype, including the source `training-plan.md`. They are retained as reference material but are not the production storage model.
