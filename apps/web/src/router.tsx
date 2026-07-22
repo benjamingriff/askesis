@@ -1,8 +1,21 @@
-import { Navigate, createBrowserRouter, isRouteErrorResponse, useRouteError } from 'react-router';
+import { useAuth } from '@clerk/react';
+import { Navigate, Outlet, createBrowserRouter, isRouteErrorResponse, useLocation, useRouteError } from 'react-router';
 import { AppShell } from './components/AppShell';
+import { SignInPage, SignUpPage } from './routes/auth';
 import { ChatPage } from './routes/chat';
 import { SettingsPage } from './routes/settings';
 import { WorkoutsPage, workoutDetailLoader, workoutsLoader } from './routes/workouts';
+
+function RequireAuthentication() {
+  const { isSignedIn } = useAuth();
+  const location = useLocation();
+
+  if (!isSignedIn) {
+    return <Navigate to="/sign-in" replace state={{ from: location.pathname }} />;
+  }
+
+  return <Outlet />;
+}
 
 function ErrorPage() {
   const error = useRouteError();
@@ -21,19 +34,26 @@ function ErrorPage() {
 }
 
 export const router = createBrowserRouter([
+  { path: '/sign-in/*', element: <SignInPage /> },
+  { path: '/sign-up/*', element: <SignUpPage /> },
   {
-    element: <AppShell />,
-    errorElement: <ErrorPage />,
+    element: <RequireAuthentication />,
     children: [
-      { index: true, element: <Navigate to="/plan" replace /> },
-      { path: '/plan', loader: workoutsLoader, element: <WorkoutsPage /> },
-      { path: '/chat', element: <ChatPage /> },
-      { path: '/chat/:conversationId', element: <ChatPage /> },
-      { path: '/settings', element: <SettingsPage /> },
+      {
+        element: <AppShell />,
+        errorElement: <ErrorPage />,
+        children: [
+          { index: true, element: <Navigate to="/plan" replace /> },
+          { path: '/plan', loader: workoutsLoader, element: <WorkoutsPage /> },
+          { path: '/chat', element: <ChatPage /> },
+          { path: '/chat/:conversationId', element: <ChatPage /> },
+          { path: '/settings', element: <SettingsPage /> },
+        ],
+      },
+      {
+        path: '/workouts/:workoutId/detail',
+        loader: workoutDetailLoader,
+      },
     ],
-  },
-  {
-    path: '/workouts/:workoutId/detail',
-    loader: workoutDetailLoader,
   },
 ]);

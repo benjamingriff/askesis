@@ -1,3 +1,4 @@
+import { useClerk, useUser } from '@clerk/react';
 import {
   CalendarDays,
   ChevronLeft,
@@ -26,6 +27,11 @@ export function AppShell() {
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [accountOpen, setAccountOpen] = useState(false);
+  const { user } = useUser();
+  const clerk = useClerk();
+  const displayName = user?.fullName ?? user?.firstName ?? 'Askesis athlete';
+  const email = user?.primaryEmailAddress?.emailAddress ?? '';
+  const initials = displayName.split(/\s+/).map((part) => part.at(0)).join('').slice(0, 2).toUpperCase() || 'A';
 
   return (
     <div className={`app-shell${collapsed ? ' sidebar-collapsed' : ''}`}>
@@ -73,16 +79,18 @@ export function AppShell() {
         <div className="account-area">
           {accountOpen && (
             <div className="account-popover">
-              <div className="account-popover-identity"><strong>Benjamin Griffiths</strong><span>benjamin@example.com</span></div>
-              <button type="button"><UserRound size={16} /> Profile</button>
+              <div className="account-popover-identity"><strong>{displayName}</strong><span>{email}</span></div>
+              <button type="button" onClick={() => clerk.openUserProfile()}><UserRound size={16} /> Profile</button>
               <button type="button"><Moon size={16} /> Appearance</button>
               <button type="button"><CircleHelp size={16} /> Help</button>
-              <button type="button" disabled><LogOut size={16} /> Sign out</button>
+              <button type="button" onClick={() => void clerk.signOut({ redirectUrl: '/sign-in' })}><LogOut size={16} /> Sign out</button>
             </div>
           )}
           <button className="account-button" type="button" onClick={() => setAccountOpen((value) => !value)} aria-expanded={accountOpen}>
-            <span className="avatar">BG</span>
-            <span className="account-copy"><strong>Benjamin</strong><small>Personal account</small></span>
+            {user?.hasImage
+              ? <img className="avatar" src={user.imageUrl} alt="" />
+              : <span className="avatar">{initials}</span>}
+            <span className="account-copy"><strong>{displayName}</strong><small>{email || 'Personal account'}</small></span>
             <span className="account-more">•••</span>
           </button>
         </div>

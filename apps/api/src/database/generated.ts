@@ -27,6 +27,15 @@ export type Numeric = ColumnType<string, number | string, number | string>;
 
 export type Timestamp = ColumnType<Date, Date | string, Date | string>;
 
+export interface AthleteIdentities {
+  athlete_id: string;
+  created_at: Generated<Timestamp>;
+  id: Generated<string>;
+  last_seen_at: Generated<Timestamp>;
+  provider: string;
+  provider_subject: string;
+}
+
 export interface Athletes {
   created_at: Generated<Timestamp>;
   display_name: string;
@@ -112,6 +121,13 @@ export interface PlanGoals {
   plan_id: string;
   priority: string;
   target_duration_seconds: number | null;
+}
+
+export interface PlanMemberships {
+  athlete_id: string;
+  created_at: Generated<Timestamp>;
+  plan_id: string;
+  role: string;
 }
 
 export interface Plans {
@@ -248,6 +264,7 @@ export interface WorkoutTags {
 }
 
 export interface DB {
+  athlete_identities: AthleteIdentities;
   athletes: Athletes;
   "atlas_schema_revisions.atlas_schema_revisions": AtlasSchemaRevisionsAtlasSchemaRevisions;
   calibration_profiles: CalibrationProfiles;
@@ -256,6 +273,7 @@ export interface DB {
   plan_calibration_periods: PlanCalibrationPeriods;
   plan_constraints: PlanConstraints;
   plan_goals: PlanGoals;
+  plan_memberships: PlanMemberships;
   plans: Plans;
   seed_runs: SeedRuns;
   step_completions: StepCompletions;

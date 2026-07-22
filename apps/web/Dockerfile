@@ -9,6 +9,8 @@ RUN npm ci
 
 COPY packages/api-client packages/api-client
 COPY apps/web apps/web
+ARG VITE_CLERK_PUBLISHABLE_KEY
+ENV VITE_CLERK_PUBLISHABLE_KEY=$VITE_CLERK_PUBLISHABLE_KEY
 RUN npm run build --workspace @askesis/web
 
 FROM nginx:1.29-alpine

@@ -57,7 +57,7 @@ function toWorkoutSummary(row: WorkoutRow): WorkoutSummary {
   };
 }
 
-export async function listWorkouts(planId?: string): Promise<WorkoutSummary[]> {
+export async function listWorkouts(athleteId: string, planId?: string): Promise<WorkoutSummary[]> {
   let query = database
     .selectFrom('workouts')
     .innerJoin('plans', 'plans.id', 'workouts.plan_id')
@@ -75,7 +75,16 @@ export async function listWorkouts(planId?: string): Promise<WorkoutSummary[]> {
       'workouts.estimated_distance_metres',
       'plans.title as plan_title',
       'training_weeks.week_number',
-    ]);
+    ])
+    .where((expression) => expression.or([
+      expression('plans.owner_id', '=', athleteId),
+      expression.exists(
+        expression.selectFrom('plan_memberships')
+          .select('plan_memberships.plan_id')
+          .whereRef('plan_memberships.plan_id', '=', 'plans.id')
+          .where('plan_memberships.athlete_id', '=', athleteId),
+      ),
+    ]));
 
   if (planId !== undefined) {
     query = query.where('workouts.plan_id', '=', planId);
@@ -93,7 +102,7 @@ function optionalNumber(value: string | null): number | null {
   return value === null ? null : Number(value);
 }
 
-export async function getWorkoutDetail(workoutId: string): Promise<WorkoutDetail | null> {
+export async function getWorkoutDetail(athleteId: string, workoutId: string): Promise<WorkoutDetail | null> {
   const workoutRow = await database
     .selectFrom('workouts')
     .innerJoin('plans', 'plans.id', 'workouts.plan_id')
@@ -113,6 +122,15 @@ export async function getWorkoutDetail(workoutId: string): Promise<WorkoutDetail
       'training_weeks.week_number',
     ])
     .where('workouts.id', '=', workoutId)
+    .where((expression) => expression.or([
+      expression('plans.owner_id', '=', athleteId),
+      expression.exists(
+        expression.selectFrom('plan_memberships')
+          .select('plan_memberships.plan_id')
+          .whereRef('plan_memberships.plan_id', '=', 'plans.id')
+          .where('plan_memberships.athlete_id', '=', athleteId),
+      ),
+    ]))
     .executeTakeFirst();
 
   if (workoutRow === undefined) return null;

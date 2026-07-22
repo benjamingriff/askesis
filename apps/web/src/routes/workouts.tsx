@@ -10,14 +10,15 @@ import {
   Timer,
 } from 'lucide-react';
 import { useMemo, useState } from 'react';
-import { type LoaderFunctionArgs, useFetcher, useLoaderData } from 'react-router';
+import { redirect, type LoaderFunctionArgs, useFetcher, useLoaderData } from 'react-router';
 import { api } from '../api';
 
 export async function workoutsLoader() {
-  const { data, error } = await api.GET('/api/v1/workouts');
+  const { data, error, response } = await api.GET('/api/v1/workouts');
 
+  if (response.status === 401) throw redirect('/sign-in');
   if (error !== undefined || data === undefined) {
-    throw new Response('The workout list could not be loaded.', { status: 500 });
+    throw new Response('The workout list could not be loaded.', { status: response.status });
   }
 
   return data;
@@ -32,6 +33,7 @@ export async function workoutDetailLoader({ params }: LoaderFunctionArgs) {
     params: { path: { workoutId: params.workoutId } },
   });
 
+  if (response.status === 401) throw redirect('/sign-in');
   if (error !== undefined || data === undefined) {
     throw new Response(error?.error ?? 'The workout could not be loaded.', {
       status: response.status,

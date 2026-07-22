@@ -54,6 +54,9 @@ services:
     environment:
       PORT: 3000
       DATABASE_URL: postgres://${POSTGRES_USER:-askesis}:${POSTGRES_PASSWORD:-askesis}@postgres:5432/${POSTGRES_DB:-askesis}
+      CLERK_SECRET_KEY: ${CLERK_SECRET_KEY:-}
+      CLERK_PUBLISHABLE_KEY: ${VITE_CLERK_PUBLISHABLE_KEY:-}
+      CLERK_AUTHORIZED_PARTIES: ${CLERK_AUTHORIZED_PARTIES:-http://localhost:8080,http://localhost:5173}
     ports:
       - "${API_PORT:-3000}:3000"
     healthcheck:
@@ -69,6 +72,8 @@ services:
     build:
       context: .
       dockerfile: apps/web/Dockerfile
+      args:
+        VITE_CLERK_PUBLISHABLE_KEY: ${VITE_CLERK_PUBLISHABLE_KEY:-}
     ports:
       - "${WEB_PORT:-8080}:80"
     healthcheck:

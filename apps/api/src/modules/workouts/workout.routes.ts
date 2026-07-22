@@ -1,4 +1,5 @@
 import { createRoute, OpenAPIHono, z } from '@hono/zod-openapi';
+import type { AppEnvironment } from '../../auth/types.js';
 import { getWorkoutDetail, listWorkouts } from './workout.repository.js';
 import {
   DatabaseIdSchema,
@@ -23,6 +24,10 @@ const listWorkoutsRoute = createRoute({
         },
       },
     },
+    401: {
+      description: 'Authentication is required.',
+      content: { 'application/json': { schema: ErrorSchema } },
+    },
   },
   tags: ['Workouts'],
 });
@@ -42,20 +47,24 @@ const getWorkoutRoute = createRoute({
       description: 'Workout not found.',
       content: { 'application/json': { schema: ErrorSchema } },
     },
+    401: {
+      description: 'Authentication is required.',
+      content: { 'application/json': { schema: ErrorSchema } },
+    },
   },
   tags: ['Workouts'],
 });
 
-export function registerWorkoutRoutes(app: OpenAPIHono): void {
+export function registerWorkoutRoutes(app: OpenAPIHono<AppEnvironment>): void {
   app.openapi(listWorkoutsRoute, async (context) => {
     const { planId } = context.req.valid('query');
-    const workouts = await listWorkouts(planId);
+    const workouts = await listWorkouts(context.get('athlete').id, planId);
     return context.json({ workouts }, 200);
   });
 
   app.openapi(getWorkoutRoute, async (context) => {
     const { workoutId } = context.req.valid('param');
-    const detail = await getWorkoutDetail(workoutId);
+    const detail = await getWorkoutDetail(context.get('athlete').id, workoutId);
     if (detail === null) return context.json({ error: 'Workout not found' }, 404);
     return context.json(detail, 200);
   });

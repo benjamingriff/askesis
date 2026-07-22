@@ -1,8 +1,10 @@
 import { swaggerUI } from '@hono/swagger-ui';
 import { OpenAPIHono } from '@hono/zod-openapi';
+import { requireAuthentication } from './auth/middleware.js';
+import type { AppEnvironment } from './auth/types.js';
 import { registerWorkoutRoutes } from './modules/workouts/workout.routes.js';
 
-export const app = new OpenAPIHono();
+export const app = new OpenAPIHono<AppEnvironment>();
 
 app.onError((error, context) => {
   console.error(error);
@@ -10,6 +12,7 @@ app.onError((error, context) => {
 });
 
 app.get('/api/health', (context) => context.json({ status: 'ok' }));
+app.use('/api/v1/*', requireAuthentication);
 
 registerWorkoutRoutes(app);
 

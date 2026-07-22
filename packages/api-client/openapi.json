@@ -99,6 +99,17 @@
           "high"
         ]
       },
+      "Error": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "error"
+        ]
+      },
       "WorkoutDetail": {
         "type": "object",
         "properties": {
@@ -366,17 +377,6 @@
           "maximumValue",
           "unit"
         ]
-      },
-      "Error": {
-        "type": "object",
-        "properties": {
-          "error": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "error"
-        ]
       }
     },
     "parameters": {}
@@ -409,6 +409,16 @@
                 }
               }
             }
+          },
+          "401": {
+            "description": "Authentication is required.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
           }
         }
       }
@@ -437,6 +447,16 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/WorkoutDetail"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication is required.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
                 }
               }
             }

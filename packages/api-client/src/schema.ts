@@ -31,6 +31,15 @@ export interface paths {
                         "application/json": components["schemas"]["WorkoutList"];
                     };
                 };
+                /** @description Authentication is required. */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
             };
         };
         put?: never;
@@ -66,6 +75,15 @@ export interface paths {
                     };
                     content: {
                         "application/json": components["schemas"]["WorkoutDetail"];
+                    };
+                };
+                /** @description Authentication is required. */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
                     };
                 };
                 /** @description Workout not found. */
@@ -113,6 +131,9 @@ export interface components {
         };
         /** @enum {string} */
         WorkoutPriority: "low" | "medium" | "high";
+        Error: {
+            error: string;
+        };
         WorkoutDetail: {
             workout: components["schemas"]["WorkoutSummary"];
             tags: string[];
@@ -170,9 +191,6 @@ export interface components {
             maximumValue: number | null;
             unit: string;
         } | null;
-        Error: {
-            error: string;
-        };
     };
     responses: never;
     parameters: never;
