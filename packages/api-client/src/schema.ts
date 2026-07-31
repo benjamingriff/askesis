@@ -132,7 +132,11 @@ export interface components {
         /** @enum {string} */
         WorkoutPriority: "low" | "medium" | "high";
         Error: {
-            error: string;
+            error: {
+                code: string;
+                message: string;
+                requestId: string;
+            };
         };
         WorkoutDetail: {
             workout: components["schemas"]["WorkoutSummary"];

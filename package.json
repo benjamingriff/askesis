@@ -3,20 +3,46 @@
   "private": true,
   "version": "0.1.0",
   "type": "module",
-  "workspaces": [
-    "apps/*",
-    "packages/*"
-  ],
+  "packageManager": "pnpm@11.18.0",
+  "engines": {
+    "node": ">=24 <25",
+    "pnpm": "11.18.0"
+  },
   "scripts": {
-    "build": "npm run build --workspaces --if-present",
-    "dev:api": "npm run dev --workspace @askesis/api",
-    "dev:web": "npm run dev --workspace @askesis/web",
-    "typecheck": "npm run typecheck --workspaces --if-present",
-    "generate:db-types": "npm run generate:db-types --workspace @askesis/api",
-    "generate:openapi": "npm run generate:openapi --workspace @askesis/api && openapi-typescript packages/api-client/openapi.json -o packages/api-client/src/schema.ts"
+    "build": "pnpm -r --if-present run build",
+    "check": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm generate:check && pnpm migrations:check && pnpm audit:production",
+    "dev:api": "pnpm --filter @askesis/api dev",
+    "dev:web": "pnpm --filter @askesis/web dev",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "lint": "eslint . --max-warnings=0",
+    "test": "pnpm -r --if-present run test",
+    "test:db": "./scripts/test-db.sh",
+    "test:coverage": "pnpm -r --if-present run test:coverage",
+    "typecheck": "pnpm -r --if-present run typecheck",
+    "generate:db-types": "pnpm --filter @askesis/api generate:db-types",
+    "generate:openapi": "pnpm --filter @askesis/api generate:openapi && pnpm exec openapi-typescript packages/api-client/openapi.json -o packages/api-client/src/schema.ts",
+    "generate:check": "./scripts/check-generated.sh",
+    "migrations:check": "./scripts/check-migrations.sh",
+    "smoke": "./scripts/smoke.sh",
+    "audit:production": "pnpm audit --prod --audit-level=high"
   },
   "devDependencies": {
+    "@eslint/js": "^9.39.5",
+    "@testing-library/jest-dom": "^7.0.0",
+    "@testing-library/react": "^16.3.2",
+    "@vitest/coverage-v8": "^4.1.10",
+    "eslint": "^9.39.5",
+    "eslint-plugin-import-x": "^4.17.1",
+    "eslint-plugin-react": "^7.37.5",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "eslint-plugin-react-refresh": "^0.5.3",
+    "globals": "^17.7.0",
+    "jsdom": "^29.1.1",
     "openapi-typescript": "^7.10.1",
-    "typescript": "^5.9.3"
+    "prettier": "^3.9.6",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.65.0",
+    "vitest": "^4.1.10"
   }
 }

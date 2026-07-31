@@ -1,18 +1,15 @@
 import type { ClerkClient } from '@clerk/backend';
-import { database } from '../database/client.js';
+import { getDatabase } from '../database/client.js';
 import type { AuthenticatedAthlete } from './types.js';
 
 const provider = 'clerk';
 
 async function findAthlete(clerkUserId: string): Promise<AuthenticatedAthlete | null> {
+  const database = getDatabase();
   const row = await database
     .selectFrom('athlete_identities')
     .innerJoin('athletes', 'athletes.id', 'athlete_identities.athlete_id')
-    .select([
-      'athletes.id',
-      'athletes.display_name',
-      'athlete_identities.id as identity_id',
-    ])
+    .select(['athletes.id', 'athletes.display_name', 'athlete_identities.id as identity_id'])
     .where('athlete_identities.provider', '=', provider)
     .where('athlete_identities.provider_subject', '=', clerkUserId)
     .executeTakeFirst();
@@ -36,11 +33,17 @@ function profileDisplayName(user: Awaited<ReturnType<ClerkClient['users']['getUs
   const fullName = [user.firstName, user.lastName].filter(Boolean).join(' ').trim();
   if (fullName.length > 0) return fullName;
 
-  const primaryEmail = user.emailAddresses.find(({ id }) => id === user.primaryEmailAddressId)?.emailAddress;
+  const primaryEmail = user.emailAddresses.find(
+    ({ id }) => id === user.primaryEmailAddressId,
+  )?.emailAddress;
   return primaryEmail ?? 'Askesis athlete';
 }
 
-export async function ensureAthlete(clerk: ClerkClient, clerkUserId: string): Promise<AuthenticatedAthlete> {
+export async function ensureAthlete(
+  clerk: ClerkClient,
+  clerkUserId: string,
+): Promise<AuthenticatedAthlete> {
+  const database = getDatabase();
   const existing = await findAthlete(clerkUserId);
   if (existing !== null) return existing;
 

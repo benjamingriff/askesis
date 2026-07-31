@@ -1,4 +1,6 @@
-# Implementation roadmap
+# Initial data-model implementation roadmap
+
+> This document records the earlier persistence-focused sequence. The accepted product roadmap is now [V1 proof-of-concept development plan](./v1-poc-development-plan.md).
 
 ## Objective
 

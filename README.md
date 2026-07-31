@@ -14,7 +14,16 @@ Hono API
 PostgreSQL
 ```
 
-The web application provides a dashboard-style plan calendar, an expandable workout schedule, a cosmetic mock coaching chat, and placeholder account settings. The ten workouts from the seeded Cardiff example unfold on demand to show their nested prescription, repeats, recoveries, completion conditions, targets, and resolved training zones.
+The web application provides a Clerk-authenticated dashboard-style plan calendar, an expandable workout schedule, a cosmetic mock coaching chat, and Clerk-backed account settings. The ten workouts from the seeded Cardiff example unfold on demand to show their nested prescription, repeats, recoveries, completion conditions, targets, and resolved training zones.
+
+## Package management
+
+The monorepo uses pnpm 11.18.0, pinned through `package.json`:
+
+```bash
+npm install --global pnpm@11.18.0
+pnpm install --frozen-lockfile
+```
 
 ## Run with Docker
 
@@ -28,7 +37,8 @@ Open:
 
 - Web: <http://localhost:8080>
 - API documentation: <http://localhost:3000/api/docs>
-- Workout endpoint: <http://localhost:3000/api/v1/workouts>
+- API readiness: <http://localhost:3000/api/ready>
+- Workout endpoint: <http://localhost:3000/api/v1/workouts> (requires a Clerk session token)
 
 Inspect service state:
 
@@ -41,6 +51,8 @@ Stop the stack without deleting database data:
 ```bash
 docker compose down
 ```
+
+Run the lightweight validation suite with `pnpm check`, PostgreSQL integration tests with `pnpm test:db`, and the disposable full-stack smoke test with `pnpm smoke`.
 
 See [`docs/local-development.md`](./docs/local-development.md) for local development and type-generation commands.
 

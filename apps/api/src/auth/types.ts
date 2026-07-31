@@ -7,5 +7,6 @@ export type AuthenticatedAthlete = {
 export type AppEnvironment = {
   Variables: {
     athlete: AuthenticatedAthlete;
+    requestId: string;
   };
 };

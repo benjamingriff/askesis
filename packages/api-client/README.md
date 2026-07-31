@@ -5,7 +5,7 @@ This package contains the generated OpenAPI schema types and a small `openapi-fe
 Regenerate it from the Hono route schemas with:
 
 ```bash
-npm run generate:openapi
+pnpm generate:openapi
 ```
 
 Do not edit `openapi.json` or `src/schema.ts` manually.

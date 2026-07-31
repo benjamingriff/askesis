@@ -35,7 +35,7 @@ export async function workoutDetailLoader({ params }: LoaderFunctionArgs) {
 
   if (response.status === 401) throw redirect('/sign-in');
   if (error !== undefined || data === undefined) {
-    throw new Response(error?.error ?? 'The workout could not be loaded.', {
+    throw new Response(error?.error.message ?? 'The workout could not be loaded.', {
       status: response.status,
     });
   }
@@ -93,7 +93,8 @@ function formatTarget(target: StepTarget): string {
     if (zone !== null && zone.minimumValue !== null && zone.maximumValue !== null) {
       const minimum = formatValue(zone.minimumValue, zone.unit);
       const maximum = formatValue(zone.maximumValue, zone.unit);
-      const fitness = zone.fitnessValue === null ? '' : ` · ${zone.method.toUpperCase()} ${zone.fitnessValue}`;
+      const fitness =
+        zone.fitnessValue === null ? '' : ` · ${zone.method.toUpperCase()} ${zone.fitnessValue}`;
       return `${target.zoneKey} · ${minimum}–${maximum}${fitness}`;
     }
     return target.zoneKey;
@@ -103,9 +104,12 @@ function formatTarget(target: StepTarget): string {
   const minimum = formatValue(target.minimumValue, target.unit);
   const preferred = formatValue(target.targetValue, target.unit);
   const maximum = formatValue(target.maximumValue, target.unit);
-  const range = minimum !== null && maximum !== null
-    ? minimum === maximum ? minimum : `${minimum}–${maximum}`
-    : preferred ?? minimum ?? maximum;
+  const range =
+    minimum !== null && maximum !== null
+      ? minimum === maximum
+        ? minimum
+        : `${minimum}–${maximum}`
+      : (preferred ?? minimum ?? maximum);
   return `${target.type.replaceAll('_', ' ')}${range === null ? '' : ` ${range}`}`;
 }
 
@@ -113,7 +117,9 @@ function StepNode({ step, depth = 0 }: { step: WorkoutStep; depth?: number }) {
   if (step.kind === 'sequence') {
     return (
       <div className="sequence">
-        {step.steps.map((child) => <StepNode step={child} depth={depth} key={child.id} />)}
+        {step.steps.map((child) => (
+          <StepNode step={child} depth={depth} key={child.id} />
+        ))}
       </div>
     );
   }
@@ -127,7 +133,9 @@ function StepNode({ step, depth = 0 }: { step: WorkoutStep; depth?: number }) {
           {step.label !== null && <span>{step.label}</span>}
         </div>
         <div className="repeat-steps">
-          {step.steps.map((child) => <StepNode step={child} depth={depth + 1} key={child.id} />)}
+          {step.steps.map((child) => (
+            <StepNode step={child} depth={depth + 1} key={child.id} />
+          ))}
         </div>
       </section>
     );
@@ -147,7 +155,9 @@ function StepNode({ step, depth = 0 }: { step: WorkoutStep; depth?: number }) {
         {step.targets.length > 0 && (
           <div className="target-list">
             {step.targets.map((target, index) => (
-              <span className="target" key={`${target.type}-${index}`}>{formatTarget(target)}</span>
+              <span className="target" key={`${target.type}-${index}`}>
+                {formatTarget(target)}
+              </span>
             ))}
           </div>
         )}
@@ -166,7 +176,11 @@ function WorkoutBreakdown({ detail }: { detail: Awaited<ReturnType<typeof workou
           <p>{detail.workout.purpose}</p>
         </div>
         {detail.tags.length > 0 && (
-          <div className="tag-list">{detail.tags.map((tag) => <span key={tag}>{tag}</span>)}</div>
+          <div className="tag-list">
+            {detail.tags.map((tag) => (
+              <span key={tag}>{tag}</span>
+            ))}
+          </div>
         )}
       </div>
       <StepNode step={detail.prescription} />
@@ -189,7 +203,10 @@ function WorkoutRow({ workout, selected }: { workout: WorkoutSummary; selected: 
   }
 
   return (
-    <li id={`workout-${workout.scheduledDate}`} className={`workout-item${expanded ? ' expanded' : ''}${selected ? ' selected' : ''}`}>
+    <li
+      id={`workout-${workout.scheduledDate}`}
+      className={`workout-item${expanded ? ' expanded' : ''}${selected ? ' selected' : ''}`}
+    >
       <div className="workout-row">
         <time dateTime={workout.scheduledDate} className="workout-date">
           <span>{scheduled.day}</span>
@@ -205,11 +222,15 @@ function WorkoutRow({ workout, selected }: { workout: WorkoutSummary; selected: 
         </div>
         <dl className="workout-metrics">
           <div>
-            <dt><Route size={14} /> Distance</dt>
+            <dt>
+              <Route size={14} /> Distance
+            </dt>
             <dd>{formatDistance(workout.estimatedDistanceMetres)}</dd>
           </div>
           <div>
-            <dt><Timer size={14} /> Duration</dt>
+            <dt>
+              <Timer size={14} /> Duration
+            </dt>
             <dd>{formatDuration(workout.estimatedDurationSeconds)}</dd>
           </div>
         </dl>
@@ -226,9 +247,11 @@ function WorkoutRow({ workout, selected }: { workout: WorkoutSummary; selected: 
       </div>
       {expanded && (
         <div id={breakdownId}>
-          {detailFetcher.state === 'loading' && detailFetcher.data === undefined
-            ? <p className="breakdown-loading">Loading prescription…</p>
-            : detailFetcher.data !== undefined && <WorkoutBreakdown detail={detailFetcher.data} />}
+          {detailFetcher.state === 'loading' && detailFetcher.data === undefined ? (
+            <p className="breakdown-loading">Loading prescription…</p>
+          ) : (
+            detailFetcher.data !== undefined && <WorkoutBreakdown detail={detailFetcher.data} />
+          )}
         </div>
       )}
     </li>
@@ -264,7 +287,11 @@ function WorkoutCalendar({
     date.setUTCDate(gridStart.getUTCDate() + index);
     return date;
   });
-  const monthLabel = new Intl.DateTimeFormat('en-GB', { month: 'long', year: 'numeric', timeZone: 'UTC' }).format(firstDay);
+  const monthLabel = new Intl.DateTimeFormat('en-GB', {
+    month: 'long',
+    year: 'numeric',
+    timeZone: 'UTC',
+  }).format(firstDay);
 
   function changeMonth(offset: number) {
     const next = new Date(Date.UTC(year, month - 1 + offset, 1));
@@ -274,14 +301,27 @@ function WorkoutCalendar({
   return (
     <section className="plan-calendar" aria-label="Training calendar">
       <header className="calendar-header">
-        <div><CalendarDays size={18} /><strong>{monthLabel}</strong></div>
         <div>
-          <button type="button" onClick={() => changeMonth(-1)} aria-label="Previous month"><ChevronLeft size={17} /></button>
-          <button type="button" onClick={() => setVisibleMonth(firstWorkout.slice(0, 7))}>Plan start</button>
-          <button type="button" onClick={() => changeMonth(1)} aria-label="Next month"><ChevronRight size={17} /></button>
+          <CalendarDays size={18} />
+          <strong>{monthLabel}</strong>
+        </div>
+        <div>
+          <button type="button" onClick={() => changeMonth(-1)} aria-label="Previous month">
+            <ChevronLeft size={17} />
+          </button>
+          <button type="button" onClick={() => setVisibleMonth(firstWorkout.slice(0, 7))}>
+            Plan start
+          </button>
+          <button type="button" onClick={() => changeMonth(1)} aria-label="Next month">
+            <ChevronRight size={17} />
+          </button>
         </div>
       </header>
-      <div className="calendar-weekdays">{['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((day) => <span key={day}>{day}</span>)}</div>
+      <div className="calendar-weekdays">
+        {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((day) => (
+          <span key={day}>{day}</span>
+        ))}
+      </div>
       <div className="calendar-grid">
         {days.map((date) => {
           const dateKey = date.toISOString().slice(0, 10);
@@ -298,7 +338,11 @@ function WorkoutCalendar({
             >
               <span>{date.getUTCDate()}</span>
               <div className="calendar-activities">
-                {dayWorkouts.map((workout) => <i className={`activity-marker priority-${workout.priority}`} key={workout.id}><Footprints size={13} /></i>)}
+                {dayWorkouts.map((workout) => (
+                  <i className={`activity-marker priority-${workout.priority}`} key={workout.id}>
+                    <Footprints size={13} />
+                  </i>
+                ))}
               </div>
             </button>
           );
@@ -312,16 +356,25 @@ export function WorkoutsPage() {
   const { workouts } = useLoaderData<typeof workoutsLoader>();
   const planTitle = workouts.at(0)?.planTitle ?? 'Training plan';
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
-  const [calendarVisible, setCalendarVisible] = useState(() => window.localStorage.getItem('askesis-calendar-visible') !== 'false');
+  const [calendarVisible, setCalendarVisible] = useState(
+    () => window.localStorage.getItem('askesis-calendar-visible') !== 'false',
+  );
   const weeks = useMemo(() => {
     const grouped = new Map<number, WorkoutSummary[]>();
-    for (const workout of workouts) grouped.set(workout.weekNumber, [...(grouped.get(workout.weekNumber) ?? []), workout]);
+    for (const workout of workouts)
+      grouped.set(workout.weekNumber, [...(grouped.get(workout.weekNumber) ?? []), workout]);
     return [...grouped.entries()];
   }, [workouts]);
 
   function selectDate(date: string) {
     setSelectedDate(date);
-    window.setTimeout(() => document.getElementById(`workout-${date}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 50);
+    window.setTimeout(
+      () =>
+        document
+          .getElementById(`workout-${date}`)
+          ?.scrollIntoView({ behavior: 'smooth', block: 'center' }),
+      50,
+    );
   }
 
   function toggleCalendar() {
@@ -345,23 +398,53 @@ export function WorkoutsPage() {
         </button>
       </header>
 
-      {calendarVisible && <WorkoutCalendar workouts={workouts} selectedDate={selectedDate} onSelectDate={selectDate} />}
+      {calendarVisible && (
+        <WorkoutCalendar
+          workouts={workouts}
+          selectedDate={selectedDate}
+          onSelectDate={selectDate}
+        />
+      )}
 
       <section className="schedule" aria-labelledby="workouts-heading">
         <div className="section-heading">
-          <div><h2 id="workouts-heading">Schedule</h2><p>Your upcoming training, ordered by date.</p></div>
-          {selectedDate !== null && <button type="button" onClick={() => setSelectedDate(null)}>Clear selected day</button>}
+          <div>
+            <h2 id="workouts-heading">Schedule</h2>
+            <p>Your upcoming training, ordered by date.</p>
+          </div>
+          {selectedDate !== null && (
+            <button type="button" onClick={() => setSelectedDate(null)}>
+              Clear selected day
+            </button>
+          )}
         </div>
-        {workouts.length === 0
-          ? <p className="empty-state">No workouts have been scheduled.</p>
-          : weeks.map(([weekNumber, weekWorkouts]) => (
+        {workouts.length === 0 ? (
+          <p className="empty-state">No workouts have been scheduled.</p>
+        ) : (
+          weeks.map(([weekNumber, weekWorkouts]) => (
             <section className="training-week" key={weekNumber}>
-              <header><span>Week {weekNumber}</span><strong>{weekWorkouts.reduce((total, workout) => total + (workout.estimatedDistanceMetres ?? 0), 0) / 1000} km</strong></header>
-              <ol className="workout-list">{weekWorkouts.map((workout) => (
-                <WorkoutRow workout={workout} selected={selectedDate === workout.scheduledDate} key={workout.id} />
-              ))}</ol>
+              <header>
+                <span>Week {weekNumber}</span>
+                <strong>
+                  {weekWorkouts.reduce(
+                    (total, workout) => total + (workout.estimatedDistanceMetres ?? 0),
+                    0,
+                  ) / 1000}{' '}
+                  km
+                </strong>
+              </header>
+              <ol className="workout-list">
+                {weekWorkouts.map((workout) => (
+                  <WorkoutRow
+                    workout={workout}
+                    selected={selectedDate === workout.scheduledDate}
+                    key={workout.id}
+                  />
+                ))}
+              </ol>
             </section>
-          ))}
+          ))
+        )}
       </section>
     </main>
   );

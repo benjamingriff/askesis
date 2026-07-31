@@ -8,25 +8,40 @@ services:
       POSTGRES_USER: ${POSTGRES_USER:-askesis}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-askesis}
     ports:
-      - "${POSTGRES_PORT:-5432}:5432"
+      - '${POSTGRES_PORT:-5432}:5432'
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-askesis} -d ${POSTGRES_DB:-askesis}"]
+      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER:-askesis} -d ${POSTGRES_DB:-askesis}']
+      interval: 2s
+      timeout: 5s
+      retries: 20
+
+  postgres-test:
+    image: postgres:17-alpine
+    profiles: ['test']
+    environment:
+      POSTGRES_DB: askesis_test
+      POSTGRES_USER: askesis_test
+      POSTGRES_PASSWORD: askesis_test
+    ports:
+      - '55432:5432'
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U askesis_test -d askesis_test']
       interval: 2s
       timeout: 5s
       retries: 20
 
   migrate:
     image: arigaio/atlas:1.2.3
-    user: "${LOCAL_UID:-1000}:${LOCAL_GID:-1000}"
+    user: '${LOCAL_UID:-1000}:${LOCAL_GID:-1000}'
     working_dir: /workspace/database
     environment:
       HOME: /tmp
       DATABASE_URL: postgres://${POSTGRES_USER:-askesis}:${POSTGRES_PASSWORD:-askesis}@postgres:5432/${POSTGRES_DB:-askesis}?sslmode=disable
     volumes:
       - ./database:/workspace/database
-    command: ["migrate", "apply", "--env", "local"]
+    command: ['migrate', 'apply', '--env', 'local']
     depends_on:
       postgres:
         condition: service_healthy
@@ -42,7 +57,7 @@ services:
       PGPASSWORD: ${POSTGRES_PASSWORD:-askesis}
     volumes:
       - ./database/seed:/workspace/database/seed:ro
-    command: ["sh", "/workspace/database/seed/seed.sh"]
+    command: ['sh', '/workspace/database/seed/seed.sh']
     depends_on:
       migrate:
         condition: service_completed_successfully
@@ -57,10 +72,19 @@ services:
       CLERK_SECRET_KEY: ${CLERK_SECRET_KEY:-}
       CLERK_PUBLISHABLE_KEY: ${VITE_CLERK_PUBLISHABLE_KEY:-}
       CLERK_AUTHORIZED_PARTIES: ${CLERK_AUTHORIZED_PARTIES:-http://localhost:8080,http://localhost:5173}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      SENTRY_DSN: ${SENTRY_DSN:-}
+      SENTRY_RELEASE: ${SENTRY_RELEASE:-}
     ports:
-      - "${API_PORT:-3000}:3000"
+      - '${API_PORT:-3000}:3000'
     healthcheck:
-      test: ["CMD", "node", "-e", "fetch('http://localhost:3000/api/health').then(r => { if (!r.ok) process.exit(1) })"]
+      test:
+        [
+          'CMD',
+          'node',
+          '-e',
+          "fetch('http://localhost:3000/api/ready').then(r => { if (!r.ok) process.exit(1) })",
+        ]
       interval: 3s
       timeout: 5s
       retries: 20
@@ -74,10 +98,14 @@ services:
       dockerfile: apps/web/Dockerfile
       args:
         VITE_CLERK_PUBLISHABLE_KEY: ${VITE_CLERK_PUBLISHABLE_KEY:-}
+        VITE_SENTRY_DSN: ${VITE_SENTRY_DSN:-}
+        VITE_SENTRY_RELEASE: ${SENTRY_RELEASE:-}
+    environment:
+      API_UPSTREAM: ${API_UPSTREAM:-http://api:3000}
     ports:
-      - "${WEB_PORT:-8080}:80"
+      - '${WEB_PORT:-8080}:80'
     healthcheck:
-      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://127.0.0.1/"]
+      test: ['CMD', 'wget', '--quiet', '--tries=1', '--spider', 'http://127.0.0.1/']
       interval: 3s
       timeout: 5s
       retries: 20

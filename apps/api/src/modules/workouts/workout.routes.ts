@@ -1,4 +1,4 @@
-import { createRoute, OpenAPIHono, z } from '@hono/zod-openapi';
+import { createRoute, z, type OpenAPIHono } from '@hono/zod-openapi';
 import type { AppEnvironment } from '../../auth/types.js';
 import { getWorkoutDetail, listWorkouts } from './workout.repository.js';
 import {
@@ -65,7 +65,18 @@ export function registerWorkoutRoutes(app: OpenAPIHono<AppEnvironment>): void {
   app.openapi(getWorkoutRoute, async (context) => {
     const { workoutId } = context.req.valid('param');
     const detail = await getWorkoutDetail(context.get('athlete').id, workoutId);
-    if (detail === null) return context.json({ error: 'Workout not found' }, 404);
+    if (detail === null) {
+      return context.json(
+        {
+          error: {
+            code: 'WORKOUT_NOT_FOUND',
+            message: 'Workout not found.',
+            requestId: context.get('requestId'),
+          },
+        },
+        404,
+      );
+    }
     return context.json(detail, 200);
   });
 }

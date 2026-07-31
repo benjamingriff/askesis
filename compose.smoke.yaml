@@ -1,0 +1,87 @@
+name: askesis-smoke
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: askesis_smoke
+      POSTGRES_USER: askesis_smoke
+      POSTGRES_PASSWORD: askesis_smoke
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U askesis_smoke -d askesis_smoke']
+      interval: 2s
+      timeout: 5s
+      retries: 20
+
+  migrate:
+    image: arigaio/atlas:1.2.3
+    working_dir: /workspace/database
+    environment:
+      DATABASE_URL: postgres://askesis_smoke:askesis_smoke@postgres:5432/askesis_smoke?sslmode=disable
+    volumes:
+      - ./database:/workspace/database:ro
+    command: ['migrate', 'apply', '--env', 'local']
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  seed:
+    image: postgres:17-alpine
+    working_dir: /workspace
+    environment:
+      PGHOST: postgres
+      PGPORT: 5432
+      PGDATABASE: askesis_smoke
+      PGUSER: askesis_smoke
+      PGPASSWORD: askesis_smoke
+    volumes:
+      - ./database/seed:/workspace/database/seed:ro
+    command: ['sh', '/workspace/database/seed/seed.sh']
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    environment:
+      NODE_ENV: test
+      PORT: 3000
+      DATABASE_URL: postgres://askesis_smoke:askesis_smoke@postgres:5432/askesis_smoke
+      CLERK_SECRET_KEY: sk_test_smoke_tests
+      CLERK_PUBLISHABLE_KEY: pk_test_c21va2UtdGVzdHMuY2xlcmsuYWNjb3VudHMuZGV2JA
+      LOG_LEVEL: silent
+    healthcheck:
+      test:
+        [
+          'CMD',
+          'node',
+          '-e',
+          "fetch('http://localhost:3000/api/ready').then(r => { if (!r.ok) process.exit(1) })",
+        ]
+      interval: 3s
+      timeout: 5s
+      retries: 20
+    depends_on:
+      seed:
+        condition: service_completed_successfully
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+      args:
+        VITE_CLERK_PUBLISHABLE_KEY: pk_test_c21va2UtdGVzdHMuY2xlcmsuYWNjb3VudHMuZGV2JA
+    environment:
+      API_UPSTREAM: http://api:3000
+    ports:
+      - '58080:80'
+    healthcheck:
+      test: ['CMD', 'wget', '--quiet', '--tries=1', '--spider', 'http://127.0.0.1/']
+      interval: 3s
+      timeout: 5s
+      retries: 20
+    depends_on:
+      api:
+        condition: service_healthy

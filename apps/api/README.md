@@ -6,6 +6,7 @@ The Askesis API is a Hono application running on Node.js. It is the only applica
 
 ```text
 GET /api/health
+GET /api/ready
 GET /api/v1/workouts
 GET /api/v1/workouts/:workoutId
 GET /api/openapi.json
@@ -19,17 +20,17 @@ GET /api/docs
 From the repository root:
 
 ```bash
-npm install
-npm run dev:api
+pnpm install
+pnpm dev:api
 ```
 
-The API listens on `http://localhost:3000` and uses the local PostgreSQL connection by default. Set `DATABASE_URL` to override it.
+The API listens on `http://localhost:3000`. Development reads the repository-root `.env` when present. Typed startup validation requires PostgreSQL and Clerk configuration; see `.env.example`. `/api/health` reports process liveness, while `/api/ready` verifies database connectivity and required migrations.
 
 Regenerate database and API types after their respective sources change:
 
 ```bash
-npm run generate:db-types
-npm run generate:openapi
+pnpm generate:db-types
+pnpm generate:openapi
 ```
 
 Generated files must not be edited manually.

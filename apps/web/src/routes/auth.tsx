@@ -7,7 +7,10 @@ export function SignInPage() {
 
   return (
     <main className="auth-page">
-      <div className="auth-brand"><span className="brand-mark">A</span><strong>Askesis</strong></div>
+      <div className="auth-brand">
+        <span className="brand-mark">A</span>
+        <strong>Askesis</strong>
+      </div>
       <SignIn routing="path" path="/sign-in" signUpUrl="/sign-up" forceRedirectUrl="/plan" />
       <p>Structured training, adapted around you.</p>
     </main>
@@ -20,7 +23,10 @@ export function SignUpPage() {
 
   return (
     <main className="auth-page">
-      <div className="auth-brand"><span className="brand-mark">A</span><strong>Askesis</strong></div>
+      <div className="auth-brand">
+        <span className="brand-mark">A</span>
+        <strong>Askesis</strong>
+      </div>
       <SignUp routing="path" path="/sign-up" signInUrl="/sign-in" forceRedirectUrl="/plan" />
       <p>Create your Askesis athlete profile.</p>
     </main>

@@ -323,18 +323,20 @@ In production, Atlas should run as a one-off deployment job before the new API r
 
 ## Infrastructure timing
 
-Do not build substantial provider-specific infrastructure before choosing a deployment target. Continue using Docker Compose locally and add Terraform/OpenTofu under `infra/` once hosting requirements are known.
+Railway is the selected target for the small hosted prototype, while Docker Compose remains the active local environment. The detailed rollout is recorded in the [Railway prototype deployment plan](./railway-deployment-plan.md).
 
-Possible deployment shapes include:
+Do not add Terraform/OpenTofu for the prototype. Revisit infrastructure as code when the deployment has stabilised or when a more operationally involved provider is selected.
+
+The managed application platform shape is the selected prototype approach; the AWS shape remains a possible later alternative.
 
 ### Managed application platform
 
 ```text
-Web:       Vercel or a container platform
-API:       Railway, Render, Fly.io, or similar
-Agent:     Background worker container
-Database:  Managed PostgreSQL
-Queue:     Provider queue or an initial PostgreSQL-backed job queue
+Web:       Railway container
+API:       Railway private container service
+Agent:     Future Railway private worker
+Database:  Railway managed PostgreSQL
+Queue:     Deferred until agent requirements justify one
 ```
 
 ### AWS

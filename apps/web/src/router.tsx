@@ -1,5 +1,14 @@
+import * as Sentry from '@sentry/react';
 import { useAuth } from '@clerk/react';
-import { Navigate, Outlet, createBrowserRouter, isRouteErrorResponse, useLocation, useRouteError } from 'react-router';
+import { useEffect } from 'react';
+import {
+  Navigate,
+  Outlet,
+  createBrowserRouter,
+  isRouteErrorResponse,
+  useLocation,
+  useRouteError,
+} from 'react-router';
 import { AppShell } from './components/AppShell';
 import { SignInPage, SignUpPage } from './routes/auth';
 import { ChatPage } from './routes/chat';
@@ -19,6 +28,11 @@ function RequireAuthentication() {
 
 function ErrorPage() {
   const error = useRouteError();
+
+  useEffect(() => {
+    if (!isRouteErrorResponse(error)) Sentry.captureException(error);
+  }, [error]);
+
   const message = isRouteErrorResponse(error)
     ? `${error.status}: ${error.statusText || error.data}`
     : 'An unexpected error occurred.';
@@ -28,7 +42,9 @@ function ErrorPage() {
       <p className="page-kicker">Askesis</p>
       <h1>Something went wrong</h1>
       <p>{message}</p>
-      <button className="primary-button" type="button" onClick={() => window.location.reload()}>Try again</button>
+      <button className="primary-button" type="button" onClick={() => window.location.reload()}>
+        Try again
+      </button>
     </main>
   );
 }

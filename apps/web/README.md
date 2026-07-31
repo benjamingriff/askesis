@@ -25,7 +25,7 @@ React Router
 Router loaders and actions
 ```
 
-TanStack Query is intentionally deferred until cross-route caching, polling, optimistic updates, or complex invalidation justify it.
+TanStack Query will be introduced with persistent chat and live agent mutations. React Router remains the router for the v1 prototype.
 
 ## Current vertical slice
 
@@ -33,12 +33,14 @@ The application uses a Grok-inspired persistent shell with three prototype areas
 
 - `/plan` renders a compact calendar and scheduled workouts from the Hono API. Each workout expands through a React Router fetcher to show its nested sequence, repeats, completions, targets, instructions, tags, and date-appropriate resolved zones.
 - `/chat` provides a cosmetic coaching-chat interface with hardcoded conversation history and local mock replies. It does not call an agent or persist messages yet.
-- `/settings` displays placeholder account information while authentication is deferred.
+- `/settings` uses Clerk account data and provides profile management and sign-out controls.
+
+Clerk protects the application routes, and the generated API client attaches the current session token to API requests.
 
 Run it locally from the repository root:
 
 ```bash
-npm run dev:web
+pnpm dev:web
 ```
 
 Vite listens on <http://localhost:5173> and proxies `/api/*` to the API on port 3000.

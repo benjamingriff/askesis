@@ -1,0 +1,7 @@
+**/dist
+**/coverage
+apps/api/src/database/generated.ts
+packages/api-client/openapi.json
+packages/api-client/src/schema.ts
+pnpm-lock.yaml
+database/fixtures/

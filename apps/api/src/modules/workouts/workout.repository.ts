@@ -1,5 +1,5 @@
 import type { Selectable } from 'kysely';
-import { database } from '../../database/client.js';
+import { getDatabase } from '../../database/client.js';
 import type { Workouts } from '../../database/generated.js';
 import {
   StepCompletionSchema,
@@ -22,7 +22,8 @@ type TreeNode = Omit<WorkoutStep, 'steps'> & {
   parentId: string | null;
 };
 
-type WorkoutRow = Pick<Selectable<Workouts>,
+type WorkoutRow = Pick<
+  Selectable<Workouts>,
   | 'id'
   | 'plan_id'
   | 'scheduled_date'
@@ -51,13 +52,13 @@ function toWorkoutSummary(row: WorkoutRow): WorkoutSummary {
     discipline: row.primary_discipline,
     priority: WorkoutPrioritySchema.parse(row.priority),
     estimatedDurationSeconds: row.estimated_duration_seconds,
-    estimatedDistanceMetres: row.estimated_distance_metres === null
-      ? null
-      : Number(row.estimated_distance_metres),
+    estimatedDistanceMetres:
+      row.estimated_distance_metres === null ? null : Number(row.estimated_distance_metres),
   };
 }
 
 export async function listWorkouts(athleteId: string, planId?: string): Promise<WorkoutSummary[]> {
+  const database = getDatabase();
   let query = database
     .selectFrom('workouts')
     .innerJoin('plans', 'plans.id', 'workouts.plan_id')
@@ -76,15 +77,18 @@ export async function listWorkouts(athleteId: string, planId?: string): Promise<
       'plans.title as plan_title',
       'training_weeks.week_number',
     ])
-    .where((expression) => expression.or([
-      expression('plans.owner_id', '=', athleteId),
-      expression.exists(
-        expression.selectFrom('plan_memberships')
-          .select('plan_memberships.plan_id')
-          .whereRef('plan_memberships.plan_id', '=', 'plans.id')
-          .where('plan_memberships.athlete_id', '=', athleteId),
-      ),
-    ]));
+    .where((expression) =>
+      expression.or([
+        expression('plans.owner_id', '=', athleteId),
+        expression.exists(
+          expression
+            .selectFrom('plan_memberships')
+            .select('plan_memberships.plan_id')
+            .whereRef('plan_memberships.plan_id', '=', 'plans.id')
+            .where('plan_memberships.athlete_id', '=', athleteId),
+        ),
+      ]),
+    );
 
   if (planId !== undefined) {
     query = query.where('workouts.plan_id', '=', planId);
@@ -102,7 +106,11 @@ function optionalNumber(value: string | null): number | null {
   return value === null ? null : Number(value);
 }
 
-export async function getWorkoutDetail(athleteId: string, workoutId: string): Promise<WorkoutDetail | null> {
+export async function getWorkoutDetail(
+  athleteId: string,
+  workoutId: string,
+): Promise<WorkoutDetail | null> {
+  const database = getDatabase();
   const workoutRow = await database
     .selectFrom('workouts')
     .innerJoin('plans', 'plans.id', 'workouts.plan_id')
@@ -122,15 +130,18 @@ export async function getWorkoutDetail(athleteId: string, workoutId: string): Pr
       'training_weeks.week_number',
     ])
     .where('workouts.id', '=', workoutId)
-    .where((expression) => expression.or([
-      expression('plans.owner_id', '=', athleteId),
-      expression.exists(
-        expression.selectFrom('plan_memberships')
-          .select('plan_memberships.plan_id')
-          .whereRef('plan_memberships.plan_id', '=', 'plans.id')
-          .where('plan_memberships.athlete_id', '=', athleteId),
-      ),
-    ]))
+    .where((expression) =>
+      expression.or([
+        expression('plans.owner_id', '=', athleteId),
+        expression.exists(
+          expression
+            .selectFrom('plan_memberships')
+            .select('plan_memberships.plan_id')
+            .whereRef('plan_memberships.plan_id', '=', 'plans.id')
+            .where('plan_memberships.athlete_id', '=', athleteId),
+        ),
+      ]),
+    )
     .executeTakeFirst();
 
   if (workoutRow === undefined) return null;
@@ -187,7 +198,11 @@ export async function getWorkoutDetail(athleteId: string, workoutId: string): Pr
       .execute(),
     database
       .selectFrom('plan_calibration_periods')
-      .innerJoin('calibration_profiles', 'calibration_profiles.id', 'plan_calibration_periods.profile_id')
+      .innerJoin(
+        'calibration_profiles',
+        'calibration_profiles.id',
+        'plan_calibration_periods.profile_id',
+      )
       .innerJoin('calibration_zones', 'calibration_zones.profile_id', 'calibration_profiles.id')
       .select([
         'plan_calibration_periods.system',
@@ -203,59 +218,67 @@ export async function getWorkoutDetail(athleteId: string, workoutId: string): Pr
       ])
       .where('plan_calibration_periods.plan_id', '=', workoutRow.plan_id)
       .where('plan_calibration_periods.effective_from', '<=', workoutRow.scheduled_date)
-      .where((expression) => expression.or([
-        expression('plan_calibration_periods.effective_until', 'is', null),
-        expression('plan_calibration_periods.effective_until', '>', workoutRow.scheduled_date),
-      ]))
+      .where((expression) =>
+        expression.or([
+          expression('plan_calibration_periods.effective_until', 'is', null),
+          expression('plan_calibration_periods.effective_until', '>', workoutRow.scheduled_date),
+        ]),
+      )
       .execute(),
   ]);
 
-  const resolvedZones = new Map(calibrationRows.map((row) => [
-    `${row.system}:${row.zone_key}`,
-    {
-      profileId: row.profile_id,
-      method: row.method,
-      fitnessValue: optionalNumber(row.fitness_value),
-      metric: row.metric,
-      minimumValue: optionalNumber(row.minimum_value),
-      targetValue: optionalNumber(row.target_value),
-      maximumValue: optionalNumber(row.maximum_value),
-      unit: row.unit,
-    },
-  ]));
+  const resolvedZones = new Map(
+    calibrationRows.map((row) => [
+      `${row.system}:${row.zone_key}`,
+      {
+        profileId: row.profile_id,
+        method: row.method,
+        fitnessValue: optionalNumber(row.fitness_value),
+        metric: row.metric,
+        minimumValue: optionalNumber(row.minimum_value),
+        targetValue: optionalNumber(row.target_value),
+        maximumValue: optionalNumber(row.maximum_value),
+        unit: row.unit,
+      },
+    ]),
+  );
 
   const targetsByStep = new Map<string, ReturnType<typeof StepTargetSchema.parse>[]>();
   for (const row of targetRows) {
     const targets = targetsByStep.get(row.step_id) ?? [];
-    const resolvedZone = row.zone_system === null || row.zone_key === null
-      ? null
-      : resolvedZones.get(`${row.zone_system}:${row.zone_key}`) ?? null;
+    const resolvedZone =
+      row.zone_system === null || row.zone_key === null
+        ? null
+        : (resolvedZones.get(`${row.zone_system}:${row.zone_key}`) ?? null);
 
-    targets.push(StepTargetSchema.parse({
-      type: row.target_type,
-      minimumValue: optionalNumber(row.minimum_value),
-      targetValue: optionalNumber(row.target_value),
-      maximumValue: optionalNumber(row.maximum_value),
-      unit: row.unit,
-      zoneSystem: row.zone_system,
-      zoneKey: row.zone_key,
-      text: row.text_value,
-      resolvedZone,
-    }));
+    targets.push(
+      StepTargetSchema.parse({
+        type: row.target_type,
+        minimumValue: optionalNumber(row.minimum_value),
+        targetValue: optionalNumber(row.target_value),
+        maximumValue: optionalNumber(row.maximum_value),
+        unit: row.unit,
+        zoneSystem: row.zone_system,
+        zoneKey: row.zone_key,
+        text: row.text_value,
+        resolvedZone,
+      }),
+    );
     targetsByStep.set(row.step_id, targets);
   }
 
   const nodes = new Map<string, TreeNode>();
   for (const row of stepRows) {
-    const completion = row.completion_type === null
-      ? null
-      : StepCompletionSchema.parse({
-          type: row.completion_type,
-          value: optionalNumber(row.completion_value),
-          unit: row.completion_unit,
-          conditionType: row.condition_type,
-          conditionValue: row.condition_value,
-        });
+    const completion =
+      row.completion_type === null
+        ? null
+        : StepCompletionSchema.parse({
+            type: row.completion_type,
+            value: optionalNumber(row.completion_value),
+            unit: row.completion_unit,
+            conditionType: row.condition_type,
+            conditionValue: row.condition_value,
+          });
 
     nodes.set(row.id, {
       id: row.id,
@@ -265,11 +288,14 @@ export async function getWorkoutDetail(athleteId: string, workoutId: string): Pr
       repeatCount: row.repeat_count,
       label: row.label,
       instructions: row.instructions,
-      movement: row.movement_id === null ? null : {
-        id: row.movement_id,
-        name: row.movement_name ?? '',
-        category: row.movement_category ?? '',
-      },
+      movement:
+        row.movement_id === null
+          ? null
+          : {
+              id: row.movement_id,
+              name: row.movement_name ?? '',
+              category: row.movement_category ?? '',
+            },
       completion,
       targets: targetsByStep.get(row.id) ?? [],
       steps: [],
