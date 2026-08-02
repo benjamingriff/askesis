@@ -9,7 +9,8 @@ const config = getApiConfig();
 const server = serve(
   {
     fetch: app.fetch,
-    hostname: '0.0.0.0',
+    // Railway private networking is IPv6; Node's IPv6 wildcard also accepts IPv4 locally.
+    hostname: '::',
     port: config.PORT,
   },
   (info) => {

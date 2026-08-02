@@ -80,10 +80,10 @@ Atlas remains independent from application startup. Before deployment, the API i
 Configure an API pre-deploy command, or an equivalent one-shot Railway job, to run:
 
 ```bash
-atlas migrate apply \
-  --dir file:///app/database/migrations \
-  --url "$DATABASE_URL"
+sh -c 'atlas migrate apply --dir file:///app/database/migrations --url "${DATABASE_URL}?sslmode=disable"'
 ```
+
+The explicit shell is required because Railway does not expand `$DATABASE_URL` when it executes a custom command directly. Railway private PostgreSQL does not require TLS, so the migration URL disables SSL.
 
 The API release must not start if migration verification or application fails. The normal API process must not run migrations itself.
 
