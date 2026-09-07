@@ -13,8 +13,11 @@ This directory records the proposed direction for Askesis beyond the original fi
 - [Database backup and restore](./database-backup-and-restore.md) — manual backup, verification, and disaster-restore procedures.
 - [Prototype observability](./observability.md) — Pino logs, request correlation, health checks, and Sentry configuration.
 - [Local application development](./local-development.md) — run the web/API stack and regenerate types.
-- [Railway prototype deployment plan](./railway-deployment-plan.md) — planned service topology, Clerk configuration, migrations, security, and rollout sequence.
+- [Railway prototype deployment plan](./railway-deployment-plan.md) — deployed service topology, Clerk configuration, migrations, security, and rollout sequence.
 - [V1 proof-of-concept development plan](./v1-poc-development-plan.md) — accepted phased plan for revisions, profiles, chat, agents, synchronization, deployment, and the private alpha.
+- [Phase 2 plan lifecycle refinement](./phase-2-plan-lifecycle-refinement.md) — accepted product and architecture contract for logical plans, drafts, immutable versions, lifecycle operations, and the thin Phase 2 UI.
+- [Phase 2 schema contract](./phase-2-schema-contract.md) — proposed relational tables, keys, constraints, immutability, identity, and transaction boundaries for Phase 2.
+- [Phase 2 implementation plan](./phase-2-implementation-plan.md) — proposed backend-first delivery stages, API/UI work, verification, and Railway cutover.
 - [Example queries](./example-queries.md) — inspect plans, workout trees, weekly totals, and calibrations.
 - [Implementation roadmap](./implementation-roadmap.md) — the earlier data-model implementation sequence and deferred concerns.
 

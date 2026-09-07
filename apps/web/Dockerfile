@@ -26,6 +26,7 @@ RUN pnpm --filter @askesis/web build
 
 FROM nginx:1.29-alpine
 ENV API_UPSTREAM=http://api:3000
+ENV DNS_RESOLVER=127.0.0.11
 COPY apps/web/nginx.conf /etc/nginx/templates/default.conf.template
 COPY --from=build /app/apps/web/dist /usr/share/nginx/html
 EXPOSE 80

@@ -282,7 +282,7 @@ Any change to this aggregate happens in the unlocked draft and is committed toge
 - Every plan has one owning account for the alpha.
 - Only its owner can activate, unlock, edit, lock, restore, export, or archive it.
 - User-facing plan sharing and collaboration are deferred.
-- The existing membership model may remain internal but has no alpha UI.
+- Phase 2 removes the existing membership model; alpha plans are owner-only.
 - Markdown export is the initial sharing mechanism.
 
 ### Export
@@ -311,7 +311,7 @@ Chats and private agent reasoning are excluded.
 
 ## Phase 1: engineering foundation and deployment rail
 
-**Status: implementation contract agreed; not yet implemented.** Establish the safety net before plan versioning, persistent chat, and agent mutations substantially increase complexity.
+**Status: complete.** The engineering foundation, private Railway deployment, authenticated production smoke test, and Sentry validation are complete. Phase 2 may proceed.
 
 ### Repository and delivery workflow
 
@@ -566,54 +566,55 @@ The first Railway deployment is an infrastructure validation environment, not th
 
 ### Phase 1 exit criteria
 
-- [ ] Formatting, linting, type checking, tests, builds, generation checks, Atlas checksums, and production audit pass through `pnpm check` and CI.
+- [x] Formatting, linting, type checking, tests, builds, generation checks, Atlas checksums, and production audit pass through `pnpm check` and CI.
 - [x] The agreed baseline tests cover current authentication, authorization, repository assembly, and empty UI behavior.
 - [x] Local PostgreSQL tests cannot target the development database.
 - [x] The disposable smoke workflow applies migrations to an empty database and verifies the stack.
 - [x] Typed configuration, standardized API errors, request IDs, and structured logging are implemented.
 - [x] API liveness and readiness are distinct and tested.
 - [x] Production containers use the agreed runtime and shutdown safeguards.
-- [ ] A successful `main` build deploys automatically to private Railway only after CI passes.
-- [ ] Atlas pre-deployment failure prevents the API release from starting.
-- [ ] The authenticated shell works through Railway's web domain with a private API and no development seed.
-- [ ] Sentry receives scrubbed Railway errors while remaining disabled locally.
+- [x] A successful `main` build deploys automatically to private Railway only after CI passes.
+- [x] Atlas pre-deployment failure prevents the API release from starting.
+- [x] The authenticated shell works through Railway's web domain with a private API and no development seed.
+- [x] Sentry receives scrubbed Railway errors while remaining disabled locally.
 - [x] Manual database backup and restore steps are documented and locally rehearsed.
 - [x] Branch-protection activation is recorded as a prerequisite for inviting alpha users.
 
 ## Phase 2: plan lifecycle and immutable revisions
 
+**Status: refined; implementation planning pending.** The accepted implementation contract is [Phase 2 plan lifecycle and immutable revisions](./phase-2-plan-lifecycle-refinement.md).
+
 Implement revision semantics before allowing agents to write plans. Retrofitting revision history after agent mutation endpoints exist would create significant rework.
 
-### Proposed model
+### Refined model
 
 A logical plan owns a sequence of revisions and, when unlocked, an editable draft:
 
 ```text
 Plan
-  ├── ownership and membership
+  ├── private ownership and organizational metadata
   ├── lifecycle and activation metadata
   ├── current locked revision
   └── current editable draft, if unlocked
 
 Plan revision
   ├── monotonically increasing revision number
-  ├── source revision
-  ├── creator: athlete, agent, or system
-  ├── creation reason
+  ├── based-on and superseded revisions
   ├── locked timestamp
+  ├── content hash and schema version
   └── normalized revision content
 ```
 
-Plan content remains relational. Historical core plan data should not become an authoritative JSONB snapshot merely to simplify revisioning.
+Plan content remains relational. Historical core plan data does not become an authoritative JSONB snapshot merely to simplify revisioning. Plans are owner-only during alpha; the existing membership model is removed.
 
 ### Lifecycle
 
 1. A new plan starts as an editable draft.
 2. User and agent mutations affect only that draft.
-3. Locking validates the complete draft and commits an immutable revision.
+3. Locking validates and promotes the complete draft into an immutable revision.
 4. Unlocking clones the current locked revision into a new draft.
 5. Locking the changed draft creates the next revision.
-6. Restoring an old revision copies it into a new draft or revision.
+6. Restoring an old revision copies it into a new draft for human review.
 7. Existing revision history is never renumbered or overwritten.
 
 ### Initial APIs
@@ -623,6 +624,10 @@ GET    /api/v1/plans
 POST   /api/v1/plans
 GET    /api/v1/plans/:planId
 PATCH  /api/v1/plans/:planId
+
+GET    /api/v1/plans/:planId/draft
+PATCH  /api/v1/plans/:planId/draft
+POST   /api/v1/plans/:planId/draft/validate
 
 POST   /api/v1/plans/:planId/activate
 POST   /api/v1/plans/:planId/deactivate
@@ -647,7 +652,8 @@ POST   /api/v1/plans/:planId/revisions/:revisionId/restore
 - Discarding a draft returns to the current locked version without creating history.
 - Restoring preserves all intervening history.
 - Archiving preserves versions and drafts while making the plan read-only.
-- Authorization applies consistently to plans, drafts, and revisions.
+- Owner-only authorization applies consistently to plans, drafts, revisions, and workouts.
+- A thin signed-in UI exposes every lifecycle operation without introducing chat or a full plan editor.
 
 ## Phase 3: plan brief and fitness calibration
 

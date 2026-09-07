@@ -1,8 +1,8 @@
 # Current agent handoff
 
-**Updated:** 2026-08-02  
-**Current phase:** Phase 1 — engineering foundation and Railway deployment validation  
-**Next planned phase:** Phase 2 — plan lifecycle and immutable revisions
+**Updated:** 2026-09-07
+**Current phase:** Phase 2 — implementation planning for plan lifecycle and immutable revisions
+**Completed phase:** Phase 1 — engineering foundation and Railway deployment validation
 
 ## Purpose
 
@@ -19,28 +19,9 @@ Do not place credentials, Clerk tokens, database URLs, Sentry credentials, or Ra
 
 ## Repository state at handoff
 
-The working tree was clean when this handoff was created.
+Phase 1 implementation and deployment changes are committed on `main`. The Phase 2 lifecycle refinement, schema contract, and implementation plan are included with this handoff. Use `git log` for the exact handoff commit rather than copying a commit hash from this document.
 
-```text
-HEAD: bed0bf7e6f2405d03b0588b3e714c7788facbf7e
-Commit: Support railway private api networking
-```
-
-Recent commits:
-
-```text
-bed0bf7 Support railway private api networking
-fd518b3 added engineering tooling
-9aad893 adding clerk for auth
-```
-
-The latest commit:
-
-- Makes the API listen on the IPv6 wildcard `::` for Railway private networking. Node also accepts IPv4 locally through this listener.
-- Removes the production API process's unnecessary attempt to load the repository `.env` file.
-- Documents the explicit shell expansion required by the Railway Atlas pre-deploy command.
-
-The following passed immediately before that commit:
+The Phase 1 closure validation includes:
 
 ```bash
 pnpm check
@@ -97,15 +78,17 @@ Completed or observed:
 - Clerk's development instance loads and browser sign-in works.
 - No Railway development seed should be configured or executed.
 
-Not yet confirmed:
+Confirmed during Phase 1 closure:
 
-- The Railway API health-check path is actually configured as `/api/ready`.
-- nginx can reach the API over Railway private networking.
+- The Railway API health-check path is configured as `/api/ready`.
+- nginx reaches the API over Railway private networking.
 - Authenticated API requests work through the public web origin.
 - Lazy provisioning and the empty unseeded Plan view work in Railway.
-- Sentry projects and deployment variables are configured.
+- Sentry projects, deployment variables, scrubbed event delivery, and private source-map upload are configured and validated.
 
-## Active blocker: nginx cannot reach the private API
+## Resolved Phase 1 incident: nginx private API resolution
+
+This section is retained as deployment history. nginx originally resolved its upstream during process startup, before Railway private DNS was available, and crashed. It now uses Railway's internal resolver and resolves the configured upstream dynamically at request time.
 
 External tests at handoff produced:
 
@@ -144,7 +127,7 @@ Requirements:
 - Apply the variable to the web service in the same Railway environment as the API.
 - Redeploy the web service after changing it because nginx renders its template at container startup.
 
-### Next diagnostics
+### Historical diagnostics
 
 Perform these before changing application architecture.
 
@@ -275,9 +258,9 @@ Then verify manually in the browser:
 - Confirm Settings/account management works.
 - Sign out and confirm protected routes return to sign-in.
 
-## Sentry work remaining
+## Sentry deployment
 
-After networking is healthy, create two Sentry projects:
+Phase 1 created two Sentry projects:
 
 ```text
 askesis-api — Node.js
@@ -295,7 +278,7 @@ Configure the web service and rebuild it:
 
 ```text
 VITE_SENTRY_DSN=<web project DSN>
-VITE_SENTRY_RELEASE=<Git commit SHA>
+SENTRY_RELEASE=<Git commit SHA>
 ```
 
 Runtime Sentry initialization and basic scrubbing already exist in:
@@ -306,31 +289,31 @@ Runtime Sentry initialization and basic scrubbing already exist in:
 
 The implementation disables default PII collection and removes request bodies, cookies, authorization headers, and cookie headers before sending events.
 
-Verify one deployed browser event and one deployed API event. Inspect the resulting Sentry events and confirm they contain no Clerk tokens, authorization headers, cookies, chat content, complete plan context, database URLs, or other credentials.
+Deployed browser and API events were verified and inspected for Clerk tokens, authorization headers, cookies, chat content, complete plan context, database URLs, and other credentials.
 
-There is one known Phase 1 discrepancy: runtime Sentry is implemented, but production browser source-map generation and secure Sentry upload are not currently implemented. Before declaring Phase 1 complete, either implement source-map upload or explicitly document its deferral.
+Production browser builds generate hidden source maps, upload them securely to Sentry, and delete them before the nginx runtime image is assembled.
 
 ## Phase 1 completion checklist
 
 After resolving the blocker and configuring Sentry:
 
-- [ ] Public `/api/health` succeeds through nginx.
-- [ ] Public `/api/ready` confirms PostgreSQL and Atlas migration readiness.
-- [ ] Unauthenticated `/api/v1/workouts` returns the standard `401` envelope.
-- [ ] Authenticated API access works through the public web domain.
-- [ ] A new Railway athlete sees no development seed data.
-- [ ] Lazy Clerk identity provisioning works.
-- [ ] Settings and sign-out work.
-- [ ] Railway API health check uses `/api/ready`.
-- [ ] Atlas pre-deploy failure is confirmed to block API release.
-- [ ] Sentry receives scrubbed API and browser errors.
-- [ ] Source-map upload is implemented or explicitly deferred.
-- [ ] `docs/v1-poc-development-plan.md` Phase 1 status and checkboxes are updated.
-- [ ] `docs/railway-deployment-plan.md` status is updated from planned to deployed.
+- [x] Public `/api/health` succeeds through nginx.
+- [x] Public `/api/ready` confirms PostgreSQL and Atlas migration readiness.
+- [x] Unauthenticated `/api/v1/workouts` returns the standard `401` envelope.
+- [x] Authenticated API access works through the public web domain.
+- [x] A new Railway athlete sees no development seed data.
+- [x] Lazy Clerk identity provisioning works.
+- [x] Settings and sign-out work.
+- [x] Railway API health check uses `/api/ready`.
+- [x] Atlas pre-deploy failure is confirmed to block API release.
+- [x] Sentry receives scrubbed API and browser errors.
+- [x] Source-map upload is implemented and validated.
+- [x] `docs/v1-poc-development-plan.md` Phase 1 status and checkboxes are updated.
+- [x] `docs/railway-deployment-plan.md` status is updated from planned to deployed.
 
 ## Next implementation phase
 
-Once Phase 1 is closed, refine Phase 2 before implementation. Phase 2 is defined in [`v1-poc-development-plan.md`](./v1-poc-development-plan.md) and introduces:
+Phase 1 is closed. Phase 2 refinement, schema design, and implementation planning are recorded in the accepted [lifecycle refinement](./phase-2-plan-lifecycle-refinement.md), proposed [schema contract](./phase-2-schema-contract.md), and proposed [implementation plan](./phase-2-implementation-plan.md). Phase 2 introduces:
 
 - Multiple logical plans.
 - Draft, Locked, Unlocked, and Archived states.

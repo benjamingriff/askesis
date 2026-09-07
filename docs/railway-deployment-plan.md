@@ -2,7 +2,7 @@
 
 ## Status
 
-**Planned, not yet deployed.** Local Docker Compose remains the active development environment.
+**Deployed and validated.** The Phase 1 production environment runs on Railway with a public web service, private API, and private PostgreSQL. Local Docker Compose remains the development environment.
 
 This plan describes the first hosted Askesis prototype for a small invited group. It deliberately favours ease of operation over provider-independent infrastructure or production-scale complexity.
 
@@ -61,7 +61,7 @@ The API service:
 - Verifies Clerk session tokens.
 - Lazily maps Clerk users to Askesis athletes.
 - Is the only application service with `DATABASE_URL`.
-- Exposes the public health endpoint `/api/health` to internal health checks.
+- Exposes `/api/health` for liveness and `/api/ready` for Railway readiness checks.
 
 The API does not need a public Railway domain when all browser traffic passes through the web proxy. Swagger remains reachable through the web service at `/api/docs` unless it is explicitly disabled.
 
@@ -110,7 +110,7 @@ Both existing Dockerfiles require the repository root as their build context bec
 ```text
 Build context:  repository root
 Dockerfile:     apps/api/Dockerfile
-Health path:    /api/health
+Health path:    /api/ready
 Visibility:     private
 ```
 
@@ -141,10 +141,16 @@ Secrets belong in Railway service variables and must never be committed.
 
 ### Web
 
-| Variable                     | Purpose                                  | Secret |
-| ---------------------------- | ---------------------------------------- | ------ |
-| `VITE_CLERK_PUBLISHABLE_KEY` | Clerk browser SDK                        | No     |
-| `API_UPSTREAM`               | Railway private API origin used by nginx | No     |
+| Variable                     | Purpose                                     | Secret |
+| ---------------------------- | ------------------------------------------- | ------ |
+| `VITE_CLERK_PUBLISHABLE_KEY` | Clerk browser SDK                           | No     |
+| `API_UPSTREAM`               | Railway private API origin used by nginx    | No     |
+| `DNS_RESOLVER`               | Railway private DNS resolver (`[fd12::10]`) | No     |
+| `VITE_SENTRY_DSN`            | Sentry browser event ingestion              | No     |
+| `SENTRY_RELEASE`             | Deployed Git revision                       | No     |
+| `SENTRY_AUTH_TOKEN`          | Build-only source-map upload credential     | Yes    |
+| `SENTRY_ORG`                 | Sentry organization slug                    | No     |
+| `SENTRY_PROJECT`             | Sentry web project slug                     | No     |
 
 `VITE_CLERK_PUBLISHABLE_KEY` is currently embedded during the Vite Docker build. Confirm that Railway passes the variable as a Docker build argument. If that proves awkward, add a small runtime configuration file before deployment.
 
@@ -158,6 +164,8 @@ Secrets belong in Railway service variables and must never be committed.
 | `CLERK_AUTHORIZED_PARTIES` | Allowed web origins for Clerk tokens   | No     |
 | `NODE_ENV=production`      | Runtime mode                           | No     |
 | `PORT`                     | Injected by Railway                    | No     |
+| `SENTRY_DSN`               | Sentry API event ingestion             | Yes    |
+| `SENTRY_RELEASE`           | Deployed Git revision                  | No     |
 
 `CLERK_AUTHORIZED_PARTIES` should contain only the deployed Railway domain and eventual custom domain. Do not retain localhost entries in the Railway value.
 
@@ -218,7 +226,7 @@ Connect the Git repository, select `apps/api/Dockerfile`, and configure:
 - Clerk production variables.
 - Production authorized parties.
 - Atlas pre-deploy command.
-- `/api/health` health check.
+- `/api/ready` health check.
 - Private networking without a public domain.
 
 Deploy the API and confirm migrations completed before continuing.
