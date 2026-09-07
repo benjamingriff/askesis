@@ -39,11 +39,16 @@ Web build:
 ```text
 VITE_SENTRY_DSN
 SENTRY_RELEASE
+SENTRY_AUTH_TOKEN
+SENTRY_ORG
+SENTRY_PROJECT
 ```
 
 The web Dockerfile maps `SENTRY_RELEASE` into `VITE_SENTRY_RELEASE` during the build. Sentry is configured with default PII collection disabled. Request bodies, cookies, and authorization headers are removed before events are sent.
 
-Source-map upload requires a Sentry project and deployment credential. The credential must be supplied only to the build environment and must not be committed or embedded in the browser bundle.
+Production web builds use the Sentry Vite plugin to upload hidden source maps for the configured release. The maps are deleted from `dist` after a successful upload, so nginx does not serve them publicly. The build fails if an enabled upload fails.
+
+`SENTRY_AUTH_TOKEN` is a build credential. It must be supplied only through Railway, and must not be committed, logged, prefixed with `VITE_`, or embedded in the browser bundle. Local builds omit source maps and do not require Sentry credentials.
 
 ## Correlation procedure
 
