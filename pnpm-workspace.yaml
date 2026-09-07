@@ -5,6 +5,7 @@ packages:
 engineStrict: true
 
 allowBuilds:
+  '@sentry/cli': true
   esbuild: true
   unrs-resolver: true
 

@@ -1,4 +1,5 @@
 import react from '@vitejs/plugin-react';
+import { sentryVitePlugin } from '@sentry/vite-plugin';
 import { defineConfig, loadEnv } from 'vite';
 import { z } from 'zod';
 
@@ -8,6 +9,9 @@ const WebBuildEnvironmentSchema = z.object({
   VITE_API_PROXY_TARGET: z.string().url().optional(),
   VITE_SENTRY_DSN: z.string().url().optional().or(z.literal('')),
   VITE_SENTRY_RELEASE: z.string().optional(),
+  SENTRY_AUTH_TOKEN: z.string().min(1).optional(),
+  SENTRY_ORG: z.string().min(1).optional(),
+  SENTRY_PROJECT: z.string().min(1).optional(),
 });
 
 export default defineConfig(({ mode }) => {
@@ -21,8 +25,37 @@ export default defineConfig(({ mode }) => {
     throw new Error(`Invalid web build environment${fields.length > 0 ? `: ${fields}` : ''}`);
   }
 
+  const sentrySourceMapsEnabled =
+    mode === 'production' &&
+    result.data.SENTRY_AUTH_TOKEN !== undefined &&
+    result.data.SENTRY_ORG !== undefined &&
+    result.data.SENTRY_PROJECT !== undefined &&
+    result.data.VITE_SENTRY_RELEASE !== undefined;
+
   return {
-    plugins: [react()],
+    plugins: [
+      react(),
+      ...(sentrySourceMapsEnabled
+        ? [
+            sentryVitePlugin({
+              authToken: result.data.SENTRY_AUTH_TOKEN!,
+              org: result.data.SENTRY_ORG!,
+              project: result.data.SENTRY_PROJECT!,
+              release: {
+                name: result.data.VITE_SENTRY_RELEASE!,
+                setCommits: false,
+              },
+              sourcemaps: {
+                filesToDeleteAfterUpload: './dist/**/*.map',
+              },
+              telemetry: false,
+            }),
+          ]
+        : []),
+    ],
+    build: {
+      sourcemap: sentrySourceMapsEnabled ? 'hidden' : false,
+    },
     server: {
       host: '0.0.0.0',
       port: 5173,
