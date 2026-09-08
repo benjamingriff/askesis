@@ -17,6 +17,9 @@ import {
   type Plan,
   type Command,
   type DraftPatchSchema,
+  RevisionSchema,
+  RevisionDetailSchema,
+  type RestoreCommandSchema,
 } from './plan.schemas.js';
 import { validatePlan, VALIDATOR_VERSION } from './plan.validation.js';
 
@@ -446,4 +449,154 @@ export async function discardDraft(athleteId: string, planId: string, input: Com
     await bump(db, planId);
     return detail(db, athleteId, planId);
   });
+}
+
+async function ownedRevision(db: Database, athleteId: string, planId: string, revisionId: string) {
+  await ownerPlan(db, athleteId, planId);
+  const row = await db
+    .selectFrom('plan_versions')
+    .selectAll()
+    .where('plan_id', '=', planId)
+    .where('id', '=', revisionId)
+    .where('state', '=', 'locked')
+    .executeTakeFirst();
+  if (!row) throw new PlanError('REVISION_NOT_FOUND', 'Version not found.', 404);
+  return row;
+}
+function revisionSummary(row: Awaited<ReturnType<typeof ownedRevision>>) {
+  return RevisionSchema.parse({
+    id: row.id,
+    state: row.state,
+    versionNumber: row.version_number,
+    editNumber: row.edit_number,
+    description: row.description,
+    startDate: iso(row.start_date)?.slice(0, 10) ?? null,
+    endDate: iso(row.end_date)?.slice(0, 10) ?? null,
+    basedOnVersionId: row.based_on_version_id,
+    supersedesVersionId: row.supersedes_version_id,
+    lockedAt: iso(row.locked_at),
+    contentHash: row.content_hash,
+    contentSchemaVersion: row.content_schema_version,
+    validatorVersion: row.validator_version,
+    findings: row.validation_findings,
+    acknowledgedWarningCodes: row.acknowledged_warning_codes,
+    summary: row.change_summary,
+  });
+}
+export async function listRevisions(athleteId: string, planId: string) {
+  return getDatabase()
+    .transaction()
+    .setIsolationLevel('repeatable read')
+    .execute(async (db) => {
+      await ownerPlan(db, athleteId, planId);
+      const rows = await db
+        .selectFrom('plan_versions')
+        .selectAll()
+        .where('plan_id', '=', planId)
+        .where('state', '=', 'locked')
+        .orderBy('version_number', 'desc')
+        .execute();
+      return rows.map(revisionSummary);
+    });
+}
+export async function getRevision(athleteId: string, planId: string, revisionId: string) {
+  return getDatabase()
+    .transaction()
+    .setIsolationLevel('repeatable read')
+    .execute(async (db) => {
+      const row = await ownedRevision(db, athleteId, planId, revisionId);
+      return RevisionDetailSchema.parse({
+        revision: revisionSummary(row),
+        content: (await readAggregate(db, row.id)).semantic,
+      });
+    });
+}
+async function restorePreview(db: Database, athleteId: string, plan: Plan, revisionId: string) {
+  const source = await ownedRevision(db, athleteId, plan.id, revisionId);
+  editable(plan);
+  if (plan.draft)
+    throw new PlanError(
+      'DRAFT_EXISTS',
+      'Lock or discard the existing draft before restoring a version.',
+    );
+  if (!plan.locked)
+    throw new PlanError('LOCKED_VERSION_REQUIRED', 'There is no current locked version.');
+  if (source.content_schema_version !== 1)
+    throw new PlanError(
+      'UNSUPPORTED_CONTENT_SCHEMA',
+      'This version needs a content upgrade before restoration.',
+    );
+  const before = await readAggregate(db, plan.locked.id);
+  const after = await readAggregate(db, source.id);
+  const sourceHash = contentHash(after.semantic);
+  if (source.id === plan.locked.id || sourceHash === contentHash(before.semantic))
+    throw new PlanError('NO_CHANGES', 'This version already matches the current locked content.');
+  const target = revisionSummary(source);
+  return {
+    sourceRevisionId: source.id,
+    currentVersionId: plan.locked.id,
+    stateVersion: plan.stateVersion,
+    sourceHash,
+    summary: SummarySchema.parse({
+      headerChanges: (['description', 'startDate', 'endDate'] as const).filter(
+        (field) => target[field] !== plan.locked![field],
+      ),
+      entities: summarizeChanges(before, after),
+    }),
+  };
+}
+export async function previewRestore(athleteId: string, planId: string, revisionId: string) {
+  return getDatabase()
+    .transaction()
+    .setIsolationLevel('repeatable read')
+    .execute(async (db) =>
+      restorePreview(db, athleteId, await detail(db, athleteId, planId), revisionId),
+    );
+}
+export async function restoreRevision(
+  athleteId: string,
+  planId: string,
+  revisionId: string,
+  input: z.infer<typeof RestoreCommandSchema>,
+  key: string,
+) {
+  return idempotent(
+    athleteId,
+    'plan.restore',
+    key,
+    { planId, revisionId, ...input },
+    async (db) => {
+      await ownerPlan(db, athleteId, planId, true);
+      const plan = await detail(db, athleteId, planId);
+      stateMatches(plan, input.expectedStateVersion);
+      const preview = await restorePreview(db, athleteId, plan, revisionId);
+      if (
+        preview.currentVersionId !== input.expectedCurrentVersionId ||
+        preview.sourceHash !== input.expectedSourceHash
+      )
+        throw new PlanError('STALE_RESTORE', 'Review the restore preview again before confirming.');
+      const source = await ownedRevision(db, athleteId, planId, revisionId);
+      const draftId = randomUUID();
+      await db
+        .insertInto('plan_versions')
+        .values({
+          id: draftId,
+          plan_id: planId,
+          description: source.description,
+          start_date: source.start_date,
+          end_date: source.end_date,
+          based_on_version_id: source.id,
+          content_schema_version: source.content_schema_version,
+        })
+        .execute();
+      await cloneContent(db, source.id, draftId);
+      await db
+        .updateTable('plans')
+        .set({ current_draft_version_id: draftId })
+        .where('id', '=', planId)
+        .execute();
+      await bump(db, planId);
+      return detail(db, athleteId, planId);
+    },
+  );
 }

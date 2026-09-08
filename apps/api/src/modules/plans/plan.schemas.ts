@@ -94,3 +94,31 @@ export const RenameSchema = z
   .strict();
 export type Command = z.infer<typeof CommandSchema>;
 export type Plan = z.infer<typeof PlanSchema>;
+
+export const RevisionParams = PlanParams.extend({ revisionId: Id });
+export const RevisionSchema = VersionSchema.extend({
+  state: z.literal('locked'),
+  versionNumber: z.number().int().positive(),
+  contentHash: z.string(),
+  contentSchemaVersion: z.number().int(),
+  validatorVersion: z.number().int(),
+  findings: z.array(FindingSchema),
+  acknowledgedWarningCodes: z.array(z.string()),
+  summary: SummarySchema,
+});
+export const RevisionDetailSchema = z.object({
+  revision: RevisionSchema,
+  // A read-only semantic projection; normalized database rows remain authoritative.
+  content: z.record(z.string(), z.unknown()),
+});
+export const RestorePreviewSchema = z.object({
+  sourceRevisionId: Id,
+  currentVersionId: Id,
+  stateVersion: z.number().int(),
+  sourceHash: z.string(),
+  summary: SummarySchema,
+});
+export const RestoreCommandSchema = StateCommandSchema.extend({
+  expectedCurrentVersionId: Id,
+  expectedSourceHash: z.string().regex(/^[a-f0-9]{64}$/),
+}).strict();

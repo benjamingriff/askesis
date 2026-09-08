@@ -5,6 +5,12 @@ import { cloneContent, readAggregate } from '../../src/modules/plans/plan.aggreg
 import { contentHash } from '../../src/modules/plans/plan.canonical.js';
 import { listPlans, organizePlan, renamePlan } from '../../src/modules/plans/plan.service.js';
 import {
+  getRevision,
+  listRevisions,
+  previewRestore,
+  restoreRevision,
+} from '../../src/modules/plans/plan.service.js';
+import {
   createPlan,
   discardDraft,
   editDraft,
@@ -16,6 +22,106 @@ import {
 
 const owner = '00000000-0000-0000-0000-000000000001';
 afterAll(closeDatabase);
+
+it('restores full historical content as a draft and records chronological and content ancestry', async () => {
+  const plan = await prepared();
+  const db = getDatabase();
+  await db
+    .transaction()
+    .execute((tx) => cloneContent(tx, '00000000-0000-0000-0000-000000000050', plan.draft!.id));
+  const first = await lockPlan(owner, plan.id, await confirmation(plan.id), randomUUID());
+  const original = await getRevision(owner, plan.id, first.locked!.id);
+  await expect(previewRestore(owner, plan.id, first.locked!.id)).rejects.toMatchObject({
+    code: 'NO_CHANGES',
+  });
+  const draft = await unlockPlan(owner, plan.id, first.stateVersion);
+  await editDraft(owner, plan.id, {
+    expectedDraftId: draft.draft!.id,
+    expectedEditNumber: draft.draft!.editNumber,
+    description: 'Second version',
+    startDate: '2026-05-11',
+    endDate: '2026-10-04',
+  });
+  await expect(previewRestore(owner, plan.id, first.locked!.id)).rejects.toMatchObject({
+    code: 'DRAFT_EXISTS',
+  });
+  const second = await lockPlan(owner, plan.id, await confirmation(plan.id), randomUUID());
+  const preview = await previewRestore(owner, plan.id, first.locked!.id);
+  const input = {
+    expectedStateVersion: preview.stateVersion,
+    expectedCurrentVersionId: preview.currentVersionId,
+    expectedSourceHash: preview.sourceHash,
+  };
+  await expect(
+    restoreRevision(
+      owner,
+      plan.id,
+      first.locked!.id,
+      { ...input, expectedSourceHash: '0'.repeat(64) },
+      randomUUID(),
+    ),
+  ).rejects.toMatchObject({ code: 'STALE_RESTORE' });
+  const key = randomUUID();
+  const [restored, retry] = await Promise.all([
+    restoreRevision(owner, plan.id, first.locked!.id, input, key),
+    restoreRevision(owner, plan.id, first.locked!.id, input, key),
+  ]);
+  expect(retry).toEqual(restored);
+  await expect(
+    restoreRevision(owner, plan.id, first.locked!.id, input, randomUUID()),
+  ).rejects.toMatchObject({ code: 'STALE_PLAN' });
+  await expect(
+    restoreRevision(randomUUID(), plan.id, first.locked!.id, input, randomUUID()),
+  ).rejects.toMatchObject({ status: 404 });
+  expect(restored.locked).toEqual(second.locked);
+  expect(restored.draft?.basedOnVersionId).toBe(first.locked!.id);
+  expect((await readAggregate(db, restored.draft!.id)).semantic).toEqual(original.content);
+  const rows = await db
+    .selectFrom('workouts')
+    .select(['id', 'lineage_id'])
+    .where('plan_version_id', '=', restored.draft!.id)
+    .execute();
+  const originals = await db
+    .selectFrom('workouts')
+    .select(['id', 'lineage_id'])
+    .where('plan_version_id', '=', first.locked!.id)
+    .execute();
+  expect(rows.map((r) => r.lineage_id).sort()).toEqual(originals.map((r) => r.lineage_id).sort());
+  expect(rows.some((r) => originals.some((o) => o.id === r.id))).toBe(false);
+  const third = await lockPlan(owner, plan.id, await confirmation(plan.id), randomUUID());
+  expect(third.locked?.versionNumber).toBe(3);
+  expect(third.locked?.basedOnVersionId).toBe(first.locked!.id);
+  expect(third.locked?.supersedesVersionId).toBe(second.locked!.id);
+  expect(await getRevision(owner, plan.id, first.locked!.id)).toEqual(original);
+  expect((await listRevisions(owner, plan.id)).map((r) => r.versionNumber)).toEqual([3, 2, 1]);
+  await expect(previewRestore(owner, plan.id, first.locked!.id)).rejects.toMatchObject({
+    code: 'NO_CHANGES',
+  });
+  const archived = await organizePlan(owner, plan.id, 'archive', third.stateVersion);
+  expect(await getRevision(owner, plan.id, first.locked!.id)).toEqual(original);
+  await expect(previewRestore(owner, plan.id, second.locked!.id)).rejects.toMatchObject({
+    code: 'PLAN_ARCHIVED',
+  });
+  await expect(getRevision(randomUUID(), plan.id, first.locked!.id)).rejects.toMatchObject({
+    status: 404,
+  });
+  const other = await prepared();
+  await expect(getRevision(owner, other.id, first.locked!.id)).rejects.toMatchObject({
+    code: 'REVISION_NOT_FOUND',
+  });
+  await expect(getRevision(owner, other.id, other.draft!.id)).rejects.toMatchObject({
+    code: 'REVISION_NOT_FOUND',
+  });
+  await expect(
+    restoreRevision(
+      owner,
+      plan.id,
+      second.locked!.id,
+      { ...input, expectedStateVersion: archived.stateVersion },
+      randomUUID(),
+    ),
+  ).rejects.toMatchObject({ code: 'PLAN_ARCHIVED' });
+});
 
 it('organizes plans without altering versions and preserves archived drafts', async () => {
   const initial = await prepared();

@@ -11,6 +11,11 @@ import {
   PlanListQuery,
   RenameSchema,
   StateCommandSchema,
+  RevisionParams,
+  RevisionSchema,
+  RevisionDetailSchema,
+  RestorePreviewSchema,
+  RestoreCommandSchema,
 } from './plan.schemas.js';
 import {
   createPlan,
@@ -23,6 +28,10 @@ import {
   unlockPlan,
   renamePlan,
   organizePlan,
+  listRevisions,
+  getRevision,
+  previewRestore,
+  restoreRevision,
 } from './plan.service.js';
 
 const errors = Object.fromEntries(
@@ -48,6 +57,68 @@ const body = <T extends z.ZodType>(schema: T) => ({
 const headers = z.object({ 'idempotency-key': z.string().min(1).max(200) });
 
 export function registerPlanRoutes(app: OpenAPIHono<AppEnvironment>): void {
+  app.openapi(
+    createRoute({
+      method: 'get',
+      path: '/api/v1/plans/{planId}/revisions',
+      tags: ['Plans'],
+      request: { params: PlanParams },
+      responses: response(z.object({ revisions: z.array(RevisionSchema) })),
+    }),
+    async (c) =>
+      c.json(
+        { revisions: await listRevisions(c.get('athlete').id, c.req.valid('param').planId) },
+        200,
+      ),
+  );
+  app.openapi(
+    createRoute({
+      method: 'get',
+      path: '/api/v1/plans/{planId}/revisions/{revisionId}',
+      tags: ['Plans'],
+      request: { params: RevisionParams },
+      responses: response(RevisionDetailSchema),
+    }),
+    async (c) => {
+      const { planId, revisionId } = c.req.valid('param');
+      return c.json(await getRevision(c.get('athlete').id, planId, revisionId), 200);
+    },
+  );
+  app.openapi(
+    createRoute({
+      method: 'post',
+      path: '/api/v1/plans/{planId}/revisions/{revisionId}/restore-preview',
+      tags: ['Plans'],
+      request: { params: RevisionParams },
+      responses: response(RestorePreviewSchema),
+    }),
+    async (c) => {
+      const { planId, revisionId } = c.req.valid('param');
+      return c.json(await previewRestore(c.get('athlete').id, planId, revisionId), 200);
+    },
+  );
+  app.openapi(
+    createRoute({
+      method: 'post',
+      path: '/api/v1/plans/{planId}/revisions/{revisionId}/restore',
+      tags: ['Plans'],
+      request: { params: RevisionParams, headers, body: body(RestoreCommandSchema) },
+      responses: response(PlanSchema),
+    }),
+    async (c) => {
+      const { planId, revisionId } = c.req.valid('param');
+      return c.json(
+        await restoreRevision(
+          c.get('athlete').id,
+          planId,
+          revisionId,
+          c.req.valid('json'),
+          c.req.valid('header')['idempotency-key'],
+        ),
+        200,
+      );
+    },
+  );
   app.openapi(
     createRoute({
       method: 'patch',
