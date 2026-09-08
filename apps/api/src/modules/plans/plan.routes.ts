@@ -8,6 +8,9 @@ import {
   PlanParams,
   PlanSchema,
   PreviewSchema,
+  PlanListQuery,
+  RenameSchema,
+  StateCommandSchema,
 } from './plan.schemas.js';
 import {
   createPlan,
@@ -18,6 +21,8 @@ import {
   lockPlan,
   previewLock,
   unlockPlan,
+  renamePlan,
+  organizePlan,
 } from './plan.service.js';
 
 const errors = Object.fromEntries(
@@ -45,12 +50,56 @@ const headers = z.object({ 'idempotency-key': z.string().min(1).max(200) });
 export function registerPlanRoutes(app: OpenAPIHono<AppEnvironment>): void {
   app.openapi(
     createRoute({
+      method: 'patch',
+      path: '/api/v1/plans/{planId}',
+      tags: ['Plans'],
+      request: { params: PlanParams, body: body(RenameSchema) },
+      responses: response(PlanSchema),
+    }),
+    async (c) => {
+      const input = c.req.valid('json');
+      return c.json(
+        await renamePlan(
+          c.get('athlete').id,
+          c.req.valid('param').planId,
+          input.displayName,
+          input.expectedStateVersion,
+        ),
+        200,
+      );
+    },
+  );
+  for (const action of ['activate', 'deactivate', 'archive', 'unarchive'] as const) {
+    app.openapi(
+      createRoute({
+        method: 'post',
+        path: `/api/v1/plans/{planId}/${action}`,
+        tags: ['Plans'],
+        request: { params: PlanParams, body: body(StateCommandSchema) },
+        responses: response(PlanSchema),
+      }),
+      async (c) =>
+        c.json(
+          await organizePlan(
+            c.get('athlete').id,
+            c.req.valid('param').planId,
+            action,
+            c.req.valid('json').expectedStateVersion,
+          ),
+          200,
+        ),
+    );
+  }
+  app.openapi(
+    createRoute({
       method: 'get',
       path: '/api/v1/plans',
       tags: ['Plans'],
+      request: { query: PlanListQuery },
       responses: response(z.object({ plans: z.array(PlanSchema) })),
     }),
-    async (c) => c.json({ plans: await listPlans(c.get('athlete').id) }, 200),
+    async (c) =>
+      c.json({ plans: await listPlans(c.get('athlete').id, c.req.valid('query').collection) }, 200),
   );
   app.openapi(
     createRoute({

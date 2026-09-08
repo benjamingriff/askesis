@@ -3,6 +3,7 @@ import { afterAll, expect, it } from 'vitest';
 import { closeDatabase, getDatabase } from '../../src/database/client.js';
 import { cloneContent, readAggregate } from '../../src/modules/plans/plan.aggregate.js';
 import { contentHash } from '../../src/modules/plans/plan.canonical.js';
+import { listPlans, organizePlan, renamePlan } from '../../src/modules/plans/plan.service.js';
 import {
   createPlan,
   discardDraft,
@@ -15,6 +16,71 @@ import {
 
 const owner = '00000000-0000-0000-0000-000000000001';
 afterAll(closeDatabase);
+
+it('organizes plans without altering versions and preserves archived drafts', async () => {
+  const initial = await prepared();
+  await expect(
+    organizePlan(owner, initial.id, 'activate', initial.stateVersion),
+  ).rejects.toMatchObject({ code: 'LOCKED_VERSION_REQUIRED' });
+  const locked = await lockPlan(owner, initial.id, await confirmation(initial.id), randomUUID());
+  const renamed = await renamePlan(owner, initial.id, 'Renamed', locked.stateVersion);
+  expect(renamed.locked).toEqual(locked.locked);
+  expect(await renamePlan(owner, initial.id, 'Renamed', renamed.stateVersion)).toEqual(renamed);
+  await expect(renamePlan(owner, initial.id, 'Stale', locked.stateVersion)).rejects.toMatchObject({
+    code: 'STALE_PLAN',
+  });
+  const active = await organizePlan(owner, initial.id, 'activate', renamed.stateVersion);
+  expect(await organizePlan(owner, initial.id, 'activate', renamed.stateVersion)).toEqual(active);
+  const unlocked = await unlockPlan(owner, initial.id, active.stateVersion);
+  expect(unlocked.active).toBe(true);
+  const archived = await organizePlan(owner, initial.id, 'archive', unlocked.stateVersion);
+  expect(archived.active).toBe(false);
+  expect(archived.draft).toEqual(unlocked.draft);
+  expect(archived.locked).toEqual(unlocked.locked);
+  expect(await organizePlan(owner, initial.id, 'archive', unlocked.stateVersion)).toEqual(archived);
+  expect((await listPlans(owner)).some((p) => p.id === initial.id)).toBe(false);
+  expect((await listPlans(owner, 'archive')).some((p) => p.id === initial.id)).toBe(true);
+  await expect(
+    renamePlan(owner, initial.id, 'Forbidden', archived.stateVersion),
+  ).rejects.toMatchObject({ code: 'PLAN_ARCHIVED' });
+  await expect(
+    organizePlan(owner, initial.id, 'activate', archived.stateVersion),
+  ).rejects.toMatchObject({ code: 'PLAN_ARCHIVED' });
+  for (const action of ['activate', 'deactivate', 'archive', 'unarchive'] as const) {
+    await expect(
+      organizePlan(randomUUID(), initial.id, action, archived.stateVersion),
+    ).rejects.toMatchObject({ status: 404 });
+  }
+  const restored = await organizePlan(owner, initial.id, 'unarchive', archived.stateVersion);
+  expect(restored.active).toBe(false);
+  expect(restored.draft).toEqual(unlocked.draft);
+  expect(restored.locked).toEqual(unlocked.locked);
+  const another = await prepared();
+  const otherLocked = await lockPlan(
+    owner,
+    another.id,
+    await confirmation(another.id),
+    randomUUID(),
+  );
+  await organizePlan(owner, another.id, 'activate', otherLocked.stateVersion);
+  await organizePlan(owner, initial.id, 'activate', restored.stateVersion);
+  const activeIds = (await listPlans(owner, 'active')).map((p) => p.id);
+  expect(activeIds).toEqual(expect.arrayContaining([initial.id, another.id]));
+});
+
+it('archives an initial draft and serializes conflicting metadata commands', async () => {
+  const plan = await prepared();
+  const results = await Promise.allSettled([
+    renamePlan(owner, plan.id, 'Concurrent rename', plan.stateVersion),
+    organizePlan(owner, plan.id, 'archive', plan.stateVersion),
+  ]);
+  expect(results.filter((r) => r.status === 'fulfilled')).toHaveLength(1);
+  expect(results.filter((r) => r.status === 'rejected')).toHaveLength(1);
+  const current = await getPlan(owner, plan.id);
+  const archived = await organizePlan(owner, plan.id, 'archive', current.stateVersion);
+  expect(archived.draft).toEqual(plan.draft);
+  expect(archived.locked).toBeNull();
+});
 
 async function prepared() {
   const plan = await createPlan(owner, 'Lifecycle test', randomUUID());

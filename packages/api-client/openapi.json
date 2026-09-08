@@ -496,10 +496,1545 @@
         }
       }
     },
+    "/api/v1/plans/{planId}": {
+      "patch": {
+        "tags": [
+          "Plans"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+            },
+            "required": true,
+            "name": "planId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "displayName": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 200
+                  },
+                  "expectedStateVersion": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "exclusiveMinimum": true
+                  }
+                },
+                "required": [
+                  "displayName",
+                  "expectedStateVersion"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+                    },
+                    "displayName": {
+                      "type": "string"
+                    },
+                    "stateVersion": {
+                      "type": "integer"
+                    },
+                    "active": {
+                      "type": "boolean"
+                    },
+                    "archived": {
+                      "type": "boolean"
+                    },
+                    "draft": {
+                      "type": "object",
+                      "nullable": true,
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+                        },
+                        "state": {
+                          "type": "string",
+                          "enum": [
+                            "draft",
+                            "locked"
+                          ]
+                        },
+                        "versionNumber": {
+                          "type": "integer",
+                          "nullable": true
+                        },
+                        "editNumber": {
+                          "type": "integer"
+                        },
+                        "description": {
+                          "type": "string",
+                          "nullable": true
+                        },
+                        "startDate": {
+                          "type": "string",
+                          "nullable": true,
+                          "format": "date"
+                        },
+                        "endDate": {
+                          "type": "string",
+                          "nullable": true,
+                          "format": "date"
+                        },
+                        "basedOnVersionId": {
+                          "type": "string",
+                          "nullable": true,
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+                        },
+                        "supersedesVersionId": {
+                          "type": "string",
+                          "nullable": true,
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+                        },
+                        "lockedAt": {
+                          "type": "string",
+                          "nullable": true
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "state",
+                        "versionNumber",
+                        "editNumber",
+                        "description",
+                        "startDate",
+                        "endDate",
+                        "basedOnVersionId",
+                        "supersedesVersionId",
+                        "lockedAt"
+                      ]
+                    },
+                    "locked": {
+                      "type": "object",
+                      "nullable": true,
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+                        },
+                        "state": {
+                          "type": "string",
+                          "enum": [
+                            "draft",
+                            "locked"
+                          ]
+                        },
+                        "versionNumber": {
+                          "type": "integer",
+                          "nullable": true
+                        },
+                        "editNumber": {
+                          "type": "integer"
+                        },
+                        "description": {
+                          "type": "string",
+                          "nullable": true
+                        },
+                        "startDate": {
+                          "type": "string",
+                          "nullable": true,
+                          "format": "date"
+                        },
+                        "endDate": {
+                          "type": "string",
+                          "nullable": true,
+                          "format": "date"
+                        },
+                        "basedOnVersionId": {
+                          "type": "string",
+                          "nullable": true,
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+                        },
+                        "supersedesVersionId": {
+                          "type": "string",
+                          "nullable": true,
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+                        },
+                        "lockedAt": {
+                          "type": "string",
+                          "nullable": true
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "state",
+                        "versionNumber",
+                        "editNumber",
+                        "description",
+                        "startDate",
+                        "endDate",
+                        "basedOnVersionId",
+                        "supersedesVersionId",
+                        "lockedAt"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "displayName",
+                    "stateVersion",
+                    "active",
+                    "archived",
+                    "draft",
+                    "locked"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Request rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Request rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Request rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Request rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Request rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "Plans"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+            },
+            "required": true,
+            "name": "planId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+                    },
+                    "displayName": {
+                      "type": "string"
+                    },
+                    "stateVersion": {
+                      "type": "integer"
+                    },
+                    "active": {
+                      "type": "boolean"
+                    },
+                    "archived": {
+                      "type": "boolean"
+                    },
+                    "draft": {
+                      "type": "object",
+                      "nullable": true,
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+                        },
+                        "state": {
+                          "type": "string",
+                          "enum": [
+                            "draft",
+                            "locked"
+                          ]
+                        },
+                        "versionNumber": {
+                          "type": "integer",
+                          "nullable": true
+                        },
+                        "editNumber": {
+                          "type": "integer"
+                        },
+                        "description": {
+                          "type": "string",
+                          "nullable": true
+                        },
+                        "startDate": {
+                          "type": "string",
+                          "nullable": true,
+                          "format": "date"
+                        },
+                        "endDate": {
+                          "type": "string",
+                          "nullable": true,
+                          "format": "date"
+                        },
+                        "basedOnVersionId": {
+                          "type": "string",
+                          "nullable": true,
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+                        },
+                        "supersedesVersionId": {
+                          "type": "string",
+                          "nullable": true,
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+                        },
+                        "lockedAt": {
+                          "type": "string",
+                          "nullable": true
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "state",
+                        "versionNumber",
+                        "editNumber",
+                        "description",
+                        "startDate",
+                        "endDate",
+                        "basedOnVersionId",
+                        "supersedesVersionId",
+                        "lockedAt"
+                      ]
+                    },
+                    "locked": {
+                      "type": "object",
+                      "nullable": true,
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+                        },
+                        "state": {
+                          "type": "string",
+                          "enum": [
+                            "draft",
+                            "locked"
+                          ]
+                        },
+                        "versionNumber": {
+                          "type": "integer",
+                          "nullable": true
+                        },
+                        "editNumber": {
+                          "type": "integer"
+                        },
+                        "description": {
+                          "type": "string",
+                          "nullable": true
+                        },
+                        "startDate": {
+                          "type": "string",
+                          "nullable": true,
+                          "format": "date"
+                        },
+                        "endDate": {
+                          "type": "string",
+                          "nullable": true,
+                          "format": "date"
+                        },
+                        "basedOnVersionId": {
+                          "type": "string",
+                          "nullable": true,
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+                        },
+                        "supersedesVersionId": {
+                          "type": "string",
+                          "nullable": true,
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+                        },
+                        "lockedAt": {
+                          "type": "string",
+                          "nullable": true
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "state",
+                        "versionNumber",
+                        "editNumber",
+                        "description",
+                        "startDate",
+                        "endDate",
+                        "basedOnVersionId",
+                        "supersedesVersionId",
+                        "lockedAt"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "displayName",
+                    "stateVersion",
+                    "active",
+                    "archived",
+                    "draft",
+                    "locked"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Request rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Request rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Request rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Request rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Request rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/plans/{planId}/activate": {
+      "post": {
+        "tags": [
+          "Plans"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+            },
+            "required": true,
+            "name": "planId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "expectedStateVersion": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "exclusiveMinimum": true
+                  }
+                },
+                "required": [
+                  "expectedStateVersion"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+                    },
+                    "displayName": {
+                      "type": "string"
+                    },
+                    "stateVersion": {
+                      "type": "integer"
+                    },
+                    "active": {
+                      "type": "boolean"
+                    },
+                    "archived": {
+                      "type": "boolean"
+                    },
+                    "draft": {
+                      "type": "object",
+                      "nullable": true,
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+                        },
+                        "state": {
+                          "type": "string",
+                          "enum": [
+                            "draft",
+                            "locked"
+                          ]
+                        },
+                        "versionNumber": {
+                          "type": "integer",
+                          "nullable": true
+                        },
+                        "editNumber": {
+                          "type": "integer"
+                        },
+                        "description": {
+                          "type": "string",
+                          "nullable": true
+                        },
+                        "startDate": {
+                          "type": "string",
+                          "nullable": true,
+                          "format": "date"
+                        },
+                        "endDate": {
+                          "type": "string",
+                          "nullable": true,
+                          "format": "date"
+                        },
+                        "basedOnVersionId": {
+                          "type": "string",
+                          "nullable": true,
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+                        },
+                        "supersedesVersionId": {
+                          "type": "string",
+                          "nullable": true,
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+                        },
+                        "lockedAt": {
+                          "type": "string",
+                          "nullable": true
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "state",
+                        "versionNumber",
+                        "editNumber",
+                        "description",
+                        "startDate",
+                        "endDate",
+                        "basedOnVersionId",
+                        "supersedesVersionId",
+                        "lockedAt"
+                      ]
+                    },
+                    "locked": {
+                      "type": "object",
+                      "nullable": true,
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+                        },
+                        "state": {
+                          "type": "string",
+                          "enum": [
+                            "draft",
+                            "locked"
+                          ]
+                        },
+                        "versionNumber": {
+                          "type": "integer",
+                          "nullable": true
+                        },
+                        "editNumber": {
+                          "type": "integer"
+                        },
+                        "description": {
+                          "type": "string",
+                          "nullable": true
+                        },
+                        "startDate": {
+                          "type": "string",
+                          "nullable": true,
+                          "format": "date"
+                        },
+                        "endDate": {
+                          "type": "string",
+                          "nullable": true,
+                          "format": "date"
+                        },
+                        "basedOnVersionId": {
+                          "type": "string",
+                          "nullable": true,
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+                        },
+                        "supersedesVersionId": {
+                          "type": "string",
+                          "nullable": true,
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+                        },
+                        "lockedAt": {
+                          "type": "string",
+                          "nullable": true
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "state",
+                        "versionNumber",
+                        "editNumber",
+                        "description",
+                        "startDate",
+                        "endDate",
+                        "basedOnVersionId",
+                        "supersedesVersionId",
+                        "lockedAt"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "displayName",
+                    "stateVersion",
+                    "active",
+                    "archived",
+                    "draft",
+                    "locked"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Request rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Request rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Request rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Request rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Request rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/plans/{planId}/deactivate": {
+      "post": {
+        "tags": [
+          "Plans"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+            },
+            "required": true,
+            "name": "planId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "expectedStateVersion": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "exclusiveMinimum": true
+                  }
+                },
+                "required": [
+                  "expectedStateVersion"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+                    },
+                    "displayName": {
+                      "type": "string"
+                    },
+                    "stateVersion": {
+                      "type": "integer"
+                    },
+                    "active": {
+                      "type": "boolean"
+                    },
+                    "archived": {
+                      "type": "boolean"
+                    },
+                    "draft": {
+                      "type": "object",
+                      "nullable": true,
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+                        },
+                        "state": {
+                          "type": "string",
+                          "enum": [
+                            "draft",
+                            "locked"
+                          ]
+                        },
+                        "versionNumber": {
+                          "type": "integer",
+                          "nullable": true
+                        },
+                        "editNumber": {
+                          "type": "integer"
+                        },
+                        "description": {
+                          "type": "string",
+                          "nullable": true
+                        },
+                        "startDate": {
+                          "type": "string",
+                          "nullable": true,
+                          "format": "date"
+                        },
+                        "endDate": {
+                          "type": "string",
+                          "nullable": true,
+                          "format": "date"
+                        },
+                        "basedOnVersionId": {
+                          "type": "string",
+                          "nullable": true,
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+                        },
+                        "supersedesVersionId": {
+                          "type": "string",
+                          "nullable": true,
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+                        },
+                        "lockedAt": {
+                          "type": "string",
+                          "nullable": true
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "state",
+                        "versionNumber",
+                        "editNumber",
+                        "description",
+                        "startDate",
+                        "endDate",
+                        "basedOnVersionId",
+                        "supersedesVersionId",
+                        "lockedAt"
+                      ]
+                    },
+                    "locked": {
+                      "type": "object",
+                      "nullable": true,
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+                        },
+                        "state": {
+                          "type": "string",
+                          "enum": [
+                            "draft",
+                            "locked"
+                          ]
+                        },
+                        "versionNumber": {
+                          "type": "integer",
+                          "nullable": true
+                        },
+                        "editNumber": {
+                          "type": "integer"
+                        },
+                        "description": {
+                          "type": "string",
+                          "nullable": true
+                        },
+                        "startDate": {
+                          "type": "string",
+                          "nullable": true,
+                          "format": "date"
+                        },
+                        "endDate": {
+                          "type": "string",
+                          "nullable": true,
+                          "format": "date"
+                        },
+                        "basedOnVersionId": {
+                          "type": "string",
+                          "nullable": true,
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+                        },
+                        "supersedesVersionId": {
+                          "type": "string",
+                          "nullable": true,
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+                        },
+                        "lockedAt": {
+                          "type": "string",
+                          "nullable": true
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "state",
+                        "versionNumber",
+                        "editNumber",
+                        "description",
+                        "startDate",
+                        "endDate",
+                        "basedOnVersionId",
+                        "supersedesVersionId",
+                        "lockedAt"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "displayName",
+                    "stateVersion",
+                    "active",
+                    "archived",
+                    "draft",
+                    "locked"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Request rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Request rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Request rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Request rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Request rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/plans/{planId}/archive": {
+      "post": {
+        "tags": [
+          "Plans"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+            },
+            "required": true,
+            "name": "planId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "expectedStateVersion": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "exclusiveMinimum": true
+                  }
+                },
+                "required": [
+                  "expectedStateVersion"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+                    },
+                    "displayName": {
+                      "type": "string"
+                    },
+                    "stateVersion": {
+                      "type": "integer"
+                    },
+                    "active": {
+                      "type": "boolean"
+                    },
+                    "archived": {
+                      "type": "boolean"
+                    },
+                    "draft": {
+                      "type": "object",
+                      "nullable": true,
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+                        },
+                        "state": {
+                          "type": "string",
+                          "enum": [
+                            "draft",
+                            "locked"
+                          ]
+                        },
+                        "versionNumber": {
+                          "type": "integer",
+                          "nullable": true
+                        },
+                        "editNumber": {
+                          "type": "integer"
+                        },
+                        "description": {
+                          "type": "string",
+                          "nullable": true
+                        },
+                        "startDate": {
+                          "type": "string",
+                          "nullable": true,
+                          "format": "date"
+                        },
+                        "endDate": {
+                          "type": "string",
+                          "nullable": true,
+                          "format": "date"
+                        },
+                        "basedOnVersionId": {
+                          "type": "string",
+                          "nullable": true,
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+                        },
+                        "supersedesVersionId": {
+                          "type": "string",
+                          "nullable": true,
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+                        },
+                        "lockedAt": {
+                          "type": "string",
+                          "nullable": true
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "state",
+                        "versionNumber",
+                        "editNumber",
+                        "description",
+                        "startDate",
+                        "endDate",
+                        "basedOnVersionId",
+                        "supersedesVersionId",
+                        "lockedAt"
+                      ]
+                    },
+                    "locked": {
+                      "type": "object",
+                      "nullable": true,
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+                        },
+                        "state": {
+                          "type": "string",
+                          "enum": [
+                            "draft",
+                            "locked"
+                          ]
+                        },
+                        "versionNumber": {
+                          "type": "integer",
+                          "nullable": true
+                        },
+                        "editNumber": {
+                          "type": "integer"
+                        },
+                        "description": {
+                          "type": "string",
+                          "nullable": true
+                        },
+                        "startDate": {
+                          "type": "string",
+                          "nullable": true,
+                          "format": "date"
+                        },
+                        "endDate": {
+                          "type": "string",
+                          "nullable": true,
+                          "format": "date"
+                        },
+                        "basedOnVersionId": {
+                          "type": "string",
+                          "nullable": true,
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+                        },
+                        "supersedesVersionId": {
+                          "type": "string",
+                          "nullable": true,
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+                        },
+                        "lockedAt": {
+                          "type": "string",
+                          "nullable": true
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "state",
+                        "versionNumber",
+                        "editNumber",
+                        "description",
+                        "startDate",
+                        "endDate",
+                        "basedOnVersionId",
+                        "supersedesVersionId",
+                        "lockedAt"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "displayName",
+                    "stateVersion",
+                    "active",
+                    "archived",
+                    "draft",
+                    "locked"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Request rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Request rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Request rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Request rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Request rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/plans/{planId}/unarchive": {
+      "post": {
+        "tags": [
+          "Plans"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+            },
+            "required": true,
+            "name": "planId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "expectedStateVersion": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "exclusiveMinimum": true
+                  }
+                },
+                "required": [
+                  "expectedStateVersion"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+                    },
+                    "displayName": {
+                      "type": "string"
+                    },
+                    "stateVersion": {
+                      "type": "integer"
+                    },
+                    "active": {
+                      "type": "boolean"
+                    },
+                    "archived": {
+                      "type": "boolean"
+                    },
+                    "draft": {
+                      "type": "object",
+                      "nullable": true,
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+                        },
+                        "state": {
+                          "type": "string",
+                          "enum": [
+                            "draft",
+                            "locked"
+                          ]
+                        },
+                        "versionNumber": {
+                          "type": "integer",
+                          "nullable": true
+                        },
+                        "editNumber": {
+                          "type": "integer"
+                        },
+                        "description": {
+                          "type": "string",
+                          "nullable": true
+                        },
+                        "startDate": {
+                          "type": "string",
+                          "nullable": true,
+                          "format": "date"
+                        },
+                        "endDate": {
+                          "type": "string",
+                          "nullable": true,
+                          "format": "date"
+                        },
+                        "basedOnVersionId": {
+                          "type": "string",
+                          "nullable": true,
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+                        },
+                        "supersedesVersionId": {
+                          "type": "string",
+                          "nullable": true,
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+                        },
+                        "lockedAt": {
+                          "type": "string",
+                          "nullable": true
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "state",
+                        "versionNumber",
+                        "editNumber",
+                        "description",
+                        "startDate",
+                        "endDate",
+                        "basedOnVersionId",
+                        "supersedesVersionId",
+                        "lockedAt"
+                      ]
+                    },
+                    "locked": {
+                      "type": "object",
+                      "nullable": true,
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+                        },
+                        "state": {
+                          "type": "string",
+                          "enum": [
+                            "draft",
+                            "locked"
+                          ]
+                        },
+                        "versionNumber": {
+                          "type": "integer",
+                          "nullable": true
+                        },
+                        "editNumber": {
+                          "type": "integer"
+                        },
+                        "description": {
+                          "type": "string",
+                          "nullable": true
+                        },
+                        "startDate": {
+                          "type": "string",
+                          "nullable": true,
+                          "format": "date"
+                        },
+                        "endDate": {
+                          "type": "string",
+                          "nullable": true,
+                          "format": "date"
+                        },
+                        "basedOnVersionId": {
+                          "type": "string",
+                          "nullable": true,
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+                        },
+                        "supersedesVersionId": {
+                          "type": "string",
+                          "nullable": true,
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+                        },
+                        "lockedAt": {
+                          "type": "string",
+                          "nullable": true
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "state",
+                        "versionNumber",
+                        "editNumber",
+                        "description",
+                        "startDate",
+                        "endDate",
+                        "basedOnVersionId",
+                        "supersedesVersionId",
+                        "lockedAt"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "displayName",
+                    "stateVersion",
+                    "active",
+                    "archived",
+                    "draft",
+                    "locked"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Request rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Request rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Request rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Request rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Request rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/plans": {
       "get": {
         "tags": [
           "Plans"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "library",
+                "active",
+                "archive"
+              ],
+              "default": "library"
+            },
+            "required": false,
+            "name": "collection",
+            "in": "query"
+          }
         ],
         "responses": {
           "200": {
@@ -516,7 +2051,7 @@
                         "properties": {
                           "id": {
                             "type": "string",
-                            "format": "uuid"
+                            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
                           },
                           "displayName": {
                             "type": "string"
@@ -536,7 +2071,7 @@
                             "properties": {
                               "id": {
                                 "type": "string",
-                                "format": "uuid"
+                                "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
                               },
                               "state": {
                                 "type": "string",
@@ -569,12 +2104,12 @@
                               "basedOnVersionId": {
                                 "type": "string",
                                 "nullable": true,
-                                "format": "uuid"
+                                "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
                               },
                               "supersedesVersionId": {
                                 "type": "string",
                                 "nullable": true,
-                                "format": "uuid"
+                                "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
                               },
                               "lockedAt": {
                                 "type": "string",
@@ -600,7 +2135,7 @@
                             "properties": {
                               "id": {
                                 "type": "string",
-                                "format": "uuid"
+                                "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
                               },
                               "state": {
                                 "type": "string",
@@ -633,12 +2168,12 @@
                               "basedOnVersionId": {
                                 "type": "string",
                                 "nullable": true,
-                                "format": "uuid"
+                                "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
                               },
                               "supersedesVersionId": {
                                 "type": "string",
                                 "nullable": true,
-                                "format": "uuid"
+                                "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
                               },
                               "lockedAt": {
                                 "type": "string",
@@ -777,7 +2312,7 @@
                   "properties": {
                     "id": {
                       "type": "string",
-                      "format": "uuid"
+                      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
                     },
                     "displayName": {
                       "type": "string"
@@ -797,7 +2332,7 @@
                       "properties": {
                         "id": {
                           "type": "string",
-                          "format": "uuid"
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
                         },
                         "state": {
                           "type": "string",
@@ -830,12 +2365,12 @@
                         "basedOnVersionId": {
                           "type": "string",
                           "nullable": true,
-                          "format": "uuid"
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
                         },
                         "supersedesVersionId": {
                           "type": "string",
                           "nullable": true,
-                          "format": "uuid"
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
                         },
                         "lockedAt": {
                           "type": "string",
@@ -861,7 +2396,7 @@
                       "properties": {
                         "id": {
                           "type": "string",
-                          "format": "uuid"
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
                         },
                         "state": {
                           "type": "string",
@@ -894,247 +2429,12 @@
                         "basedOnVersionId": {
                           "type": "string",
                           "nullable": true,
-                          "format": "uuid"
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
                         },
                         "supersedesVersionId": {
                           "type": "string",
                           "nullable": true,
-                          "format": "uuid"
-                        },
-                        "lockedAt": {
-                          "type": "string",
-                          "nullable": true
-                        }
-                      },
-                      "required": [
-                        "id",
-                        "state",
-                        "versionNumber",
-                        "editNumber",
-                        "description",
-                        "startDate",
-                        "endDate",
-                        "basedOnVersionId",
-                        "supersedesVersionId",
-                        "lockedAt"
-                      ]
-                    }
-                  },
-                  "required": [
-                    "id",
-                    "displayName",
-                    "stateVersion",
-                    "active",
-                    "archived",
-                    "draft",
-                    "locked"
-                  ]
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Request rejected.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Request rejected.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Request rejected.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "Request rejected.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Request rejected.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/plans/{planId}": {
-      "get": {
-        "tags": [
-          "Plans"
-        ],
-        "parameters": [
-          {
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            },
-            "required": true,
-            "name": "planId",
-            "in": "path"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful response.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "id": {
-                      "type": "string",
-                      "format": "uuid"
-                    },
-                    "displayName": {
-                      "type": "string"
-                    },
-                    "stateVersion": {
-                      "type": "integer"
-                    },
-                    "active": {
-                      "type": "boolean"
-                    },
-                    "archived": {
-                      "type": "boolean"
-                    },
-                    "draft": {
-                      "type": "object",
-                      "nullable": true,
-                      "properties": {
-                        "id": {
-                          "type": "string",
-                          "format": "uuid"
-                        },
-                        "state": {
-                          "type": "string",
-                          "enum": [
-                            "draft",
-                            "locked"
-                          ]
-                        },
-                        "versionNumber": {
-                          "type": "integer",
-                          "nullable": true
-                        },
-                        "editNumber": {
-                          "type": "integer"
-                        },
-                        "description": {
-                          "type": "string",
-                          "nullable": true
-                        },
-                        "startDate": {
-                          "type": "string",
-                          "nullable": true,
-                          "format": "date"
-                        },
-                        "endDate": {
-                          "type": "string",
-                          "nullable": true,
-                          "format": "date"
-                        },
-                        "basedOnVersionId": {
-                          "type": "string",
-                          "nullable": true,
-                          "format": "uuid"
-                        },
-                        "supersedesVersionId": {
-                          "type": "string",
-                          "nullable": true,
-                          "format": "uuid"
-                        },
-                        "lockedAt": {
-                          "type": "string",
-                          "nullable": true
-                        }
-                      },
-                      "required": [
-                        "id",
-                        "state",
-                        "versionNumber",
-                        "editNumber",
-                        "description",
-                        "startDate",
-                        "endDate",
-                        "basedOnVersionId",
-                        "supersedesVersionId",
-                        "lockedAt"
-                      ]
-                    },
-                    "locked": {
-                      "type": "object",
-                      "nullable": true,
-                      "properties": {
-                        "id": {
-                          "type": "string",
-                          "format": "uuid"
-                        },
-                        "state": {
-                          "type": "string",
-                          "enum": [
-                            "draft",
-                            "locked"
-                          ]
-                        },
-                        "versionNumber": {
-                          "type": "integer",
-                          "nullable": true
-                        },
-                        "editNumber": {
-                          "type": "integer"
-                        },
-                        "description": {
-                          "type": "string",
-                          "nullable": true
-                        },
-                        "startDate": {
-                          "type": "string",
-                          "nullable": true,
-                          "format": "date"
-                        },
-                        "endDate": {
-                          "type": "string",
-                          "nullable": true,
-                          "format": "date"
-                        },
-                        "basedOnVersionId": {
-                          "type": "string",
-                          "nullable": true,
-                          "format": "uuid"
-                        },
-                        "supersedesVersionId": {
-                          "type": "string",
-                          "nullable": true,
-                          "format": "uuid"
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
                         },
                         "lockedAt": {
                           "type": "string",
@@ -1230,7 +2530,7 @@
           {
             "schema": {
               "type": "string",
-              "format": "uuid"
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
             },
             "required": true,
             "name": "planId",
@@ -1246,7 +2546,7 @@
                 "properties": {
                   "expectedDraftId": {
                     "type": "string",
-                    "format": "uuid"
+                    "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
                   },
                   "expectedEditNumber": {
                     "type": "integer",
@@ -1291,7 +2591,7 @@
                   "properties": {
                     "id": {
                       "type": "string",
-                      "format": "uuid"
+                      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
                     },
                     "displayName": {
                       "type": "string"
@@ -1311,7 +2611,7 @@
                       "properties": {
                         "id": {
                           "type": "string",
-                          "format": "uuid"
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
                         },
                         "state": {
                           "type": "string",
@@ -1344,12 +2644,12 @@
                         "basedOnVersionId": {
                           "type": "string",
                           "nullable": true,
-                          "format": "uuid"
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
                         },
                         "supersedesVersionId": {
                           "type": "string",
                           "nullable": true,
-                          "format": "uuid"
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
                         },
                         "lockedAt": {
                           "type": "string",
@@ -1375,7 +2675,7 @@
                       "properties": {
                         "id": {
                           "type": "string",
-                          "format": "uuid"
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
                         },
                         "state": {
                           "type": "string",
@@ -1408,12 +2708,12 @@
                         "basedOnVersionId": {
                           "type": "string",
                           "nullable": true,
-                          "format": "uuid"
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
                         },
                         "supersedesVersionId": {
                           "type": "string",
                           "nullable": true,
-                          "format": "uuid"
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
                         },
                         "lockedAt": {
                           "type": "string",
@@ -1509,7 +2809,7 @@
           {
             "schema": {
               "type": "string",
-              "format": "uuid"
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
             },
             "required": true,
             "name": "planId",
@@ -1526,7 +2826,7 @@
                   "properties": {
                     "draftId": {
                       "type": "string",
-                      "format": "uuid"
+                      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
                     },
                     "editNumber": {
                       "type": "integer"
@@ -1687,7 +2987,7 @@
           {
             "schema": {
               "type": "string",
-              "format": "uuid"
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
             },
             "required": true,
             "name": "planId",
@@ -1708,7 +3008,7 @@
                   },
                   "expectedDraftId": {
                     "type": "string",
-                    "format": "uuid"
+                    "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
                   },
                   "expectedEditNumber": {
                     "type": "integer",
@@ -1748,7 +3048,7 @@
                   "properties": {
                     "id": {
                       "type": "string",
-                      "format": "uuid"
+                      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
                     },
                     "displayName": {
                       "type": "string"
@@ -1768,7 +3068,7 @@
                       "properties": {
                         "id": {
                           "type": "string",
-                          "format": "uuid"
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
                         },
                         "state": {
                           "type": "string",
@@ -1801,12 +3101,12 @@
                         "basedOnVersionId": {
                           "type": "string",
                           "nullable": true,
-                          "format": "uuid"
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
                         },
                         "supersedesVersionId": {
                           "type": "string",
                           "nullable": true,
-                          "format": "uuid"
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
                         },
                         "lockedAt": {
                           "type": "string",
@@ -1832,7 +3132,7 @@
                       "properties": {
                         "id": {
                           "type": "string",
-                          "format": "uuid"
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
                         },
                         "state": {
                           "type": "string",
@@ -1865,12 +3165,12 @@
                         "basedOnVersionId": {
                           "type": "string",
                           "nullable": true,
-                          "format": "uuid"
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
                         },
                         "supersedesVersionId": {
                           "type": "string",
                           "nullable": true,
-                          "format": "uuid"
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
                         },
                         "lockedAt": {
                           "type": "string",
@@ -1966,7 +3266,7 @@
           {
             "schema": {
               "type": "string",
-              "format": "uuid"
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
             },
             "required": true,
             "name": "planId",
@@ -1997,7 +3297,7 @@
                   },
                   "expectedDraftId": {
                     "type": "string",
-                    "format": "uuid"
+                    "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
                   },
                   "expectedEditNumber": {
                     "type": "integer",
@@ -2037,7 +3337,7 @@
                   "properties": {
                     "id": {
                       "type": "string",
-                      "format": "uuid"
+                      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
                     },
                     "displayName": {
                       "type": "string"
@@ -2057,7 +3357,7 @@
                       "properties": {
                         "id": {
                           "type": "string",
-                          "format": "uuid"
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
                         },
                         "state": {
                           "type": "string",
@@ -2090,12 +3390,12 @@
                         "basedOnVersionId": {
                           "type": "string",
                           "nullable": true,
-                          "format": "uuid"
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
                         },
                         "supersedesVersionId": {
                           "type": "string",
                           "nullable": true,
-                          "format": "uuid"
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
                         },
                         "lockedAt": {
                           "type": "string",
@@ -2121,7 +3421,7 @@
                       "properties": {
                         "id": {
                           "type": "string",
-                          "format": "uuid"
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
                         },
                         "state": {
                           "type": "string",
@@ -2154,12 +3454,12 @@
                         "basedOnVersionId": {
                           "type": "string",
                           "nullable": true,
-                          "format": "uuid"
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
                         },
                         "supersedesVersionId": {
                           "type": "string",
                           "nullable": true,
-                          "format": "uuid"
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
                         },
                         "lockedAt": {
                           "type": "string",
@@ -2255,7 +3555,7 @@
           {
             "schema": {
               "type": "string",
-              "format": "uuid"
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
             },
             "required": true,
             "name": "planId",
@@ -2286,7 +3586,7 @@
                   },
                   "expectedDraftId": {
                     "type": "string",
-                    "format": "uuid"
+                    "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
                   },
                   "expectedEditNumber": {
                     "type": "integer",
@@ -2326,7 +3626,7 @@
                   "properties": {
                     "id": {
                       "type": "string",
-                      "format": "uuid"
+                      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
                     },
                     "displayName": {
                       "type": "string"
@@ -2346,7 +3646,7 @@
                       "properties": {
                         "id": {
                           "type": "string",
-                          "format": "uuid"
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
                         },
                         "state": {
                           "type": "string",
@@ -2379,12 +3679,12 @@
                         "basedOnVersionId": {
                           "type": "string",
                           "nullable": true,
-                          "format": "uuid"
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
                         },
                         "supersedesVersionId": {
                           "type": "string",
                           "nullable": true,
-                          "format": "uuid"
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
                         },
                         "lockedAt": {
                           "type": "string",
@@ -2410,7 +3710,7 @@
                       "properties": {
                         "id": {
                           "type": "string",
-                          "format": "uuid"
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
                         },
                         "state": {
                           "type": "string",
@@ -2443,12 +3743,12 @@
                         "basedOnVersionId": {
                           "type": "string",
                           "nullable": true,
-                          "format": "uuid"
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
                         },
                         "supersedesVersionId": {
                           "type": "string",
                           "nullable": true,
-                          "format": "uuid"
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
                         },
                         "lockedAt": {
                           "type": "string",

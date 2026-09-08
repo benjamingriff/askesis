@@ -1,7 +1,16 @@
 import { z } from '@hono/zod-openapi';
 
-export const Id = z.uuid();
+// PostgreSQL accepts UUIDs without RFC version/variant bits (including local fixtures).
+export const Id = z
+  .string()
+  .regex(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i);
 export const PlanParams = z.object({ planId: Id });
+export const PlanListQuery = z.object({
+  collection: z.enum(['library', 'active', 'archive']).default('library'),
+});
+export const StateCommandSchema = z
+  .object({ expectedStateVersion: z.number().int().positive() })
+  .strict();
 export const FindingSchema = z.object({
   code: z.string(),
   severity: z.enum(['error', 'warning']),

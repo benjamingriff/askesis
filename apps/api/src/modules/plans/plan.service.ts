@@ -84,18 +84,87 @@ export async function getPlan(athleteId: string, planId: string) {
     .setIsolationLevel('repeatable read')
     .execute((db) => detail(db, athleteId, planId));
 }
-export async function listPlans(athleteId: string) {
+export async function listPlans(
+  athleteId: string,
+  collection: 'library' | 'active' | 'archive' = 'library',
+) {
   return getDatabase()
     .transaction()
     .setIsolationLevel('repeatable read')
     .execute(async (db) => {
-      const plans = await db
+      let query = db
         .selectFrom('plans')
         .select('id')
         .where('owner_id', '=', athleteId)
-        .orderBy('created_at', 'desc')
-        .execute();
+        .where('archived_at', collection === 'archive' ? 'is not' : 'is', null)
+        .orderBy('created_at', 'desc');
+      if (collection === 'active') query = query.where('activated_at', 'is not', null);
+      const plans = await query.execute();
       return Promise.all(plans.map((plan) => detail(db, athleteId, plan.id)));
+    });
+}
+export async function renamePlan(
+  athleteId: string,
+  planId: string,
+  displayName: string,
+  expectedStateVersion: number,
+) {
+  return getDatabase()
+    .transaction()
+    .execute(async (db) => {
+      await ownerPlan(db, athleteId, planId, true);
+      const plan = await detail(db, athleteId, planId);
+      editable(plan);
+      stateMatches(plan, expectedStateVersion);
+      if (plan.displayName === displayName) return plan;
+      await db
+        .updateTable('plans')
+        .set({ display_name: displayName })
+        .where('id', '=', planId)
+        .execute();
+      await bump(db, planId);
+      return detail(db, athleteId, planId);
+    });
+}
+
+export async function organizePlan(
+  athleteId: string,
+  planId: string,
+  action: 'activate' | 'deactivate' | 'archive' | 'unarchive',
+  expectedStateVersion: number,
+) {
+  return getDatabase()
+    .transaction()
+    .execute(async (db) => {
+      await ownerPlan(db, athleteId, planId, true);
+      const plan = await detail(db, athleteId, planId);
+      if ((action === 'archive' && plan.archived) || (action === 'unarchive' && !plan.archived))
+        return plan;
+      if (action === 'activate' || action === 'deactivate') {
+        editable(plan);
+        if (plan.active === (action === 'activate')) return plan;
+        if (action === 'activate' && !plan.locked)
+          throw new PlanError(
+            'LOCKED_VERSION_REQUIRED',
+            'Lock a version before activating this plan.',
+          );
+      }
+      stateMatches(plan, expectedStateVersion);
+      // One UPDATE: archived rows only permit the unarchive transition.
+      await db
+        .updateTable('plans')
+        .set({
+          ...(action === 'archive'
+            ? { archived_at: new Date(), activated_at: null }
+            : action === 'unarchive'
+              ? { archived_at: null, activated_at: null }
+              : { activated_at: action === 'activate' ? new Date() : null }),
+          state_version: sql`state_version + 1`,
+          updated_at: new Date(),
+        })
+        .where('id', '=', planId)
+        .execute();
+      return detail(db, athleteId, planId);
     });
 }
 function editable(plan: Plan) {
