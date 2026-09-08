@@ -39,6 +39,11 @@ Next: implement canonical aggregate assembly, hashing, validation, change summar
 and the create/lock/unlock/discard service journey. Organization/history/restore,
 TanStack Query UI, full lifecycle tests, and Railway cutover remain outstanding.
 
+The schema foundation is committed as `12fa29b`. Stage 2 has started with pure
+canonical JSON/SHA-256 helpers, precision-preserving decimal normalization, and
+temporal aggregate validation in `apps/api/src/modules/plans/`. These helpers
+are covered by unit tests but are not yet wired to lifecycle HTTP commands.
+
 Phase 1 implementation and deployment changes are committed on `main`. The Phase 2 lifecycle refinement, schema contract, and implementation plan are included with this handoff. Use `git log` for the exact handoff commit rather than copying a commit hash from this document.
 
 The Phase 1 closure validation includes:
