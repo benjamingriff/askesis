@@ -18,13 +18,16 @@ afterAll(closeDatabase);
 
 async function prepared() {
   const plan = await createPlan(owner, 'Lifecycle test', randomUUID());
-  return editDraft(owner, plan.id, {
+  const edited = await editDraft(owner, plan.id, {
     expectedDraftId: plan.draft!.id,
     expectedEditNumber: plan.draft!.editNumber,
     description: 'Test plan',
     startDate: '2026-05-11',
     endDate: '2026-10-04',
   });
+  expect(edited.draft?.startDate).toBe('2026-05-11');
+  expect(edited.draft?.endDate).toBe('2026-10-04');
+  return edited;
 }
 async function confirmation(id: string) {
   const preview = await previewLock(owner, id);
@@ -86,6 +89,23 @@ it('requires current validation and warning acknowledgement, and preserves immut
   const discarded = await discardDraft(owner, plan.id, await confirmation(plan.id), randomUUID());
   expect(discarded.draft).toBeNull();
   expect(discarded.locked).toEqual(locked.locked);
+  const secondDraft = await unlockPlan(owner, plan.id, discarded.stateVersion);
+  await editDraft(owner, plan.id, {
+    expectedDraftId: secondDraft.draft!.id,
+    expectedEditNumber: secondDraft.draft!.editNumber,
+    description: 'Version two',
+    startDate: '2026-05-11',
+    endDate: '2026-10-04',
+  });
+  const second = await lockPlan(owner, plan.id, await confirmation(plan.id), randomUUID());
+  expect(second.locked?.versionNumber).toBe(2);
+  expect(second.locked?.supersedesVersionId).toBe(locked.locked?.id);
+  const original = await getDatabase()
+    .selectFrom('plan_versions')
+    .select('description')
+    .where('id', '=', locked.locked!.id)
+    .executeTakeFirstOrThrow();
+  expect(original.description).toBe('Test plan');
 });
 
 it('clones the complete fixture with new physical IDs, retained lineage and identical semantics', async () => {
