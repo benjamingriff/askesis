@@ -8,6 +8,8 @@ import { getDatabase } from './database/client.js';
 import { requestContext } from './http/middleware.js';
 import { logger } from './logger.js';
 import { registerWorkoutRoutes } from './modules/workouts/workout.routes.js';
+import { registerPlanRoutes } from './modules/plans/plan.routes.js';
+import { PlanError } from './modules/plans/plan.service.js';
 
 export const app = new OpenAPIHono<AppEnvironment>({
   defaultHook: (result, context) => {
@@ -29,6 +31,12 @@ app.use('*', requestContext);
 
 app.onError((error, context) => {
   const requestId = context.get('requestId');
+  if (error instanceof PlanError) {
+    return context.json(
+      { error: { code: error.code, message: error.message, requestId } },
+      error.status,
+    );
+  }
   logger.error({ error, requestId }, 'Unhandled request error');
   Sentry.withScope((scope) => {
     scope.setTag('request_id', requestId);
@@ -88,6 +96,7 @@ app.get('/api/ready', async (context) => {
 app.use('/api/v1/*', requireAuthentication);
 
 registerWorkoutRoutes(app);
+registerPlanRoutes(app);
 
 app.doc('/api/openapi.json', {
   openapi: '3.1.0',
