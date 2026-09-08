@@ -1,9 +1,30 @@
-# Phase 2: first browser-testable slice
+# Phase 2: browser verification checklist
 
 Implemented on `phase-2-plan-lifecycle`: private plan library, create, edit description/dates,
 validation preview, warning acknowledgement, lock, unlock, and discard. This is a lifecycle
-checkpoint, not the complete Phase 2 feature set. The next organization slice adds rename,
-activation/deactivation, archive/unarchive, and active-plan/locked-draft schedule selection.
+checkpoint, not the complete Phase 2 feature set. Organization, activation/deactivation,
+archive/unarchive, explicit schedule selection, and version history/restore are also implemented.
+
+## History and restore walkthrough
+
+1. Open a plan with at least two locked versions. If needed, unlock, edit the description,
+   save, validate, and lock to create a second version.
+2. In **Version history**, open **Version 1**. Inspect its original description/dates,
+   saved validation findings, automatic change summary, complete content, and schedule.
+3. Click **Review restore as draft**. The preview should identify the older source and current
+   locked version and explain that locking later replaces the current schedule.
+4. Confirm restore. Back in plan details, the draft should contain Version 1's content while
+   Version 2 stays locked. History should identify Version 1 as the draft's starting point.
+5. Validate and lock the restored draft. This creates Version 3, based on Version 1 and
+   replacing Version 2. All three remain inspectable; Versions 1 and 2 are unchanged.
+6. Try restoring Version 1 again while its identical content is current: expect a no-change
+   rejection, not another draft. Restoring the current version is also blocked.
+7. Unlock and revisit history: restore must be blocked until the draft is locked or discarded.
+8. Archive the plan: historical content remains inspectable, but restore is blocked until unarchive.
+
+This slice does not reset local data or deploy Railway. `pnpm test:db` verifies full restored
+workout cloning, preserved lineage, new physical IDs, retry safety, stale requests, authorization,
+and ancestry; UI tests verify the preview and confirmation gates.
 
 ## Organization walkthrough
 
@@ -24,8 +45,8 @@ activation/deactivation, archive/unarchive, and active-plan/locked-draft schedul
 
 No production deployment or additional local data reset was needed for this slice. The API and
 web run in detached tmux sessions `askesis-phase2-api` and `askesis-phase2-web` so they survive
-the agent turn ending. The schedule currently supports active plans; full historical/archived
-schedule inspection belongs to the upcoming history slice.
+the agent turn ending. The main schedule supports active plans; version-history pages also
+allow historical schedule inspection, including for archived plans.
 
 ## Open the app
 
@@ -74,8 +95,8 @@ date strings rather than being shifted through UTC instants ([driver date behavi
 The browser automation tab reaches sign-in, but its snapshot/evaluation calls timed out;
 the authenticated visual walkthrough still needs human verification.
 
-Next slices: history/restore, fuller structural/order validators,
-historical schedule inspection, fixture publication, and Railway cutover. No workout or
+Next slices: fuller structural/order validators,
+fixture publication, and Railway cutover. No workout or
 calibration editing UI or agent mutations are included in this checkpoint.
 
 The new screen uses the query/mutation/invalidation pattern from the

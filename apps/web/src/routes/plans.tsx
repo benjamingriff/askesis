@@ -4,6 +4,7 @@ import { Link, useBeforeUnload, useBlocker, useNavigate, useParams } from 'react
 import type { paths } from '@askesis/api-client';
 import { api } from '../api';
 import { usePlanPreferences } from '../plan-selection';
+import { PlanHistory } from './plan-history';
 
 type Plan = paths['/api/v1/plans/{planId}']['get']['responses'][200]['content']['application/json'];
 type Preview =
@@ -372,7 +373,7 @@ function PlanEditor({ plan }: { plan: Plan }) {
       <p className="plan-state">
         {plan.draft
           ? plan.locked
-            ? `Unlocked · editing a draft based on version ${plan.locked.versionNumber}`
+            ? `Unlocked · unpublished draft (current locked version ${plan.locked.versionNumber})`
             : 'Initial draft'
           : `Locked · version ${plan.locked?.versionNumber}`}
       </p>
@@ -508,6 +509,14 @@ function PlanEditor({ plan }: { plan: Plan }) {
         <section className="plan-panel" aria-label="Lock review">
           <h2>Review before locking</h2>
           <p>Draft edit {preview.editNumber}. Locking makes this version immutable.</p>
+          {plan.draft?.basedOnVersionId &&
+            plan.locked &&
+            plan.draft.basedOnVersionId !== plan.locked.id && (
+              <p>
+                Warning: this draft was restored from an older version. Locking it replaces the
+                current schedule with the restored content while preserving all previous versions.
+              </p>
+            )}
           {!preview.hasChanges && (
             <p>
               No content changes since the locked version. Edit the draft or discard it; no new
@@ -559,6 +568,7 @@ function PlanEditor({ plan }: { plan: Plan }) {
         </section>
       )}
       {mutation.isPending && <p role="status">Working…</p>}
+      <PlanHistory planId={plan.id} basedOnVersionId={plan.draft?.basedOnVersionId ?? null} />
     </>
   );
 }

@@ -1695,3 +1695,8 @@ textarea:focus-visible {
   background: white;
   font: inherit;
 }
+.version-content {
+  overflow: auto;
+  max-height: 480px;
+  font-size: 0.8rem;
+}
