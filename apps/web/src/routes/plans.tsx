@@ -3,6 +3,7 @@ import { useCallback, useRef, useState } from 'react';
 import { Link, useBeforeUnload, useBlocker, useNavigate, useParams } from 'react-router';
 import type { paths } from '@askesis/api-client';
 import { api } from '../api';
+import { usePlanPreferences } from '../plan-selection';
 
 type Plan = paths['/api/v1/plans/{planId}']['get']['responses'][200]['content']['application/json'];
 type Preview =
@@ -28,14 +29,19 @@ function useRequestKey() {
   };
 }
 
-export function PlansPage() {
+export function PlansPage({ archived = false }: { archived?: boolean }) {
   const navigate = useNavigate();
   const client = useQueryClient();
   const [name, setName] = useState('');
   const requestKey = useRequestKey();
   const plans = useQuery({
-    queryKey: ['plans'],
-    queryFn: async () => result(await api.GET('/api/v1/plans')).plans,
+    queryKey: ['plans', 'collection', archived ? 'archive' : 'library'],
+    queryFn: async () =>
+      result(
+        await api.GET('/api/v1/plans', {
+          params: { query: { collection: archived ? 'archive' : 'library' } },
+        }),
+      ).plans,
   });
   const create = useMutation({
     mutationFn: async () =>
@@ -53,40 +59,53 @@ export function PlansPage() {
   return (
     <main className="plan-lifecycle">
       <p className="page-kicker">Your training</p>
-      <h1>Plan library</h1>
+      <h1>{archived ? 'Archived plans' : 'Plan library'}</h1>
+      <Link to={archived ? '/plans' : '/plans/archive'}>
+        {archived ? 'Back to library' : 'View archive'}
+      </Link>
       <p>
         Create a plan, edit a draft, then review and lock a version. Plans remain private to your
         account.
       </p>
-      <form
-        className="plan-panel"
-        onSubmit={(event) => {
-          event.preventDefault();
-          create.mutate();
-        }}
-      >
-        <label>
-          Plan name
-          <input required maxLength={200} value={name} onChange={(e) => setName(e.target.value)} />
-        </label>
-        <button className="primary-button" disabled={create.isPending || !name.trim()}>
-          Create plan
-        </button>
-        {create.error && <p role="alert">{create.error.message}</p>}
-      </form>
+      {!archived && (
+        <form
+          className="plan-panel"
+          onSubmit={(event) => {
+            event.preventDefault();
+            create.mutate();
+          }}
+        >
+          <label>
+            Plan name
+            <input
+              required
+              maxLength={200}
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+            />
+          </label>
+          <button className="primary-button" disabled={create.isPending || !name.trim()}>
+            Create plan
+          </button>
+          {create.error && <p role="alert">{create.error.message}</p>}
+        </form>
+      )}
       {plans.isPending && <p role="status">Loading plans…</p>}
       {plans.error && (
         <p role="alert">
           {plans.error.message} <button onClick={() => void plans.refetch()}>Retry</button>
         </p>
       )}
-      {plans.data?.length === 0 && <p>No plans yet. Create your first draft above.</p>}
+      {plans.data?.length === 0 && (
+        <p>{archived ? 'No archived plans.' : 'No plans yet. Create your first draft above.'}</p>
+      )}
       <ul className="plan-library-list">
         {plans.data?.map((plan) => (
           <li key={plan.id}>
             <Link to={`/plans/${plan.id}`}>
               <strong>{plan.displayName}</strong>
               <span>
+                {plan.active && 'Active · '}
                 {plan.archived
                   ? 'Archived'
                   : plan.draft
@@ -133,6 +152,8 @@ export function PlanPage() {
 
 function PlanEditor({ plan }: { plan: Plan }) {
   const client = useQueryClient();
+  const preferences = usePlanPreferences();
+  const [name, setName] = useState(plan.displayName);
   const version = plan.draft ?? plan.locked;
   const requestKey = useRequestKey();
   const [description, setDescription] = useState(version?.description ?? '');
@@ -140,12 +161,15 @@ function PlanEditor({ plan }: { plan: Plan }) {
   const [endDate, setEndDate] = useState(version?.endDate ?? '');
   const [preview, setPreview] = useState<Preview | null>(null);
   const [acknowledged, setAcknowledged] = useState(false);
-  const [confirm, setConfirm] = useState<'unlock' | 'discard' | null>(null);
+  const [confirm, setConfirm] = useState<'unlock' | 'discard' | 'archive' | 'unarchive' | null>(
+    null,
+  );
   const params = { path: { planId: plan.id } };
-  const dirty =
+  const contentDirty =
     description !== (version?.description ?? '') ||
     startDate !== (version?.startDate ?? '') ||
     endDate !== (version?.endDate ?? '');
+  const dirty = name !== plan.displayName || contentDirty;
   const blocker = useBlocker(dirty);
   useBeforeUnload(
     useCallback(
@@ -159,7 +183,38 @@ function PlanEditor({ plan }: { plan: Plan }) {
     ),
   );
   const mutation = useMutation({
-    mutationFn: async (action: 'save' | 'validate' | 'lock' | 'unlock' | 'discard') => {
+    mutationFn: async (
+      action:
+        | 'save'
+        | 'validate'
+        | 'lock'
+        | 'unlock'
+        | 'discard'
+        | 'rename'
+        | 'activate'
+        | 'deactivate'
+        | 'archive'
+        | 'unarchive',
+    ) => {
+      if (action === 'rename')
+        return result(
+          await api.PATCH('/api/v1/plans/{planId}', {
+            params,
+            body: { displayName: name.trim(), expectedStateVersion: plan.stateVersion },
+          }),
+        );
+      if (
+        action === 'activate' ||
+        action === 'deactivate' ||
+        action === 'archive' ||
+        action === 'unarchive'
+      )
+        return result(
+          await api.POST(`/api/v1/plans/{planId}/${action}`, {
+            params,
+            body: { expectedStateVersion: plan.stateVersion },
+          }),
+        );
       if (action === 'validate') {
         const next = result(await api.POST('/api/v1/plans/{planId}/validate', { params }));
         setPreview(next);
@@ -210,8 +265,10 @@ function PlanEditor({ plan }: { plan: Plan }) {
         );
       throw new Error('Refresh the plan before continuing.');
     },
-    onSuccess: async (updated) => {
+    onSuccess: async (updated, action) => {
       if (updated === null) return;
+      if (action === 'unlock' || action === 'activate')
+        preferences.write({ planId: updated.id, view: updated.draft ? 'draft' : 'locked' });
       client.setQueryData(['plans', plan.id], updated);
       await client.invalidateQueries({ queryKey: ['plans'] });
     },
@@ -223,11 +280,87 @@ function PlanEditor({ plan }: { plan: Plan }) {
   function change() {
     setPreview(null);
     setAcknowledged(false);
+    setConfirm(null);
   }
   const warnings = preview?.findings.some((f) => f.severity === 'warning') ?? false;
   return (
     <>
       <h1>{plan.displayName}</h1>
+      <p>
+        {plan.archived
+          ? 'Archived · read-only'
+          : plan.active
+            ? 'Active · available in Plan'
+            : 'Inactive · library only'}
+      </p>
+      <form
+        className="plan-panel"
+        onSubmit={(event) => {
+          event.preventDefault();
+          mutation.mutate('rename');
+        }}
+      >
+        <label>
+          Plan name
+          <input
+            required
+            maxLength={200}
+            disabled={plan.archived || mutation.isPending || contentDirty}
+            value={name}
+            onChange={(event) => {
+              setName(event.target.value);
+              change();
+            }}
+          />
+        </label>
+        {!plan.archived && (
+          <button
+            disabled={
+              mutation.isPending ||
+              !name.trim() ||
+              name === plan.displayName ||
+              description !== (version?.description ?? '') ||
+              startDate !== (version?.startDate ?? '') ||
+              endDate !== (version?.endDate ?? '')
+            }
+          >
+            Rename plan
+          </button>
+        )}
+        <p>The name is not versioned. Save any content edits before renaming.</p>
+      </form>
+      <div className="plan-actions">
+        {plan.archived ? (
+          <button disabled={mutation.isPending} onClick={() => setConfirm('unarchive')}>
+            Unarchive plan…
+          </button>
+        ) : (
+          <>
+            <button
+              disabled={dirty || mutation.isPending || !plan.locked}
+              onClick={() => mutation.mutate(plan.active ? 'deactivate' : 'activate')}
+            >
+              {plan.active ? 'Deactivate plan' : 'Activate plan'}
+            </button>
+            <button disabled={dirty || mutation.isPending} onClick={() => setConfirm('archive')}>
+              Archive plan…
+            </button>
+          </>
+        )}
+        {plan.active && (
+          <Link
+            to="/plan"
+            onClick={() =>
+              preferences.write({ planId: plan.id, view: plan.draft ? 'draft' : 'locked' })
+            }
+          >
+            View schedule
+          </Link>
+        )}
+      </div>
+      {!plan.locked && !plan.archived && (
+        <p>Lock the first version before activating. You can archive an unfinished draft.</p>
+      )}
       {blocker.state === 'blocked' && (
         <section className="plan-panel" aria-label="Unsaved changes">
           <h2>Leave without saving?</h2>
@@ -244,6 +377,15 @@ function PlanEditor({ plan }: { plan: Plan }) {
           : `Locked · version ${plan.locked?.versionNumber}`}
       </p>
       <p className="plan-id">Plan ID: {plan.id}</p>
+      {plan.locked && plan.draft && (
+        <details className="plan-panel">
+          <summary>Inspect preserved locked version {plan.locked.versionNumber}</summary>
+          <p>
+            {plan.locked.startDate} – {plan.locked.endDate}
+          </p>
+          <p>{plan.locked.description ?? 'No description.'}</p>
+        </details>
+      )}
       {plan.locked && (
         <p>
           Locked version {plan.locked.versionNumber} is preserved.{' '}
@@ -266,7 +408,9 @@ function PlanEditor({ plan }: { plan: Plan }) {
           mutation.mutate('save');
         }}
       >
-        <fieldset disabled={mutation.isPending || !plan.draft || plan.archived}>
+        <fieldset
+          disabled={mutation.isPending || !plan.draft || plan.archived || name !== plan.displayName}
+        >
           <label>
             Description
             <textarea
@@ -304,7 +448,7 @@ function PlanEditor({ plan }: { plan: Plan }) {
             </label>
           </div>
           {plan.draft && (
-            <button className="primary-button" disabled={!dirty}>
+            <button className="primary-button" disabled={!dirty || name !== plan.displayName}>
               Save draft
             </button>
           )}
@@ -334,14 +478,26 @@ function PlanEditor({ plan }: { plan: Plan }) {
       )}
       {confirm && (
         <section className="plan-panel" aria-label={`${confirm} confirmation`}>
-          <h2>{confirm === 'unlock' ? 'Create an editable draft?' : 'Discard this draft?'}</h2>
+          <h2>
+            {confirm === 'archive'
+              ? 'Archive this plan?'
+              : confirm === 'unarchive'
+                ? 'Unarchive this plan?'
+                : confirm === 'unlock'
+                  ? 'Create an editable draft?'
+                  : 'Discard this draft?'}
+          </h2>
           <p>
-            {confirm === 'unlock'
-              ? 'The current locked version and all its content will be copied into a draft. The locked version stays unchanged.'
-              : `All draft changes${dirty ? ', including your unsaved edits,' : ''} will be permanently removed. Locked version ${plan.locked?.versionNumber} stays unchanged.`}
+            {confirm === 'archive'
+              ? 'This plan will be deactivated and become read-only. All saved draft content and locked versions are retained.'
+              : confirm === 'unarchive'
+                ? 'This restores the saved draft and locked state to your library. The plan will remain inactive until you activate it.'
+                : confirm === 'unlock'
+                  ? 'The current locked version and all its content will be copied into a draft. The locked version stays unchanged.'
+                  : `All draft changes${dirty ? ', including your unsaved edits,' : ''} will be permanently removed. Locked version ${plan.locked?.versionNumber} stays unchanged.`}
           </p>
           <button disabled={mutation.isPending} onClick={() => mutation.mutate(confirm)}>
-            {confirm === 'unlock' ? 'Confirm unlock' : 'Confirm discard'}
+            {`Confirm ${confirm}`}
           </button>{' '}
           <button disabled={mutation.isPending} onClick={() => setConfirm(null)}>
             Cancel

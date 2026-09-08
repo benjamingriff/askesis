@@ -10,7 +10,7 @@ describe('WorkoutsPage', () => {
         {
           path: '/plan',
           loader: () => ({ workouts: [] }),
-          element: <WorkoutsPage />,
+          element: <WorkoutsPage workouts={[]} />,
         },
       ],
       { initialEntries: ['/plan'] },

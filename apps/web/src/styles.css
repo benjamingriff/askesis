@@ -1684,3 +1684,14 @@ textarea:focus-visible {
 .plan-acknowledgement input {
   margin-top: 5px;
 }
+.plan-selector {
+  width: min(1180px, calc(100% - 64px));
+  margin: 32px auto;
+}
+.plan-selector select {
+  padding: 10px;
+  border: 1px solid #bbb;
+  border-radius: 6px;
+  background: white;
+  font: inherit;
+}

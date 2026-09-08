@@ -46,7 +46,7 @@ function AuthenticatedRouter() {
 
   configureAuthTokenProvider(getToken);
   return (
-    <AccountQueryProvider key={userId ?? 'signed-out'}>
+    <AccountQueryProvider key={userId ?? 'signed-out'} accountId={userId ?? 'signed-out'}>
       <RouterProvider router={router} />
     </AccountQueryProvider>
   );

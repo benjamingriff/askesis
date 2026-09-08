@@ -1,7 +1,7 @@
 # Current agent handoff
 
 **Updated:** 2026-09-08
-**Current phase:** Phase 2 — first browser-testable lifecycle slice on `phase-2-plan-lifecycle`
+**Current phase:** Phase 2 — lifecycle and plan organization on `phase-2-plan-lifecycle`
 **Completed phase:** Phase 1 — engineering foundation and Railway deployment validation
 
 ## Purpose
@@ -26,7 +26,7 @@ content, immutable movement definitions, idempotency storage, and database guard
 Kysely types and the workout OpenAPI/client contract have been regenerated.
 
 Workout lists now require `planVersionId`; membership access is removed. The
-transitional `/plan?planVersionId=...` page can inspect explicit version content.
+`/plan` page selects active plans and explicitly requests their locked or draft version content.
 The Cardiff seed currently creates a populated draft; its final publication
 must use the lifecycle service and real hash/validation results.
 
@@ -35,14 +35,20 @@ optimistic concurrency, successful-command idempotency, canonical hashing, tempo
 change summaries, and complete normalized cloning with retained lineage. The new `/plans`
 library and detail screens use account-isolated TanStack Query caches and explicit confirmations.
 
+Organization is now implemented: rename, multiple active plans, deactivate, archive/unarchive,
+and owner-scoped library/active/archive filters. Archived plans retain content and become
+read-only; unarchive leaves them inactive. `/plans/archive` lists archived plans. `/plan` uses
+account-scoped browser preferences for selection, always issuing explicit version-ID requests.
+Local servers run in detached tmux sessions `askesis-phase2-api` and `askesis-phase2-web`.
+
 Verified locally: `pnpm check` and `pnpm test:db`. The earlier schema checkpoint also passed
 `pnpm test:cutover` and `pnpm smoke`. The normal development database is now migrated: one
 legacy plan removed, two athlete records and one external identity preserved. Railway is unchanged.
 Local API readiness succeeds; the web app runs at http://localhost:5173/plans.
 
 See [the browser test checklist](./phase-2-lifecycle-test-checklist.md) for the user walkthrough,
-automation limitations, restart commands, and remaining scope. Organization/history/restore,
-full structural/order validation, schedule integration, fixture publication, and Railway cutover
+automation limitations, restart commands, and remaining scope. History/restore,
+full structural/order validation, historical schedule inspection, fixture publication, and Railway cutover
 are still outstanding. Do not describe Phase 2 as complete.
 
 Phase 1 implementation and deployment changes are committed on `main`. The Phase 2 lifecycle refinement, schema contract, and implementation plan are included with this handoff. Use `git log` for the exact handoff commit rather than copying a commit hash from this document.

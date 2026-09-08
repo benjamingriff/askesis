@@ -64,6 +64,53 @@ beforeEach(() => {
 });
 afterEach(cleanup);
 
+it('requires archive confirmation and describes retention and deactivation', async () => {
+  mount();
+  fireEvent.click(await screen.findByRole('button', { name: 'Archive plan…' }));
+  expect(api.POST).not.toHaveBeenCalled();
+  expect(
+    screen.getByText(/All saved draft content and locked versions are retained/),
+  ).toBeInTheDocument();
+  vi.mocked(api.POST).mockRejectedValue(new Error('Test request'));
+  fireEvent.click(screen.getByRole('button', { name: 'Confirm archive' }));
+  await screen.findByRole('alert');
+  expect(api.POST).toHaveBeenCalledWith(
+    '/api/v1/plans/{planId}/archive',
+    expect.objectContaining({ body: { expectedStateVersion: 1 } }),
+  );
+});
+
+it('keeps archived metadata read-only and offers explicit unarchive', async () => {
+  vi.mocked(api.GET).mockResolvedValue({
+    data: { ...plan, archived: true },
+    response: new Response(),
+  });
+  mount();
+  expect(await screen.findByLabelText('Plan name')).toBeDisabled();
+  expect(screen.getByLabelText('Description')).toBeDisabled();
+  expect(screen.queryByRole('button', { name: 'Activate plan' })).not.toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: 'Unarchive plan…' }));
+  expect(screen.getByText(/The plan will remain inactive/)).toBeInTheDocument();
+  expect(api.POST).not.toHaveBeenCalled();
+});
+
+it('renames a locked plan without unlocking', async () => {
+  vi.mocked(api.GET).mockResolvedValue({
+    data: { ...plan, draft: null, locked: { ...draft, state: 'locked', versionNumber: 1 } },
+    response: new Response(),
+  });
+  vi.mocked(api.PATCH).mockRejectedValue(new Error('Test request'));
+  mount();
+  fireEvent.change(await screen.findByLabelText('Plan name'), { target: { value: 'New name' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Rename plan' }));
+  await screen.findByRole('alert');
+  expect(api.PATCH).toHaveBeenCalledWith(
+    '/api/v1/plans/{planId}',
+    expect.objectContaining({ body: { displayName: 'New name', expectedStateVersion: 1 } }),
+  );
+  expect(api.POST).not.toHaveBeenCalled();
+});
+
 it('warns before navigating away from unsaved edits', async () => {
   mount();
   fireEvent.change(await screen.findByLabelText('Description'), { target: { value: 'Unsaved' } });

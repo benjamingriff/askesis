@@ -2,7 +2,30 @@
 
 Implemented on `phase-2-plan-lifecycle`: private plan library, create, edit description/dates,
 validation preview, warning acknowledgement, lock, unlock, and discard. This is a lifecycle
-checkpoint, not the complete Phase 2 feature set.
+checkpoint, not the complete Phase 2 feature set. The next organization slice adds rename,
+activation/deactivation, archive/unarchive, and active-plan/locked-draft schedule selection.
+
+## Organization walkthrough
+
+1. Open an existing locked plan and rename it. The version number and content stay unchanged.
+2. Activate it. Open **Plan** in the sidebar (or **View schedule** in plan details).
+3. Lock and activate a second plan. Both should be available in the **Active plan** selector;
+   activating the second must not deactivate the first.
+4. Unlock one plan, edit its description, and save. Open its schedule and switch **Content source**
+   between locked and draft. The description/dates identify the chosen source even for empty schedules.
+5. Refresh the schedule. Your selected plan/source should be remembered in this browser/account.
+6. Archive an unlocked active plan after reviewing the confirmation. It leaves the main Plan
+   selector and library, but appears under **View archive**. Saved draft and locked content remain.
+7. Inspect its archived details: name and content are read-only. Unarchive after confirming;
+   it returns to the library with its draft intact, but stays inactive until explicitly activated.
+8. Archive an initial, never-locked draft. Activation must be unavailable, but archive should work.
+9. In two tabs, rename a plan in one, then attempt an organizational change from stale details
+   in the other. Expect a conflict and an explicit refresh, not silent overwriting.
+
+No production deployment or additional local data reset was needed for this slice. The API and
+web run in detached tmux sessions `askesis-phase2-api` and `askesis-phase2-web` so they survive
+the agent turn ending. The schedule currently supports active plans; full historical/archived
+schedule inspection belongs to the upcoming history slice.
 
 ## Open the app
 
@@ -51,8 +74,8 @@ date strings rather than being shifted through UTC instants ([driver date behavi
 The browser automation tab reaches sign-in, but its snapshot/evaluation calls timed out;
 the authenticated visual walkthrough still needs human verification.
 
-Next slices: rename/activation/archive, history/restore, fuller structural/order validators,
-schedule/version navigation, fixture publication, and Railway cutover. No workout or
+Next slices: history/restore, fuller structural/order validators,
+historical schedule inspection, fixture publication, and Railway cutover. No workout or
 calibration editing UI or agent mutations are included in this checkpoint.
 
 The new screen uses the query/mutation/invalidation pattern from the
