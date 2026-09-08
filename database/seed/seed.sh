@@ -1,7 +1,7 @@
 #!/bin/sh
 set -eu
 
-SEED_KEY="cardiff-half-example-v1"
+SEED_KEY="cardiff-half-example-v2"
 SEED_FILE="${SEED_FILE:-/workspace/database/seed/cardiff-half-example.sql}"
 
 already_applied="$(psql -Atqc "SELECT EXISTS (SELECT 1 FROM seed_runs WHERE seed_key = '${SEED_KEY}')")"

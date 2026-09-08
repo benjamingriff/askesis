@@ -13,8 +13,8 @@ export interface paths {
         };
         get: {
             parameters: {
-                query?: {
-                    planId?: string;
+                query: {
+                    planVersionId: string;
                 };
                 header?: never;
                 path?: never;
@@ -117,6 +117,8 @@ export interface components {
             id: string;
             /** Format: uuid */
             planId: string;
+            /** Format: uuid */
+            planVersionId: string;
             planTitle: string;
             weekNumber: number;
             /** Format: date */

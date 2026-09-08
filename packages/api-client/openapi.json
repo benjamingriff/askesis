@@ -34,6 +34,11 @@
             "format": "uuid",
             "pattern": "^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i"
           },
+          "planVersionId": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i"
+          },
           "planTitle": {
             "type": "string"
           },
@@ -79,6 +84,7 @@
         "required": [
           "id",
           "planId",
+          "planVersionId",
           "planTitle",
           "weekNumber",
           "scheduledDate",
@@ -410,8 +416,8 @@
               "format": "uuid",
               "pattern": "^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i"
             },
-            "required": false,
-            "name": "planId",
+            "required": true,
+            "name": "planVersionId",
             "in": "query"
           }
         ],

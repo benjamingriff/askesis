@@ -2,7 +2,7 @@
 
 ## Status
 
-**Proposed checkpoint for approval; implementation not started.** This plan implements the accepted [Phase 2 lifecycle refinement](./phase-2-plan-lifecycle-refinement.md) using the proposed [Phase 2 schema contract](./phase-2-schema-contract.md).
+**Approved; implementation in progress.** This plan implements the accepted [Phase 2 lifecycle refinement](./phase-2-plan-lifecycle-refinement.md) using the approved [Phase 2 schema contract](./phase-2-schema-contract.md).
 
 ## Delivery strategy
 
@@ -39,6 +39,11 @@ Kysely repositories and PostgreSQL transactions
 - No shared domain package, stored-procedure business layer, outbox, or event system is introduced.
 
 ## Implementation sequence
+
+Progress: the schema migration, draft fixture, generated database types,
+version-aware workout reads, and schema/cutover checks are implemented on
+`phase-2-plan-lifecycle`. The fixture will be published through the lifecycle
+service in Stage 2. The remaining stages are not implemented yet.
 
 ### Stage 1: destructive schema foundation
 

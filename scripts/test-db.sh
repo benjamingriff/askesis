@@ -26,3 +26,7 @@ docker compose --profile test run --rm --no-deps \
   seed sh /workspace/database/seed/seed.sh
 
 TEST_DATABASE_URL="$TEST_DATABASE_URL" pnpm --filter @askesis/api test:db
+
+docker compose exec -T postgres-test psql \
+  --username askesis_test --dbname askesis_test --set ON_ERROR_STOP=1 \
+  < database/tests/plan-version-invariants.sql

@@ -12,6 +12,16 @@
 
 The Compose `seed` service runs `seed.sh` after Atlas finishes migrating. The `seed_runs` table makes startup idempotent, so the seed is only loaded into a database volume once.
 
+The Phase 2 seed key is `cardiff-half-example-v2`. During schema-foundation work,
+the fixture is a populated initial draft with version ID
+`00000000-0000-0000-0000-000000000050`. Publication will use the lifecycle service
+once canonical hashing and validation are implemented. The transitional Plan
+route accepts `?planVersionId=00000000-0000-0000-0000-000000000050` for inspection.
+
+Reset preserves athlete rows and external authentication identities. It requires
+table-owner privileges, disables user triggers only within its transaction, and
+removes only the fixed fixture plan and seed marker.
+
 Reset and reload only the example data:
 
 ```bash

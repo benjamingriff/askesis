@@ -1,7 +1,7 @@
 # Current agent handoff
 
 **Updated:** 2026-09-07
-**Current phase:** Phase 2 — implementation planning for plan lifecycle and immutable revisions
+**Current phase:** Phase 2 — schema foundation implemented on `phase-2-plan-lifecycle`
 **Completed phase:** Phase 1 — engineering foundation and Railway deployment validation
 
 ## Purpose
@@ -18,6 +18,26 @@ Before making changes, read:
 Do not place credentials, Clerk tokens, database URLs, Sentry credentials, or Railway secrets in chat, logs, commits, or this file.
 
 ## Repository state at handoff
+
+Phase 2 implementation is underway on `phase-2-plan-lifecycle`. The new migration
+`20260907120000_plan_versions.sql` resets plan-domain data while preserving
+athletes and external identities. It adds version roots, lineage, version-scoped
+content, immutable movement definitions, idempotency storage, and database guards.
+Kysely types and the workout OpenAPI/client contract have been regenerated.
+
+Workout lists now require `planVersionId`; membership access is removed. The
+transitional `/plan?planVersionId=...` page can inspect explicit version content.
+The Cardiff seed currently creates a populated draft; its final publication
+must use the forthcoming lifecycle service and real hash/validation results.
+
+Verified locally: `pnpm check`, `pnpm test:db`, `pnpm test:cutover`, and `pnpm smoke`. The cutover check
+also verifies that fixture reset preserves external identities. These tests use
+only disposable databases. The normal development database and Railway have not
+been migrated by this work.
+
+Next: implement canonical aggregate assembly, hashing, validation, change summaries,
+and the create/lock/unlock/discard service journey. Organization/history/restore,
+TanStack Query UI, full lifecycle tests, and Railway cutover remain outstanding.
 
 Phase 1 implementation and deployment changes are committed on `main`. The Phase 2 lifecycle refinement, schema contract, and implementation plan are included with this handoff. Use `git log` for the exact handoff commit rather than copying a commit hash from this document.
 

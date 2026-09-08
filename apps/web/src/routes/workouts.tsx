@@ -13,8 +13,12 @@ import { useMemo, useState } from 'react';
 import { redirect, type LoaderFunctionArgs, useFetcher, useLoaderData } from 'react-router';
 import { api } from '../api';
 
-export async function workoutsLoader() {
-  const { data, error, response } = await api.GET('/api/v1/workouts');
+export async function workoutsLoader({ request }: LoaderFunctionArgs) {
+  const planVersionId = new URL(request.url).searchParams.get('planVersionId');
+  if (planVersionId === null) return { workouts: [] };
+  const { data, error, response } = await api.GET('/api/v1/workouts', {
+    params: { query: { planVersionId } },
+  });
 
   if (response.status === 401) throw redirect('/sign-in');
   if (error !== undefined || data === undefined) {
