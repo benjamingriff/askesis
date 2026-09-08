@@ -1,7 +1,7 @@
 # Current agent handoff
 
-**Updated:** 2026-09-07
-**Current phase:** Phase 2 — schema foundation implemented on `phase-2-plan-lifecycle`
+**Updated:** 2026-09-08
+**Current phase:** Phase 2 — first browser-testable lifecycle slice on `phase-2-plan-lifecycle`
 **Completed phase:** Phase 1 — engineering foundation and Railway deployment validation
 
 ## Purpose
@@ -28,21 +28,22 @@ Kysely types and the workout OpenAPI/client contract have been regenerated.
 Workout lists now require `planVersionId`; membership access is removed. The
 transitional `/plan?planVersionId=...` page can inspect explicit version content.
 The Cardiff seed currently creates a populated draft; its final publication
-must use the forthcoming lifecycle service and real hash/validation results.
+must use the lifecycle service and real hash/validation results.
 
-Verified locally: `pnpm check`, `pnpm test:db`, `pnpm test:cutover`, and `pnpm smoke`. The cutover check
-also verifies that fixture reset preserves external identities. These tests use
-only disposable databases. The normal development database and Railway have not
-been migrated by this work.
+The create/edit/validate/lock/unlock/discard API is implemented, including owner scoping,
+optimistic concurrency, successful-command idempotency, canonical hashing, temporal validation,
+change summaries, and complete normalized cloning with retained lineage. The new `/plans`
+library and detail screens use account-isolated TanStack Query caches and explicit confirmations.
 
-Next: implement canonical aggregate assembly, hashing, validation, change summaries,
-and the create/lock/unlock/discard service journey. Organization/history/restore,
-TanStack Query UI, full lifecycle tests, and Railway cutover remain outstanding.
+Verified locally: `pnpm check` and `pnpm test:db`. The earlier schema checkpoint also passed
+`pnpm test:cutover` and `pnpm smoke`. The normal development database is now migrated: one
+legacy plan removed, two athlete records and one external identity preserved. Railway is unchanged.
+Local API readiness succeeds; the web app runs at http://localhost:5173/plans.
 
-The schema foundation is committed as `12fa29b`. Stage 2 has started with pure
-canonical JSON/SHA-256 helpers, precision-preserving decimal normalization, and
-temporal aggregate validation in `apps/api/src/modules/plans/`. These helpers
-are covered by unit tests but are not yet wired to lifecycle HTTP commands.
+See [the browser test checklist](./phase-2-lifecycle-test-checklist.md) for the user walkthrough,
+automation limitations, restart commands, and remaining scope. Organization/history/restore,
+full structural/order validation, schedule integration, fixture publication, and Railway cutover
+are still outstanding. Do not describe Phase 2 as complete.
 
 Phase 1 implementation and deployment changes are committed on `main`. The Phase 2 lifecycle refinement, schema contract, and implementation plan are included with this handoff. Use `git log` for the exact handoff commit rather than copying a commit hash from this document.
 

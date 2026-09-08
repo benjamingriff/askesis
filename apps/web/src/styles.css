@@ -1584,3 +1584,103 @@ textarea:focus-visible {
     flex-wrap: wrap;
   }
 }
+.plan-lifecycle {
+  max-width: 920px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 40px 28px;
+  overflow-y: auto;
+}
+
+.plan-lifecycle h1 {
+  margin: 24px 0 12px;
+}
+.plan-lifecycle h2 {
+  font-size: 1.15rem;
+  margin: 0 0 12px;
+}
+.plan-lifecycle p {
+  line-height: 1.6;
+}
+.plan-panel {
+  border: 1px solid #ddd;
+  border-radius: 12px;
+  padding: 24px;
+  margin: 24px 0;
+  background: #fff;
+}
+.plan-panel fieldset {
+  border: 0;
+  padding: 0;
+  margin: 0;
+}
+.plan-panel label {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+.plan-panel input:not([type='checkbox']),
+.plan-panel textarea {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #bbb;
+  border-radius: 6px;
+  font: inherit;
+  background: #fff;
+}
+.plan-panel textarea {
+  min-height: 110px;
+  resize: vertical;
+}
+.plan-panel button,
+.plan-actions button {
+  padding: 10px 16px;
+  border: 1px solid #aaa;
+  border-radius: 6px;
+  cursor: pointer;
+}
+.plan-lifecycle button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+.plan-date-fields,
+.plan-actions {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.plan-date-fields label {
+  flex: 1;
+  min-width: 180px;
+}
+.plan-id {
+  font-size: 0.8rem;
+  color: #666;
+  overflow-wrap: anywhere;
+}
+.plan-state {
+  font-weight: 600;
+}
+.plan-library-list {
+  list-style: none;
+  padding: 0;
+}
+.plan-library-list a {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 20px;
+  margin: 12px 0;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+}
+.plan-panel .plan-acknowledgement {
+  flex-direction: row;
+  align-items: flex-start;
+  line-height: 1.5;
+}
+.plan-acknowledgement input {
+  margin-top: 5px;
+}

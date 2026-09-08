@@ -5,6 +5,7 @@ import { createRoot } from 'react-dom/client';
 import { RouterProvider } from 'react-router';
 import { configureAuthTokenProvider } from './api';
 import { router } from './router';
+import { AccountQueryProvider } from './query-provider';
 import './styles.css';
 
 Sentry.init({
@@ -32,7 +33,7 @@ if (publishableKey === undefined || publishableKey.length === 0) {
 }
 
 function AuthenticatedRouter() {
-  const { getToken, isLoaded } = useAuth();
+  const { getToken, isLoaded, userId } = useAuth();
 
   if (!isLoaded) {
     return (
@@ -44,7 +45,11 @@ function AuthenticatedRouter() {
   }
 
   configureAuthTokenProvider(getToken);
-  return <RouterProvider router={router} />;
+  return (
+    <AccountQueryProvider key={userId ?? 'signed-out'}>
+      <RouterProvider router={router} />
+    </AccountQueryProvider>
+  );
 }
 
 const root = document.getElementById('root');

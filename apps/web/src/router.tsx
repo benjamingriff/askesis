@@ -13,6 +13,7 @@ import { AppShell } from './components/AppShell';
 import { SignInPage, SignUpPage } from './routes/auth';
 import { ChatPage } from './routes/chat';
 import { SettingsPage } from './routes/settings';
+import { PlanPage, PlansPage } from './routes/plans';
 import { WorkoutsPage, workoutDetailLoader, workoutsLoader } from './routes/workouts';
 
 function RequireAuthentication() {
@@ -61,6 +62,8 @@ export const router = createBrowserRouter([
         children: [
           { index: true, element: <Navigate to="/plan" replace /> },
           { path: '/plan', loader: workoutsLoader, element: <WorkoutsPage /> },
+          { path: '/plans', element: <PlansPage /> },
+          { path: '/plans/:planId', element: <PlanPage /> },
           { path: '/chat', element: <ChatPage /> },
           { path: '/chat/:conversationId', element: <ChatPage /> },
           { path: '/settings', element: <SettingsPage /> },

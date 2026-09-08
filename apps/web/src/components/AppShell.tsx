@@ -88,6 +88,10 @@ export function AppShell() {
         </div>
 
         <nav className="primary-nav" aria-label="Primary navigation">
+          <NavLink to="/plans" onClick={() => setMobileOpen(false)}>
+            <FileText size={19} />
+            <span>Plan library</span>
+          </NavLink>
           <NavLink to="/plan" onClick={() => setMobileOpen(false)}>
             <CalendarDays size={19} />
             <span>Plan</span>
