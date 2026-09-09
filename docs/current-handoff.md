@@ -1,7 +1,7 @@
 # Current agent handoff
 
-**Updated:** 2026-09-07
-**Current phase:** Phase 2 — implementation planning for plan lifecycle and immutable revisions
+**Updated:** 2026-09-09
+**Current phase:** Phase 2 — implementation underway for plan lifecycle and immutable revisions
 **Completed phase:** Phase 1 — engineering foundation and Railway deployment validation
 
 ## Purpose
@@ -19,7 +19,7 @@ Do not place credentials, Clerk tokens, database URLs, Sentry credentials, or Ra
 
 ## Repository state at handoff
 
-Phase 1 implementation and deployment changes are committed on `main`. The Phase 2 lifecycle refinement, schema contract, and implementation plan are included with this handoff. Use `git log` for the exact handoff commit rather than copying a commit hash from this document.
+Phase 1 implementation and deployment changes are committed on `main`. Phase 2 implementation is underway. The accepted Phase 3 refinement and its proposed schema and implementation contracts have also been prepared so Phase 3 can begin from an agreed boundary after Phase 2 lands. Use `git log` for the exact handoff commit rather than copying a commit hash from this document.
 
 The Phase 1 closure validation includes:
 
@@ -327,6 +327,8 @@ Phase 1 is closed. Phase 2 refinement, schema design, and implementation plannin
 - Consistent owner authorization.
 
 Do not begin agent plan mutations before immutable plan revision semantics exist.
+
+Phase 3 has been refined in parallel so it is ready for review after Phase 2. Its accepted [brief and calibration refinement](./phase-3-plan-brief-and-calibration-refinement.md), proposed [schema and API contract](./phase-3-schema-contract.md), and proposed [implementation plan](./phase-3-implementation-plan.md) define the temporary structured brief flow, human confirmation, race-result or threshold-pace calibration, persisted E/M/T/I/R guides, and effective-dated workout resolution. Phase 3 must build on the final Phase 2 implementation rather than beginning against an assumed intermediate schema.
 
 ## Non-negotiable architecture and product constraints
 

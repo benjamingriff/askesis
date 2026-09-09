@@ -18,6 +18,9 @@ This directory records the proposed direction for Askesis beyond the original fi
 - [Phase 2 plan lifecycle refinement](./phase-2-plan-lifecycle-refinement.md) — accepted product and architecture contract for logical plans, drafts, immutable versions, lifecycle operations, and the thin Phase 2 UI.
 - [Phase 2 schema contract](./phase-2-schema-contract.md) — proposed relational tables, keys, constraints, immutability, identity, and transaction boundaries for Phase 2.
 - [Phase 2 implementation plan](./phase-2-implementation-plan.md) — proposed backend-first delivery stages, API/UI work, verification, and Railway cutover.
+- [Phase 3 plan brief and running pace calibration](./phase-3-plan-brief-and-calibration-refinement.md) — accepted product contract for plan-specific running context, human confirmation, and effective-dated pace guides.
+- [Phase 3 schema and API contract](./phase-3-schema-contract.md) — proposed brief, weekday, calibration, confirmation, effective-period, and workout-resolution contracts.
+- [Phase 3 implementation plan](./phase-3-implementation-plan.md) — proposed calculator-first delivery stages, API/UI work, verification, and Railway rollout.
 - [Example queries](./example-queries.md) — inspect plans, workout trees, weekly totals, and calibrations.
 - [Implementation roadmap](./implementation-roadmap.md) — the earlier data-model implementation sequence and deferred concerns.
 

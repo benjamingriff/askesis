@@ -657,44 +657,44 @@ POST   /api/v1/plans/:planId/revisions/:revisionId/restore
 
 ## Phase 3: plan brief and fitness calibration
 
+**Status: refined; schema and implementation contracts proposed.** The accepted scope is [Phase 3 plan brief and running pace calibration](./phase-3-plan-brief-and-calibration-refinement.md), supported by the proposed [schema and API contract](./phase-3-schema-contract.md) and [implementation plan](./phase-3-implementation-plan.md).
+
 The alpha has no global athlete profile or demographic onboarding. Training context belongs to the versioned plan aggregate and may describe the account owner, another person, or a hypothetical scenario without creating a separate runner identity.
 
 ### Structured plan brief
 
-The exact schema will be refined at the start of this phase. Candidate plan-specific assumptions include:
+Phase 3 replaces typed goals and generic constraints with a deliberately small running brief:
 
-- Goal and target date
-- Available training days
-- Current weekly running volume
-- Current longest run
-- Recent race or time-trial evidence
-- Training limitations and constraints
-- Distance and pace units
-- Free-text planning context
+- One free-text goal; the plan start and end remain the only structured dates.
+- Typical weekly distance, current frequency, and longest recent run, each allowing an explicit unknown answer.
+- Desired weekly run frequency.
+- Recurring available, preferred, and unavailable weekdays, with up to two runs on an allowed day.
+- Coupled kilometre/min-per-kilometre or mile/min-per-mile display units.
+- A plan-specific IANA timezone.
+- Optional free-text constraints and planning context.
 
-The agent collects these conversationally, structures them, and asks the user to confirm the brief before generating the schedule.
+Phase 3 supplies a temporary structured editor and a separate human confirmation action. Persistent chat and conversational collection remain in later phases; the temporary UI and future agent use the same domain API.
 
 ### Fitness calibration
 
-Extend the existing effective-dated, sport-neutral calibration model but scope calibrations to a plan version for the alpha. The first running implementation may include:
+Running calibration accepts exactly one current input:
 
-- Recent race result
-- Estimated threshold pace
-- Easy pace range
-- Maximum or threshold heart rate
-- Calibration source: manual, race, field test, or agent estimate
-- Confidence and explanatory notes
+- A recent race distance and finish duration from one mile through marathon.
+- One estimated threshold pace.
 
-The brief, calibration, resolved zones, and workouts are locked and restored as one linked version.
+An internal versioned calculator based on the published Daniels-Gilbert equations persists Easy, Marathon, Threshold, Interval, and Repetition targets and proportional pace ranges. It exposes Askesis pace guides rather than an intermediate VDOT score. Heart rate, confidence, notes, easy-pace input, individual zone editing, and subjective adjustment are deferred.
+
+The first calibration applies from plan start. Once a plan is underway, another calibration applies from today in the plan timezone. Symbolic workout zones resolve by scheduled date, so future pace guidance changes without rewriting workouts and earlier guidance remains attributable. The brief, calibration history, resolved zones, and workouts lock and restore as one linked version.
 
 ### Exit criteria
 
-- Plan creation collects and confirms a structured brief through chat.
+- Plan creation collects and confirms a structured brief through the temporary editor; later phases replace collection with chat against the same API.
 - No global athlete profile is required.
 - Running fitness can differ independently between plans owned by the same account.
 - Changing assumptions or calibration requires an unlocked draft.
 - Workout pace recommendations identify the versioned calibration that produced them.
 - Plan-specific units are applied consistently by the API and UI.
+- New locked revisions require a current human-confirmed brief; an empty schedule remains an acknowledged warning.
 
 ## Phase 4: persistent chats and agent runs
 
