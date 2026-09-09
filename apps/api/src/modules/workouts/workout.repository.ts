@@ -25,7 +25,7 @@ type TreeNode = Omit<WorkoutStep, 'steps'> & {
 type WorkoutRow = Pick<
   Selectable<Workouts>,
   | 'id'
-  | 'plan_id'
+  | 'plan_version_id'
   | 'scheduled_date'
   | 'title'
   | 'description'
@@ -35,6 +35,7 @@ type WorkoutRow = Pick<
   | 'estimated_duration_seconds'
   | 'estimated_distance_metres'
 > & {
+  plan_id: string;
   plan_title: string;
   week_number: number;
 };
@@ -43,6 +44,7 @@ function toWorkoutSummary(row: WorkoutRow): WorkoutSummary {
   return {
     id: row.id,
     planId: row.plan_id,
+    planVersionId: row.plan_version_id,
     planTitle: row.plan_title,
     weekNumber: row.week_number,
     scheduledDate: formatDate(row.scheduled_date),
@@ -57,15 +59,20 @@ function toWorkoutSummary(row: WorkoutRow): WorkoutSummary {
   };
 }
 
-export async function listWorkouts(athleteId: string, planId?: string): Promise<WorkoutSummary[]> {
+export async function listWorkouts(
+  athleteId: string,
+  planVersionId: string,
+): Promise<WorkoutSummary[]> {
   const database = getDatabase();
-  let query = database
+  const query = database
     .selectFrom('workouts')
-    .innerJoin('plans', 'plans.id', 'workouts.plan_id')
+    .innerJoin('plan_versions', 'plan_versions.id', 'workouts.plan_version_id')
+    .innerJoin('plans', 'plans.id', 'plan_versions.plan_id')
     .innerJoin('training_weeks', 'training_weeks.id', 'workouts.week_id')
     .select([
       'workouts.id',
-      'workouts.plan_id',
+      'plan_versions.plan_id',
+      'workouts.plan_version_id',
       'workouts.scheduled_date',
       'workouts.title',
       'workouts.description',
@@ -74,27 +81,13 @@ export async function listWorkouts(athleteId: string, planId?: string): Promise<
       'workouts.priority',
       'workouts.estimated_duration_seconds',
       'workouts.estimated_distance_metres',
-      'plans.title as plan_title',
+      'plans.display_name as plan_title',
       'training_weeks.week_number',
     ])
-    .where((expression) =>
-      expression.or([
-        expression('plans.owner_id', '=', athleteId),
-        expression.exists(
-          expression
-            .selectFrom('plan_memberships')
-            .select('plan_memberships.plan_id')
-            .whereRef('plan_memberships.plan_id', '=', 'plans.id')
-            .where('plan_memberships.athlete_id', '=', athleteId),
-        ),
-      ]),
-    );
-
-  if (planId !== undefined) {
-    query = query.where('workouts.plan_id', '=', planId);
-  }
+    .where('plans.owner_id', '=', athleteId);
 
   const rows = await query
+    .where('workouts.plan_version_id', '=', planVersionId)
     .orderBy('workouts.scheduled_date', 'asc')
     .orderBy('workouts.position', 'asc')
     .execute();
@@ -113,11 +106,13 @@ export async function getWorkoutDetail(
   const database = getDatabase();
   const workoutRow = await database
     .selectFrom('workouts')
-    .innerJoin('plans', 'plans.id', 'workouts.plan_id')
+    .innerJoin('plan_versions', 'plan_versions.id', 'workouts.plan_version_id')
+    .innerJoin('plans', 'plans.id', 'plan_versions.plan_id')
     .innerJoin('training_weeks', 'training_weeks.id', 'workouts.week_id')
     .select([
       'workouts.id',
-      'workouts.plan_id',
+      'plan_versions.plan_id',
+      'workouts.plan_version_id',
       'workouts.scheduled_date',
       'workouts.title',
       'workouts.description',
@@ -126,22 +121,11 @@ export async function getWorkoutDetail(
       'workouts.priority',
       'workouts.estimated_duration_seconds',
       'workouts.estimated_distance_metres',
-      'plans.title as plan_title',
+      'plans.display_name as plan_title',
       'training_weeks.week_number',
     ])
     .where('workouts.id', '=', workoutId)
-    .where((expression) =>
-      expression.or([
-        expression('plans.owner_id', '=', athleteId),
-        expression.exists(
-          expression
-            .selectFrom('plan_memberships')
-            .select('plan_memberships.plan_id')
-            .whereRef('plan_memberships.plan_id', '=', 'plans.id')
-            .where('plan_memberships.athlete_id', '=', athleteId),
-        ),
-      ]),
-    )
+    .where('plans.owner_id', '=', athleteId)
     .executeTakeFirst();
 
   if (workoutRow === undefined) return null;
@@ -150,7 +134,7 @@ export async function getWorkoutDetail(
     database
       .selectFrom('workout_steps')
       .leftJoin('step_completions', 'step_completions.step_id', 'workout_steps.id')
-      .leftJoin('movements', 'movements.id', 'workout_steps.movement_id')
+      .leftJoin('movement_definitions', 'movement_definitions.id', 'workout_steps.movement_id')
       .select([
         'workout_steps.id',
         'workout_steps.parent_step_id',
@@ -161,9 +145,9 @@ export async function getWorkoutDetail(
         'workout_steps.repeat_count',
         'workout_steps.label',
         'workout_steps.instructions',
-        'movements.id as movement_id',
-        'movements.name as movement_name',
-        'movements.category as movement_category',
+        'movement_definitions.id as movement_id',
+        'movement_definitions.name as movement_name',
+        'movement_definitions.category as movement_category',
         'step_completions.completion_type',
         'step_completions.numeric_value as completion_value',
         'step_completions.unit as completion_unit',
@@ -216,7 +200,7 @@ export async function getWorkoutDetail(
         'calibration_zones.maximum_value',
         'calibration_zones.unit',
       ])
-      .where('plan_calibration_periods.plan_id', '=', workoutRow.plan_id)
+      .where('plan_calibration_periods.plan_version_id', '=', workoutRow.plan_version_id)
       .where('plan_calibration_periods.effective_from', '<=', workoutRow.scheduled_date)
       .where((expression) =>
         expression.or([

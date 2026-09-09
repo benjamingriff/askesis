@@ -2,7 +2,7 @@
 
 ## Status
 
-**Proposed checkpoint for approval.** This document translates the accepted [Phase 2 lifecycle refinement](./phase-2-plan-lifecycle-refinement.md) into a concrete relational contract. It intentionally specifies ownership, keys, relationships, and invariants rather than final migration SQL.
+**Approved for implementation.** This document translates the accepted [Phase 2 lifecycle refinement](./phase-2-plan-lifecycle-refinement.md) into the relational contract for implementation. It intentionally specifies ownership, keys, relationships, and invariants rather than final migration SQL.
 
 Once approved, implementation may adjust names or indexes where PostgreSQL or Kysely requires it, but it must not weaken the stated invariants without reopening the contract.
 
@@ -299,7 +299,7 @@ One shared trigger function protects every version-owned content table:
 
 A plan-level trigger makes an archived row read-only except for the valid unarchive transition. In particular, display name, version pointers, and activation cannot change while archived. Archiving must clear activation in the same transition.
 
-The function accepts a transaction-local operator override used only by the documented account-removal procedure. The application never sets that override during normal requests.
+Operator removal requires table-owner privileges and an explicit transaction that disables and restores user triggers while removing the exact selected aggregate. There is no application-settable override flag. The local fixture reset is the first such narrowly scoped workflow.
 
 Deferred constraint triggers validate plan current-version pointers at commit. Foreign keys and checks retain local entity integrity regardless of version state.
 

@@ -8,6 +8,8 @@ import { getDatabase } from './database/client.js';
 import { requestContext } from './http/middleware.js';
 import { logger } from './logger.js';
 import { registerWorkoutRoutes } from './modules/workouts/workout.routes.js';
+import { registerPlanRoutes } from './modules/plans/plan.routes.js';
+import { PlanError } from './modules/plans/plan.service.js';
 
 export const app = new OpenAPIHono<AppEnvironment>({
   defaultHook: (result, context) => {
@@ -29,11 +31,29 @@ app.use('*', requestContext);
 
 app.onError((error, context) => {
   const requestId = context.get('requestId');
-  logger.error({ error, requestId }, 'Unhandled request error');
+  if (error instanceof PlanError) {
+    return context.json(
+      { error: { code: error.code, message: error.message, requestId } },
+      error.status,
+    );
+  }
+  // PostgreSQL constraint errors can include the entire failing row in `detail`.
+  // Never forward that payload (which may contain plan text) to logs or Sentry.
+  const safeError =
+    'code' in error && /^[0-9A-Z]{5}$/.test(String(error.code))
+      ? new Error('Database operation failed.')
+      : error;
+  logger.error(
+    {
+      error: { name: safeError.name, message: safeError.message, stack: safeError.stack },
+      requestId,
+    },
+    'Unhandled request error',
+  );
   Sentry.withScope((scope) => {
     scope.setTag('request_id', requestId);
     scope.setContext('request', { method: context.req.method, path: context.req.path });
-    Sentry.captureException(error);
+    Sentry.captureException(safeError);
   });
   return context.json(
     {
@@ -66,7 +86,7 @@ app.get('/api/ready', async (context) => {
     select exists (
       select 1
       from atlas_schema_revisions.atlas_schema_revisions
-      where version = '20260722153000'
+      where version = '20260908160000'
     ) as migrated
   `.execute(getDatabase());
 
@@ -88,6 +108,7 @@ app.get('/api/ready', async (context) => {
 app.use('/api/v1/*', requireAuthentication);
 
 registerWorkoutRoutes(app);
+registerPlanRoutes(app);
 
 app.doc('/api/openapi.json', {
   openapi: '3.1.0',

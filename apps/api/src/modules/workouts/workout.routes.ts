@@ -57,8 +57,8 @@ const getWorkoutRoute = createRoute({
 
 export function registerWorkoutRoutes(app: OpenAPIHono<AppEnvironment>): void {
   app.openapi(listWorkoutsRoute, async (context) => {
-    const { planId } = context.req.valid('query');
-    const workouts = await listWorkouts(context.get('athlete').id, planId);
+    const { planVersionId } = context.req.valid('query');
+    const workouts = await listWorkouts(context.get('athlete').id, planVersionId);
     return context.json({ workouts }, 200);
   });
 

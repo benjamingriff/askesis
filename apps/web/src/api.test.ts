@@ -18,7 +18,9 @@ describe('Askesis API client authentication', () => {
     configureAuthTokenProvider(async () => 'session-token');
     const client = createAuthenticatedApiClient('http://askesis.test');
 
-    const result = await client.GET('/api/v1/workouts');
+    const result = await client.GET('/api/v1/workouts', {
+      params: { query: { planVersionId: '00000000-0000-0000-0000-000000000050' } },
+    });
 
     expect(result.data).toEqual({ workouts: [] });
     expect(fetchMock).toHaveBeenCalledOnce();

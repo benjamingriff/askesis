@@ -14,6 +14,7 @@ export const WorkoutSummarySchema = z
   .object({
     id: DatabaseIdSchema,
     planId: DatabaseIdSchema,
+    planVersionId: DatabaseIdSchema,
     planTitle: z.string(),
     weekNumber: z.number().int().positive(),
     scheduledDate: z.iso.date(),
@@ -34,7 +35,7 @@ export const WorkoutListSchema = z
   .openapi('WorkoutList');
 
 export const WorkoutListQuerySchema = z.object({
-  planId: DatabaseIdSchema.optional(),
+  planVersionId: DatabaseIdSchema,
 });
 
 export const StepCompletionSchema = z

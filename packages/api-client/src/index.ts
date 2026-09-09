@@ -1,5 +1,6 @@
 import createClient from 'openapi-fetch';
 import type { components, paths } from './schema.js';
+export type { paths } from './schema.js';
 
 export type WorkoutSummary = components['schemas']['WorkoutSummary'];
 export type WorkoutDetail = components['schemas']['WorkoutDetail'];

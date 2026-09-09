@@ -10,11 +10,15 @@ import {
   Timer,
 } from 'lucide-react';
 import { useMemo, useState } from 'react';
-import { redirect, type LoaderFunctionArgs, useFetcher, useLoaderData } from 'react-router';
+import { redirect, type LoaderFunctionArgs, useFetcher } from 'react-router';
 import { api } from '../api';
 
-export async function workoutsLoader() {
-  const { data, error, response } = await api.GET('/api/v1/workouts');
+export async function workoutsLoader({ request }: LoaderFunctionArgs) {
+  const planVersionId = new URL(request.url).searchParams.get('planVersionId');
+  if (planVersionId === null) return { workouts: [] };
+  const { data, error, response } = await api.GET('/api/v1/workouts', {
+    params: { query: { planVersionId } },
+  });
 
   if (response.status === 401) throw redirect('/sign-in');
   if (error !== undefined || data === undefined) {
@@ -352,9 +356,8 @@ function WorkoutCalendar({
   );
 }
 
-export function WorkoutsPage() {
-  const { workouts } = useLoaderData<typeof workoutsLoader>();
-  const planTitle = workouts.at(0)?.planTitle ?? 'Training plan';
+export function WorkoutsPage({ workouts, title }: { workouts: WorkoutSummary[]; title?: string }) {
+  const planTitle = title ?? workouts.at(0)?.planTitle ?? 'Training plan';
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [calendarVisible, setCalendarVisible] = useState(
     () => window.localStorage.getItem('askesis-calendar-visible') !== 'false',
@@ -390,7 +393,7 @@ export function WorkoutsPage() {
         <div>
           <p className="page-kicker">Training plan</p>
           <h1>{planTitle}</h1>
-          <p>Two-week foundation block · {workouts.length} scheduled workouts</p>
+          <p>{workouts.length} scheduled workouts</p>
         </div>
         <button className="secondary-button" type="button" onClick={toggleCalendar}>
           {calendarVisible ? <PanelTopClose size={17} /> : <PanelTopOpen size={17} />}

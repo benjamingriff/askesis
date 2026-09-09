@@ -27,6 +27,18 @@ export type Numeric = ColumnType<string, number | string, number | string>;
 
 export type Timestamp = ColumnType<Date, Date | string, Date | string>;
 
+export interface ApiIdempotencyKeys {
+  athlete_id: string;
+  command_scope: string;
+  created_at: Generated<Timestamp>;
+  expires_at: Timestamp | null;
+  id: Generated<string>;
+  idempotency_key: string;
+  request_hash: string;
+  response_body: Json;
+  response_status: number;
+}
+
 export interface AthleteIdentities {
   athlete_id: string;
   created_at: Generated<Timestamp>;
@@ -63,36 +75,44 @@ export interface CalibrationProfiles {
   discipline: string;
   fitness_value: Numeric | null;
   id: Generated<string>;
+  lineage_id: Generated<string>;
   method: string;
-  owner_id: string;
+  plan_version_id: string;
   source_description: string | null;
   system: string;
 }
 
 export interface CalibrationZones {
   id: Generated<string>;
+  lineage_id: Generated<string>;
   maximum_value: Numeric | null;
   metric: string;
   minimum_value: Numeric | null;
+  plan_version_id: string;
   profile_id: string;
   target_value: Numeric | null;
   unit: string;
   zone_key: string;
 }
 
-export interface Movements {
+export interface MovementDefinitions {
   category: string;
+  created_at: Generated<Timestamp>;
+  definition_number: Generated<number>;
   id: Generated<string>;
   instructions: string | null;
+  lineage_id: Generated<string>;
   name: string;
   primary_discipline: Generated<string>;
+  supersedes_definition_id: string | null;
 }
 
 export interface PlanCalibrationPeriods {
   effective_from: Timestamp;
   effective_until: Timestamp | null;
   id: Generated<string>;
-  plan_id: string;
+  lineage_id: Generated<string>;
+  plan_version_id: string;
   profile_id: string;
   system: string;
 }
@@ -103,8 +123,9 @@ export interface PlanConstraints {
   description: string | null;
   discipline: string | null;
   id: Generated<string>;
+  lineage_id: Generated<string>;
   numeric_value: Numeric | null;
-  plan_id: string;
+  plan_version_id: string;
   severity: string;
   unit: string | null;
 }
@@ -118,30 +139,46 @@ export interface PlanGoals {
   event_name: string | null;
   goal_type: string;
   id: Generated<string>;
-  plan_id: string;
+  lineage_id: Generated<string>;
+  plan_version_id: string;
   priority: string;
   target_duration_seconds: number | null;
 }
 
-export interface PlanMemberships {
-  athlete_id: string;
-  created_at: Generated<Timestamp>;
-  plan_id: string;
-  role: string;
-}
-
 export interface Plans {
+  activated_at: Timestamp | null;
+  archived_at: Timestamp | null;
   created_at: Generated<Timestamp>;
-  description: string | null;
-  end_date: Timestamp;
+  current_draft_version_id: string | null;
+  current_locked_version_id: string | null;
+  display_name: string;
   id: Generated<string>;
   owner_id: string;
-  schema_version: Generated<number>;
-  slug: string;
-  start_date: Timestamp;
-  status: Generated<string>;
-  title: string;
+  state_version: Generated<number>;
   updated_at: Generated<Timestamp>;
+}
+
+export interface PlanVersions {
+  acknowledged_warning_codes: string[] | null;
+  based_on_version_id: string | null;
+  change_summary: Json | null;
+  content_hash: string | null;
+  content_hash_version: number | null;
+  content_schema_version: Generated<number>;
+  created_at: Generated<Timestamp>;
+  description: string | null;
+  edit_number: Generated<number>;
+  end_date: Timestamp | null;
+  id: Generated<string>;
+  locked_at: Timestamp | null;
+  plan_id: string;
+  start_date: Timestamp | null;
+  state: Generated<string>;
+  supersedes_version_id: string | null;
+  updated_at: Generated<Timestamp>;
+  validation_findings: Json | null;
+  validator_version: number | null;
+  version_number: number | null;
 }
 
 export interface SeedRuns {
@@ -154,14 +191,17 @@ export interface StepCompletions {
   condition_type: string | null;
   condition_value: string | null;
   numeric_value: Numeric | null;
+  plan_version_id: string;
   step_id: string;
   unit: string | null;
 }
 
 export interface StepTargets {
   id: Generated<string>;
+  lineage_id: Generated<string>;
   maximum_value: Numeric | null;
   minimum_value: Numeric | null;
+  plan_version_id: string;
   position: number;
   step_id: string;
   target_type: string;
@@ -176,7 +216,8 @@ export interface TrainingBlocks {
   description: string | null;
   end_date: Timestamp;
   id: Generated<string>;
-  plan_id: string;
+  lineage_id: Generated<string>;
+  plan_version_id: string;
   position: number;
   start_date: Timestamp;
   title: string;
@@ -187,7 +228,8 @@ export interface TrainingWeeks {
   description: string | null;
   end_date: Timestamp;
   id: Generated<string>;
-  plan_id: string;
+  lineage_id: Generated<string>;
+  plan_version_id: string;
   position: number;
   start_date: Timestamp;
   title: string;
@@ -200,7 +242,7 @@ export interface WeeklyPlanSummary {
   estimated_duration_seconds: Int8 | null;
   estimated_run_distance_metres: Numeric | null;
   estimated_swim_distance_metres: Numeric | null;
-  plan_id: string | null;
+  plan_version_id: string | null;
   start_date: Timestamp | null;
   title: string | null;
   week_id: string | null;
@@ -211,9 +253,11 @@ export interface WeeklyPlanSummary {
 export interface WeekTargets {
   discipline: string | null;
   id: Generated<string>;
+  lineage_id: Generated<string>;
   maximum_value: Numeric | null;
   metric: string;
   minimum_value: Numeric | null;
+  plan_version_id: string;
   target_value: Numeric | null;
   unit: string;
   week_id: string;
@@ -223,6 +267,7 @@ export interface WorkoutPrescriptionTotals {
   discipline: string | null;
   distance_metres: Numeric | null;
   duration_seconds: Numeric | null;
+  plan_version_id: string | null;
   repetitions: Numeric | null;
   workout_id: string | null;
 }
@@ -233,7 +278,8 @@ export interface Workouts {
   estimated_distance_metres: Numeric | null;
   estimated_duration_seconds: number | null;
   id: Generated<string>;
-  plan_id: string;
+  lineage_id: Generated<string>;
+  plan_version_id: string;
   position: number;
   primary_discipline: string;
   priority: Generated<string>;
@@ -250,8 +296,10 @@ export interface WorkoutSteps {
   instructions: string | null;
   kind: string;
   label: string | null;
+  lineage_id: Generated<string>;
   movement_id: string | null;
   parent_step_id: string | null;
+  plan_version_id: string;
   position: number;
   repeat_count: number | null;
   role: string | null;
@@ -259,21 +307,23 @@ export interface WorkoutSteps {
 }
 
 export interface WorkoutTags {
+  plan_version_id: string;
   tag: string;
   workout_id: string;
 }
 
 export interface DB {
+  api_idempotency_keys: ApiIdempotencyKeys;
   athlete_identities: AthleteIdentities;
   athletes: Athletes;
   "atlas_schema_revisions.atlas_schema_revisions": AtlasSchemaRevisionsAtlasSchemaRevisions;
   calibration_profiles: CalibrationProfiles;
   calibration_zones: CalibrationZones;
-  movements: Movements;
+  movement_definitions: MovementDefinitions;
   plan_calibration_periods: PlanCalibrationPeriods;
   plan_constraints: PlanConstraints;
   plan_goals: PlanGoals;
-  plan_memberships: PlanMemberships;
+  plan_versions: PlanVersions;
   plans: Plans;
   seed_runs: SeedRuns;
   step_completions: StepCompletions;

@@ -18,6 +18,7 @@
     "lint": "eslint . --max-warnings=0",
     "test": "pnpm -r --if-present run test",
     "test:db": "./scripts/test-db.sh",
+    "test:cutover": "sh ./scripts/test-plan-cutover.sh",
     "test:coverage": "pnpm -r --if-present run test:coverage",
     "typecheck": "pnpm -r --if-present run typecheck",
     "generate:db-types": "pnpm --filter @askesis/api generate:db-types",

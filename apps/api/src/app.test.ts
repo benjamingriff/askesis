@@ -2,6 +2,13 @@ import { describe, expect, it } from 'vitest';
 import { app } from './app.js';
 
 describe('Askesis API', () => {
+  it.each([
+    '/api/v1/plans',
+    '/api/v1/plans/00000000-0000-4000-8000-000000000010/draft',
+    '/api/v1/plans/00000000-0000-4000-8000-000000000010/revisions',
+  ])('requires authentication for %s', async (path) => {
+    expect((await app.request(path)).status).toBe(401);
+  });
   it('returns liveness without accessing PostgreSQL', async () => {
     const response = await app.request('/api/health', {
       headers: { 'x-request-id': 'test-request-id' },

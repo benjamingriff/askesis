@@ -1,7 +1,7 @@
 # Current agent handoff
 
 **Updated:** 2026-09-09
-**Current phase:** Phase 2 — implementation underway for plan lifecycle and immutable revisions
+**Current phase:** Phase 3 — brief and calibration implementation; Phase 2 deployed with signed-in verification outstanding
 **Completed phase:** Phase 1 — engineering foundation and Railway deployment validation
 
 ## Purpose
@@ -19,7 +19,75 @@ Do not place credentials, Clerk tokens, database URLs, Sentry credentials, or Ra
 
 ## Repository state at handoff
 
-Phase 1 implementation and deployment changes are committed on `main`. Phase 2 implementation is underway. The accepted Phase 3 refinement and its proposed schema and implementation contracts have also been prepared so Phase 3 can begin from an agreed boundary after Phase 2 lands. Use `git log` for the exact handoff commit rather than copying a commit hash from this document.
+Phase 2 implementation is underway on `phase-2-plan-lifecycle`. The new migration
+`20260907120000_plan_versions.sql` resets plan-domain data while preserving
+athletes and external identities. It adds version roots, lineage, version-scoped
+content, immutable movement definitions, idempotency storage, and database guards.
+Kysely types and the workout OpenAPI/client contract have been regenerated.
+
+Workout lists now require `planVersionId`; membership access is removed. The
+`/plan` page selects active plans and explicitly requests their locked or draft version content.
+The Cardiff seed creates a populated draft, then Compose publishes and activates it
+using the real lifecycle service and hash/validation results. Publication is
+idempotent and forbidden in production/Railway.
+
+The create/edit/validate/lock/unlock/discard API is implemented, including owner scoping,
+optimistic concurrency, successful-command idempotency, canonical hashing, temporal validation,
+change summaries, and complete normalized cloning with retained lineage. The new `/plans`
+library and detail screens use account-isolated TanStack Query caches and explicit confirmations.
+
+Organization is now implemented: rename, multiple active plans, deactivate, archive/unarchive,
+and owner-scoped library/active/archive filters. Archived plans retain content and become
+read-only; unarchive leaves them inactive. `/plans/archive` lists archived plans. `/plan` uses
+account-scoped browser preferences for selection, always issuing explicit version-ID requests.
+Local servers run in detached tmux sessions `askesis-phase2-api` and `askesis-phase2-web`.
+
+History/restore is implemented. Plan details embed immutable revision history, and
+`/plans/:planId/versions/:revisionId` shows saved metadata, validation, summaries, semantic
+content, and the explicit historical schedule (also while archived). Restore is previewed
+and confirmed with state/current-version/hash checks and an idempotency key. It clones into
+a draft based on the historical source, leaving the locked pointer untouched until a later
+lock creates the next chronological version. Existing drafts, archives, and semantic no-ops
+block restoration. The UI identifies restored ancestry and warns before replacing a schedule.
+
+Verified locally at the final hardening checkpoint: `pnpm check`, `pnpm test:db`
+(14 PostgreSQL tests), `pnpm test:cutover`, and `pnpm smoke`. The normal development database was migrated at the earlier lifecycle checkpoint: one
+legacy plan removed, two athlete records and one external identity preserved.
+Local API readiness succeeds; the web app runs at http://localhost:5173/plans.
+
+See [the browser test checklist](./phase-2-lifecycle-test-checklist.md) for the user walkthrough,
+automation limitations, restart commands, and remaining scope. Structural/order validation,
+fixture publication, affected-workout summaries, and archived draft inspection are implemented.
+The append-only `20260908160000_workout_structure.sql` migration adds deferred workout-tree
+and prescription integrity checks; readiness requires this migration. Validator version is 2.
+Railway cutover is deployed; authenticated public verification remains outstanding. Do not
+describe Phase 2 as complete until the signed-in walkthrough passes.
+
+### Phase 2 deployment checkpoint — 2026-09-09
+
+- Merged the integration branch into `main` and pushed. Hardening commit `519faab`;
+  smoke-script lint follow-up `f2fb2df`. Full local `pnpm check` and final GitHub CI passed.
+- API deployment `6baa9db5-fd66-437d-9e2c-aec838dd3f10`: SUCCESS, commit `f2fb2df`.
+- Web deployment `156bbe0f-7513-48ad-876b-7665d8b6b7ba`: SUCCESS, explicitly uploaded
+  from the clean `f2fb2df` tree after GitHub's web deployment was skipped.
+- Atlas migration logs report success; public `/api/ready` returns 200/ready and
+  OpenAPI exposes the new draft-read endpoint, proving the Phase 2 API is live.
+- Public `/plans` returns 200; unauthenticated plan API requests return 401.
+- No development seed/publication was run on Railway. Production row counts were not
+  independently inspected; identity preservation is covered by the local cutover rehearsal.
+- The cutover intentionally removes legacy plan-domain data; no backup was taken by this
+  agent. Athletes and external identities are excluded from the reset.
+- Remaining gate: user signed-in lifecycle/history/restore walkthrough on the public app.
+
+`scripts/smoke-lifecycle.mjs` accepts a short-lived session-token JSON object through stdin
+and an explicitly allowlisted origin. It creates a named smoke plan, exercises three revisions
+and organization/restore, and retains the record archived. Never store or print the token.
+The attempted Clerk backend-minted token lacked the required authorized-party claim and was
+correctly rejected. Do not weaken authentication to run this check; use a properly scoped
+browser session or the manual signed-in checklist. Railway SSH/direct database inspection
+was unavailable; no SSH keys or public database networking were added.
+
+Phase 1 implementation and deployment changes are committed on `main`. The Phase 2 lifecycle refinement, schema contract, and implementation plan are included with this handoff. Use `git log` for the exact handoff commit rather than copying a commit hash from this document.
 
 The Phase 1 closure validation includes:
 

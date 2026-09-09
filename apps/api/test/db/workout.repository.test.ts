@@ -10,6 +10,7 @@ import { getWorkoutDetail, listWorkouts } from '../../src/modules/workouts/worko
 
 const fixtureOwnerId = '00000000-0000-0000-0000-000000000001';
 const fixturePlanId = '00000000-0000-0000-0000-000000000010';
+const fixtureVersionId = '00000000-0000-0000-0000-000000000050';
 const hillWorkoutId = '10000000-0000-0000-0000-000000000103';
 
 afterAll(async () => {
@@ -26,30 +27,25 @@ describe('database readiness', () => {
 
 describe('workout repository authorization', () => {
   it('lists workouts for the plan owner', async () => {
-    const workouts = await listWorkouts(fixtureOwnerId);
+    const workouts = await listWorkouts(fixtureOwnerId, fixtureVersionId);
 
     expect(workouts).toHaveLength(10);
     expect(workouts[0]?.planId).toBe(fixturePlanId);
   });
 
   it('hides workouts from an unrelated athlete', async () => {
-    await expect(listWorkouts(randomUUID())).resolves.toEqual([]);
+    await expect(listWorkouts(randomUUID(), fixtureVersionId)).resolves.toEqual([]);
     await expect(getWorkoutDetail(randomUUID(), hillWorkoutId)).resolves.toBeNull();
   });
 
-  it('grants access through plan membership', async () => {
+  it('does not grant another account access', async () => {
     const athleteId = randomUUID();
     await database
       .insertInto('athletes')
       .values({ id: athleteId, display_name: 'Member' })
       .execute();
-    await database
-      .insertInto('plan_memberships')
-      .values({ athlete_id: athleteId, plan_id: fixturePlanId, role: 'viewer' })
-      .execute();
-
-    await expect(listWorkouts(athleteId)).resolves.toHaveLength(10);
-    await expect(getWorkoutDetail(athleteId, hillWorkoutId)).resolves.not.toBeNull();
+    await expect(listWorkouts(athleteId, fixtureVersionId)).resolves.toEqual([]);
+    await expect(getWorkoutDetail(athleteId, hillWorkoutId)).resolves.toBeNull();
   });
 });
 

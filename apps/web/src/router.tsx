@@ -13,7 +13,11 @@ import { AppShell } from './components/AppShell';
 import { SignInPage, SignUpPage } from './routes/auth';
 import { ChatPage } from './routes/chat';
 import { SettingsPage } from './routes/settings';
-import { WorkoutsPage, workoutDetailLoader, workoutsLoader } from './routes/workouts';
+import { PlanPage, PlansPage } from './routes/plans';
+import { workoutDetailLoader } from './routes/workouts';
+import { ActivePlansPage } from './routes/active-plans';
+import { PlanRevisionPage } from './routes/plan-history';
+import { PlanDraftPage } from './routes/plan-draft';
 
 function RequireAuthentication() {
   const { isSignedIn } = useAuth();
@@ -60,7 +64,12 @@ export const router = createBrowserRouter([
         errorElement: <ErrorPage />,
         children: [
           { index: true, element: <Navigate to="/plan" replace /> },
-          { path: '/plan', loader: workoutsLoader, element: <WorkoutsPage /> },
+          { path: '/plan', element: <ActivePlansPage /> },
+          { path: '/plans/archive', element: <PlansPage archived /> },
+          { path: '/plans', element: <PlansPage /> },
+          { path: '/plans/:planId', element: <PlanPage /> },
+          { path: '/plans/:planId/draft', element: <PlanDraftPage /> },
+          { path: '/plans/:planId/versions/:revisionId', element: <PlanRevisionPage /> },
           { path: '/chat', element: <ChatPage /> },
           { path: '/chat/:conversationId', element: <ChatPage /> },
           { path: '/settings', element: <SettingsPage /> },
