@@ -1,4 +1,7 @@
+/* global fetch */
 import assert from 'node:assert/strict';
+import process from 'node:process';
+import console from 'node:console';
 import { randomUUID } from 'node:crypto';
 
 // Pipe a short-lived Clerk session-token JSON object on stdin. Never print/store it.
