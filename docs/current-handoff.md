@@ -52,7 +52,7 @@ block restoration. The UI identifies restored ancestry and warns before replacin
 
 Verified locally at the final hardening checkpoint: `pnpm check`, `pnpm test:db`
 (14 PostgreSQL tests), `pnpm test:cutover`, and `pnpm smoke`. The normal development database was migrated at the earlier lifecycle checkpoint: one
-legacy plan removed, two athlete records and one external identity preserved. Railway is unchanged.
+legacy plan removed, two athlete records and one external identity preserved.
 Local API readiness succeeds; the web app runs at http://localhost:5173/plans.
 
 See [the browser test checklist](./phase-2-lifecycle-test-checklist.md) for the user walkthrough,
@@ -60,8 +60,24 @@ automation limitations, restart commands, and remaining scope. Structural/order 
 fixture publication, affected-workout summaries, and archived draft inspection are implemented.
 The append-only `20260908160000_workout_structure.sql` migration adds deferred workout-tree
 and prescription integrity checks; readiness requires this migration. Validator version is 2.
-Railway cutover and authenticated public verification remain outstanding. Do not describe
-Phase 2 as complete until those gates pass.
+Railway cutover is deployed; authenticated public verification remains outstanding. Do not
+describe Phase 2 as complete until the signed-in walkthrough passes.
+
+### Phase 2 deployment checkpoint — 2026-09-09
+
+- Merged the integration branch into `main` and pushed. Hardening commit `519faab`;
+  smoke-script lint follow-up `f2fb2df`. Full local `pnpm check` and final GitHub CI passed.
+- API deployment `6baa9db5-fd66-437d-9e2c-aec838dd3f10`: SUCCESS, commit `f2fb2df`.
+- Web deployment `156bbe0f-7513-48ad-876b-7665d8b6b7ba`: SUCCESS, explicitly uploaded
+  from the clean `f2fb2df` tree after GitHub's web deployment was skipped.
+- Atlas migration logs report success; public `/api/ready` returns 200/ready and
+  OpenAPI exposes the new draft-read endpoint, proving the Phase 2 API is live.
+- Public `/plans` returns 200; unauthenticated plan API requests return 401.
+- No development seed/publication was run on Railway. Production row counts were not
+  independently inspected; identity preservation is covered by the local cutover rehearsal.
+- The cutover intentionally removes legacy plan-domain data; no backup was taken by this
+  agent. Athletes and external identities are excluded from the reset.
+- Remaining gate: user signed-in lifecycle/history/restore walkthrough on the public app.
 
 `scripts/smoke-lifecycle.mjs` accepts a short-lived session-token JSON object through stdin
 and an explicitly allowlisted origin. It creates a named smoke plan, exercises three revisions

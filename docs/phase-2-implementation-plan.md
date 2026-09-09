@@ -44,8 +44,9 @@ Progress (2026-09-09): Stages 1–4 are implemented, including history/restore,
 archived draft inspection, structural/order validation, and affected-workout summaries.
 The development fixture is published and activated through the real lifecycle service.
 Stage 5 local checks, PostgreSQL tests, destructive-cutover rehearsal, and disposable
-Docker smoke have passed. Merge/deployment and the authenticated public lifecycle
-walkthrough remain the final completion gate.
+Docker smoke have passed. The branch is merged and both Railway services are deployed;
+public readiness and the new API contract are verified. The authenticated public lifecycle
+walkthrough remains the final completion gate (see the current handoff for deployment IDs).
 
 ### Stage 1: destructive schema foundation
 
