@@ -9,6 +9,7 @@ import {
   readAggregate,
   summarizeChanges,
   type Database,
+  affectedWorkouts,
 } from './plan.aggregate.js';
 import { CONTENT_HASH_VERSION, contentHash, type SemanticValue } from './plan.canonical.js';
 import {
@@ -20,6 +21,7 @@ import {
   RevisionSchema,
   RevisionDetailSchema,
   type RestoreCommandSchema,
+  DraftDetailSchema,
 } from './plan.schemas.js';
 import { validatePlan, VALIDATOR_VERSION } from './plan.validation.js';
 
@@ -86,6 +88,21 @@ export async function getPlan(athleteId: string, planId: string) {
     .transaction()
     .setIsolationLevel('repeatable read')
     .execute((db) => detail(db, athleteId, planId));
+}
+export async function getDraft(athleteId: string, planId: string) {
+  return getDatabase()
+    .transaction()
+    .setIsolationLevel('repeatable read')
+    .execute(async (db) => {
+      const plan = await detail(db, athleteId, planId);
+      if (!plan.draft) throw new PlanError('DRAFT_NOT_FOUND', 'Draft not found.', 404);
+      const aggregate = await readAggregate(db, plan.draft.id);
+      return DraftDetailSchema.parse({
+        version: plan.draft,
+        content: aggregate.semantic,
+        findings: validatePlan(aggregate.validation),
+      });
+    });
 }
 export async function listPlans(
   athleteId: string,
@@ -315,6 +332,7 @@ async function preview(db: Database, plan: Plan) {
     summary: SummarySchema.parse({
       headerChanges,
       entities: summarizeChanges(previous, aggregate),
+      affectedWorkouts: affectedWorkouts(previous, aggregate),
     }),
   };
 }
@@ -542,6 +560,7 @@ async function restorePreview(db: Database, athleteId: string, plan: Plan, revis
         (field) => target[field] !== plan.locked![field],
       ),
       entities: summarizeChanges(before, after),
+      affectedWorkouts: affectedWorkouts(before, after),
     }),
   };
 }

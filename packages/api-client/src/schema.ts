@@ -105,6 +105,228 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/plans/{planId}/draft": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    planId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Successful response. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            version: {
+                                id: string;
+                                /** @enum {string} */
+                                state: "draft" | "locked";
+                                versionNumber: number | null;
+                                editNumber: number;
+                                description: string | null;
+                                /** Format: date */
+                                startDate: string | null;
+                                /** Format: date */
+                                endDate: string | null;
+                                basedOnVersionId: string | null;
+                                supersedesVersionId: string | null;
+                                lockedAt: string | null;
+                            };
+                            content: {
+                                [key: string]: unknown;
+                            };
+                            findings: {
+                                code: string;
+                                /** @enum {string} */
+                                severity: "error" | "warning";
+                                message: string;
+                                path: string;
+                            }[];
+                        };
+                    };
+                };
+                /** @description Request rejected. */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Request rejected. */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Request rejected. */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Request rejected. */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Request rejected. */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    planId: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        expectedDraftId: string;
+                        expectedEditNumber: number;
+                        description: string | null;
+                        /** Format: date */
+                        startDate: string | null;
+                        /** Format: date */
+                        endDate: string | null;
+                    };
+                };
+            };
+            responses: {
+                /** @description Successful response. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            id: string;
+                            displayName: string;
+                            stateVersion: number;
+                            active: boolean;
+                            archived: boolean;
+                            draft: {
+                                id: string;
+                                /** @enum {string} */
+                                state: "draft" | "locked";
+                                versionNumber: number | null;
+                                editNumber: number;
+                                description: string | null;
+                                /** Format: date */
+                                startDate: string | null;
+                                /** Format: date */
+                                endDate: string | null;
+                                basedOnVersionId: string | null;
+                                supersedesVersionId: string | null;
+                                lockedAt: string | null;
+                            } | null;
+                            locked: {
+                                id: string;
+                                /** @enum {string} */
+                                state: "draft" | "locked";
+                                versionNumber: number | null;
+                                editNumber: number;
+                                description: string | null;
+                                /** Format: date */
+                                startDate: string | null;
+                                /** Format: date */
+                                endDate: string | null;
+                                basedOnVersionId: string | null;
+                                supersedesVersionId: string | null;
+                                lockedAt: string | null;
+                            } | null;
+                        };
+                    };
+                };
+                /** @description Request rejected. */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Request rejected. */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Request rejected. */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Request rejected. */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Request rejected. */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        trace?: never;
+    };
     "/api/v1/plans/{planId}/revisions": {
         parameters: {
             query?: never;
@@ -156,6 +378,15 @@ export interface paths {
                                 }[];
                                 acknowledgedWarningCodes: string[];
                                 summary: {
+                                    affectedWorkouts?: {
+                                        /** @enum {string} */
+                                        change: "added" | "changed" | "removed";
+                                        title: string;
+                                        /** Format: date */
+                                        date: string;
+                                        /** Format: date */
+                                        previousDate: string | null;
+                                    }[];
                                     headerChanges: string[];
                                     entities: {
                                         [key: string]: {
@@ -276,6 +507,15 @@ export interface paths {
                                 }[];
                                 acknowledgedWarningCodes: string[];
                                 summary: {
+                                    affectedWorkouts?: {
+                                        /** @enum {string} */
+                                        change: "added" | "changed" | "removed";
+                                        title: string;
+                                        /** Format: date */
+                                        date: string;
+                                        /** Format: date */
+                                        previousDate: string | null;
+                                    }[];
                                     headerChanges: string[];
                                     entities: {
                                         [key: string]: {
@@ -380,6 +620,15 @@ export interface paths {
                             stateVersion: number;
                             sourceHash: string;
                             summary: {
+                                affectedWorkouts?: {
+                                    /** @enum {string} */
+                                    change: "added" | "changed" | "removed";
+                                    title: string;
+                                    /** Format: date */
+                                    date: string;
+                                    /** Format: date */
+                                    previousDate: string | null;
+                                }[];
                                 headerChanges: string[];
                                 entities: {
                                     [key: string]: {
@@ -1525,136 +1774,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/plans/{planId}/draft": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    planId: string;
-                };
-                cookie?: never;
-            };
-            requestBody: {
-                content: {
-                    "application/json": {
-                        expectedDraftId: string;
-                        expectedEditNumber: number;
-                        description: string | null;
-                        /** Format: date */
-                        startDate: string | null;
-                        /** Format: date */
-                        endDate: string | null;
-                    };
-                };
-            };
-            responses: {
-                /** @description Successful response. */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            id: string;
-                            displayName: string;
-                            stateVersion: number;
-                            active: boolean;
-                            archived: boolean;
-                            draft: {
-                                id: string;
-                                /** @enum {string} */
-                                state: "draft" | "locked";
-                                versionNumber: number | null;
-                                editNumber: number;
-                                description: string | null;
-                                /** Format: date */
-                                startDate: string | null;
-                                /** Format: date */
-                                endDate: string | null;
-                                basedOnVersionId: string | null;
-                                supersedesVersionId: string | null;
-                                lockedAt: string | null;
-                            } | null;
-                            locked: {
-                                id: string;
-                                /** @enum {string} */
-                                state: "draft" | "locked";
-                                versionNumber: number | null;
-                                editNumber: number;
-                                description: string | null;
-                                /** Format: date */
-                                startDate: string | null;
-                                /** Format: date */
-                                endDate: string | null;
-                                basedOnVersionId: string | null;
-                                supersedesVersionId: string | null;
-                                lockedAt: string | null;
-                            } | null;
-                        };
-                    };
-                };
-                /** @description Request rejected. */
-                400: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Error"];
-                    };
-                };
-                /** @description Request rejected. */
-                401: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Error"];
-                    };
-                };
-                /** @description Request rejected. */
-                404: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Error"];
-                    };
-                };
-                /** @description Request rejected. */
-                409: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Error"];
-                    };
-                };
-                /** @description Request rejected. */
-                422: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Error"];
-                    };
-                };
-            };
-        };
-        trace?: never;
-    };
     "/api/v1/plans/{planId}/validate": {
         parameters: {
             query?: never;
@@ -1696,6 +1815,15 @@ export interface paths {
                             }[];
                             hasChanges: boolean;
                             summary: {
+                                affectedWorkouts?: {
+                                    /** @enum {string} */
+                                    change: "added" | "changed" | "removed";
+                                    title: string;
+                                    /** Format: date */
+                                    date: string;
+                                    /** Format: date */
+                                    previousDate: string | null;
+                                }[];
                                 headerChanges: string[];
                                 entities: {
                                     [key: string]: {

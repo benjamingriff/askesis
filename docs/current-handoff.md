@@ -1,6 +1,6 @@
 # Current agent handoff
 
-**Updated:** 2026-09-08
+**Updated:** 2026-09-09
 **Current phase:** Phase 2 — lifecycle, organization, and history/restore on `phase-2-plan-lifecycle`
 **Completed phase:** Phase 1 — engineering foundation and Railway deployment validation
 
@@ -27,8 +27,9 @@ Kysely types and the workout OpenAPI/client contract have been regenerated.
 
 Workout lists now require `planVersionId`; membership access is removed. The
 `/plan` page selects active plans and explicitly requests their locked or draft version content.
-The Cardiff seed currently creates a populated draft; its final publication
-must use the lifecycle service and real hash/validation results.
+The Cardiff seed creates a populated draft, then Compose publishes and activates it
+using the real lifecycle service and hash/validation results. Publication is
+idempotent and forbidden in production/Railway.
 
 The create/edit/validate/lock/unlock/discard API is implemented, including owner scoping,
 optimistic concurrency, successful-command idempotency, canonical hashing, temporal validation,
@@ -49,15 +50,26 @@ a draft based on the historical source, leaving the locked pointer untouched unt
 lock creates the next chronological version. Existing drafts, archives, and semantic no-ops
 block restoration. The UI identifies restored ancestry and warns before replacing a schedule.
 
-Verified locally: `pnpm check` and `pnpm test:db`. The earlier schema checkpoint also passed
-`pnpm test:cutover` and `pnpm smoke`. The normal development database is now migrated: one
+Verified locally at the final hardening checkpoint: `pnpm check`, `pnpm test:db`
+(14 PostgreSQL tests), `pnpm test:cutover`, and `pnpm smoke`. The normal development database was migrated at the earlier lifecycle checkpoint: one
 legacy plan removed, two athlete records and one external identity preserved. Railway is unchanged.
 Local API readiness succeeds; the web app runs at http://localhost:5173/plans.
 
 See [the browser test checklist](./phase-2-lifecycle-test-checklist.md) for the user walkthrough,
-automation limitations, restart commands, and remaining scope. Full structural/order validation,
-fixture publication, and Railway cutover
-are still outstanding. Do not describe Phase 2 as complete.
+automation limitations, restart commands, and remaining scope. Structural/order validation,
+fixture publication, affected-workout summaries, and archived draft inspection are implemented.
+The append-only `20260908160000_workout_structure.sql` migration adds deferred workout-tree
+and prescription integrity checks; readiness requires this migration. Validator version is 2.
+Railway cutover and authenticated public verification remain outstanding. Do not describe
+Phase 2 as complete until those gates pass.
+
+`scripts/smoke-lifecycle.mjs` accepts a short-lived session-token JSON object through stdin
+and an explicitly allowlisted origin. It creates a named smoke plan, exercises three revisions
+and organization/restore, and retains the record archived. Never store or print the token.
+The attempted Clerk backend-minted token lacked the required authorized-party claim and was
+correctly rejected. Do not weaken authentication to run this check; use a properly scoped
+browser session or the manual signed-in checklist. Railway SSH/direct database inspection
+was unavailable; no SSH keys or public database networking were added.
 
 Phase 1 implementation and deployment changes are committed on `main`. The Phase 2 lifecycle refinement, schema contract, and implementation plan are included with this handoff. Use `git log` for the exact handoff commit rather than copying a commit hash from this document.
 

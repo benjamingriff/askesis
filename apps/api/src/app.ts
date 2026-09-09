@@ -37,11 +37,23 @@ app.onError((error, context) => {
       error.status,
     );
   }
-  logger.error({ error, requestId }, 'Unhandled request error');
+  // PostgreSQL constraint errors can include the entire failing row in `detail`.
+  // Never forward that payload (which may contain plan text) to logs or Sentry.
+  const safeError =
+    'code' in error && /^[0-9A-Z]{5}$/.test(String(error.code))
+      ? new Error('Database operation failed.')
+      : error;
+  logger.error(
+    {
+      error: { name: safeError.name, message: safeError.message, stack: safeError.stack },
+      requestId,
+    },
+    'Unhandled request error',
+  );
   Sentry.withScope((scope) => {
     scope.setTag('request_id', requestId);
     scope.setContext('request', { method: context.req.method, path: context.req.path });
-    Sentry.captureException(error);
+    Sentry.captureException(safeError);
   });
   return context.json(
     {
@@ -74,7 +86,7 @@ app.get('/api/ready', async (context) => {
     select exists (
       select 1
       from atlas_schema_revisions.atlas_schema_revisions
-      where version = '20260907120000'
+      where version = '20260908160000'
     ) as migrated
   `.execute(getDatabase());
 

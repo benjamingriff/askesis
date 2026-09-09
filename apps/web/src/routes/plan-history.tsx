@@ -271,6 +271,16 @@ function ChangeSummary({ summary }: { summary: Preview['summary'] }) {
     <>
       <p>Changed fields: {summary.headerChanges.join(', ') || 'none'}.</p>
       <ul>
+        {summary.affectedWorkouts?.map((workout, index) => (
+          <li key={index}>
+            {workout.change}: {workout.date} · {workout.title}
+            {workout.previousDate && workout.previousDate !== workout.date
+              ? ` (was ${workout.previousDate})`
+              : ''}
+          </li>
+        ))}
+      </ul>
+      <ul>
         {Object.entries(summary.entities)
           .filter(([, counts]) => counts.added || counts.changed || counts.removed)
           .map(([name, counts]) => (

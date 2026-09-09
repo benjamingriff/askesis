@@ -103,7 +103,7 @@ export async function readAggregate(db: Database, versionId: string): Promise<Ag
   }
   function step(row: Row, visiting: Set<string>): SemanticValue {
     const id = String(row.id);
-    if (visiting.has(id)) throw new Error('Cyclic workout prescription');
+    if (visiting.has(id)) return { invalidCycle: true };
     const next = new Set(visiting).add(id);
     const movement = movements.get(String(row.movement_id));
     return capture('workout_steps', row, {
@@ -121,16 +121,6 @@ export async function readAggregate(db: Database, versionId: string): Promise<Ag
   function workout(row: Row): SemanticValue {
     const allSteps = children('workout_steps', 'workout_id', row.id);
     const roots = allSteps.filter((item) => item.parent_step_id === null);
-    // Walking every node catches disconnected cycles as well as cycles beneath a root.
-    for (const item of allSteps) {
-      const visited = new Set<string>();
-      let current: Row | undefined = item;
-      while (current !== undefined) {
-        if (visited.has(String(current.id))) throw new Error('Cyclic workout prescription');
-        visited.add(String(current.id));
-        current = allSteps.find((candidate) => candidate.id === current?.parent_step_id);
-      }
-    }
     return capture('workouts', row, {
       ...fields(row),
       tags: children('workout_tags', 'workout_id', row.id)
@@ -185,16 +175,38 @@ export async function readAggregate(db: Database, versionId: string): Promise<Ag
     },
     entities,
     validation: {
+      unresolvedZones: rows.step_targets
+        .filter((target) => {
+          if (target.target_type !== 'zone') return false;
+          const step = rows.workout_steps.find((item) => item.id === target.step_id);
+          const workout = rows.workouts.find((item) => item.id === step?.workout_id);
+          if (!workout) return true;
+          return !rows.plan_calibration_periods.some(
+            (period) =>
+              period.system === target.zone_system &&
+              date(period.effective_from) <= date(workout.scheduled_date) &&
+              (period.effective_until === null ||
+                date(period.effective_until) > date(workout.scheduled_date)) &&
+              rows.calibration_zones.some(
+                (zone) =>
+                  zone.profile_id === period.profile_id && zone.zone_key === target.zone_key,
+              ),
+          );
+        })
+        .map((target) => String(target.id)),
       startDate: version.start_date === null ? null : date(version.start_date),
       endDate: version.end_date === null ? null : date(version.end_date),
       blocks: rows.training_blocks.map((row) => ({
         id: String(row.id),
+        position: Number(row.position),
         startDate: date(row.start_date),
         endDate: date(row.end_date),
       })),
       weeks: rows.training_weeks.map((row) => ({
         id: String(row.id),
         blockId: String(row.block_id),
+        position: Number(row.position),
+        weekNumber: Number(row.week_number),
         startDate: date(row.start_date),
         endDate: date(row.end_date),
       })),
@@ -202,6 +214,16 @@ export async function readAggregate(db: Database, versionId: string): Promise<Ag
         id: String(row.id),
         weekId: String(row.week_id),
         scheduledDate: date(row.scheduled_date),
+        position: Number(row.position),
+      })),
+      steps: rows.workout_steps.map((row) => ({
+        id: String(row.id),
+        workoutId: String(row.workout_id),
+        parentId: row.parent_step_id === null ? null : String(row.parent_step_id),
+        kind: String(row.kind),
+        position: Number(row.position),
+        hasCompletion: children('step_completions', 'step_id', row.id).length > 0,
+        hasTargets: children('step_targets', 'step_id', row.id).length > 0,
       })),
     },
   };
@@ -233,6 +255,41 @@ export function summarizeChanges(before: Aggregate | null, after: Aggregate) {
           },
         ];
       }),
+  );
+}
+
+export function affectedWorkouts(before: Aggregate | null, after: Aggregate) {
+  const previous = new Map(
+    (before?.entities.workouts ?? []).map((item) => [item.lineage, item.value]),
+  );
+  const current = new Map(
+    (after.entities.workouts ?? []).map((item) => [item.lineage, item.value]),
+  );
+  const rows: {
+    change: 'added' | 'changed' | 'removed';
+    title: string;
+    date: string;
+    previousDate: string | null;
+  }[] = [];
+  for (const lineage of new Set([...previous.keys(), ...current.keys()])) {
+    const old = previous.get(lineage);
+    const next = current.get(lineage);
+    if (old !== undefined && next !== undefined && canonicalJson(old) === canonicalJson(next))
+      continue;
+    const value = (next ?? old) as { content: { title: string; scheduled_date: string } };
+    const oldValue = old as { content: { scheduled_date: string } } | undefined;
+    rows.push({
+      change: next === undefined ? 'removed' : old === undefined ? 'added' : 'changed',
+      title: value.content.title,
+      date: value.content.scheduled_date,
+      previousDate: oldValue?.content.scheduled_date ?? null,
+    });
+  }
+  return rows.sort(
+    (a, b) =>
+      a.date.localeCompare(b.date) ||
+      a.title.localeCompare(b.title) ||
+      a.change.localeCompare(b.change),
   );
 }
 

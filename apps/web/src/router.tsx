@@ -17,6 +17,7 @@ import { PlanPage, PlansPage } from './routes/plans';
 import { workoutDetailLoader } from './routes/workouts';
 import { ActivePlansPage } from './routes/active-plans';
 import { PlanRevisionPage } from './routes/plan-history';
+import { PlanDraftPage } from './routes/plan-draft';
 
 function RequireAuthentication() {
   const { isSignedIn } = useAuth();
@@ -67,6 +68,7 @@ export const router = createBrowserRouter([
           { path: '/plans/archive', element: <PlansPage archived /> },
           { path: '/plans', element: <PlansPage /> },
           { path: '/plans/:planId', element: <PlanPage /> },
+          { path: '/plans/:planId/draft', element: <PlanDraftPage /> },
           { path: '/plans/:planId/versions/:revisionId', element: <PlanRevisionPage /> },
           { path: '/chat', element: <ChatPage /> },
           { path: '/chat/:conversationId', element: <ChatPage /> },

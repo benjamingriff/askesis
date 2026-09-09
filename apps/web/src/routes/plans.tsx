@@ -378,6 +378,9 @@ function PlanEditor({ plan }: { plan: Plan }) {
           : `Locked · version ${plan.locked?.versionNumber}`}
       </p>
       <p className="plan-id">Plan ID: {plan.id}</p>
+      {plan.draft && (
+        <Link to={`/plans/${plan.id}/draft`}>Inspect saved draft content and schedule</Link>
+      )}
       {plan.locked && plan.draft && (
         <details className="plan-panel">
           <summary>Inspect preserved locked version {plan.locked.versionNumber}</summary>
@@ -524,6 +527,16 @@ function PlanEditor({ plan }: { plan: Plan }) {
             </p>
           )}
           <p>Changed fields: {preview.summary.headerChanges.join(', ') || 'none'}.</p>
+          <ul>
+            {preview.summary.affectedWorkouts?.map((workout, index) => (
+              <li key={index}>
+                {workout.change}: {workout.date} · {workout.title}
+                {workout.previousDate && workout.previousDate !== workout.date
+                  ? ` (was ${workout.previousDate})`
+                  : ''}
+              </li>
+            ))}
+          </ul>
           <ul>
             {Object.entries(preview.summary.entities)
               .filter(([, counts]) => counts.added || counts.changed || counts.removed)

@@ -25,6 +25,56 @@ describe('canonical content', () => {
 });
 
 describe('plan validation', () => {
+  it('blocks reversed structural chronology and detects malformed prescription trees', () => {
+    const plan: ValidationPlan = {
+      ...empty,
+      blocks: [
+        { id: 'late', startDate: '2026-09-15', endDate: '2026-09-30', position: 1 },
+        { id: 'early', startDate: '2026-09-01', endDate: '2026-09-14', position: 2 },
+      ],
+      workouts: [{ id: 'run', weekId: 'week', scheduledDate: '2026-09-01' }],
+      steps: [
+        {
+          id: 'cycle',
+          workoutId: 'run',
+          parentId: 'cycle',
+          kind: 'effort',
+          position: 1,
+          hasCompletion: false,
+          hasTargets: false,
+        },
+      ],
+    };
+    expect(validatePlan(plan).map((finding) => finding.code)).toEqual(
+      expect.arrayContaining(['BLOCK_ORDER', 'WORKOUT_ROOT', 'STEP_CYCLE', 'STEP_SHAPE']),
+    );
+  });
+  it('warns about unusual same-day ordering but accepts a well-formed single effort', () => {
+    const findings = validatePlan({
+      ...empty,
+      workouts: [
+        { id: 'a', weekId: 'w', scheduledDate: '2026-09-01', position: 1 },
+        { id: 'b', weekId: 'w', scheduledDate: '2026-09-01', position: 3 },
+      ],
+      steps: ['a', 'b'].map((id) => ({
+        id,
+        workoutId: id,
+        parentId: null,
+        kind: 'effort',
+        position: 1,
+        hasCompletion: true,
+        hasTargets: false,
+      })),
+    });
+    expect(findings).toContainEqual(
+      expect.objectContaining({ code: 'WORKOUT_ORDER_GAP', severity: 'warning' }),
+    );
+    expect(
+      findings.some(
+        (finding) => finding.code.startsWith('STEP_') || finding.code === 'WORKOUT_ROOT',
+      ),
+    ).toBe(false);
+  });
   it('allows bounded empty plans with warnings, but requires dates', () => {
     const result = validatePlan(empty);
     expect(result.some((finding) => finding.severity === 'error')).toBe(false);

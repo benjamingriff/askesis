@@ -39,6 +39,16 @@ export const PlanSchema = z.object({
   locked: VersionSchema.nullable(),
 });
 export const SummarySchema = z.object({
+  affectedWorkouts: z
+    .array(
+      z.object({
+        change: z.enum(['added', 'changed', 'removed']),
+        title: z.string(),
+        date: z.iso.date(),
+        previousDate: z.iso.date().nullable(),
+      }),
+    )
+    .optional(),
   headerChanges: z.array(z.string()),
   entities: z.record(
     z.string(),
@@ -122,3 +132,8 @@ export const RestoreCommandSchema = StateCommandSchema.extend({
   expectedCurrentVersionId: Id,
   expectedSourceHash: z.string().regex(/^[a-f0-9]{64}$/),
 }).strict();
+export const DraftDetailSchema = z.object({
+  version: VersionSchema,
+  content: z.record(z.string(), z.unknown()),
+  findings: z.array(FindingSchema),
+});

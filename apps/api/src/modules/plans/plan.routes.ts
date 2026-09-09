@@ -16,6 +16,7 @@ import {
   RevisionDetailSchema,
   RestorePreviewSchema,
   RestoreCommandSchema,
+  DraftDetailSchema,
 } from './plan.schemas.js';
 import {
   createPlan,
@@ -32,6 +33,7 @@ import {
   getRevision,
   previewRestore,
   restoreRevision,
+  getDraft,
 } from './plan.service.js';
 
 const errors = Object.fromEntries(
@@ -57,6 +59,16 @@ const body = <T extends z.ZodType>(schema: T) => ({
 const headers = z.object({ 'idempotency-key': z.string().min(1).max(200) });
 
 export function registerPlanRoutes(app: OpenAPIHono<AppEnvironment>): void {
+  app.openapi(
+    createRoute({
+      method: 'get',
+      path: '/api/v1/plans/{planId}/draft',
+      tags: ['Plans'],
+      request: { params: PlanParams },
+      responses: response(DraftDetailSchema),
+    }),
+    async (c) => c.json(await getDraft(c.get('athlete').id, c.req.valid('param').planId), 200),
+  );
   app.openapi(
     createRoute({
       method: 'get',

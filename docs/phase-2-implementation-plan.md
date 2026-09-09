@@ -40,10 +40,12 @@ Kysely repositories and PostgreSQL transactions
 
 ## Implementation sequence
 
-Progress: the schema migration, draft fixture, generated database types,
-version-aware workout reads, and schema/cutover checks are implemented on
-`phase-2-plan-lifecycle`. The fixture will be published through the lifecycle
-service in Stage 2. The remaining stages are not implemented yet.
+Progress (2026-09-09): Stages 1–4 are implemented, including history/restore,
+archived draft inspection, structural/order validation, and affected-workout summaries.
+The development fixture is published and activated through the real lifecycle service.
+Stage 5 local checks, PostgreSQL tests, destructive-cutover rehearsal, and disposable
+Docker smoke have passed. Merge/deployment and the authenticated public lifecycle
+walkthrough remain the final completion gate.
 
 ### Stage 1: destructive schema foundation
 

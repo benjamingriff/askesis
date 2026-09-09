@@ -62,6 +62,20 @@ services:
       migrate:
         condition: service_completed_successfully
 
+  publish-fixture:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    environment:
+      NODE_ENV: development
+      DATABASE_URL: postgres://${POSTGRES_USER:-askesis}:${POSTGRES_PASSWORD:-askesis}@postgres:5432/${POSTGRES_DB:-askesis}
+      CLERK_SECRET_KEY: sk_test_fixture_operator
+      CLERK_PUBLISHABLE_KEY: pk_test_fixture_operator
+    command: ['node', 'apps/api/dist/development/publish-fixture.js']
+    depends_on:
+      seed:
+        condition: service_completed_successfully
+
   api:
     build:
       context: .
@@ -89,7 +103,7 @@ services:
       timeout: 5s
       retries: 20
     depends_on:
-      seed:
+      publish-fixture:
         condition: service_completed_successfully
 
   web:

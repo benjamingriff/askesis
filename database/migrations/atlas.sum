@@ -1,4 +1,5 @@
-h1:3yzOW+jvJ7mUdaw+lLFyX6tUl/2pxo1Uc1qU9gW7Utk=
+h1:/tOx0u2GGzAKjYpbIC5Xu2KtkrsCybm5PMkPCEC6ILo=
 20260318120000_initial_schema.sql h1:MbXNJ0M+x3PLnNTdaTG8cvpU2rBCnNk0xWUovu3fgUQ=
 20260722153000_auth_identities.sql h1:19sniiRUiZhRCTgVPObJFlC/QWk+jrhMoDVnq6p8riY=
 20260907120000_plan_versions.sql h1:y0idcRC1x5Umd86vNv9EHRqqZkGdkZQmG4js/z68Ty4=
+20260908160000_workout_structure.sql h1:D52wE3JN1eduDEQqR8vvIKVvTO4sj7EUPEA7nDgk0+Q=

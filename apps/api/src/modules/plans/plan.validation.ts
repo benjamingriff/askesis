@@ -6,16 +6,26 @@ export type ValidationFinding = {
   path: string;
 };
 
-export type DatedEntity = { id: string; startDate: string; endDate: string };
+export type DatedEntity = { id: string; startDate: string; endDate: string; position?: number };
 export type ValidationPlan = {
   startDate: string | null;
   endDate: string | null;
   blocks: DatedEntity[];
-  weeks: (DatedEntity & { blockId: string })[];
-  workouts: { id: string; weekId: string; scheduledDate: string }[];
+  weeks: (DatedEntity & { blockId: string; weekNumber?: number })[];
+  workouts: { id: string; weekId: string; scheduledDate: string; position?: number }[];
+  steps?: {
+    id: string;
+    workoutId: string;
+    parentId: string | null;
+    kind: string;
+    position: number;
+    hasCompletion: boolean;
+    hasTargets: boolean;
+  }[];
+  unresolvedZones?: string[];
 };
 
-export const VALIDATOR_VERSION = 1;
+export const VALIDATOR_VERSION = 2;
 const day = (date: string): number => Date.parse(`${date}T00:00:00Z`) / 86_400_000;
 
 export function validatePlan(plan: ValidationPlan): ValidationFinding[] {
@@ -92,6 +102,36 @@ export function validatePlan(plan: ValidationPlan): ValidationFinding[] {
   }
   checkRanges(plan.blocks, 'BLOCK');
   checkRanges(plan.weeks, 'WEEK');
+  function chronological(
+    items: { id: string; startDate: string; position?: number }[],
+    code: string,
+  ) {
+    const sorted = [...items]
+      .filter((item) => item.position !== undefined)
+      .sort((a, b) => a.position! - b.position!);
+    for (let index = 1; index < sorted.length; index++) {
+      if (sorted[index]!.startDate < sorted[index - 1]!.startDate)
+        add(
+          code,
+          'error',
+          'Structural ordering must follow chronological dates.',
+          sorted[index]!.id,
+        );
+    }
+  }
+  chronological(plan.blocks, 'BLOCK_ORDER');
+  for (const block of plan.blocks)
+    chronological(
+      plan.weeks.filter((week) => week.blockId === block.id),
+      'WEEK_ORDER',
+    );
+  chronological(
+    plan.weeks.map((week) => ({
+      ...week,
+      ...(week.weekNumber === undefined ? {} : { position: week.weekNumber }),
+    })),
+    'WEEK_NUMBER_ORDER',
+  );
   const blocks = new Map(plan.blocks.map((block) => [block.id, block]));
   const weeks = new Map(plan.weeks.map((week) => [week.id, week]));
   const populatedWeeks = new Set(plan.workouts.map((workout) => workout.weekId));
@@ -140,6 +180,81 @@ export function validatePlan(plan: ValidationPlan): ValidationFinding[] {
   }
   if (plan.workouts.length === 0)
     add('EMPTY_SCHEDULE', 'warning', 'Plan contains no workouts.', 'workouts');
+
+  for (const date of new Set(plan.workouts.map((workout) => workout.scheduledDate))) {
+    const daily = plan.workouts
+      .filter((workout) => workout.scheduledDate === date)
+      .sort((a, b) => (a.position ?? 0) - (b.position ?? 0));
+    if (
+      daily.length > 1 &&
+      daily.some(
+        (workout, index) => workout.position !== undefined && workout.position !== index + 1,
+      )
+    )
+      add(
+        'WORKOUT_ORDER_GAP',
+        'warning',
+        'Multiple workouts on this day have nonconsecutive positions; review their intended order.',
+        `workouts/${date}`,
+      );
+  }
+  if (plan.steps !== undefined) {
+    const nodes = new Map(plan.steps.map((step) => [step.id, step]));
+    for (const workout of plan.workouts) {
+      if (
+        plan.steps.filter((step) => step.workoutId === workout.id && step.parentId === null)
+          .length !== 1
+      )
+        add(
+          'WORKOUT_ROOT',
+          'error',
+          'A workout needs exactly one prescription root.',
+          `workouts/${workout.id}`,
+        );
+    }
+    for (const step of plan.steps) {
+      const children = plan.steps.filter((child) => child.parentId === step.id);
+      if (
+        step.kind === 'effort'
+          ? children.length > 0 || !step.hasCompletion
+          : children.length === 0 || step.hasCompletion || step.hasTargets
+      )
+        add(
+          'STEP_SHAPE',
+          'error',
+          'Efforts need a completion and no children; containers need children and cannot carry completions or targets.',
+          `steps/${step.id}`,
+        );
+      const visited = new Set<string>();
+      let cursor: typeof step | undefined = step;
+      while (cursor) {
+        if (visited.has(cursor.id)) {
+          add('STEP_CYCLE', 'error', 'Workout prescription contains a cycle.', `steps/${step.id}`);
+          break;
+        }
+        visited.add(cursor.id);
+        if (cursor.parentId === null) break;
+        const parent = nodes.get(cursor.parentId);
+        if (!parent || parent.workoutId !== step.workoutId) {
+          add(
+            'STEP_PARENT',
+            'error',
+            'Step parent must belong to the same workout.',
+            `steps/${step.id}`,
+          );
+          break;
+        }
+        cursor = parent;
+      }
+    }
+  }
+  for (const target of plan.unresolvedZones ?? [])
+    add(
+      'ZONE_UNRESOLVED',
+      'error',
+      'Zone target needs a matching calibration zone effective on the workout date.',
+      `targets/${target}`,
+    );
 
   return findings.sort((a, b) => a.code.localeCompare(b.code) || a.path.localeCompare(b.path));
 }
