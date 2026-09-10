@@ -1,7 +1,7 @@
 # Current agent handoff
 
 **Updated:** 2026-09-10
-**Current phase:** Phase 3 implemented and running locally; signed-in acceptance walkthrough outstanding
+**Current phase:** Phase 3 accepted locally and deployed to Railway; alpha polish deferred
 **Completed phase:** Phase 1 — engineering foundation and Railway deployment validation
 
 ## Purpose
@@ -27,7 +27,17 @@ race/threshold pace guides, effective-date replacement and reuse, and locked-his
 Content schema is 2, validator is 3, and readiness requires `20260909120000_plan_briefs.sql`.
 Local app: <http://localhost:5174/plans>; API: port 3001; isolated database: `askesis_phase3`.
 See [the Phase 3 walkthrough](./phase-3-test-checklist.md) for checks, runtime details,
-implementation differences, and limitations. Railway still serves Phase 2.
+implementation differences, and limitations. Railway now serves Phase 3.
+
+### Phase 3 deployment — 2026-09-10
+
+User accepted the local walkthrough and authorized deployment. Implementation commit
+`4a83e7e` is on `main`. Initial Railway API deployment
+`014db987-ea30-453d-b6df-8a8009806baf` and web deployment
+`e021dd39-ebc3-49cc-acf8-5e097be9b5b3` both succeeded.
+Public health/readiness return 200, protected plans return 401 without authentication,
+and the live frontend bundle contains the Phase 3 brief editor. Existing Phase 4
+working documents in the main checkout were preserved during integration.
 
 The Phase 2 checkpoint below is retained as deployment history.
 

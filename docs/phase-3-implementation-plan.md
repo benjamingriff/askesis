@@ -2,7 +2,7 @@
 
 ## Status
 
-**Implemented locally; signed-in acceptance pending.** This document records the design checkpoint for the accepted [Phase 3 brief and calibration refinement](./phase-3-plan-brief-and-calibration-refinement.md). See the [walkthrough and implementation notes](./phase-3-test-checklist.md) for the running instance, verification, and final storage details. Railway deployment remains pending.
+**Accepted locally and deployed to Railway.** This document records the design checkpoint for the accepted [Phase 3 brief and calibration refinement](./phase-3-plan-brief-and-calibration-refinement.md). See the [walkthrough and implementation notes](./phase-3-test-checklist.md) for the running instance, verification, and final storage details. Remaining visual polish is deferred to the alpha review.
 
 ## Delivery strategy
 

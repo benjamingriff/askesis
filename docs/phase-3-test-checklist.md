@@ -1,6 +1,6 @@
 # Phase 3 walkthrough
 
-Implemented locally on 2026-09-10. Open <http://localhost:5174/plans> and sign in using your existing account. This instance has its own empty development database. Phase 2 remains on port 5173 and Railway; Phase 3 has not been deployed to Railway.
+Deployed to Railway on 2026-09-10 after the local user walkthrough. Open <https://askesis.up.railway.app/plans> and sign in using your existing account. The migration resets disposable plans while preserving accounts. The separate local instance remains at <http://localhost:5174/plans>.
 
 ## Try the complete flow
 
