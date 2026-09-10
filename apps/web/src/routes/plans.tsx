@@ -34,6 +34,8 @@ export function PlansPage({ archived = false }: { archived?: boolean }) {
   const navigate = useNavigate();
   const client = useQueryClient();
   const [name, setName] = useState('');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
   const requestKey = useRequestKey();
   const plans = useQuery({
     queryKey: ['plans', 'collection', archived ? 'archive' : 'library'],
@@ -48,13 +50,13 @@ export function PlansPage({ archived = false }: { archived?: boolean }) {
     mutationFn: async () =>
       result(
         await api.POST('/api/v1/plans', {
-          params: { header: { 'idempotency-key': requestKey(name.trim()) } },
-          body: { displayName: name.trim() },
+          params: { header: { 'idempotency-key': requestKey([name.trim(), startDate, endDate]) } },
+          body: { displayName: name.trim(), startDate, endDate },
         }),
       ),
     onSuccess: async (plan) => {
       await client.invalidateQueries({ queryKey: ['plans'] });
-      void navigate(`/plans/${plan.id}`);
+      void navigate(`/plans/${plan.id}/brief`);
     },
   });
   return (
@@ -83,6 +85,25 @@ export function PlansPage({ archived = false }: { archived?: boolean }) {
               maxLength={200}
               value={name}
               onChange={(e) => setName(e.target.value)}
+            />
+          </label>
+          <label>
+            Start date
+            <input
+              type="date"
+              required
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
+            />
+          </label>
+          <label>
+            End date
+            <input
+              type="date"
+              required
+              min={startDate}
+              value={endDate}
+              onChange={(e) => setEndDate(e.target.value)}
             />
           </label>
           <button className="primary-button" disabled={create.isPending || !name.trim()}>
@@ -378,6 +399,17 @@ function PlanEditor({ plan }: { plan: Plan }) {
           : `Locked · version ${plan.locked?.versionNumber}`}
       </p>
       <p className="plan-id">Plan ID: {plan.id}</p>
+      <p>
+        {plan.draft ? (
+          <Link to={`/plans/${plan.id}/brief`}>Edit brief and pace guides</Link>
+        ) : (
+          plan.locked && (
+            <Link to={`/plans/${plan.id}/versions/${plan.locked.id}/brief`}>
+              View brief and pace guides
+            </Link>
+          )
+        )}
+      </p>
       {plan.draft && (
         <Link to={`/plans/${plan.id}/draft`}>Inspect saved draft content and schedule</Link>
       )}

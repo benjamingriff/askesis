@@ -71,6 +71,7 @@ export interface AtlasSchemaRevisionsAtlasSchemaRevisions {
 }
 
 export interface CalibrationProfiles {
+  calculator_version: string;
   created_at: Generated<Timestamp>;
   discipline: string;
   fitness_value: Numeric | null;
@@ -78,8 +79,10 @@ export interface CalibrationProfiles {
   lineage_id: Generated<string>;
   method: string;
   plan_version_id: string;
-  source_description: string | null;
+  race_distance_metres: Numeric | null;
+  race_duration_seconds: number | null;
   system: string;
+  threshold_seconds_per_kilometre: Numeric | null;
 }
 
 export interface CalibrationZones {
@@ -107,6 +110,37 @@ export interface MovementDefinitions {
   supersedes_definition_id: string | null;
 }
 
+export interface PlanBriefs {
+  acknowledged_warning_codes: string[] | null;
+  confirmed_at: Timestamp | null;
+  confirmed_edit_number: number | null;
+  confirmed_hash: string | null;
+  context: Generated<string>;
+  current_runs_per_week: number | null;
+  current_runs_status: Generated<string>;
+  desired_runs_per_week: number | null;
+  distance_unit: Generated<string>;
+  goal_text: Generated<string>;
+  id: Generated<string>;
+  lineage_id: Generated<string>;
+  longest_run_metres: Numeric | null;
+  longest_run_status: Generated<string>;
+  plan_version_id: string;
+  schedule_review_required: Generated<boolean>;
+  timezone: Generated<string>;
+  validator_version: number | null;
+  weekly_distance_metres: Numeric | null;
+  weekly_distance_status: Generated<string>;
+}
+
+export interface PlanBriefWeekdays {
+  availability: string;
+  id: Generated<string>;
+  lineage_id: Generated<string>;
+  plan_version_id: string;
+  weekday: number;
+}
+
 export interface PlanCalibrationPeriods {
   effective_from: Timestamp;
   effective_until: Timestamp | null;
@@ -115,34 +149,6 @@ export interface PlanCalibrationPeriods {
   plan_version_id: string;
   profile_id: string;
   system: string;
-}
-
-export interface PlanConstraints {
-  constraint_type: string;
-  day_of_week: number | null;
-  description: string | null;
-  discipline: string | null;
-  id: Generated<string>;
-  lineage_id: Generated<string>;
-  numeric_value: Numeric | null;
-  plan_version_id: string;
-  severity: string;
-  unit: string | null;
-}
-
-export interface PlanGoals {
-  description: string | null;
-  discipline: string | null;
-  distance_unit: string | null;
-  distance_value: Numeric | null;
-  event_date: Timestamp | null;
-  event_name: string | null;
-  goal_type: string;
-  id: Generated<string>;
-  lineage_id: Generated<string>;
-  plan_version_id: string;
-  priority: string;
-  target_duration_seconds: number | null;
 }
 
 export interface Plans {
@@ -320,9 +326,9 @@ export interface DB {
   calibration_profiles: CalibrationProfiles;
   calibration_zones: CalibrationZones;
   movement_definitions: MovementDefinitions;
+  plan_brief_weekdays: PlanBriefWeekdays;
+  plan_briefs: PlanBriefs;
   plan_calibration_periods: PlanCalibrationPeriods;
-  plan_constraints: PlanConstraints;
-  plan_goals: PlanGoals;
   plan_versions: PlanVersions;
   plans: Plans;
   seed_runs: SeedRuns;

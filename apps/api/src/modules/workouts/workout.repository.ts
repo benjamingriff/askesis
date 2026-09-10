@@ -129,6 +129,12 @@ export async function getWorkoutDetail(
     .executeTakeFirst();
 
   if (workoutRow === undefined) return null;
+  const brief = await database
+    .selectFrom('plan_briefs')
+    .select('distance_unit')
+    .where('plan_version_id', '=', workoutRow.plan_version_id)
+    .executeTakeFirst();
+  const paceFactor = brief?.distance_unit === 'miles' ? 1.609344 : 1;
 
   const [stepRows, targetRows, tagRows, calibrationRows] = await Promise.all([
     database
@@ -195,6 +201,8 @@ export async function getWorkoutDetail(
         'calibration_profiles.fitness_value',
         'calibration_zones.zone_key',
         'calibration_zones.metric',
+        'plan_calibration_periods.effective_from',
+        'calibration_profiles.calculator_version',
         'calibration_zones.minimum_value',
         'calibration_zones.target_value',
         'calibration_zones.maximum_value',
@@ -216,13 +224,15 @@ export async function getWorkoutDetail(
       `${row.system}:${row.zone_key}`,
       {
         profileId: row.profile_id,
+        effectiveFrom: String(row.effective_from).slice(0, 10),
+        calculatorVersion: row.calculator_version,
         method: row.method,
-        fitnessValue: optionalNumber(row.fitness_value),
+        fitnessValue: null,
         metric: row.metric,
-        minimumValue: optionalNumber(row.minimum_value),
-        targetValue: optionalNumber(row.target_value),
-        maximumValue: optionalNumber(row.maximum_value),
-        unit: row.unit,
+        minimumValue: row.minimum_value === null ? null : Number(row.minimum_value) * paceFactor,
+        targetValue: row.target_value === null ? null : Number(row.target_value) * paceFactor,
+        maximumValue: row.maximum_value === null ? null : Number(row.maximum_value) * paceFactor,
+        unit: paceFactor === 1 ? row.unit : 'seconds_per_mile',
       },
     ]),
   );
@@ -230,6 +240,9 @@ export async function getWorkoutDetail(
   const targetsByStep = new Map<string, ReturnType<typeof StepTargetSchema.parse>[]>();
   for (const row of targetRows) {
     const targets = targetsByStep.get(row.step_id) ?? [];
+    const targetFactor = row.unit === 'seconds_per_kilometre' ? paceFactor : 1;
+    const displayValue = (value: string | number | null) =>
+      value === null ? null : Number(value) * targetFactor;
     const resolvedZone =
       row.zone_system === null || row.zone_key === null
         ? null
@@ -238,10 +251,10 @@ export async function getWorkoutDetail(
     targets.push(
       StepTargetSchema.parse({
         type: row.target_type,
-        minimumValue: optionalNumber(row.minimum_value),
-        targetValue: optionalNumber(row.target_value),
-        maximumValue: optionalNumber(row.maximum_value),
-        unit: row.unit,
+        minimumValue: displayValue(row.minimum_value),
+        targetValue: displayValue(row.target_value),
+        maximumValue: displayValue(row.maximum_value),
+        unit: targetFactor === 1 ? row.unit : 'seconds_per_mile',
         zoneSystem: row.zone_system,
         zoneKey: row.zone_key,
         text: row.text_value,

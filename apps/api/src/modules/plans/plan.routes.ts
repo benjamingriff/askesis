@@ -198,6 +198,7 @@ export function registerPlanRoutes(app: OpenAPIHono<AppEnvironment>): void {
           c.get('athlete').id,
           c.req.valid('json').displayName,
           c.req.valid('header')['idempotency-key'],
+          c.req.valid('json'),
         ),
         200,
       ),

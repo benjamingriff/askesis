@@ -1,7 +1,7 @@
 # Current agent handoff
 
-**Updated:** 2026-09-09
-**Current phase:** Phase 3 — brief and calibration implementation; Phase 2 deployed with signed-in verification outstanding
+**Updated:** 2026-09-10
+**Current phase:** Phase 3 implemented and running locally; signed-in acceptance walkthrough outstanding
 **Completed phase:** Phase 1 — engineering foundation and Railway deployment validation
 
 ## Purpose
@@ -18,6 +18,18 @@ Before making changes, read:
 Do not place credentials, Clerk tokens, database URLs, Sentry credentials, or Railway secrets in chat, logs, commits, or this file.
 
 ## Repository state at handoff
+
+### Phase 3 local checkpoint — 2026-09-10
+
+The Phase 2 main branch was merged into `t3code/refine-phase-three` before implementation.
+Phase 3 now has versioned briefs, recurring weekdays, explicit confirmation, persisted
+race/threshold pace guides, effective-date replacement and reuse, and locked-history views.
+Content schema is 2, validator is 3, and readiness requires `20260909120000_plan_briefs.sql`.
+Local app: <http://localhost:5174/plans>; API: port 3001; isolated database: `askesis_phase3`.
+See [the Phase 3 walkthrough](./phase-3-test-checklist.md) for checks, runtime details,
+implementation differences, and limitations. Railway still serves Phase 2.
+
+The Phase 2 checkpoint below is retained as deployment history.
 
 Phase 2 implementation is underway on `phase-2-plan-lifecycle`. The new migration
 `20260907120000_plan_versions.sql` resets plan-domain data while preserving

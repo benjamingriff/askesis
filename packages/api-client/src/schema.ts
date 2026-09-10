@@ -1672,6 +1672,10 @@ export interface paths {
                 content: {
                     "application/json": {
                         displayName: string;
+                        /** Format: date */
+                        startDate?: string;
+                        /** Format: date */
+                        endDate?: string;
                     };
                 };
             };
@@ -2280,6 +2284,1372 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/plans/{planId}/draft/brief": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    planId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Brief and calibration state. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            versionId: string;
+                            editNumber: number;
+                            startDate: string | null;
+                            endDate: string | null;
+                            readOnly: boolean;
+                            brief: {
+                                goal: string;
+                                /** @enum {string} */
+                                unit: "kilometres" | "miles";
+                                timezone: string;
+                                weeklyDistance: {
+                                    /** @enum {string} */
+                                    status: "unanswered";
+                                    value: unknown;
+                                } | {
+                                    /** @enum {string} */
+                                    status: "unknown";
+                                    value: unknown;
+                                } | {
+                                    /** @enum {string} */
+                                    status: "known";
+                                    value: number;
+                                };
+                                currentRuns: {
+                                    /** @enum {string} */
+                                    status: "unanswered";
+                                    value: unknown;
+                                } | {
+                                    /** @enum {string} */
+                                    status: "unknown";
+                                    value: unknown;
+                                } | {
+                                    /** @enum {string} */
+                                    status: "known";
+                                    value: number;
+                                };
+                                longestRun: {
+                                    /** @enum {string} */
+                                    status: "unanswered";
+                                    value: unknown;
+                                } | {
+                                    /** @enum {string} */
+                                    status: "unknown";
+                                    value: unknown;
+                                } | {
+                                    /** @enum {string} */
+                                    status: "known";
+                                    value: number;
+                                };
+                                desiredRuns: number | null;
+                                weekdays: ("available" | "preferred" | "unavailable")[];
+                                context: string;
+                            };
+                            confirmed: boolean;
+                            hash: string;
+                            scheduleReviewRequired: boolean;
+                            findings: {
+                                code: string;
+                                /** @enum {string} */
+                                severity: "error" | "warning";
+                                message: string;
+                                path: string;
+                            }[];
+                            calibrations: {
+                                id: string;
+                                effectiveFrom: string;
+                                effectiveUntil: string | null;
+                                /** @enum {string} */
+                                method: "race_result" | "threshold_pace";
+                                distanceMetres: number | null;
+                                durationSeconds: number | null;
+                                secondsPerKilometre: number | null;
+                                calculatorVersion: string;
+                                zones: {
+                                    key: string;
+                                    fast: number;
+                                    target: number;
+                                    slow: number;
+                                }[];
+                            }[];
+                        };
+                    };
+                };
+                /** @description Request rejected. */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Request rejected. */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Request rejected. */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Request rejected. */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Request rejected. */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    planId: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        expectedDraftId: string;
+                        expectedEditNumber: number;
+                        idempotencyKey?: string;
+                        brief: {
+                            goal: string;
+                            /** @enum {string} */
+                            unit: "kilometres" | "miles";
+                            timezone: string;
+                            weeklyDistance: {
+                                /** @enum {string} */
+                                status: "unanswered";
+                                value: unknown;
+                            } | {
+                                /** @enum {string} */
+                                status: "unknown";
+                                value: unknown;
+                            } | {
+                                /** @enum {string} */
+                                status: "known";
+                                value: number;
+                            };
+                            currentRuns: {
+                                /** @enum {string} */
+                                status: "unanswered";
+                                value: unknown;
+                            } | {
+                                /** @enum {string} */
+                                status: "unknown";
+                                value: unknown;
+                            } | {
+                                /** @enum {string} */
+                                status: "known";
+                                value: number;
+                            };
+                            longestRun: {
+                                /** @enum {string} */
+                                status: "unanswered";
+                                value: unknown;
+                            } | {
+                                /** @enum {string} */
+                                status: "unknown";
+                                value: unknown;
+                            } | {
+                                /** @enum {string} */
+                                status: "known";
+                                value: number;
+                            };
+                            desiredRuns: number | null;
+                            weekdays: ("available" | "preferred" | "unavailable")[];
+                            context: string;
+                        };
+                    };
+                };
+            };
+            responses: {
+                /** @description Brief and calibration state. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            versionId: string;
+                            editNumber: number;
+                            startDate: string | null;
+                            endDate: string | null;
+                            readOnly: boolean;
+                            brief: {
+                                goal: string;
+                                /** @enum {string} */
+                                unit: "kilometres" | "miles";
+                                timezone: string;
+                                weeklyDistance: {
+                                    /** @enum {string} */
+                                    status: "unanswered";
+                                    value: unknown;
+                                } | {
+                                    /** @enum {string} */
+                                    status: "unknown";
+                                    value: unknown;
+                                } | {
+                                    /** @enum {string} */
+                                    status: "known";
+                                    value: number;
+                                };
+                                currentRuns: {
+                                    /** @enum {string} */
+                                    status: "unanswered";
+                                    value: unknown;
+                                } | {
+                                    /** @enum {string} */
+                                    status: "unknown";
+                                    value: unknown;
+                                } | {
+                                    /** @enum {string} */
+                                    status: "known";
+                                    value: number;
+                                };
+                                longestRun: {
+                                    /** @enum {string} */
+                                    status: "unanswered";
+                                    value: unknown;
+                                } | {
+                                    /** @enum {string} */
+                                    status: "unknown";
+                                    value: unknown;
+                                } | {
+                                    /** @enum {string} */
+                                    status: "known";
+                                    value: number;
+                                };
+                                desiredRuns: number | null;
+                                weekdays: ("available" | "preferred" | "unavailable")[];
+                                context: string;
+                            };
+                            confirmed: boolean;
+                            hash: string;
+                            scheduleReviewRequired: boolean;
+                            findings: {
+                                code: string;
+                                /** @enum {string} */
+                                severity: "error" | "warning";
+                                message: string;
+                                path: string;
+                            }[];
+                            calibrations: {
+                                id: string;
+                                effectiveFrom: string;
+                                effectiveUntil: string | null;
+                                /** @enum {string} */
+                                method: "race_result" | "threshold_pace";
+                                distanceMetres: number | null;
+                                durationSeconds: number | null;
+                                secondsPerKilometre: number | null;
+                                calculatorVersion: string;
+                                zones: {
+                                    key: string;
+                                    fast: number;
+                                    target: number;
+                                    slow: number;
+                                }[];
+                            }[];
+                        };
+                    };
+                };
+                /** @description Request rejected. */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Request rejected. */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Request rejected. */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Request rejected. */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Request rejected. */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/plans/{planId}/revisions/{revisionId}/brief": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    planId: string;
+                    revisionId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Brief and calibration state. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            versionId: string;
+                            editNumber: number;
+                            startDate: string | null;
+                            endDate: string | null;
+                            readOnly: boolean;
+                            brief: {
+                                goal: string;
+                                /** @enum {string} */
+                                unit: "kilometres" | "miles";
+                                timezone: string;
+                                weeklyDistance: {
+                                    /** @enum {string} */
+                                    status: "unanswered";
+                                    value: unknown;
+                                } | {
+                                    /** @enum {string} */
+                                    status: "unknown";
+                                    value: unknown;
+                                } | {
+                                    /** @enum {string} */
+                                    status: "known";
+                                    value: number;
+                                };
+                                currentRuns: {
+                                    /** @enum {string} */
+                                    status: "unanswered";
+                                    value: unknown;
+                                } | {
+                                    /** @enum {string} */
+                                    status: "unknown";
+                                    value: unknown;
+                                } | {
+                                    /** @enum {string} */
+                                    status: "known";
+                                    value: number;
+                                };
+                                longestRun: {
+                                    /** @enum {string} */
+                                    status: "unanswered";
+                                    value: unknown;
+                                } | {
+                                    /** @enum {string} */
+                                    status: "unknown";
+                                    value: unknown;
+                                } | {
+                                    /** @enum {string} */
+                                    status: "known";
+                                    value: number;
+                                };
+                                desiredRuns: number | null;
+                                weekdays: ("available" | "preferred" | "unavailable")[];
+                                context: string;
+                            };
+                            confirmed: boolean;
+                            hash: string;
+                            scheduleReviewRequired: boolean;
+                            findings: {
+                                code: string;
+                                /** @enum {string} */
+                                severity: "error" | "warning";
+                                message: string;
+                                path: string;
+                            }[];
+                            calibrations: {
+                                id: string;
+                                effectiveFrom: string;
+                                effectiveUntil: string | null;
+                                /** @enum {string} */
+                                method: "race_result" | "threshold_pace";
+                                distanceMetres: number | null;
+                                durationSeconds: number | null;
+                                secondsPerKilometre: number | null;
+                                calculatorVersion: string;
+                                zones: {
+                                    key: string;
+                                    fast: number;
+                                    target: number;
+                                    slow: number;
+                                }[];
+                            }[];
+                        };
+                    };
+                };
+                /** @description Request rejected. */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Request rejected. */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Request rejected. */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Request rejected. */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Request rejected. */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/plans/{planId}/draft/brief/validate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    planId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Brief and calibration state. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            versionId: string;
+                            editNumber: number;
+                            startDate: string | null;
+                            endDate: string | null;
+                            readOnly: boolean;
+                            brief: {
+                                goal: string;
+                                /** @enum {string} */
+                                unit: "kilometres" | "miles";
+                                timezone: string;
+                                weeklyDistance: {
+                                    /** @enum {string} */
+                                    status: "unanswered";
+                                    value: unknown;
+                                } | {
+                                    /** @enum {string} */
+                                    status: "unknown";
+                                    value: unknown;
+                                } | {
+                                    /** @enum {string} */
+                                    status: "known";
+                                    value: number;
+                                };
+                                currentRuns: {
+                                    /** @enum {string} */
+                                    status: "unanswered";
+                                    value: unknown;
+                                } | {
+                                    /** @enum {string} */
+                                    status: "unknown";
+                                    value: unknown;
+                                } | {
+                                    /** @enum {string} */
+                                    status: "known";
+                                    value: number;
+                                };
+                                longestRun: {
+                                    /** @enum {string} */
+                                    status: "unanswered";
+                                    value: unknown;
+                                } | {
+                                    /** @enum {string} */
+                                    status: "unknown";
+                                    value: unknown;
+                                } | {
+                                    /** @enum {string} */
+                                    status: "known";
+                                    value: number;
+                                };
+                                desiredRuns: number | null;
+                                weekdays: ("available" | "preferred" | "unavailable")[];
+                                context: string;
+                            };
+                            confirmed: boolean;
+                            hash: string;
+                            scheduleReviewRequired: boolean;
+                            findings: {
+                                code: string;
+                                /** @enum {string} */
+                                severity: "error" | "warning";
+                                message: string;
+                                path: string;
+                            }[];
+                            calibrations: {
+                                id: string;
+                                effectiveFrom: string;
+                                effectiveUntil: string | null;
+                                /** @enum {string} */
+                                method: "race_result" | "threshold_pace";
+                                distanceMetres: number | null;
+                                durationSeconds: number | null;
+                                secondsPerKilometre: number | null;
+                                calculatorVersion: string;
+                                zones: {
+                                    key: string;
+                                    fast: number;
+                                    target: number;
+                                    slow: number;
+                                }[];
+                            }[];
+                        };
+                    };
+                };
+                /** @description Request rejected. */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Request rejected. */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Request rejected. */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Request rejected. */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Request rejected. */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/plans/{planId}/draft/brief/confirm": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    planId: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        expectedDraftId: string;
+                        expectedEditNumber: number;
+                        idempotencyKey?: string;
+                        expectedHash: string;
+                        acknowledgedWarningCodes: string[];
+                    };
+                };
+            };
+            responses: {
+                /** @description Brief and calibration state. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            versionId: string;
+                            editNumber: number;
+                            startDate: string | null;
+                            endDate: string | null;
+                            readOnly: boolean;
+                            brief: {
+                                goal: string;
+                                /** @enum {string} */
+                                unit: "kilometres" | "miles";
+                                timezone: string;
+                                weeklyDistance: {
+                                    /** @enum {string} */
+                                    status: "unanswered";
+                                    value: unknown;
+                                } | {
+                                    /** @enum {string} */
+                                    status: "unknown";
+                                    value: unknown;
+                                } | {
+                                    /** @enum {string} */
+                                    status: "known";
+                                    value: number;
+                                };
+                                currentRuns: {
+                                    /** @enum {string} */
+                                    status: "unanswered";
+                                    value: unknown;
+                                } | {
+                                    /** @enum {string} */
+                                    status: "unknown";
+                                    value: unknown;
+                                } | {
+                                    /** @enum {string} */
+                                    status: "known";
+                                    value: number;
+                                };
+                                longestRun: {
+                                    /** @enum {string} */
+                                    status: "unanswered";
+                                    value: unknown;
+                                } | {
+                                    /** @enum {string} */
+                                    status: "unknown";
+                                    value: unknown;
+                                } | {
+                                    /** @enum {string} */
+                                    status: "known";
+                                    value: number;
+                                };
+                                desiredRuns: number | null;
+                                weekdays: ("available" | "preferred" | "unavailable")[];
+                                context: string;
+                            };
+                            confirmed: boolean;
+                            hash: string;
+                            scheduleReviewRequired: boolean;
+                            findings: {
+                                code: string;
+                                /** @enum {string} */
+                                severity: "error" | "warning";
+                                message: string;
+                                path: string;
+                            }[];
+                            calibrations: {
+                                id: string;
+                                effectiveFrom: string;
+                                effectiveUntil: string | null;
+                                /** @enum {string} */
+                                method: "race_result" | "threshold_pace";
+                                distanceMetres: number | null;
+                                durationSeconds: number | null;
+                                secondsPerKilometre: number | null;
+                                calculatorVersion: string;
+                                zones: {
+                                    key: string;
+                                    fast: number;
+                                    target: number;
+                                    slow: number;
+                                }[];
+                            }[];
+                        };
+                    };
+                };
+                /** @description Request rejected. */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Request rejected. */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Request rejected. */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Request rejected. */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Request rejected. */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/plans/{planId}/draft/calibrations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    planId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Brief and calibration state. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            versionId: string;
+                            editNumber: number;
+                            startDate: string | null;
+                            endDate: string | null;
+                            readOnly: boolean;
+                            brief: {
+                                goal: string;
+                                /** @enum {string} */
+                                unit: "kilometres" | "miles";
+                                timezone: string;
+                                weeklyDistance: {
+                                    /** @enum {string} */
+                                    status: "unanswered";
+                                    value: unknown;
+                                } | {
+                                    /** @enum {string} */
+                                    status: "unknown";
+                                    value: unknown;
+                                } | {
+                                    /** @enum {string} */
+                                    status: "known";
+                                    value: number;
+                                };
+                                currentRuns: {
+                                    /** @enum {string} */
+                                    status: "unanswered";
+                                    value: unknown;
+                                } | {
+                                    /** @enum {string} */
+                                    status: "unknown";
+                                    value: unknown;
+                                } | {
+                                    /** @enum {string} */
+                                    status: "known";
+                                    value: number;
+                                };
+                                longestRun: {
+                                    /** @enum {string} */
+                                    status: "unanswered";
+                                    value: unknown;
+                                } | {
+                                    /** @enum {string} */
+                                    status: "unknown";
+                                    value: unknown;
+                                } | {
+                                    /** @enum {string} */
+                                    status: "known";
+                                    value: number;
+                                };
+                                desiredRuns: number | null;
+                                weekdays: ("available" | "preferred" | "unavailable")[];
+                                context: string;
+                            };
+                            confirmed: boolean;
+                            hash: string;
+                            scheduleReviewRequired: boolean;
+                            findings: {
+                                code: string;
+                                /** @enum {string} */
+                                severity: "error" | "warning";
+                                message: string;
+                                path: string;
+                            }[];
+                            calibrations: {
+                                id: string;
+                                effectiveFrom: string;
+                                effectiveUntil: string | null;
+                                /** @enum {string} */
+                                method: "race_result" | "threshold_pace";
+                                distanceMetres: number | null;
+                                durationSeconds: number | null;
+                                secondsPerKilometre: number | null;
+                                calculatorVersion: string;
+                                zones: {
+                                    key: string;
+                                    fast: number;
+                                    target: number;
+                                    slow: number;
+                                }[];
+                            }[];
+                        };
+                    };
+                };
+                /** @description Request rejected. */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Request rejected. */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Request rejected. */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Request rejected. */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Request rejected. */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    planId: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        expectedDraftId: string;
+                        expectedEditNumber: number;
+                        idempotencyKey?: string;
+                        input: {
+                            /** @enum {string} */
+                            method: "race_result";
+                            distanceMetres: number;
+                            durationSeconds: number;
+                        } | {
+                            /** @enum {string} */
+                            method: "threshold_pace";
+                            secondsPerKilometre: number;
+                        };
+                    };
+                };
+            };
+            responses: {
+                /** @description Brief and calibration state. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            versionId: string;
+                            editNumber: number;
+                            startDate: string | null;
+                            endDate: string | null;
+                            readOnly: boolean;
+                            brief: {
+                                goal: string;
+                                /** @enum {string} */
+                                unit: "kilometres" | "miles";
+                                timezone: string;
+                                weeklyDistance: {
+                                    /** @enum {string} */
+                                    status: "unanswered";
+                                    value: unknown;
+                                } | {
+                                    /** @enum {string} */
+                                    status: "unknown";
+                                    value: unknown;
+                                } | {
+                                    /** @enum {string} */
+                                    status: "known";
+                                    value: number;
+                                };
+                                currentRuns: {
+                                    /** @enum {string} */
+                                    status: "unanswered";
+                                    value: unknown;
+                                } | {
+                                    /** @enum {string} */
+                                    status: "unknown";
+                                    value: unknown;
+                                } | {
+                                    /** @enum {string} */
+                                    status: "known";
+                                    value: number;
+                                };
+                                longestRun: {
+                                    /** @enum {string} */
+                                    status: "unanswered";
+                                    value: unknown;
+                                } | {
+                                    /** @enum {string} */
+                                    status: "unknown";
+                                    value: unknown;
+                                } | {
+                                    /** @enum {string} */
+                                    status: "known";
+                                    value: number;
+                                };
+                                desiredRuns: number | null;
+                                weekdays: ("available" | "preferred" | "unavailable")[];
+                                context: string;
+                            };
+                            confirmed: boolean;
+                            hash: string;
+                            scheduleReviewRequired: boolean;
+                            findings: {
+                                code: string;
+                                /** @enum {string} */
+                                severity: "error" | "warning";
+                                message: string;
+                                path: string;
+                            }[];
+                            calibrations: {
+                                id: string;
+                                effectiveFrom: string;
+                                effectiveUntil: string | null;
+                                /** @enum {string} */
+                                method: "race_result" | "threshold_pace";
+                                distanceMetres: number | null;
+                                durationSeconds: number | null;
+                                secondsPerKilometre: number | null;
+                                calculatorVersion: string;
+                                zones: {
+                                    key: string;
+                                    fast: number;
+                                    target: number;
+                                    slow: number;
+                                }[];
+                            }[];
+                        };
+                    };
+                };
+                /** @description Request rejected. */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Request rejected. */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Request rejected. */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Request rejected. */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Request rejected. */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/plans/{planId}/draft/calibrations/{calibrationId}/use-again": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    planId: string;
+                    calibrationId: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        expectedDraftId: string;
+                        expectedEditNumber: number;
+                        idempotencyKey?: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description Brief and calibration state. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            versionId: string;
+                            editNumber: number;
+                            startDate: string | null;
+                            endDate: string | null;
+                            readOnly: boolean;
+                            brief: {
+                                goal: string;
+                                /** @enum {string} */
+                                unit: "kilometres" | "miles";
+                                timezone: string;
+                                weeklyDistance: {
+                                    /** @enum {string} */
+                                    status: "unanswered";
+                                    value: unknown;
+                                } | {
+                                    /** @enum {string} */
+                                    status: "unknown";
+                                    value: unknown;
+                                } | {
+                                    /** @enum {string} */
+                                    status: "known";
+                                    value: number;
+                                };
+                                currentRuns: {
+                                    /** @enum {string} */
+                                    status: "unanswered";
+                                    value: unknown;
+                                } | {
+                                    /** @enum {string} */
+                                    status: "unknown";
+                                    value: unknown;
+                                } | {
+                                    /** @enum {string} */
+                                    status: "known";
+                                    value: number;
+                                };
+                                longestRun: {
+                                    /** @enum {string} */
+                                    status: "unanswered";
+                                    value: unknown;
+                                } | {
+                                    /** @enum {string} */
+                                    status: "unknown";
+                                    value: unknown;
+                                } | {
+                                    /** @enum {string} */
+                                    status: "known";
+                                    value: number;
+                                };
+                                desiredRuns: number | null;
+                                weekdays: ("available" | "preferred" | "unavailable")[];
+                                context: string;
+                            };
+                            confirmed: boolean;
+                            hash: string;
+                            scheduleReviewRequired: boolean;
+                            findings: {
+                                code: string;
+                                /** @enum {string} */
+                                severity: "error" | "warning";
+                                message: string;
+                                path: string;
+                            }[];
+                            calibrations: {
+                                id: string;
+                                effectiveFrom: string;
+                                effectiveUntil: string | null;
+                                /** @enum {string} */
+                                method: "race_result" | "threshold_pace";
+                                distanceMetres: number | null;
+                                durationSeconds: number | null;
+                                secondsPerKilometre: number | null;
+                                calculatorVersion: string;
+                                zones: {
+                                    key: string;
+                                    fast: number;
+                                    target: number;
+                                    slow: number;
+                                }[];
+                            }[];
+                        };
+                    };
+                };
+                /** @description Request rejected. */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Request rejected. */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Request rejected. */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Request rejected. */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Request rejected. */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -2364,6 +3734,8 @@ export interface components {
         ResolvedZone: {
             /** Format: uuid */
             profileId: string;
+            effectiveFrom?: string;
+            calculatorVersion?: string;
             method: string;
             fitnessValue: number | null;
             metric: string;

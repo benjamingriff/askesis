@@ -9,6 +9,7 @@ import { requestContext } from './http/middleware.js';
 import { logger } from './logger.js';
 import { registerWorkoutRoutes } from './modules/workouts/workout.routes.js';
 import { registerPlanRoutes } from './modules/plans/plan.routes.js';
+import { registerBriefRoutes } from './modules/plans/brief.routes.js';
 import { PlanError } from './modules/plans/plan.service.js';
 
 export const app = new OpenAPIHono<AppEnvironment>({
@@ -86,7 +87,7 @@ app.get('/api/ready', async (context) => {
     select exists (
       select 1
       from atlas_schema_revisions.atlas_schema_revisions
-      where version = '20260908160000'
+      where version = '20260909120000'
     ) as migrated
   `.execute(getDatabase());
 
@@ -109,6 +110,7 @@ app.use('/api/v1/*', requireAuthentication);
 
 registerWorkoutRoutes(app);
 registerPlanRoutes(app);
+registerBriefRoutes(app);
 
 app.doc('/api/openapi.json', {
   openapi: '3.1.0',

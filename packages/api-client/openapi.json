@@ -363,6 +363,12 @@
             "format": "uuid",
             "pattern": "^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i"
           },
+          "effectiveFrom": {
+            "type": "string"
+          },
+          "calculatorVersion": {
+            "type": "string"
+          },
           "method": {
             "type": "string"
           },
@@ -3782,6 +3788,14 @@
                     "type": "string",
                     "minLength": 1,
                     "maxLength": 200
+                  },
+                  "startDate": {
+                    "type": "string",
+                    "format": "date"
+                  },
+                  "endDate": {
+                    "type": "string",
+                    "format": "date"
                   }
                 },
                 "required": [
@@ -5022,6 +5036,4235 @@
                     "archived",
                     "draft",
                     "locked"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Request rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Request rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Request rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Request rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Request rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/plans/{planId}/draft/brief": {
+      "get": {
+        "tags": [
+          "Brief"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+            },
+            "required": true,
+            "name": "planId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Brief and calibration state.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "versionId": {
+                      "type": "string",
+                      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+                    },
+                    "editNumber": {
+                      "type": "number"
+                    },
+                    "startDate": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "endDate": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "readOnly": {
+                      "type": "boolean"
+                    },
+                    "brief": {
+                      "type": "object",
+                      "properties": {
+                        "goal": {
+                          "type": "string",
+                          "maxLength": 20000
+                        },
+                        "unit": {
+                          "type": "string",
+                          "enum": [
+                            "kilometres",
+                            "miles"
+                          ]
+                        },
+                        "timezone": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 100
+                        },
+                        "weeklyDistance": {
+                          "oneOf": [
+                            {
+                              "type": "object",
+                              "properties": {
+                                "status": {
+                                  "type": "string",
+                                  "enum": [
+                                    "unanswered"
+                                  ]
+                                },
+                                "value": {
+                                  "nullable": true
+                                }
+                              },
+                              "required": [
+                                "status",
+                                "value"
+                              ],
+                              "additionalProperties": false
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "status": {
+                                  "type": "string",
+                                  "enum": [
+                                    "unknown"
+                                  ]
+                                },
+                                "value": {
+                                  "nullable": true
+                                }
+                              },
+                              "required": [
+                                "status",
+                                "value"
+                              ],
+                              "additionalProperties": false
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "status": {
+                                  "type": "string",
+                                  "enum": [
+                                    "known"
+                                  ]
+                                },
+                                "value": {
+                                  "type": "number",
+                                  "minimum": 0,
+                                  "maximum": 1000000
+                                }
+                              },
+                              "required": [
+                                "status",
+                                "value"
+                              ],
+                              "additionalProperties": false
+                            }
+                          ]
+                        },
+                        "currentRuns": {
+                          "oneOf": [
+                            {
+                              "type": "object",
+                              "properties": {
+                                "status": {
+                                  "type": "string",
+                                  "enum": [
+                                    "unanswered"
+                                  ]
+                                },
+                                "value": {
+                                  "nullable": true
+                                }
+                              },
+                              "required": [
+                                "status",
+                                "value"
+                              ],
+                              "additionalProperties": false
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "status": {
+                                  "type": "string",
+                                  "enum": [
+                                    "unknown"
+                                  ]
+                                },
+                                "value": {
+                                  "nullable": true
+                                }
+                              },
+                              "required": [
+                                "status",
+                                "value"
+                              ],
+                              "additionalProperties": false
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "status": {
+                                  "type": "string",
+                                  "enum": [
+                                    "known"
+                                  ]
+                                },
+                                "value": {
+                                  "type": "number",
+                                  "minimum": 0,
+                                  "maximum": 1000000
+                                }
+                              },
+                              "required": [
+                                "status",
+                                "value"
+                              ],
+                              "additionalProperties": false
+                            }
+                          ]
+                        },
+                        "longestRun": {
+                          "oneOf": [
+                            {
+                              "type": "object",
+                              "properties": {
+                                "status": {
+                                  "type": "string",
+                                  "enum": [
+                                    "unanswered"
+                                  ]
+                                },
+                                "value": {
+                                  "nullable": true
+                                }
+                              },
+                              "required": [
+                                "status",
+                                "value"
+                              ],
+                              "additionalProperties": false
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "status": {
+                                  "type": "string",
+                                  "enum": [
+                                    "unknown"
+                                  ]
+                                },
+                                "value": {
+                                  "nullable": true
+                                }
+                              },
+                              "required": [
+                                "status",
+                                "value"
+                              ],
+                              "additionalProperties": false
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "status": {
+                                  "type": "string",
+                                  "enum": [
+                                    "known"
+                                  ]
+                                },
+                                "value": {
+                                  "type": "number",
+                                  "minimum": 0,
+                                  "maximum": 1000000
+                                }
+                              },
+                              "required": [
+                                "status",
+                                "value"
+                              ],
+                              "additionalProperties": false
+                            }
+                          ]
+                        },
+                        "desiredRuns": {
+                          "type": "integer",
+                          "nullable": true,
+                          "minimum": 1,
+                          "maximum": 14
+                        },
+                        "weekdays": {
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "enum": [
+                              "available",
+                              "preferred",
+                              "unavailable"
+                            ]
+                          }
+                        },
+                        "context": {
+                          "type": "string",
+                          "maxLength": 20000
+                        }
+                      },
+                      "required": [
+                        "goal",
+                        "unit",
+                        "timezone",
+                        "weeklyDistance",
+                        "currentRuns",
+                        "longestRun",
+                        "desiredRuns",
+                        "weekdays",
+                        "context"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "confirmed": {
+                      "type": "boolean"
+                    },
+                    "hash": {
+                      "type": "string"
+                    },
+                    "scheduleReviewRequired": {
+                      "type": "boolean"
+                    },
+                    "findings": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "code": {
+                            "type": "string"
+                          },
+                          "severity": {
+                            "type": "string",
+                            "enum": [
+                              "error",
+                              "warning"
+                            ]
+                          },
+                          "message": {
+                            "type": "string"
+                          },
+                          "path": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "code",
+                          "severity",
+                          "message",
+                          "path"
+                        ]
+                      }
+                    },
+                    "calibrations": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+                          },
+                          "effectiveFrom": {
+                            "type": "string"
+                          },
+                          "effectiveUntil": {
+                            "type": "string",
+                            "nullable": true
+                          },
+                          "method": {
+                            "type": "string",
+                            "enum": [
+                              "race_result",
+                              "threshold_pace"
+                            ]
+                          },
+                          "distanceMetres": {
+                            "type": "number",
+                            "nullable": true
+                          },
+                          "durationSeconds": {
+                            "type": "number",
+                            "nullable": true
+                          },
+                          "secondsPerKilometre": {
+                            "type": "number",
+                            "nullable": true
+                          },
+                          "calculatorVersion": {
+                            "type": "string"
+                          },
+                          "zones": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "key": {
+                                  "type": "string"
+                                },
+                                "fast": {
+                                  "type": "number"
+                                },
+                                "target": {
+                                  "type": "number"
+                                },
+                                "slow": {
+                                  "type": "number"
+                                }
+                              },
+                              "required": [
+                                "key",
+                                "fast",
+                                "target",
+                                "slow"
+                              ]
+                            }
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "effectiveFrom",
+                          "effectiveUntil",
+                          "method",
+                          "distanceMetres",
+                          "durationSeconds",
+                          "secondsPerKilometre",
+                          "calculatorVersion",
+                          "zones"
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "versionId",
+                    "editNumber",
+                    "startDate",
+                    "endDate",
+                    "readOnly",
+                    "brief",
+                    "confirmed",
+                    "hash",
+                    "scheduleReviewRequired",
+                    "findings",
+                    "calibrations"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Request rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Request rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Request rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Request rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Request rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Brief"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+            },
+            "required": true,
+            "name": "planId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "expectedDraftId": {
+                    "type": "string",
+                    "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+                  },
+                  "expectedEditNumber": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "exclusiveMinimum": true
+                  },
+                  "idempotencyKey": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 200
+                  },
+                  "brief": {
+                    "type": "object",
+                    "properties": {
+                      "goal": {
+                        "type": "string",
+                        "maxLength": 20000
+                      },
+                      "unit": {
+                        "type": "string",
+                        "enum": [
+                          "kilometres",
+                          "miles"
+                        ]
+                      },
+                      "timezone": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 100
+                      },
+                      "weeklyDistance": {
+                        "oneOf": [
+                          {
+                            "type": "object",
+                            "properties": {
+                              "status": {
+                                "type": "string",
+                                "enum": [
+                                  "unanswered"
+                                ]
+                              },
+                              "value": {
+                                "nullable": true
+                              }
+                            },
+                            "required": [
+                              "status",
+                              "value"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "status": {
+                                "type": "string",
+                                "enum": [
+                                  "unknown"
+                                ]
+                              },
+                              "value": {
+                                "nullable": true
+                              }
+                            },
+                            "required": [
+                              "status",
+                              "value"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "status": {
+                                "type": "string",
+                                "enum": [
+                                  "known"
+                                ]
+                              },
+                              "value": {
+                                "type": "number",
+                                "minimum": 0,
+                                "maximum": 1000000
+                              }
+                            },
+                            "required": [
+                              "status",
+                              "value"
+                            ],
+                            "additionalProperties": false
+                          }
+                        ]
+                      },
+                      "currentRuns": {
+                        "oneOf": [
+                          {
+                            "type": "object",
+                            "properties": {
+                              "status": {
+                                "type": "string",
+                                "enum": [
+                                  "unanswered"
+                                ]
+                              },
+                              "value": {
+                                "nullable": true
+                              }
+                            },
+                            "required": [
+                              "status",
+                              "value"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "status": {
+                                "type": "string",
+                                "enum": [
+                                  "unknown"
+                                ]
+                              },
+                              "value": {
+                                "nullable": true
+                              }
+                            },
+                            "required": [
+                              "status",
+                              "value"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "status": {
+                                "type": "string",
+                                "enum": [
+                                  "known"
+                                ]
+                              },
+                              "value": {
+                                "type": "number",
+                                "minimum": 0,
+                                "maximum": 1000000
+                              }
+                            },
+                            "required": [
+                              "status",
+                              "value"
+                            ],
+                            "additionalProperties": false
+                          }
+                        ]
+                      },
+                      "longestRun": {
+                        "oneOf": [
+                          {
+                            "type": "object",
+                            "properties": {
+                              "status": {
+                                "type": "string",
+                                "enum": [
+                                  "unanswered"
+                                ]
+                              },
+                              "value": {
+                                "nullable": true
+                              }
+                            },
+                            "required": [
+                              "status",
+                              "value"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "status": {
+                                "type": "string",
+                                "enum": [
+                                  "unknown"
+                                ]
+                              },
+                              "value": {
+                                "nullable": true
+                              }
+                            },
+                            "required": [
+                              "status",
+                              "value"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "status": {
+                                "type": "string",
+                                "enum": [
+                                  "known"
+                                ]
+                              },
+                              "value": {
+                                "type": "number",
+                                "minimum": 0,
+                                "maximum": 1000000
+                              }
+                            },
+                            "required": [
+                              "status",
+                              "value"
+                            ],
+                            "additionalProperties": false
+                          }
+                        ]
+                      },
+                      "desiredRuns": {
+                        "type": "integer",
+                        "nullable": true,
+                        "minimum": 1,
+                        "maximum": 14
+                      },
+                      "weekdays": {
+                        "type": "array",
+                        "items": {
+                          "type": "string",
+                          "enum": [
+                            "available",
+                            "preferred",
+                            "unavailable"
+                          ]
+                        }
+                      },
+                      "context": {
+                        "type": "string",
+                        "maxLength": 20000
+                      }
+                    },
+                    "required": [
+                      "goal",
+                      "unit",
+                      "timezone",
+                      "weeklyDistance",
+                      "currentRuns",
+                      "longestRun",
+                      "desiredRuns",
+                      "weekdays",
+                      "context"
+                    ],
+                    "additionalProperties": false
+                  }
+                },
+                "required": [
+                  "expectedDraftId",
+                  "expectedEditNumber",
+                  "brief"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Brief and calibration state.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "versionId": {
+                      "type": "string",
+                      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+                    },
+                    "editNumber": {
+                      "type": "number"
+                    },
+                    "startDate": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "endDate": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "readOnly": {
+                      "type": "boolean"
+                    },
+                    "brief": {
+                      "type": "object",
+                      "properties": {
+                        "goal": {
+                          "type": "string",
+                          "maxLength": 20000
+                        },
+                        "unit": {
+                          "type": "string",
+                          "enum": [
+                            "kilometres",
+                            "miles"
+                          ]
+                        },
+                        "timezone": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 100
+                        },
+                        "weeklyDistance": {
+                          "oneOf": [
+                            {
+                              "type": "object",
+                              "properties": {
+                                "status": {
+                                  "type": "string",
+                                  "enum": [
+                                    "unanswered"
+                                  ]
+                                },
+                                "value": {
+                                  "nullable": true
+                                }
+                              },
+                              "required": [
+                                "status",
+                                "value"
+                              ],
+                              "additionalProperties": false
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "status": {
+                                  "type": "string",
+                                  "enum": [
+                                    "unknown"
+                                  ]
+                                },
+                                "value": {
+                                  "nullable": true
+                                }
+                              },
+                              "required": [
+                                "status",
+                                "value"
+                              ],
+                              "additionalProperties": false
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "status": {
+                                  "type": "string",
+                                  "enum": [
+                                    "known"
+                                  ]
+                                },
+                                "value": {
+                                  "type": "number",
+                                  "minimum": 0,
+                                  "maximum": 1000000
+                                }
+                              },
+                              "required": [
+                                "status",
+                                "value"
+                              ],
+                              "additionalProperties": false
+                            }
+                          ]
+                        },
+                        "currentRuns": {
+                          "oneOf": [
+                            {
+                              "type": "object",
+                              "properties": {
+                                "status": {
+                                  "type": "string",
+                                  "enum": [
+                                    "unanswered"
+                                  ]
+                                },
+                                "value": {
+                                  "nullable": true
+                                }
+                              },
+                              "required": [
+                                "status",
+                                "value"
+                              ],
+                              "additionalProperties": false
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "status": {
+                                  "type": "string",
+                                  "enum": [
+                                    "unknown"
+                                  ]
+                                },
+                                "value": {
+                                  "nullable": true
+                                }
+                              },
+                              "required": [
+                                "status",
+                                "value"
+                              ],
+                              "additionalProperties": false
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "status": {
+                                  "type": "string",
+                                  "enum": [
+                                    "known"
+                                  ]
+                                },
+                                "value": {
+                                  "type": "number",
+                                  "minimum": 0,
+                                  "maximum": 1000000
+                                }
+                              },
+                              "required": [
+                                "status",
+                                "value"
+                              ],
+                              "additionalProperties": false
+                            }
+                          ]
+                        },
+                        "longestRun": {
+                          "oneOf": [
+                            {
+                              "type": "object",
+                              "properties": {
+                                "status": {
+                                  "type": "string",
+                                  "enum": [
+                                    "unanswered"
+                                  ]
+                                },
+                                "value": {
+                                  "nullable": true
+                                }
+                              },
+                              "required": [
+                                "status",
+                                "value"
+                              ],
+                              "additionalProperties": false
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "status": {
+                                  "type": "string",
+                                  "enum": [
+                                    "unknown"
+                                  ]
+                                },
+                                "value": {
+                                  "nullable": true
+                                }
+                              },
+                              "required": [
+                                "status",
+                                "value"
+                              ],
+                              "additionalProperties": false
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "status": {
+                                  "type": "string",
+                                  "enum": [
+                                    "known"
+                                  ]
+                                },
+                                "value": {
+                                  "type": "number",
+                                  "minimum": 0,
+                                  "maximum": 1000000
+                                }
+                              },
+                              "required": [
+                                "status",
+                                "value"
+                              ],
+                              "additionalProperties": false
+                            }
+                          ]
+                        },
+                        "desiredRuns": {
+                          "type": "integer",
+                          "nullable": true,
+                          "minimum": 1,
+                          "maximum": 14
+                        },
+                        "weekdays": {
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "enum": [
+                              "available",
+                              "preferred",
+                              "unavailable"
+                            ]
+                          }
+                        },
+                        "context": {
+                          "type": "string",
+                          "maxLength": 20000
+                        }
+                      },
+                      "required": [
+                        "goal",
+                        "unit",
+                        "timezone",
+                        "weeklyDistance",
+                        "currentRuns",
+                        "longestRun",
+                        "desiredRuns",
+                        "weekdays",
+                        "context"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "confirmed": {
+                      "type": "boolean"
+                    },
+                    "hash": {
+                      "type": "string"
+                    },
+                    "scheduleReviewRequired": {
+                      "type": "boolean"
+                    },
+                    "findings": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "code": {
+                            "type": "string"
+                          },
+                          "severity": {
+                            "type": "string",
+                            "enum": [
+                              "error",
+                              "warning"
+                            ]
+                          },
+                          "message": {
+                            "type": "string"
+                          },
+                          "path": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "code",
+                          "severity",
+                          "message",
+                          "path"
+                        ]
+                      }
+                    },
+                    "calibrations": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+                          },
+                          "effectiveFrom": {
+                            "type": "string"
+                          },
+                          "effectiveUntil": {
+                            "type": "string",
+                            "nullable": true
+                          },
+                          "method": {
+                            "type": "string",
+                            "enum": [
+                              "race_result",
+                              "threshold_pace"
+                            ]
+                          },
+                          "distanceMetres": {
+                            "type": "number",
+                            "nullable": true
+                          },
+                          "durationSeconds": {
+                            "type": "number",
+                            "nullable": true
+                          },
+                          "secondsPerKilometre": {
+                            "type": "number",
+                            "nullable": true
+                          },
+                          "calculatorVersion": {
+                            "type": "string"
+                          },
+                          "zones": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "key": {
+                                  "type": "string"
+                                },
+                                "fast": {
+                                  "type": "number"
+                                },
+                                "target": {
+                                  "type": "number"
+                                },
+                                "slow": {
+                                  "type": "number"
+                                }
+                              },
+                              "required": [
+                                "key",
+                                "fast",
+                                "target",
+                                "slow"
+                              ]
+                            }
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "effectiveFrom",
+                          "effectiveUntil",
+                          "method",
+                          "distanceMetres",
+                          "durationSeconds",
+                          "secondsPerKilometre",
+                          "calculatorVersion",
+                          "zones"
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "versionId",
+                    "editNumber",
+                    "startDate",
+                    "endDate",
+                    "readOnly",
+                    "brief",
+                    "confirmed",
+                    "hash",
+                    "scheduleReviewRequired",
+                    "findings",
+                    "calibrations"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Request rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Request rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Request rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Request rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Request rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/plans/{planId}/revisions/{revisionId}/brief": {
+      "get": {
+        "tags": [
+          "Brief"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+            },
+            "required": true,
+            "name": "planId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+            },
+            "required": true,
+            "name": "revisionId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Brief and calibration state.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "versionId": {
+                      "type": "string",
+                      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+                    },
+                    "editNumber": {
+                      "type": "number"
+                    },
+                    "startDate": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "endDate": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "readOnly": {
+                      "type": "boolean"
+                    },
+                    "brief": {
+                      "type": "object",
+                      "properties": {
+                        "goal": {
+                          "type": "string",
+                          "maxLength": 20000
+                        },
+                        "unit": {
+                          "type": "string",
+                          "enum": [
+                            "kilometres",
+                            "miles"
+                          ]
+                        },
+                        "timezone": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 100
+                        },
+                        "weeklyDistance": {
+                          "oneOf": [
+                            {
+                              "type": "object",
+                              "properties": {
+                                "status": {
+                                  "type": "string",
+                                  "enum": [
+                                    "unanswered"
+                                  ]
+                                },
+                                "value": {
+                                  "nullable": true
+                                }
+                              },
+                              "required": [
+                                "status",
+                                "value"
+                              ],
+                              "additionalProperties": false
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "status": {
+                                  "type": "string",
+                                  "enum": [
+                                    "unknown"
+                                  ]
+                                },
+                                "value": {
+                                  "nullable": true
+                                }
+                              },
+                              "required": [
+                                "status",
+                                "value"
+                              ],
+                              "additionalProperties": false
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "status": {
+                                  "type": "string",
+                                  "enum": [
+                                    "known"
+                                  ]
+                                },
+                                "value": {
+                                  "type": "number",
+                                  "minimum": 0,
+                                  "maximum": 1000000
+                                }
+                              },
+                              "required": [
+                                "status",
+                                "value"
+                              ],
+                              "additionalProperties": false
+                            }
+                          ]
+                        },
+                        "currentRuns": {
+                          "oneOf": [
+                            {
+                              "type": "object",
+                              "properties": {
+                                "status": {
+                                  "type": "string",
+                                  "enum": [
+                                    "unanswered"
+                                  ]
+                                },
+                                "value": {
+                                  "nullable": true
+                                }
+                              },
+                              "required": [
+                                "status",
+                                "value"
+                              ],
+                              "additionalProperties": false
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "status": {
+                                  "type": "string",
+                                  "enum": [
+                                    "unknown"
+                                  ]
+                                },
+                                "value": {
+                                  "nullable": true
+                                }
+                              },
+                              "required": [
+                                "status",
+                                "value"
+                              ],
+                              "additionalProperties": false
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "status": {
+                                  "type": "string",
+                                  "enum": [
+                                    "known"
+                                  ]
+                                },
+                                "value": {
+                                  "type": "number",
+                                  "minimum": 0,
+                                  "maximum": 1000000
+                                }
+                              },
+                              "required": [
+                                "status",
+                                "value"
+                              ],
+                              "additionalProperties": false
+                            }
+                          ]
+                        },
+                        "longestRun": {
+                          "oneOf": [
+                            {
+                              "type": "object",
+                              "properties": {
+                                "status": {
+                                  "type": "string",
+                                  "enum": [
+                                    "unanswered"
+                                  ]
+                                },
+                                "value": {
+                                  "nullable": true
+                                }
+                              },
+                              "required": [
+                                "status",
+                                "value"
+                              ],
+                              "additionalProperties": false
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "status": {
+                                  "type": "string",
+                                  "enum": [
+                                    "unknown"
+                                  ]
+                                },
+                                "value": {
+                                  "nullable": true
+                                }
+                              },
+                              "required": [
+                                "status",
+                                "value"
+                              ],
+                              "additionalProperties": false
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "status": {
+                                  "type": "string",
+                                  "enum": [
+                                    "known"
+                                  ]
+                                },
+                                "value": {
+                                  "type": "number",
+                                  "minimum": 0,
+                                  "maximum": 1000000
+                                }
+                              },
+                              "required": [
+                                "status",
+                                "value"
+                              ],
+                              "additionalProperties": false
+                            }
+                          ]
+                        },
+                        "desiredRuns": {
+                          "type": "integer",
+                          "nullable": true,
+                          "minimum": 1,
+                          "maximum": 14
+                        },
+                        "weekdays": {
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "enum": [
+                              "available",
+                              "preferred",
+                              "unavailable"
+                            ]
+                          }
+                        },
+                        "context": {
+                          "type": "string",
+                          "maxLength": 20000
+                        }
+                      },
+                      "required": [
+                        "goal",
+                        "unit",
+                        "timezone",
+                        "weeklyDistance",
+                        "currentRuns",
+                        "longestRun",
+                        "desiredRuns",
+                        "weekdays",
+                        "context"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "confirmed": {
+                      "type": "boolean"
+                    },
+                    "hash": {
+                      "type": "string"
+                    },
+                    "scheduleReviewRequired": {
+                      "type": "boolean"
+                    },
+                    "findings": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "code": {
+                            "type": "string"
+                          },
+                          "severity": {
+                            "type": "string",
+                            "enum": [
+                              "error",
+                              "warning"
+                            ]
+                          },
+                          "message": {
+                            "type": "string"
+                          },
+                          "path": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "code",
+                          "severity",
+                          "message",
+                          "path"
+                        ]
+                      }
+                    },
+                    "calibrations": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+                          },
+                          "effectiveFrom": {
+                            "type": "string"
+                          },
+                          "effectiveUntil": {
+                            "type": "string",
+                            "nullable": true
+                          },
+                          "method": {
+                            "type": "string",
+                            "enum": [
+                              "race_result",
+                              "threshold_pace"
+                            ]
+                          },
+                          "distanceMetres": {
+                            "type": "number",
+                            "nullable": true
+                          },
+                          "durationSeconds": {
+                            "type": "number",
+                            "nullable": true
+                          },
+                          "secondsPerKilometre": {
+                            "type": "number",
+                            "nullable": true
+                          },
+                          "calculatorVersion": {
+                            "type": "string"
+                          },
+                          "zones": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "key": {
+                                  "type": "string"
+                                },
+                                "fast": {
+                                  "type": "number"
+                                },
+                                "target": {
+                                  "type": "number"
+                                },
+                                "slow": {
+                                  "type": "number"
+                                }
+                              },
+                              "required": [
+                                "key",
+                                "fast",
+                                "target",
+                                "slow"
+                              ]
+                            }
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "effectiveFrom",
+                          "effectiveUntil",
+                          "method",
+                          "distanceMetres",
+                          "durationSeconds",
+                          "secondsPerKilometre",
+                          "calculatorVersion",
+                          "zones"
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "versionId",
+                    "editNumber",
+                    "startDate",
+                    "endDate",
+                    "readOnly",
+                    "brief",
+                    "confirmed",
+                    "hash",
+                    "scheduleReviewRequired",
+                    "findings",
+                    "calibrations"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Request rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Request rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Request rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Request rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Request rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/plans/{planId}/draft/brief/validate": {
+      "post": {
+        "tags": [
+          "Brief"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+            },
+            "required": true,
+            "name": "planId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Brief and calibration state.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "versionId": {
+                      "type": "string",
+                      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+                    },
+                    "editNumber": {
+                      "type": "number"
+                    },
+                    "startDate": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "endDate": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "readOnly": {
+                      "type": "boolean"
+                    },
+                    "brief": {
+                      "type": "object",
+                      "properties": {
+                        "goal": {
+                          "type": "string",
+                          "maxLength": 20000
+                        },
+                        "unit": {
+                          "type": "string",
+                          "enum": [
+                            "kilometres",
+                            "miles"
+                          ]
+                        },
+                        "timezone": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 100
+                        },
+                        "weeklyDistance": {
+                          "oneOf": [
+                            {
+                              "type": "object",
+                              "properties": {
+                                "status": {
+                                  "type": "string",
+                                  "enum": [
+                                    "unanswered"
+                                  ]
+                                },
+                                "value": {
+                                  "nullable": true
+                                }
+                              },
+                              "required": [
+                                "status",
+                                "value"
+                              ],
+                              "additionalProperties": false
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "status": {
+                                  "type": "string",
+                                  "enum": [
+                                    "unknown"
+                                  ]
+                                },
+                                "value": {
+                                  "nullable": true
+                                }
+                              },
+                              "required": [
+                                "status",
+                                "value"
+                              ],
+                              "additionalProperties": false
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "status": {
+                                  "type": "string",
+                                  "enum": [
+                                    "known"
+                                  ]
+                                },
+                                "value": {
+                                  "type": "number",
+                                  "minimum": 0,
+                                  "maximum": 1000000
+                                }
+                              },
+                              "required": [
+                                "status",
+                                "value"
+                              ],
+                              "additionalProperties": false
+                            }
+                          ]
+                        },
+                        "currentRuns": {
+                          "oneOf": [
+                            {
+                              "type": "object",
+                              "properties": {
+                                "status": {
+                                  "type": "string",
+                                  "enum": [
+                                    "unanswered"
+                                  ]
+                                },
+                                "value": {
+                                  "nullable": true
+                                }
+                              },
+                              "required": [
+                                "status",
+                                "value"
+                              ],
+                              "additionalProperties": false
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "status": {
+                                  "type": "string",
+                                  "enum": [
+                                    "unknown"
+                                  ]
+                                },
+                                "value": {
+                                  "nullable": true
+                                }
+                              },
+                              "required": [
+                                "status",
+                                "value"
+                              ],
+                              "additionalProperties": false
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "status": {
+                                  "type": "string",
+                                  "enum": [
+                                    "known"
+                                  ]
+                                },
+                                "value": {
+                                  "type": "number",
+                                  "minimum": 0,
+                                  "maximum": 1000000
+                                }
+                              },
+                              "required": [
+                                "status",
+                                "value"
+                              ],
+                              "additionalProperties": false
+                            }
+                          ]
+                        },
+                        "longestRun": {
+                          "oneOf": [
+                            {
+                              "type": "object",
+                              "properties": {
+                                "status": {
+                                  "type": "string",
+                                  "enum": [
+                                    "unanswered"
+                                  ]
+                                },
+                                "value": {
+                                  "nullable": true
+                                }
+                              },
+                              "required": [
+                                "status",
+                                "value"
+                              ],
+                              "additionalProperties": false
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "status": {
+                                  "type": "string",
+                                  "enum": [
+                                    "unknown"
+                                  ]
+                                },
+                                "value": {
+                                  "nullable": true
+                                }
+                              },
+                              "required": [
+                                "status",
+                                "value"
+                              ],
+                              "additionalProperties": false
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "status": {
+                                  "type": "string",
+                                  "enum": [
+                                    "known"
+                                  ]
+                                },
+                                "value": {
+                                  "type": "number",
+                                  "minimum": 0,
+                                  "maximum": 1000000
+                                }
+                              },
+                              "required": [
+                                "status",
+                                "value"
+                              ],
+                              "additionalProperties": false
+                            }
+                          ]
+                        },
+                        "desiredRuns": {
+                          "type": "integer",
+                          "nullable": true,
+                          "minimum": 1,
+                          "maximum": 14
+                        },
+                        "weekdays": {
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "enum": [
+                              "available",
+                              "preferred",
+                              "unavailable"
+                            ]
+                          }
+                        },
+                        "context": {
+                          "type": "string",
+                          "maxLength": 20000
+                        }
+                      },
+                      "required": [
+                        "goal",
+                        "unit",
+                        "timezone",
+                        "weeklyDistance",
+                        "currentRuns",
+                        "longestRun",
+                        "desiredRuns",
+                        "weekdays",
+                        "context"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "confirmed": {
+                      "type": "boolean"
+                    },
+                    "hash": {
+                      "type": "string"
+                    },
+                    "scheduleReviewRequired": {
+                      "type": "boolean"
+                    },
+                    "findings": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "code": {
+                            "type": "string"
+                          },
+                          "severity": {
+                            "type": "string",
+                            "enum": [
+                              "error",
+                              "warning"
+                            ]
+                          },
+                          "message": {
+                            "type": "string"
+                          },
+                          "path": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "code",
+                          "severity",
+                          "message",
+                          "path"
+                        ]
+                      }
+                    },
+                    "calibrations": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+                          },
+                          "effectiveFrom": {
+                            "type": "string"
+                          },
+                          "effectiveUntil": {
+                            "type": "string",
+                            "nullable": true
+                          },
+                          "method": {
+                            "type": "string",
+                            "enum": [
+                              "race_result",
+                              "threshold_pace"
+                            ]
+                          },
+                          "distanceMetres": {
+                            "type": "number",
+                            "nullable": true
+                          },
+                          "durationSeconds": {
+                            "type": "number",
+                            "nullable": true
+                          },
+                          "secondsPerKilometre": {
+                            "type": "number",
+                            "nullable": true
+                          },
+                          "calculatorVersion": {
+                            "type": "string"
+                          },
+                          "zones": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "key": {
+                                  "type": "string"
+                                },
+                                "fast": {
+                                  "type": "number"
+                                },
+                                "target": {
+                                  "type": "number"
+                                },
+                                "slow": {
+                                  "type": "number"
+                                }
+                              },
+                              "required": [
+                                "key",
+                                "fast",
+                                "target",
+                                "slow"
+                              ]
+                            }
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "effectiveFrom",
+                          "effectiveUntil",
+                          "method",
+                          "distanceMetres",
+                          "durationSeconds",
+                          "secondsPerKilometre",
+                          "calculatorVersion",
+                          "zones"
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "versionId",
+                    "editNumber",
+                    "startDate",
+                    "endDate",
+                    "readOnly",
+                    "brief",
+                    "confirmed",
+                    "hash",
+                    "scheduleReviewRequired",
+                    "findings",
+                    "calibrations"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Request rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Request rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Request rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Request rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Request rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/plans/{planId}/draft/brief/confirm": {
+      "post": {
+        "tags": [
+          "Brief"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+            },
+            "required": true,
+            "name": "planId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "expectedDraftId": {
+                    "type": "string",
+                    "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+                  },
+                  "expectedEditNumber": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "exclusiveMinimum": true
+                  },
+                  "idempotencyKey": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 200
+                  },
+                  "expectedHash": {
+                    "type": "string"
+                  },
+                  "acknowledgedWarningCodes": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "required": [
+                  "expectedDraftId",
+                  "expectedEditNumber",
+                  "expectedHash",
+                  "acknowledgedWarningCodes"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Brief and calibration state.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "versionId": {
+                      "type": "string",
+                      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+                    },
+                    "editNumber": {
+                      "type": "number"
+                    },
+                    "startDate": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "endDate": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "readOnly": {
+                      "type": "boolean"
+                    },
+                    "brief": {
+                      "type": "object",
+                      "properties": {
+                        "goal": {
+                          "type": "string",
+                          "maxLength": 20000
+                        },
+                        "unit": {
+                          "type": "string",
+                          "enum": [
+                            "kilometres",
+                            "miles"
+                          ]
+                        },
+                        "timezone": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 100
+                        },
+                        "weeklyDistance": {
+                          "oneOf": [
+                            {
+                              "type": "object",
+                              "properties": {
+                                "status": {
+                                  "type": "string",
+                                  "enum": [
+                                    "unanswered"
+                                  ]
+                                },
+                                "value": {
+                                  "nullable": true
+                                }
+                              },
+                              "required": [
+                                "status",
+                                "value"
+                              ],
+                              "additionalProperties": false
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "status": {
+                                  "type": "string",
+                                  "enum": [
+                                    "unknown"
+                                  ]
+                                },
+                                "value": {
+                                  "nullable": true
+                                }
+                              },
+                              "required": [
+                                "status",
+                                "value"
+                              ],
+                              "additionalProperties": false
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "status": {
+                                  "type": "string",
+                                  "enum": [
+                                    "known"
+                                  ]
+                                },
+                                "value": {
+                                  "type": "number",
+                                  "minimum": 0,
+                                  "maximum": 1000000
+                                }
+                              },
+                              "required": [
+                                "status",
+                                "value"
+                              ],
+                              "additionalProperties": false
+                            }
+                          ]
+                        },
+                        "currentRuns": {
+                          "oneOf": [
+                            {
+                              "type": "object",
+                              "properties": {
+                                "status": {
+                                  "type": "string",
+                                  "enum": [
+                                    "unanswered"
+                                  ]
+                                },
+                                "value": {
+                                  "nullable": true
+                                }
+                              },
+                              "required": [
+                                "status",
+                                "value"
+                              ],
+                              "additionalProperties": false
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "status": {
+                                  "type": "string",
+                                  "enum": [
+                                    "unknown"
+                                  ]
+                                },
+                                "value": {
+                                  "nullable": true
+                                }
+                              },
+                              "required": [
+                                "status",
+                                "value"
+                              ],
+                              "additionalProperties": false
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "status": {
+                                  "type": "string",
+                                  "enum": [
+                                    "known"
+                                  ]
+                                },
+                                "value": {
+                                  "type": "number",
+                                  "minimum": 0,
+                                  "maximum": 1000000
+                                }
+                              },
+                              "required": [
+                                "status",
+                                "value"
+                              ],
+                              "additionalProperties": false
+                            }
+                          ]
+                        },
+                        "longestRun": {
+                          "oneOf": [
+                            {
+                              "type": "object",
+                              "properties": {
+                                "status": {
+                                  "type": "string",
+                                  "enum": [
+                                    "unanswered"
+                                  ]
+                                },
+                                "value": {
+                                  "nullable": true
+                                }
+                              },
+                              "required": [
+                                "status",
+                                "value"
+                              ],
+                              "additionalProperties": false
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "status": {
+                                  "type": "string",
+                                  "enum": [
+                                    "unknown"
+                                  ]
+                                },
+                                "value": {
+                                  "nullable": true
+                                }
+                              },
+                              "required": [
+                                "status",
+                                "value"
+                              ],
+                              "additionalProperties": false
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "status": {
+                                  "type": "string",
+                                  "enum": [
+                                    "known"
+                                  ]
+                                },
+                                "value": {
+                                  "type": "number",
+                                  "minimum": 0,
+                                  "maximum": 1000000
+                                }
+                              },
+                              "required": [
+                                "status",
+                                "value"
+                              ],
+                              "additionalProperties": false
+                            }
+                          ]
+                        },
+                        "desiredRuns": {
+                          "type": "integer",
+                          "nullable": true,
+                          "minimum": 1,
+                          "maximum": 14
+                        },
+                        "weekdays": {
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "enum": [
+                              "available",
+                              "preferred",
+                              "unavailable"
+                            ]
+                          }
+                        },
+                        "context": {
+                          "type": "string",
+                          "maxLength": 20000
+                        }
+                      },
+                      "required": [
+                        "goal",
+                        "unit",
+                        "timezone",
+                        "weeklyDistance",
+                        "currentRuns",
+                        "longestRun",
+                        "desiredRuns",
+                        "weekdays",
+                        "context"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "confirmed": {
+                      "type": "boolean"
+                    },
+                    "hash": {
+                      "type": "string"
+                    },
+                    "scheduleReviewRequired": {
+                      "type": "boolean"
+                    },
+                    "findings": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "code": {
+                            "type": "string"
+                          },
+                          "severity": {
+                            "type": "string",
+                            "enum": [
+                              "error",
+                              "warning"
+                            ]
+                          },
+                          "message": {
+                            "type": "string"
+                          },
+                          "path": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "code",
+                          "severity",
+                          "message",
+                          "path"
+                        ]
+                      }
+                    },
+                    "calibrations": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+                          },
+                          "effectiveFrom": {
+                            "type": "string"
+                          },
+                          "effectiveUntil": {
+                            "type": "string",
+                            "nullable": true
+                          },
+                          "method": {
+                            "type": "string",
+                            "enum": [
+                              "race_result",
+                              "threshold_pace"
+                            ]
+                          },
+                          "distanceMetres": {
+                            "type": "number",
+                            "nullable": true
+                          },
+                          "durationSeconds": {
+                            "type": "number",
+                            "nullable": true
+                          },
+                          "secondsPerKilometre": {
+                            "type": "number",
+                            "nullable": true
+                          },
+                          "calculatorVersion": {
+                            "type": "string"
+                          },
+                          "zones": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "key": {
+                                  "type": "string"
+                                },
+                                "fast": {
+                                  "type": "number"
+                                },
+                                "target": {
+                                  "type": "number"
+                                },
+                                "slow": {
+                                  "type": "number"
+                                }
+                              },
+                              "required": [
+                                "key",
+                                "fast",
+                                "target",
+                                "slow"
+                              ]
+                            }
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "effectiveFrom",
+                          "effectiveUntil",
+                          "method",
+                          "distanceMetres",
+                          "durationSeconds",
+                          "secondsPerKilometre",
+                          "calculatorVersion",
+                          "zones"
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "versionId",
+                    "editNumber",
+                    "startDate",
+                    "endDate",
+                    "readOnly",
+                    "brief",
+                    "confirmed",
+                    "hash",
+                    "scheduleReviewRequired",
+                    "findings",
+                    "calibrations"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Request rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Request rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Request rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Request rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Request rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/plans/{planId}/draft/calibrations": {
+      "get": {
+        "tags": [
+          "Brief"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+            },
+            "required": true,
+            "name": "planId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Brief and calibration state.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "versionId": {
+                      "type": "string",
+                      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+                    },
+                    "editNumber": {
+                      "type": "number"
+                    },
+                    "startDate": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "endDate": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "readOnly": {
+                      "type": "boolean"
+                    },
+                    "brief": {
+                      "type": "object",
+                      "properties": {
+                        "goal": {
+                          "type": "string",
+                          "maxLength": 20000
+                        },
+                        "unit": {
+                          "type": "string",
+                          "enum": [
+                            "kilometres",
+                            "miles"
+                          ]
+                        },
+                        "timezone": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 100
+                        },
+                        "weeklyDistance": {
+                          "oneOf": [
+                            {
+                              "type": "object",
+                              "properties": {
+                                "status": {
+                                  "type": "string",
+                                  "enum": [
+                                    "unanswered"
+                                  ]
+                                },
+                                "value": {
+                                  "nullable": true
+                                }
+                              },
+                              "required": [
+                                "status",
+                                "value"
+                              ],
+                              "additionalProperties": false
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "status": {
+                                  "type": "string",
+                                  "enum": [
+                                    "unknown"
+                                  ]
+                                },
+                                "value": {
+                                  "nullable": true
+                                }
+                              },
+                              "required": [
+                                "status",
+                                "value"
+                              ],
+                              "additionalProperties": false
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "status": {
+                                  "type": "string",
+                                  "enum": [
+                                    "known"
+                                  ]
+                                },
+                                "value": {
+                                  "type": "number",
+                                  "minimum": 0,
+                                  "maximum": 1000000
+                                }
+                              },
+                              "required": [
+                                "status",
+                                "value"
+                              ],
+                              "additionalProperties": false
+                            }
+                          ]
+                        },
+                        "currentRuns": {
+                          "oneOf": [
+                            {
+                              "type": "object",
+                              "properties": {
+                                "status": {
+                                  "type": "string",
+                                  "enum": [
+                                    "unanswered"
+                                  ]
+                                },
+                                "value": {
+                                  "nullable": true
+                                }
+                              },
+                              "required": [
+                                "status",
+                                "value"
+                              ],
+                              "additionalProperties": false
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "status": {
+                                  "type": "string",
+                                  "enum": [
+                                    "unknown"
+                                  ]
+                                },
+                                "value": {
+                                  "nullable": true
+                                }
+                              },
+                              "required": [
+                                "status",
+                                "value"
+                              ],
+                              "additionalProperties": false
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "status": {
+                                  "type": "string",
+                                  "enum": [
+                                    "known"
+                                  ]
+                                },
+                                "value": {
+                                  "type": "number",
+                                  "minimum": 0,
+                                  "maximum": 1000000
+                                }
+                              },
+                              "required": [
+                                "status",
+                                "value"
+                              ],
+                              "additionalProperties": false
+                            }
+                          ]
+                        },
+                        "longestRun": {
+                          "oneOf": [
+                            {
+                              "type": "object",
+                              "properties": {
+                                "status": {
+                                  "type": "string",
+                                  "enum": [
+                                    "unanswered"
+                                  ]
+                                },
+                                "value": {
+                                  "nullable": true
+                                }
+                              },
+                              "required": [
+                                "status",
+                                "value"
+                              ],
+                              "additionalProperties": false
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "status": {
+                                  "type": "string",
+                                  "enum": [
+                                    "unknown"
+                                  ]
+                                },
+                                "value": {
+                                  "nullable": true
+                                }
+                              },
+                              "required": [
+                                "status",
+                                "value"
+                              ],
+                              "additionalProperties": false
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "status": {
+                                  "type": "string",
+                                  "enum": [
+                                    "known"
+                                  ]
+                                },
+                                "value": {
+                                  "type": "number",
+                                  "minimum": 0,
+                                  "maximum": 1000000
+                                }
+                              },
+                              "required": [
+                                "status",
+                                "value"
+                              ],
+                              "additionalProperties": false
+                            }
+                          ]
+                        },
+                        "desiredRuns": {
+                          "type": "integer",
+                          "nullable": true,
+                          "minimum": 1,
+                          "maximum": 14
+                        },
+                        "weekdays": {
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "enum": [
+                              "available",
+                              "preferred",
+                              "unavailable"
+                            ]
+                          }
+                        },
+                        "context": {
+                          "type": "string",
+                          "maxLength": 20000
+                        }
+                      },
+                      "required": [
+                        "goal",
+                        "unit",
+                        "timezone",
+                        "weeklyDistance",
+                        "currentRuns",
+                        "longestRun",
+                        "desiredRuns",
+                        "weekdays",
+                        "context"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "confirmed": {
+                      "type": "boolean"
+                    },
+                    "hash": {
+                      "type": "string"
+                    },
+                    "scheduleReviewRequired": {
+                      "type": "boolean"
+                    },
+                    "findings": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "code": {
+                            "type": "string"
+                          },
+                          "severity": {
+                            "type": "string",
+                            "enum": [
+                              "error",
+                              "warning"
+                            ]
+                          },
+                          "message": {
+                            "type": "string"
+                          },
+                          "path": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "code",
+                          "severity",
+                          "message",
+                          "path"
+                        ]
+                      }
+                    },
+                    "calibrations": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+                          },
+                          "effectiveFrom": {
+                            "type": "string"
+                          },
+                          "effectiveUntil": {
+                            "type": "string",
+                            "nullable": true
+                          },
+                          "method": {
+                            "type": "string",
+                            "enum": [
+                              "race_result",
+                              "threshold_pace"
+                            ]
+                          },
+                          "distanceMetres": {
+                            "type": "number",
+                            "nullable": true
+                          },
+                          "durationSeconds": {
+                            "type": "number",
+                            "nullable": true
+                          },
+                          "secondsPerKilometre": {
+                            "type": "number",
+                            "nullable": true
+                          },
+                          "calculatorVersion": {
+                            "type": "string"
+                          },
+                          "zones": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "key": {
+                                  "type": "string"
+                                },
+                                "fast": {
+                                  "type": "number"
+                                },
+                                "target": {
+                                  "type": "number"
+                                },
+                                "slow": {
+                                  "type": "number"
+                                }
+                              },
+                              "required": [
+                                "key",
+                                "fast",
+                                "target",
+                                "slow"
+                              ]
+                            }
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "effectiveFrom",
+                          "effectiveUntil",
+                          "method",
+                          "distanceMetres",
+                          "durationSeconds",
+                          "secondsPerKilometre",
+                          "calculatorVersion",
+                          "zones"
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "versionId",
+                    "editNumber",
+                    "startDate",
+                    "endDate",
+                    "readOnly",
+                    "brief",
+                    "confirmed",
+                    "hash",
+                    "scheduleReviewRequired",
+                    "findings",
+                    "calibrations"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Request rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Request rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Request rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Request rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Request rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Brief"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+            },
+            "required": true,
+            "name": "planId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "expectedDraftId": {
+                    "type": "string",
+                    "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+                  },
+                  "expectedEditNumber": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "exclusiveMinimum": true
+                  },
+                  "idempotencyKey": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 200
+                  },
+                  "input": {
+                    "oneOf": [
+                      {
+                        "type": "object",
+                        "properties": {
+                          "method": {
+                            "type": "string",
+                            "enum": [
+                              "race_result"
+                            ]
+                          },
+                          "distanceMetres": {
+                            "type": "number",
+                            "minimum": 1609.344,
+                            "maximum": 42195
+                          },
+                          "durationSeconds": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "exclusiveMinimum": true
+                          }
+                        },
+                        "required": [
+                          "method",
+                          "distanceMetres",
+                          "durationSeconds"
+                        ],
+                        "additionalProperties": false
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "method": {
+                            "type": "string",
+                            "enum": [
+                              "threshold_pace"
+                            ]
+                          },
+                          "secondsPerKilometre": {
+                            "type": "number",
+                            "minimum": 0,
+                            "exclusiveMinimum": true
+                          }
+                        },
+                        "required": [
+                          "method",
+                          "secondsPerKilometre"
+                        ],
+                        "additionalProperties": false
+                      }
+                    ]
+                  }
+                },
+                "required": [
+                  "expectedDraftId",
+                  "expectedEditNumber",
+                  "input"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Brief and calibration state.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "versionId": {
+                      "type": "string",
+                      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+                    },
+                    "editNumber": {
+                      "type": "number"
+                    },
+                    "startDate": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "endDate": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "readOnly": {
+                      "type": "boolean"
+                    },
+                    "brief": {
+                      "type": "object",
+                      "properties": {
+                        "goal": {
+                          "type": "string",
+                          "maxLength": 20000
+                        },
+                        "unit": {
+                          "type": "string",
+                          "enum": [
+                            "kilometres",
+                            "miles"
+                          ]
+                        },
+                        "timezone": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 100
+                        },
+                        "weeklyDistance": {
+                          "oneOf": [
+                            {
+                              "type": "object",
+                              "properties": {
+                                "status": {
+                                  "type": "string",
+                                  "enum": [
+                                    "unanswered"
+                                  ]
+                                },
+                                "value": {
+                                  "nullable": true
+                                }
+                              },
+                              "required": [
+                                "status",
+                                "value"
+                              ],
+                              "additionalProperties": false
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "status": {
+                                  "type": "string",
+                                  "enum": [
+                                    "unknown"
+                                  ]
+                                },
+                                "value": {
+                                  "nullable": true
+                                }
+                              },
+                              "required": [
+                                "status",
+                                "value"
+                              ],
+                              "additionalProperties": false
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "status": {
+                                  "type": "string",
+                                  "enum": [
+                                    "known"
+                                  ]
+                                },
+                                "value": {
+                                  "type": "number",
+                                  "minimum": 0,
+                                  "maximum": 1000000
+                                }
+                              },
+                              "required": [
+                                "status",
+                                "value"
+                              ],
+                              "additionalProperties": false
+                            }
+                          ]
+                        },
+                        "currentRuns": {
+                          "oneOf": [
+                            {
+                              "type": "object",
+                              "properties": {
+                                "status": {
+                                  "type": "string",
+                                  "enum": [
+                                    "unanswered"
+                                  ]
+                                },
+                                "value": {
+                                  "nullable": true
+                                }
+                              },
+                              "required": [
+                                "status",
+                                "value"
+                              ],
+                              "additionalProperties": false
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "status": {
+                                  "type": "string",
+                                  "enum": [
+                                    "unknown"
+                                  ]
+                                },
+                                "value": {
+                                  "nullable": true
+                                }
+                              },
+                              "required": [
+                                "status",
+                                "value"
+                              ],
+                              "additionalProperties": false
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "status": {
+                                  "type": "string",
+                                  "enum": [
+                                    "known"
+                                  ]
+                                },
+                                "value": {
+                                  "type": "number",
+                                  "minimum": 0,
+                                  "maximum": 1000000
+                                }
+                              },
+                              "required": [
+                                "status",
+                                "value"
+                              ],
+                              "additionalProperties": false
+                            }
+                          ]
+                        },
+                        "longestRun": {
+                          "oneOf": [
+                            {
+                              "type": "object",
+                              "properties": {
+                                "status": {
+                                  "type": "string",
+                                  "enum": [
+                                    "unanswered"
+                                  ]
+                                },
+                                "value": {
+                                  "nullable": true
+                                }
+                              },
+                              "required": [
+                                "status",
+                                "value"
+                              ],
+                              "additionalProperties": false
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "status": {
+                                  "type": "string",
+                                  "enum": [
+                                    "unknown"
+                                  ]
+                                },
+                                "value": {
+                                  "nullable": true
+                                }
+                              },
+                              "required": [
+                                "status",
+                                "value"
+                              ],
+                              "additionalProperties": false
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "status": {
+                                  "type": "string",
+                                  "enum": [
+                                    "known"
+                                  ]
+                                },
+                                "value": {
+                                  "type": "number",
+                                  "minimum": 0,
+                                  "maximum": 1000000
+                                }
+                              },
+                              "required": [
+                                "status",
+                                "value"
+                              ],
+                              "additionalProperties": false
+                            }
+                          ]
+                        },
+                        "desiredRuns": {
+                          "type": "integer",
+                          "nullable": true,
+                          "minimum": 1,
+                          "maximum": 14
+                        },
+                        "weekdays": {
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "enum": [
+                              "available",
+                              "preferred",
+                              "unavailable"
+                            ]
+                          }
+                        },
+                        "context": {
+                          "type": "string",
+                          "maxLength": 20000
+                        }
+                      },
+                      "required": [
+                        "goal",
+                        "unit",
+                        "timezone",
+                        "weeklyDistance",
+                        "currentRuns",
+                        "longestRun",
+                        "desiredRuns",
+                        "weekdays",
+                        "context"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "confirmed": {
+                      "type": "boolean"
+                    },
+                    "hash": {
+                      "type": "string"
+                    },
+                    "scheduleReviewRequired": {
+                      "type": "boolean"
+                    },
+                    "findings": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "code": {
+                            "type": "string"
+                          },
+                          "severity": {
+                            "type": "string",
+                            "enum": [
+                              "error",
+                              "warning"
+                            ]
+                          },
+                          "message": {
+                            "type": "string"
+                          },
+                          "path": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "code",
+                          "severity",
+                          "message",
+                          "path"
+                        ]
+                      }
+                    },
+                    "calibrations": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+                          },
+                          "effectiveFrom": {
+                            "type": "string"
+                          },
+                          "effectiveUntil": {
+                            "type": "string",
+                            "nullable": true
+                          },
+                          "method": {
+                            "type": "string",
+                            "enum": [
+                              "race_result",
+                              "threshold_pace"
+                            ]
+                          },
+                          "distanceMetres": {
+                            "type": "number",
+                            "nullable": true
+                          },
+                          "durationSeconds": {
+                            "type": "number",
+                            "nullable": true
+                          },
+                          "secondsPerKilometre": {
+                            "type": "number",
+                            "nullable": true
+                          },
+                          "calculatorVersion": {
+                            "type": "string"
+                          },
+                          "zones": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "key": {
+                                  "type": "string"
+                                },
+                                "fast": {
+                                  "type": "number"
+                                },
+                                "target": {
+                                  "type": "number"
+                                },
+                                "slow": {
+                                  "type": "number"
+                                }
+                              },
+                              "required": [
+                                "key",
+                                "fast",
+                                "target",
+                                "slow"
+                              ]
+                            }
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "effectiveFrom",
+                          "effectiveUntil",
+                          "method",
+                          "distanceMetres",
+                          "durationSeconds",
+                          "secondsPerKilometre",
+                          "calculatorVersion",
+                          "zones"
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "versionId",
+                    "editNumber",
+                    "startDate",
+                    "endDate",
+                    "readOnly",
+                    "brief",
+                    "confirmed",
+                    "hash",
+                    "scheduleReviewRequired",
+                    "findings",
+                    "calibrations"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Request rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Request rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Request rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Request rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Request rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/plans/{planId}/draft/calibrations/{calibrationId}/use-again": {
+      "post": {
+        "tags": [
+          "Brief"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+            },
+            "required": true,
+            "name": "planId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+            },
+            "required": true,
+            "name": "calibrationId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "expectedDraftId": {
+                    "type": "string",
+                    "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+                  },
+                  "expectedEditNumber": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "exclusiveMinimum": true
+                  },
+                  "idempotencyKey": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 200
+                  }
+                },
+                "required": [
+                  "expectedDraftId",
+                  "expectedEditNumber"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Brief and calibration state.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "versionId": {
+                      "type": "string",
+                      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+                    },
+                    "editNumber": {
+                      "type": "number"
+                    },
+                    "startDate": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "endDate": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "readOnly": {
+                      "type": "boolean"
+                    },
+                    "brief": {
+                      "type": "object",
+                      "properties": {
+                        "goal": {
+                          "type": "string",
+                          "maxLength": 20000
+                        },
+                        "unit": {
+                          "type": "string",
+                          "enum": [
+                            "kilometres",
+                            "miles"
+                          ]
+                        },
+                        "timezone": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 100
+                        },
+                        "weeklyDistance": {
+                          "oneOf": [
+                            {
+                              "type": "object",
+                              "properties": {
+                                "status": {
+                                  "type": "string",
+                                  "enum": [
+                                    "unanswered"
+                                  ]
+                                },
+                                "value": {
+                                  "nullable": true
+                                }
+                              },
+                              "required": [
+                                "status",
+                                "value"
+                              ],
+                              "additionalProperties": false
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "status": {
+                                  "type": "string",
+                                  "enum": [
+                                    "unknown"
+                                  ]
+                                },
+                                "value": {
+                                  "nullable": true
+                                }
+                              },
+                              "required": [
+                                "status",
+                                "value"
+                              ],
+                              "additionalProperties": false
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "status": {
+                                  "type": "string",
+                                  "enum": [
+                                    "known"
+                                  ]
+                                },
+                                "value": {
+                                  "type": "number",
+                                  "minimum": 0,
+                                  "maximum": 1000000
+                                }
+                              },
+                              "required": [
+                                "status",
+                                "value"
+                              ],
+                              "additionalProperties": false
+                            }
+                          ]
+                        },
+                        "currentRuns": {
+                          "oneOf": [
+                            {
+                              "type": "object",
+                              "properties": {
+                                "status": {
+                                  "type": "string",
+                                  "enum": [
+                                    "unanswered"
+                                  ]
+                                },
+                                "value": {
+                                  "nullable": true
+                                }
+                              },
+                              "required": [
+                                "status",
+                                "value"
+                              ],
+                              "additionalProperties": false
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "status": {
+                                  "type": "string",
+                                  "enum": [
+                                    "unknown"
+                                  ]
+                                },
+                                "value": {
+                                  "nullable": true
+                                }
+                              },
+                              "required": [
+                                "status",
+                                "value"
+                              ],
+                              "additionalProperties": false
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "status": {
+                                  "type": "string",
+                                  "enum": [
+                                    "known"
+                                  ]
+                                },
+                                "value": {
+                                  "type": "number",
+                                  "minimum": 0,
+                                  "maximum": 1000000
+                                }
+                              },
+                              "required": [
+                                "status",
+                                "value"
+                              ],
+                              "additionalProperties": false
+                            }
+                          ]
+                        },
+                        "longestRun": {
+                          "oneOf": [
+                            {
+                              "type": "object",
+                              "properties": {
+                                "status": {
+                                  "type": "string",
+                                  "enum": [
+                                    "unanswered"
+                                  ]
+                                },
+                                "value": {
+                                  "nullable": true
+                                }
+                              },
+                              "required": [
+                                "status",
+                                "value"
+                              ],
+                              "additionalProperties": false
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "status": {
+                                  "type": "string",
+                                  "enum": [
+                                    "unknown"
+                                  ]
+                                },
+                                "value": {
+                                  "nullable": true
+                                }
+                              },
+                              "required": [
+                                "status",
+                                "value"
+                              ],
+                              "additionalProperties": false
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "status": {
+                                  "type": "string",
+                                  "enum": [
+                                    "known"
+                                  ]
+                                },
+                                "value": {
+                                  "type": "number",
+                                  "minimum": 0,
+                                  "maximum": 1000000
+                                }
+                              },
+                              "required": [
+                                "status",
+                                "value"
+                              ],
+                              "additionalProperties": false
+                            }
+                          ]
+                        },
+                        "desiredRuns": {
+                          "type": "integer",
+                          "nullable": true,
+                          "minimum": 1,
+                          "maximum": 14
+                        },
+                        "weekdays": {
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "enum": [
+                              "available",
+                              "preferred",
+                              "unavailable"
+                            ]
+                          }
+                        },
+                        "context": {
+                          "type": "string",
+                          "maxLength": 20000
+                        }
+                      },
+                      "required": [
+                        "goal",
+                        "unit",
+                        "timezone",
+                        "weeklyDistance",
+                        "currentRuns",
+                        "longestRun",
+                        "desiredRuns",
+                        "weekdays",
+                        "context"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "confirmed": {
+                      "type": "boolean"
+                    },
+                    "hash": {
+                      "type": "string"
+                    },
+                    "scheduleReviewRequired": {
+                      "type": "boolean"
+                    },
+                    "findings": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "code": {
+                            "type": "string"
+                          },
+                          "severity": {
+                            "type": "string",
+                            "enum": [
+                              "error",
+                              "warning"
+                            ]
+                          },
+                          "message": {
+                            "type": "string"
+                          },
+                          "path": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "code",
+                          "severity",
+                          "message",
+                          "path"
+                        ]
+                      }
+                    },
+                    "calibrations": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+                          },
+                          "effectiveFrom": {
+                            "type": "string"
+                          },
+                          "effectiveUntil": {
+                            "type": "string",
+                            "nullable": true
+                          },
+                          "method": {
+                            "type": "string",
+                            "enum": [
+                              "race_result",
+                              "threshold_pace"
+                            ]
+                          },
+                          "distanceMetres": {
+                            "type": "number",
+                            "nullable": true
+                          },
+                          "durationSeconds": {
+                            "type": "number",
+                            "nullable": true
+                          },
+                          "secondsPerKilometre": {
+                            "type": "number",
+                            "nullable": true
+                          },
+                          "calculatorVersion": {
+                            "type": "string"
+                          },
+                          "zones": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "key": {
+                                  "type": "string"
+                                },
+                                "fast": {
+                                  "type": "number"
+                                },
+                                "target": {
+                                  "type": "number"
+                                },
+                                "slow": {
+                                  "type": "number"
+                                }
+                              },
+                              "required": [
+                                "key",
+                                "fast",
+                                "target",
+                                "slow"
+                              ]
+                            }
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "effectiveFrom",
+                          "effectiveUntil",
+                          "method",
+                          "distanceMetres",
+                          "durationSeconds",
+                          "secondsPerKilometre",
+                          "calculatorVersion",
+                          "zones"
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "versionId",
+                    "editNumber",
+                    "startDate",
+                    "endDate",
+                    "readOnly",
+                    "brief",
+                    "confirmed",
+                    "hash",
+                    "scheduleReviewRequired",
+                    "findings",
+                    "calibrations"
                   ]
                 }
               }

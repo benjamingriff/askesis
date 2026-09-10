@@ -16,7 +16,7 @@ BEGIN
       AND owner_id <> '00000000-0000-0000-0000-000000000001') THEN
     RAISE EXCEPTION 'Fixture plan belongs to a different account; refusing reset';
   END IF;
-  FOREACH t IN ARRAY ARRAY['plans', 'plan_versions', 'plan_goals', 'plan_constraints',
+  FOREACH t IN ARRAY ARRAY['plans', 'plan_versions', 'plan_brief_weekdays', 'plan_briefs',
     'training_blocks', 'training_weeks', 'week_targets', 'workouts', 'workout_tags',
     'workout_steps', 'step_completions', 'step_targets', 'calibration_profiles',
     'calibration_zones', 'plan_calibration_periods'] LOOP
@@ -25,7 +25,7 @@ BEGIN
   FOREACH t IN ARRAY ARRAY['step_targets', 'step_completions', 'workout_steps',
     'workout_tags', 'workouts', 'week_targets', 'training_weeks', 'training_blocks',
     'plan_calibration_periods', 'calibration_zones', 'calibration_profiles',
-    'plan_goals', 'plan_constraints'] LOOP
+    'plan_brief_weekdays', 'plan_briefs'] LOOP
     EXECUTE format('DELETE FROM %I WHERE plan_version_id IN (SELECT id FROM plan_versions WHERE plan_id = $1)', t)
       USING '00000000-0000-0000-0000-000000000010'::uuid;
   END LOOP;
@@ -33,14 +33,14 @@ BEGIN
   DELETE FROM plans WHERE id = '00000000-0000-0000-0000-000000000010'
     AND owner_id = '00000000-0000-0000-0000-000000000001';
   SET CONSTRAINTS ALL IMMEDIATE;
-  FOREACH t IN ARRAY ARRAY['plans', 'plan_versions', 'plan_goals', 'plan_constraints',
+  FOREACH t IN ARRAY ARRAY['plans', 'plan_versions', 'plan_brief_weekdays', 'plan_briefs',
     'training_blocks', 'training_weeks', 'week_targets', 'workouts', 'workout_tags',
     'workout_steps', 'step_completions', 'step_targets', 'calibration_profiles',
     'calibration_zones', 'plan_calibration_periods'] LOOP
     EXECUTE format('ALTER TABLE %I ENABLE TRIGGER USER', t);
   END LOOP;
 END $$;
-DELETE FROM seed_runs WHERE seed_key = 'cardiff-half-example-v2';
+DELETE FROM seed_runs WHERE seed_key = 'cardiff-half-example-v3';
 COMMIT;
 SQL
 

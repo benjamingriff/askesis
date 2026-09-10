@@ -1,5 +1,12 @@
 import { closeDatabase } from '../database/client.js';
 import { getPlan, lockPlan, organizePlan, previewLock } from '../modules/plans/plan.service.js';
+import {
+  addCalibration,
+  confirmBrief,
+  getBrief,
+  saveBrief,
+} from '../modules/plans/brief.service.js';
+import { emptyBrief } from '../modules/plans/brief.schemas.js';
 
 // Explicit development operator command, never part of the production startup path.
 async function publish() {
@@ -12,6 +19,61 @@ async function publish() {
   if (!plan.locked) {
     if (plan.draft?.id !== '00000000-0000-0000-0000-000000000050')
       throw new Error('Unexpected development fixture draft.');
+    let brief = await getBrief(owner, planId);
+    const command = () => ({
+      expectedDraftId: brief.versionId,
+      expectedEditNumber: brief.editNumber,
+    });
+    if (!brief.brief.goal)
+      brief = await saveBrief(owner, planId, {
+        ...command(),
+        brief: {
+          ...emptyBrief(),
+          goal: 'Run Cardiff Half Marathon comfortably and consistently.',
+          timezone: 'Europe/London',
+          weeklyDistance: { status: 'known', value: 40000 },
+          currentRuns: { status: 'known', value: 5 },
+          longestRun: { status: 'known', value: 12000 },
+          desiredRuns: 5,
+          weekdays: [
+            'available',
+            'available',
+            'available',
+            'unavailable',
+            'available',
+            'preferred',
+            'unavailable',
+          ],
+          context: 'Keep long runs easy. Strength work may accompany running.',
+        },
+      });
+    if (!brief.calibrations.length) {
+      brief = await addCalibration(
+        owner,
+        planId,
+        {
+          ...command(),
+          input: { method: 'race_result', distanceMetres: 5000, durationSeconds: 1070 },
+        },
+        new Date('2026-05-11T12:00:00Z'),
+      );
+      brief = await addCalibration(
+        owner,
+        planId,
+        {
+          ...command(),
+          input: { method: 'race_result', distanceMetres: 10000, durationSeconds: 2160 },
+        },
+        new Date('2026-05-21T12:00:00Z'),
+      );
+    }
+    await confirmBrief(owner, planId, {
+      ...command(),
+      expectedHash: brief.hash,
+      acknowledgedWarningCodes: brief.findings
+        .filter((f) => f.severity === 'warning')
+        .map((f) => f.code),
+    });
     const preview = await previewLock(owner, planId);
     plan = await lockPlan(
       owner,
@@ -26,7 +88,7 @@ async function publish() {
           .filter((finding) => finding.severity === 'warning')
           .map((finding) => finding.code),
       },
-      'cardiff-half-example-v2-publication',
+      'cardiff-half-example-v3-publication',
     );
   }
   if (plan.locked?.versionNumber !== 1 || plan.draft || plan.archived)

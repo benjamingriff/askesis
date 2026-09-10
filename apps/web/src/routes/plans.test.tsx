@@ -209,6 +209,8 @@ it('reuses a create request key when retrying after a connection failure', async
   vi.mocked(api.POST).mockRejectedValue(new Error('Connection lost'));
   mount('/plans');
   fireEvent.change(screen.getByLabelText('Plan name'), { target: { value: 'A new plan' } });
+  fireEvent.change(screen.getByLabelText('Start date'), { target: { value: '2026-09-10' } });
+  fireEvent.change(screen.getByLabelText('End date'), { target: { value: '2026-12-10' } });
   fireEvent.click(screen.getByRole('button', { name: 'Create plan' }));
   await screen.findByRole('alert');
   fireEvent.click(screen.getByRole('button', { name: 'Create plan' }));

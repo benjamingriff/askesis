@@ -2,7 +2,7 @@
 
 ## Status
 
-**Proposed checkpoint for approval.** This document translates the accepted [Phase 3 plan brief and running pace calibration](./phase-3-plan-brief-and-calibration-refinement.md) into a relational and API contract. It builds on the [Phase 2 schema contract](./phase-2-schema-contract.md).
+**Design checkpoint, implemented with naming and storage adaptations.** This document translates the accepted [Phase 3 plan brief and running pace calibration](./phase-3-plan-brief-and-calibration-refinement.md) into a relational and API contract. It builds on the [Phase 2 schema contract](./phase-2-schema-contract.md). See [implementation notes](./phase-3-test-checklist.md#implementation-notes) for the final storage differences; migration SQL and generated OpenAPI describe the executable contract.
 
 Exact SQL names may change during implementation, but table responsibilities, ownership, input shapes, effective-date semantics, and transaction boundaries should remain stable.
 

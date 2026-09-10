@@ -172,6 +172,9 @@ function RevisionView({ planId, revisionId }: { planId: string; revisionId: stri
               {plan.data?.displayName} · Version {revision.versionNumber}
             </h1>
             <p>Immutable historical content{plan.data?.archived ? ' · archived plan' : ''}.</p>
+            <Link to={`/plans/${planId}/versions/${revisionId}/brief`}>
+              View this version’s brief and pace guides
+            </Link>
             {basedOn && <p>Based on version {basedOn.versionNumber}.</p>}
             {supersedes && <p>Replaced version {supersedes.versionNumber} when locked.</p>}
             <p>

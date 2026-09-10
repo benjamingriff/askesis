@@ -25,7 +25,7 @@ export type ValidationPlan = {
   unresolvedZones?: string[];
 };
 
-export const VALIDATOR_VERSION = 2;
+export const VALIDATOR_VERSION = 3;
 const day = (date: string): number => Date.parse(`${date}T00:00:00Z`) / 86_400_000;
 
 export function validatePlan(plan: ValidationPlan): ValidationFinding[] {

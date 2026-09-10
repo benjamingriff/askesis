@@ -21,6 +21,13 @@ import {
 } from '../../src/modules/plans/plan.service.js';
 
 const owner = '00000000-0000-0000-0000-000000000001';
+import {
+  getBrief,
+  saveBrief,
+  addCalibration,
+  confirmBrief,
+} from '../../src/modules/plans/brief.service.js';
+import { emptyBrief } from '../../src/modules/plans/brief.schemas.js';
 afterAll(closeDatabase);
 
 it('restores full historical content as a draft and records chronological and content ancestry', async () => {
@@ -202,6 +209,36 @@ async function prepared() {
   return edited;
 }
 async function confirmation(id: string) {
+  let state = await getBrief(owner, id);
+  const command = () => ({
+    expectedDraftId: state.versionId,
+    expectedEditNumber: state.editNumber,
+  });
+  if (!state.brief.goal)
+    state = await saveBrief(owner, id, {
+      ...command(),
+      brief: {
+        ...emptyBrief(),
+        goal: 'Run consistently',
+        desiredRuns: 3,
+        weeklyDistance: { status: 'unknown', value: null },
+        currentRuns: { status: 'unknown', value: null },
+        longestRun: { status: 'unknown', value: null },
+      },
+    });
+  if (!state.calibrations.length)
+    state = await addCalibration(owner, id, {
+      ...command(),
+      input: { method: 'threshold_pace', secondsPerKilometre: 300 },
+    });
+  if (!state.confirmed)
+    await confirmBrief(owner, id, {
+      ...command(),
+      expectedHash: state.hash,
+      acknowledgedWarningCodes: state.findings
+        .filter((f) => f.severity === 'warning')
+        .map((f) => f.code),
+    });
   const preview = await previewLock(owner, id);
   return {
     expectedStateVersion: preview.stateVersion,

@@ -24,6 +24,7 @@ import {
   DraftDetailSchema,
 } from './plan.schemas.js';
 import { validatePlan, VALIDATOR_VERSION } from './plan.validation.js';
+import { briefLockFindings } from './brief.service.js';
 
 export class PlanError extends Error {
   constructor(
@@ -260,8 +261,13 @@ async function idempotent(
       return result;
     });
 }
-export async function createPlan(athleteId: string, displayName: string, key: string) {
-  return idempotent(athleteId, 'plan.create', key, { displayName }, async (db) => {
+export async function createPlan(
+  athleteId: string,
+  displayName: string,
+  key: string,
+  dates: { startDate?: string | undefined; endDate?: string | undefined } = {},
+) {
+  return idempotent(athleteId, 'plan.create', key, { displayName, ...dates }, async (db) => {
     const planId = randomUUID();
     const draftId = randomUUID();
     await db
@@ -273,7 +279,15 @@ export async function createPlan(athleteId: string, displayName: string, key: st
         current_draft_version_id: draftId,
       })
       .execute();
-    await db.insertInto('plan_versions').values({ id: draftId, plan_id: planId }).execute();
+    await db
+      .insertInto('plan_versions')
+      .values({
+        id: draftId,
+        plan_id: planId,
+        start_date: dates.startDate ?? null,
+        end_date: dates.endDate ?? null,
+      })
+      .execute();
     return detail(db, athleteId, planId);
   });
 }
@@ -294,6 +308,30 @@ export async function editDraft(
         draft.startDate !== input.startDate ||
         draft.endDate !== input.endDate
       ) {
+        if (draft.startDate !== input.startDate || draft.endDate !== input.endDate) {
+          await sql`UPDATE plan_briefs SET confirmed_hash = NULL, confirmed_at = NULL,
+            schedule_review_required = EXISTS (SELECT 1 FROM workouts WHERE plan_version_id = ${draft.id}::uuid)
+            WHERE plan_version_id = ${draft.id}::uuid`.execute(db);
+          // Keep the initial guide covering the plan when its start changes, without moving later updates.
+          if (input.startDate) {
+            const first = await db
+              .selectFrom('plan_calibration_periods')
+              .selectAll()
+              .where('plan_version_id', '=', draft.id)
+              .orderBy('effective_from')
+              .executeTakeFirst();
+            if (
+              first &&
+              (!first.effective_until ||
+                input.startDate < String(first.effective_until).slice(0, 10))
+            )
+              await db
+                .updateTable('plan_calibration_periods')
+                .set({ effective_from: input.startDate })
+                .where('id', '=', first.id)
+                .execute();
+          }
+        }
         await db
           .updateTable('plan_versions')
           .set({
@@ -314,7 +352,10 @@ async function preview(db: Database, plan: Plan) {
   const aggregate = await readAggregate(db, plan.draft.id);
   const previous = plan.locked === null ? null : await readAggregate(db, plan.locked.id);
   const hash = contentHash(aggregate.semantic);
-  const findings = validatePlan(aggregate.validation);
+  const findings = [
+    ...validatePlan(aggregate.validation),
+    ...(await briefLockFindings(db, plan.draft.id)),
+  ];
   const headerChanges = ['description', 'startDate', 'endDate'].filter((key) => {
     const field = key as 'description' | 'startDate' | 'endDate';
     return plan.draft![field] !== (plan.locked?.[field] ?? null);
@@ -378,6 +419,9 @@ export async function lockPlan(athleteId: string, planId: string, input: Command
       .select(({ fn }) => fn.max<number>('version_number').as('latest'))
       .where('plan_id', '=', planId)
       .executeTakeFirstOrThrow();
+    await sql`UPDATE plan_briefs SET schedule_review_required = false WHERE plan_version_id = ${draft.id}::uuid`.execute(
+      db,
+    );
     await db
       .updateTable('plan_versions')
       .set({
@@ -539,7 +583,7 @@ async function restorePreview(db: Database, athleteId: string, plan: Plan, revis
     );
   if (!plan.locked)
     throw new PlanError('LOCKED_VERSION_REQUIRED', 'There is no current locked version.');
-  if (source.content_schema_version !== 1)
+  if (source.content_schema_version !== 2)
     throw new PlanError(
       'UNSUPPORTED_CONTENT_SCHEMA',
       'This version needs a content upgrade before restoration.',

@@ -12,27 +12,6 @@ VALUES ('00000000-0000-0000-0000-000000000050', '00000000-0000-0000-0000-0000000
     'A shortened relational example based on the original 21-week half-marathon programme.',
     '2026-05-11', '2026-10-04');
 
-INSERT INTO plan_goals (
-    id, plan_version_id, goal_type, priority, discipline, event_name, event_date,
-    distance_value, distance_unit, target_duration_seconds, description
-) VALUES
-    ('00000000-0000-0000-0000-000000000011', '00000000-0000-0000-0000-000000000050',
-     'race', 'primary', 'run', 'Cardiff Half Marathon', '2026-10-04',
-     21.0975, 'kilometres', 4650, 'Run under 1:17:30.'),
-    ('00000000-0000-0000-0000-000000000012', '00000000-0000-0000-0000-000000000050',
-     'performance', 'stretch', 'run', 'Cardiff Half Marathon', '2026-10-04',
-     21.0975, 'kilometres', 4500, 'Stretch target of 1:15:00.');
-
-INSERT INTO plan_constraints (
-    id, plan_version_id, constraint_type, severity, discipline, numeric_value, unit, day_of_week, description
-) VALUES
-    ('00000000-0000-0000-0000-000000000013', '00000000-0000-0000-0000-000000000050',
-     'required_rest_day', 'hard', NULL, NULL, NULL, 7, 'Sunday is a compulsory rest day.'),
-    ('00000000-0000-0000-0000-000000000014', '00000000-0000-0000-0000-000000000050',
-     'hard_sessions_max', 'hard', 'run', 2, 'sessions', NULL, 'No more than two hard running sessions per week.'),
-    ('00000000-0000-0000-0000-000000000015', '00000000-0000-0000-0000-000000000050',
-     'weekly_distance_max', 'soft', 'run', 65, 'kilometres', NULL, 'Keep peak volume around 60–65 km.');
-
 INSERT INTO training_blocks (
     id, plan_version_id, position, title, description, start_date, end_date
 ) VALUES (
@@ -65,36 +44,6 @@ VALUES
      'distance', 'run', 39, 41.5, 44, 'kilometres'),
     ('00000000-0000-0000-0000-000000000050', '00000000-0000-0000-0000-000000000026', '00000000-0000-0000-0000-000000000022',
      'hard_session_count', 'run', NULL, 1, 1, 'sessions');
-
--- Two immutable VDOT-based profiles demonstrate effective-dated calibration.
-INSERT INTO calibration_profiles (
-    id, plan_version_id, discipline, system, method, fitness_value, source_description, created_at
-) VALUES
-    ('00000000-0000-0000-0000-000000000030', '00000000-0000-0000-0000-000000000050',
-     'run', 'run_pace', 'vdot', 58, 'Baseline from a 17:50 5k', '2026-05-01 09:00:00+00'),
-    ('00000000-0000-0000-0000-000000000031', '00000000-0000-0000-0000-000000000050',
-     'run', 'run_pace', 'vdot', 60, 'Example recalibration after the Week 2 10k test', '2026-05-20 20:00:00+00');
-
--- Pace values use seconds per kilometre. Lower values are faster, so the
--- numeric minimum/maximum represent values rather than intensity ordering.
-INSERT INTO calibration_zones (plan_version_id, profile_id, zone_key, metric, minimum_value, maximum_value, unit)
-VALUES
-    ('00000000-0000-0000-0000-000000000050', '00000000-0000-0000-0000-000000000030', 'easy',       'pace', 305, 335, 'seconds_per_kilometre'),
-    ('00000000-0000-0000-0000-000000000050', '00000000-0000-0000-0000-000000000030', 'marathon',   'pace', 252, 260, 'seconds_per_kilometre'),
-    ('00000000-0000-0000-0000-000000000050', '00000000-0000-0000-0000-000000000030', 'threshold',  'pace', 231, 235, 'seconds_per_kilometre'),
-    ('00000000-0000-0000-0000-000000000050', '00000000-0000-0000-0000-000000000030', 'interval',   'pace', 213, 217, 'seconds_per_kilometre'),
-    ('00000000-0000-0000-0000-000000000050', '00000000-0000-0000-0000-000000000031', 'easy',       'pace', 298, 328, 'seconds_per_kilometre'),
-    ('00000000-0000-0000-0000-000000000050', '00000000-0000-0000-0000-000000000031', 'marathon',   'pace', 247, 255, 'seconds_per_kilometre'),
-    ('00000000-0000-0000-0000-000000000050', '00000000-0000-0000-0000-000000000031', 'threshold',  'pace', 223, 228, 'seconds_per_kilometre'),
-    ('00000000-0000-0000-0000-000000000050', '00000000-0000-0000-0000-000000000031', 'interval',   'pace', 206, 210, 'seconds_per_kilometre');
-
-INSERT INTO plan_calibration_periods (
-    id, plan_version_id, profile_id, system, effective_from, effective_until
-) VALUES
-    ('00000000-0000-0000-0000-000000000040', '00000000-0000-0000-0000-000000000050',
-     '00000000-0000-0000-0000-000000000030', 'run_pace', '2026-05-11', '2026-05-21'),
-    ('00000000-0000-0000-0000-000000000041', '00000000-0000-0000-0000-000000000050',
-     '00000000-0000-0000-0000-000000000031', 'run_pace', '2026-05-21', NULL);
 
 INSERT INTO workouts (
     id, plan_version_id, week_id, scheduled_date, position, title, description, purpose,
@@ -262,6 +211,6 @@ VALUES
     ('00000000-0000-0000-0000-000000000050', '23000000-0000-0000-0000-000000000106', 1, 'rpe', 9, 10, 'rpe', NULL, NULL, NULL),
     ('00000000-0000-0000-0000-000000000050', '23000000-0000-0000-0000-000000000107', 1, 'zone', NULL, NULL, NULL, 'run_pace', 'easy', NULL);
 
-INSERT INTO seed_runs (seed_key) VALUES ('cardiff-half-example-v2');
+INSERT INTO seed_runs (seed_key) VALUES ('cardiff-half-example-v3');
 
 COMMIT;

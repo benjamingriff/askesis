@@ -1700,3 +1700,31 @@ textarea:focus-visible {
   max-height: 480px;
   font-size: 0.8rem;
 }
+/* Temporary structured brief editor. */
+.brief-weekdays {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 12px;
+}
+.plan-panel fieldset {
+  border: 0;
+  padding: 0;
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+}
+.plan-panel textarea {
+  min-height: 90px;
+  width: 100%;
+  font: inherit;
+}
+.pace-guides {
+  width: 100%;
+  border-collapse: collapse;
+}
+.pace-guides td,
+.pace-guides th {
+  padding: 12px 8px;
+  text-align: left;
+  border-bottom: 1px solid var(--border, #ddd);
+}

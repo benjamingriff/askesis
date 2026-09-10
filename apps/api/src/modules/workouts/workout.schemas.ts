@@ -59,6 +59,8 @@ export const StepCompletionSchema = z
 export const ResolvedZoneSchema = z
   .object({
     profileId: DatabaseIdSchema,
+    effectiveFrom: z.string().optional(),
+    calculatorVersion: z.string().optional(),
     method: z.string(),
     fitnessValue: z.number().nullable(),
     metric: z.string(),

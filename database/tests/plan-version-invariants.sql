@@ -9,8 +9,8 @@ BEGIN
         VALUES (plan, athlete, 'Invariant test', version);
     INSERT INTO plan_versions(id, plan_id, start_date, end_date)
         VALUES (version, plan, '2026-09-01', '2026-09-30');
-    INSERT INTO plan_goals(id, plan_version_id, goal_type, priority)
-        VALUES (goal, version, 'fitness', 'primary');
+    INSERT INTO plan_briefs(id, plan_version_id, goal_text)
+        VALUES (goal, version, 'Run consistently');
     SET CONSTRAINTS ALL IMMEDIATE;
     SET CONSTRAINTS ALL DEFERRED;
     BEGIN
@@ -23,7 +23,7 @@ BEGIN
     EXCEPTION WHEN check_violation THEN NULL; END;
     UPDATE plans SET archived_at = now() WHERE id = plan;
     BEGIN
-        UPDATE plan_goals SET description = 'forbidden' WHERE id = goal;
+        UPDATE plan_briefs SET goal_text = 'forbidden' WHERE id = goal;
         RAISE EXCEPTION 'Archived draft edit unexpectedly succeeded';
     EXCEPTION WHEN check_violation THEN NULL; END;
     UPDATE plans SET archived_at = NULL WHERE id = plan;
@@ -36,15 +36,15 @@ BEGIN
         WHERE id = plan;
     SET CONSTRAINTS ALL IMMEDIATE;
     BEGIN
-        UPDATE plan_goals SET description = 'forbidden' WHERE id = goal;
+        UPDATE plan_briefs SET goal_text = 'forbidden' WHERE id = goal;
         RAISE EXCEPTION 'Locked child update unexpectedly succeeded';
     EXCEPTION WHEN check_violation THEN NULL; END;
     BEGIN
-        DELETE FROM plan_goals WHERE id = goal;
+        DELETE FROM plan_briefs WHERE id = goal;
         RAISE EXCEPTION 'Locked child deletion unexpectedly succeeded';
     EXCEPTION WHEN check_violation THEN NULL; END;
     BEGIN
-        INSERT INTO plan_goals(plan_version_id, goal_type, priority) VALUES (version, 'fitness', 'secondary');
+        INSERT INTO plan_briefs(plan_version_id, goal_text) VALUES (version, 'Other goal');
         RAISE EXCEPTION 'Locked child insertion unexpectedly succeeded';
     EXCEPTION WHEN check_violation THEN NULL; END;
     BEGIN

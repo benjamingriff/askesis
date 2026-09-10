@@ -2,7 +2,7 @@
 
 ## Status
 
-**Proposed checkpoint for approval; implementation not started.** This plan implements the accepted [Phase 3 brief and calibration refinement](./phase-3-plan-brief-and-calibration-refinement.md) using the proposed [Phase 3 schema and API contract](./phase-3-schema-contract.md).
+**Implemented locally; signed-in acceptance pending.** This document records the design checkpoint for the accepted [Phase 3 brief and calibration refinement](./phase-3-plan-brief-and-calibration-refinement.md). See the [walkthrough and implementation notes](./phase-3-test-checklist.md) for the running instance, verification, and final storage details. Railway deployment remains pending.
 
 ## Delivery strategy
 

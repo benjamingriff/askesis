@@ -27,6 +27,7 @@ VALUES ('00000000-0000-0000-0000-000000000001', 'test', 'cutover-preserved-ident
 SQL
 run_sql < database/migrations/20260907120000_plan_versions.sql
 run_sql < database/migrations/20260908160000_workout_structure.sql
+run_sql < database/migrations/20260909120000_plan_briefs.sql
 run_sql <<'SQL'
 DO $$ BEGIN
   IF NOT EXISTS (SELECT 1 FROM athlete_identities

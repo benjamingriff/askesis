@@ -68,8 +68,9 @@ function formatDuration(seconds: number | null): string {
 }
 
 function formatSecondsPerKilometre(seconds: number): string {
-  const minutes = Math.floor(seconds / 60);
-  return `${minutes}:${String(Math.round(seconds % 60)).padStart(2, '0')}`;
+  const rounded = Math.round(seconds);
+  const minutes = Math.floor(rounded / 60);
+  return `${minutes}:${String(rounded % 60).padStart(2, '0')}`;
 }
 
 function formatValue(value: number | null, unit: string | null): string | null {
@@ -78,6 +79,7 @@ function formatValue(value: number | null, unit: string | null): string | null {
   if (unit === 'metres') return value >= 1000 ? `${value / 1000} km` : `${value}m`;
   if (unit === 'repetitions') return `${value} reps`;
   if (unit === 'seconds_per_kilometre') return `${formatSecondsPerKilometre(value)}/km`;
+  if (unit === 'seconds_per_mile') return `${formatSecondsPerKilometre(value)}/mi`;
   return unit === null ? String(value) : `${value} ${unit.replaceAll('_', ' ')}`;
 }
 
@@ -97,9 +99,8 @@ function formatTarget(target: StepTarget): string {
     if (zone !== null && zone.minimumValue !== null && zone.maximumValue !== null) {
       const minimum = formatValue(zone.minimumValue, zone.unit);
       const maximum = formatValue(zone.maximumValue, zone.unit);
-      const fitness =
-        zone.fitnessValue === null ? '' : ` · ${zone.method.toUpperCase()} ${zone.fitnessValue}`;
-      return `${target.zoneKey} · ${minimum}–${maximum}${fitness}`;
+      const source = ` · ${zone.method.replaceAll('_', ' ')}${zone.effectiveFrom ? ` from ${zone.effectiveFrom}` : ''}`;
+      return `${target.zoneKey} · ${minimum}–${maximum}${source}`;
     }
     return target.zoneKey;
   }

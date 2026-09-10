@@ -81,7 +81,17 @@ export const CommandSchema = z
     acknowledgedWarningCodes: z.array(z.string()).optional(),
   })
   .strict();
-export const CreateSchema = z.object({ displayName: z.string().trim().min(1).max(200) }).strict();
+export const CreateSchema = z
+  .object({
+    displayName: z.string().trim().min(1).max(200),
+    startDate: z.iso.date().optional(),
+    endDate: z.iso.date().optional(),
+  })
+  .strict()
+  .refine(
+    (value) => !value.startDate || !value.endDate || value.endDate >= value.startDate,
+    'End date must not precede start date.',
+  );
 export const DraftPatchSchema = z
   .object({
     expectedDraftId: Id,

@@ -6,8 +6,8 @@ import type { ValidationPlan } from './plan.validation.js';
 export type Database = Kysely<DB> | Transaction<DB>;
 type Row = Record<string, string | number | Date | null>;
 export const contentTables = [
-  'plan_goals',
-  'plan_constraints',
+  'plan_briefs',
+  'plan_brief_weekdays',
   'calibration_profiles',
   'calibration_zones',
   'plan_calibration_periods',
@@ -26,7 +26,19 @@ export type Aggregate = {
   validation: ValidationPlan;
   entities: Record<string, { lineage: string; value: SemanticValue }[]>;
 };
-const excluded = new Set(['id', 'lineage_id', 'plan_version_id', 'created_at', 'updated_at']);
+const excluded = new Set([
+  'id',
+  'lineage_id',
+  'plan_version_id',
+  'created_at',
+  'updated_at',
+  'confirmed_hash',
+  'confirmed_at',
+  'confirmed_edit_number',
+  'validator_version',
+  'acknowledged_warning_codes',
+  'schedule_review_required',
+]);
 const numeric = new Set([
   'numeric_value',
   'minimum_value',
@@ -35,6 +47,10 @@ const numeric = new Set([
   'fitness_value',
   'distance_value',
   'estimated_distance_metres',
+  'weekly_distance_metres',
+  'longest_run_metres',
+  'race_distance_metres',
+  'threshold_seconds_per_kilometre',
 ]);
 const date = (value: Row[string] | undefined): string =>
   value instanceof Date ? value.toISOString().slice(0, 10) : String(value);
@@ -152,8 +168,8 @@ export async function readAggregate(db: Database, versionId: string): Promise<Ag
       description: version.description,
       startDate: version.start_date === null ? null : date(version.start_date),
       endDate: version.end_date === null ? null : date(version.end_date),
-      goals: ordered(rows.plan_goals.map((row) => leaf('plan_goals', row))),
-      constraints: ordered(rows.plan_constraints.map((row) => leaf('plan_constraints', row))),
+      brief: ordered(rows.plan_briefs.map((row) => leaf('plan_briefs', row))),
+      weekdays: ordered(rows.plan_brief_weekdays.map((row) => leaf('plan_brief_weekdays', row))),
       blocks: ordered(blocks),
       calibrations: ordered(
         rows.calibration_profiles.map((profile) =>

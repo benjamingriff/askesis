@@ -27,7 +27,7 @@ it('publishes the fixture with genuine validation and immutable content', async 
     .selectAll()
     .where('id', '=', fixture)
     .executeTakeFirstOrThrow();
-  expect(row.validator_version).toBe(2);
+  expect(row.validator_version).toBe(3);
   expect(row.content_hash).toMatch(/^[a-f0-9]{64}$/);
 });
 
