@@ -1,7 +1,7 @@
 # Current agent handoff
 
 **Updated:** 2026-09-11
-**Current phase:** Phase 4 accepted locally; release verification complete, Railway deployment pending. Phase 3 remains the Railway deployment.
+**Current phase:** Phase 4 deployed to Railway; Phase 5 implementation is next. UI refinement is deferred until after Phase 5.
 **Completed phase:** Phase 1 — engineering foundation and Railway deployment validation
 
 ## Purpose
@@ -18,6 +18,17 @@ Before making changes, read:
 Do not place credentials, Clerk tokens, database URLs, Sentry credentials, or Railway secrets in chat, logs, commits, or this file.
 
 ## Repository state at handoff
+
+### Phase 4 deployment — 2026-09-11
+
+The user authorized deployment after accepting local testing and explicitly deferred UI cleanup until after Phase 5. Implementation commit `51ce06c` was pushed to `main`; GitHub Actions run `34618376936` passed. Railway automatically deployed both services from that commit:
+
+- API: `dc9c08d8-1617-43c6-9866-7c3bc62d373c`, SUCCESS.
+- Web: `2a85f4ca-2624-4ec7-9634-4b94a411434a`, SUCCESS.
+- Atlas applied the one pending Phase 4 migration successfully (17 statements), and the new API started in production mode.
+- Public `/`, `/chat`, `/api/health`, and `/api/ready` returned 200. Protected conversation and capability endpoints returned 401 without authentication. The served frontend bundle includes the plan-chat action and chat-capability integration.
+
+Hosted app: <https://askesis.up.railway.app>. `CHAT_EXECUTION_MODE` is unset and defaults to `unavailable`; the Docker image sets `NODE_ENV=production`. Simulated replies remain local-only. The signed-in walkthrough was performed locally, not repeated against Railway in this release check. Local conversations are not copied to the hosted database. Open Plan Library → a plan → **Chat about this plan** to open a hosted plan-linked conversation; global New chat remains standalone.
 
 ### Phase 4 acceptance and release preparation — 2026-09-11
 
