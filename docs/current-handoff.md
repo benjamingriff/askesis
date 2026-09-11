@@ -1,7 +1,7 @@
 # Current agent handoff
 
-**Updated:** 2026-09-10
-**Current phase:** Phase 3 accepted locally and deployed to Railway; alpha polish deferred
+**Updated:** 2026-09-11
+**Current phase:** Phase 4 accepted locally; release verification complete, Railway deployment pending. Phase 3 remains the Railway deployment.
 **Completed phase:** Phase 1 — engineering foundation and Railway deployment validation
 
 ## Purpose
@@ -18,6 +18,37 @@ Before making changes, read:
 Do not place credentials, Clerk tokens, database URLs, Sentry credentials, or Railway secrets in chat, logs, commits, or this file.
 
 ## Repository state at handoff
+
+### Phase 4 acceptance and release preparation — 2026-09-11
+
+The user accepted the localhost experience, including standalone and plan-linked chats. Phase 4 product scope is complete locally; do not start Phase 5 implementation as an implicit continuation of release work.
+
+Release review tightened conversation cursor UUID validation to return `INVALID_CURSOR` (400) for malformed IDs instead of a database/server error, with a PostgreSQL-backed regression test. Final verification: `pnpm check` (31 API tests and 30 web tests), `pnpm test:db` (31 integration tests plus SQL invariants), and `pnpm smoke`. The existing eight low/moderate dependency findings and Vite bundle-size advisory remain non-blocking.
+
+Next release step: push the verified Phase 4 commit when deployment is authorized, then observe CI and both Railway services, migration `20260910120000`, public readiness and unauthenticated endpoint protection. Pushing `main` triggers Railway deployment, so this local acceptance checkpoint does not record a hosted release. Keep `CHAT_EXECUTION_MODE=unavailable` in production: history and plan-chat navigation work, but sending is unavailable until the Phase 5 worker exists. Never enable the development test executor on Railway.
+
+Phase 5 handoff: implement the separate worker and authorized API tools, real coaching, and conversational plan creation. The current manual create-plan UI remains Phase 3 scaffolding; atomic plan-plus-chat creation exists at the API boundary. Standalone-to-new-plan association, worker authentication/claiming, and streaming are not silently supplied by Phase 4 (streaming is Phase 6).
+
+### Phase 4 local checkpoint — 2026-09-10
+
+Implemented the approved [chat design](./phase-4-design.md) and [implementation plan](./phase-4-implementation-plan.md) against merged Phase 3 commit `4a83e7e`. Real coaching remains in Phase 5.
+
+- Atlas migration `20260910120000` adds durable conversations, messages, agent runs, and ordered run events; generated database/OpenAPI/client artifacts and readiness are updated.
+- Owner-scoped APIs provide conversation management, paged history/events, atomic/idempotent sends, plan chat opening, cancellation, and explicit execution capabilities.
+- Plan creation optionally creates its first conversation atomically. Existing plan creation responses retain HTTP 200 for compatibility; new conversation creation uses 201 and sends use 202.
+- Active runs guard disruptive plan lifecycle operations. Effective chat archive state inherits plan archive state without losing individual archive choices. Observed draft identity survives draft deletion.
+- Both mock chat lists are replaced, with plan context, rename/archive/restore, safe send retry, and run activity/status controls. The local executor supports success, cancellation, deliberate failure, and timeout without model calls or plan changes.
+- `CHAT_EXECUTION_MODE=test` is explicitly local/test only; production rejects it and exposes coaching as unavailable.
+
+Running test build: <http://localhost:5175/chat>, API <http://localhost:3002/api/ready>. The existing servers on ports 3000/3001 and 5173/5174 were left running. Reproduction commands and test inputs are in [local development](./local-development.md#phase-4-chat-test-executor).
+
+Verification passed: `pnpm check` (31 API tests, 27 web tests, builds, generated artifacts, migration checksum, configured audit gate), `pnpm test:db` (30 integration tests plus SQL invariants), and `pnpm smoke`. A separate populated Phase 3 fixture migration rehearsal preserved identical hashes for plans, versions, briefs, calibration profiles, and workouts; the disposable rehearsal database was removed afterward.
+
+The signed-in localhost walkthrough used a dedicated Clerk development test account and verified successful persisted replies, reload, cancellation, deliberate failure, archive/read-only/restore, and opening a plan-associated chat. Desktop and 390-pixel mobile layouts were checked, including composer visibility and conversation-panel access. The account and its sample chat/plan remain available in the collaborative preview. Clerk's testing guidance kept this on development credentials. No production authentication configuration was changed.
+
+Accepted limitations: no real coaching or plan mutation from chat; text-only history; polling rather than SSE; no exact historical reconstruction of discarded draft content. The dependency audit reports seven moderate and one low issue, with no high/critical finding blocking the existing gate. Vite retains its bundle-size advisory. Phase 4 is not committed, merged, or deployed to Railway at this checkpoint; the next step is user testing of localhost and any resulting fixes.
+
+User-testing follow-up: restored the original compact chat presentation (icon controls, options menu, centered empty state, message avatars, and inset composer). Added Enter-to-send with Shift+Enter for a newline and IME protection. Accepted sends no longer await background list refreshes, and lost-response retries remain available even if their original run has become active. All 30 web tests, frontend type checks, lint, and the web build pass; real browser mouse submission and mobile composer geometry were checked. The localhost servers were restarted as detached processes after the earlier terminal sessions stopped; use port 5175 for the test-enabled build.
 
 ### Phase 3 local checkpoint — 2026-09-10
 

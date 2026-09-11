@@ -240,6 +240,7 @@ export interface paths {
                     };
                     content: {
                         "application/json": {
+                            conversationId?: string;
                             id: string;
                             displayName: string;
                             stateVersion: number;
@@ -732,6 +733,7 @@ export interface paths {
                     };
                     content: {
                         "application/json": {
+                            conversationId?: string;
                             id: string;
                             displayName: string;
                             stateVersion: number;
@@ -848,6 +850,7 @@ export interface paths {
                     };
                     content: {
                         "application/json": {
+                            conversationId?: string;
                             id: string;
                             displayName: string;
                             stateVersion: number;
@@ -963,6 +966,7 @@ export interface paths {
                     };
                     content: {
                         "application/json": {
+                            conversationId?: string;
                             id: string;
                             displayName: string;
                             stateVersion: number;
@@ -1083,6 +1087,7 @@ export interface paths {
                     };
                     content: {
                         "application/json": {
+                            conversationId?: string;
                             id: string;
                             displayName: string;
                             stateVersion: number;
@@ -1207,6 +1212,7 @@ export interface paths {
                     };
                     content: {
                         "application/json": {
+                            conversationId?: string;
                             id: string;
                             displayName: string;
                             stateVersion: number;
@@ -1331,6 +1337,7 @@ export interface paths {
                     };
                     content: {
                         "application/json": {
+                            conversationId?: string;
                             id: string;
                             displayName: string;
                             stateVersion: number;
@@ -1455,6 +1462,7 @@ export interface paths {
                     };
                     content: {
                         "application/json": {
+                            conversationId?: string;
                             id: string;
                             displayName: string;
                             stateVersion: number;
@@ -1572,6 +1580,7 @@ export interface paths {
                     content: {
                         "application/json": {
                             plans: {
+                                conversationId?: string;
                                 id: string;
                                 displayName: string;
                                 stateVersion: number;
@@ -1671,6 +1680,7 @@ export interface paths {
             requestBody: {
                 content: {
                     "application/json": {
+                        createConversation?: boolean;
                         displayName: string;
                         /** Format: date */
                         startDate?: string;
@@ -1687,6 +1697,7 @@ export interface paths {
                     };
                     content: {
                         "application/json": {
+                            conversationId?: string;
                             id: string;
                             displayName: string;
                             stateVersion: number;
@@ -1931,6 +1942,7 @@ export interface paths {
                     };
                     content: {
                         "application/json": {
+                            conversationId?: string;
                             id: string;
                             displayName: string;
                             stateVersion: number;
@@ -2062,6 +2074,7 @@ export interface paths {
                     };
                     content: {
                         "application/json": {
+                            conversationId?: string;
                             id: string;
                             displayName: string;
                             stateVersion: number;
@@ -2193,6 +2206,7 @@ export interface paths {
                     };
                     content: {
                         "application/json": {
+                            conversationId?: string;
                             id: string;
                             displayName: string;
                             stateVersion: number;
@@ -2278,6 +2292,1383 @@ export interface paths {
                 };
             };
         };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/chat-capabilities": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Successful response. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            executionAvailable: boolean;
+                            /** @enum {string} */
+                            mode: "unavailable" | "test";
+                        };
+                    };
+                };
+                /** @description Request rejected. */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Request rejected. */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Request rejected. */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Request rejected. */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Request rejected. */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/conversations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: {
+                    collection?: "open" | "archive";
+                    planId?: string;
+                    cursor?: string;
+                    limit?: number;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Successful response. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            conversations: {
+                                id: string;
+                                title: string;
+                                planId: string | null;
+                                planName: string | null;
+                                archived: boolean;
+                                planArchived: boolean;
+                                stateVersion: number;
+                                createdAt: string;
+                                activityAt: string;
+                                context: {
+                                    versionId: string;
+                                    /** @enum {string} */
+                                    state: "draft" | "locked";
+                                    versionNumber: number | null;
+                                    editNumber: number;
+                                } | null;
+                            }[];
+                            nextCursor: string | null;
+                        };
+                    };
+                };
+                /** @description Request rejected. */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Request rejected. */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Request rejected. */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Request rejected. */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Request rejected. */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header: {
+                    "idempotency-key": string;
+                };
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        planId?: string;
+                        initialMessage?: {
+                            content: string;
+                            /** @default null */
+                            target?: {
+                                versionId: string;
+                                editNumber: number;
+                            } | null;
+                        };
+                    };
+                };
+            };
+            responses: {
+                /** @description Successful response. */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            conversation: {
+                                id: string;
+                                title: string;
+                                planId: string | null;
+                                planName: string | null;
+                                archived: boolean;
+                                planArchived: boolean;
+                                stateVersion: number;
+                                createdAt: string;
+                                activityAt: string;
+                                context: {
+                                    versionId: string;
+                                    /** @enum {string} */
+                                    state: "draft" | "locked";
+                                    versionNumber: number | null;
+                                    editNumber: number;
+                                } | null;
+                            };
+                            accepted: {
+                                message: {
+                                    id: string;
+                                    conversationId: string;
+                                    sequence: number;
+                                    /** @enum {string} */
+                                    role: "user" | "assistant";
+                                    content: string;
+                                    producingRunId: string | null;
+                                    context: {
+                                        versionId: string;
+                                        /** @enum {string} */
+                                        state: "draft" | "locked";
+                                        versionNumber: number | null;
+                                        editNumber: number;
+                                    } | null;
+                                    createdAt: string;
+                                };
+                                run: {
+                                    id: string;
+                                    conversationId: string;
+                                    planId: string | null;
+                                    userMessageId: string;
+                                    /** @enum {string} */
+                                    status: "queued" | "running" | "cancelling" | "completed" | "failed" | "cancelled";
+                                    context: {
+                                        versionId: string;
+                                        /** @enum {string} */
+                                        state: "draft" | "locked";
+                                        versionNumber: number | null;
+                                        editNumber: number;
+                                    } | null;
+                                    failureCode: string | null;
+                                    createdAt: string;
+                                    startedAt: string | null;
+                                    finishedAt: string | null;
+                                };
+                            } | null;
+                        };
+                    };
+                };
+                /** @description Request rejected. */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Request rejected. */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Request rejected. */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Request rejected. */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Request rejected. */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/conversations/{conversationId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    conversationId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Successful response. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            id: string;
+                            title: string;
+                            planId: string | null;
+                            planName: string | null;
+                            archived: boolean;
+                            planArchived: boolean;
+                            stateVersion: number;
+                            createdAt: string;
+                            activityAt: string;
+                            context: {
+                                versionId: string;
+                                /** @enum {string} */
+                                state: "draft" | "locked";
+                                versionNumber: number | null;
+                                editNumber: number;
+                            } | null;
+                            activeRun: {
+                                id: string;
+                                conversationId: string;
+                                planId: string | null;
+                                userMessageId: string;
+                                /** @enum {string} */
+                                status: "queued" | "running" | "cancelling" | "completed" | "failed" | "cancelled";
+                                context: {
+                                    versionId: string;
+                                    /** @enum {string} */
+                                    state: "draft" | "locked";
+                                    versionNumber: number | null;
+                                    editNumber: number;
+                                } | null;
+                                failureCode: string | null;
+                                createdAt: string;
+                                startedAt: string | null;
+                                finishedAt: string | null;
+                            } | null;
+                            latestRun: {
+                                id: string;
+                                conversationId: string;
+                                planId: string | null;
+                                userMessageId: string;
+                                /** @enum {string} */
+                                status: "queued" | "running" | "cancelling" | "completed" | "failed" | "cancelled";
+                                context: {
+                                    versionId: string;
+                                    /** @enum {string} */
+                                    state: "draft" | "locked";
+                                    versionNumber: number | null;
+                                    editNumber: number;
+                                } | null;
+                                failureCode: string | null;
+                                createdAt: string;
+                                startedAt: string | null;
+                                finishedAt: string | null;
+                            } | null;
+                        };
+                    };
+                };
+                /** @description Request rejected. */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Request rejected. */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Request rejected. */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Request rejected. */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Request rejected. */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    conversationId: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        expectedStateVersion: number;
+                        title: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description Successful response. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            id: string;
+                            title: string;
+                            planId: string | null;
+                            planName: string | null;
+                            archived: boolean;
+                            planArchived: boolean;
+                            stateVersion: number;
+                            createdAt: string;
+                            activityAt: string;
+                            context: {
+                                versionId: string;
+                                /** @enum {string} */
+                                state: "draft" | "locked";
+                                versionNumber: number | null;
+                                editNumber: number;
+                            } | null;
+                        };
+                    };
+                };
+                /** @description Request rejected. */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Request rejected. */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Request rejected. */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Request rejected. */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Request rejected. */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        trace?: never;
+    };
+    "/api/v1/conversations/{conversationId}/archive": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    conversationId: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        expectedStateVersion: number;
+                    };
+                };
+            };
+            responses: {
+                /** @description Successful response. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            id: string;
+                            title: string;
+                            planId: string | null;
+                            planName: string | null;
+                            archived: boolean;
+                            planArchived: boolean;
+                            stateVersion: number;
+                            createdAt: string;
+                            activityAt: string;
+                            context: {
+                                versionId: string;
+                                /** @enum {string} */
+                                state: "draft" | "locked";
+                                versionNumber: number | null;
+                                editNumber: number;
+                            } | null;
+                        };
+                    };
+                };
+                /** @description Request rejected. */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Request rejected. */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Request rejected. */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Request rejected. */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Request rejected. */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/conversations/{conversationId}/unarchive": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    conversationId: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        expectedStateVersion: number;
+                    };
+                };
+            };
+            responses: {
+                /** @description Successful response. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            id: string;
+                            title: string;
+                            planId: string | null;
+                            planName: string | null;
+                            archived: boolean;
+                            planArchived: boolean;
+                            stateVersion: number;
+                            createdAt: string;
+                            activityAt: string;
+                            context: {
+                                versionId: string;
+                                /** @enum {string} */
+                                state: "draft" | "locked";
+                                versionNumber: number | null;
+                                editNumber: number;
+                            } | null;
+                        };
+                    };
+                };
+                /** @description Request rejected. */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Request rejected. */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Request rejected. */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Request rejected. */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Request rejected. */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/plans/{planId}/conversations/open": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    planId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Successful response. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            id: string;
+                            title: string;
+                            planId: string | null;
+                            planName: string | null;
+                            archived: boolean;
+                            planArchived: boolean;
+                            stateVersion: number;
+                            createdAt: string;
+                            activityAt: string;
+                            context: {
+                                versionId: string;
+                                /** @enum {string} */
+                                state: "draft" | "locked";
+                                versionNumber: number | null;
+                                editNumber: number;
+                            } | null;
+                        };
+                    };
+                };
+                /** @description Request rejected. */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Request rejected. */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Request rejected. */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Request rejected. */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Request rejected. */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/conversations/{conversationId}/messages": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: {
+                    beforeSequence?: number;
+                    limit?: number;
+                };
+                header?: never;
+                path: {
+                    conversationId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Successful response. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            messages: {
+                                id: string;
+                                conversationId: string;
+                                sequence: number;
+                                /** @enum {string} */
+                                role: "user" | "assistant";
+                                content: string;
+                                producingRunId: string | null;
+                                context: {
+                                    versionId: string;
+                                    /** @enum {string} */
+                                    state: "draft" | "locked";
+                                    versionNumber: number | null;
+                                    editNumber: number;
+                                } | null;
+                                createdAt: string;
+                            }[];
+                            nextBeforeSequence: number | null;
+                        };
+                    };
+                };
+                /** @description Request rejected. */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Request rejected. */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Request rejected. */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Request rejected. */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Request rejected. */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header: {
+                    "idempotency-key": string;
+                };
+                path: {
+                    conversationId: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        content: string;
+                        /** @default null */
+                        target?: {
+                            versionId: string;
+                            editNumber: number;
+                        } | null;
+                    };
+                };
+            };
+            responses: {
+                /** @description Successful response. */
+                202: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            message: {
+                                id: string;
+                                conversationId: string;
+                                sequence: number;
+                                /** @enum {string} */
+                                role: "user" | "assistant";
+                                content: string;
+                                producingRunId: string | null;
+                                context: {
+                                    versionId: string;
+                                    /** @enum {string} */
+                                    state: "draft" | "locked";
+                                    versionNumber: number | null;
+                                    editNumber: number;
+                                } | null;
+                                createdAt: string;
+                            };
+                            run: {
+                                id: string;
+                                conversationId: string;
+                                planId: string | null;
+                                userMessageId: string;
+                                /** @enum {string} */
+                                status: "queued" | "running" | "cancelling" | "completed" | "failed" | "cancelled";
+                                context: {
+                                    versionId: string;
+                                    /** @enum {string} */
+                                    state: "draft" | "locked";
+                                    versionNumber: number | null;
+                                    editNumber: number;
+                                } | null;
+                                failureCode: string | null;
+                                createdAt: string;
+                                startedAt: string | null;
+                                finishedAt: string | null;
+                            };
+                        };
+                    };
+                };
+                /** @description Request rejected. */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Request rejected. */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Request rejected. */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Request rejected. */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Request rejected. */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/agent-runs/{runId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    runId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Successful response. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            id: string;
+                            conversationId: string;
+                            planId: string | null;
+                            userMessageId: string;
+                            /** @enum {string} */
+                            status: "queued" | "running" | "cancelling" | "completed" | "failed" | "cancelled";
+                            context: {
+                                versionId: string;
+                                /** @enum {string} */
+                                state: "draft" | "locked";
+                                versionNumber: number | null;
+                                editNumber: number;
+                            } | null;
+                            failureCode: string | null;
+                            createdAt: string;
+                            startedAt: string | null;
+                            finishedAt: string | null;
+                        };
+                    };
+                };
+                /** @description Request rejected. */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Request rejected. */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Request rejected. */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Request rejected. */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Request rejected. */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/agent-runs/{runId}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    runId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Successful response. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            id: string;
+                            conversationId: string;
+                            planId: string | null;
+                            userMessageId: string;
+                            /** @enum {string} */
+                            status: "queued" | "running" | "cancelling" | "completed" | "failed" | "cancelled";
+                            context: {
+                                versionId: string;
+                                /** @enum {string} */
+                                state: "draft" | "locked";
+                                versionNumber: number | null;
+                                editNumber: number;
+                            } | null;
+                            failureCode: string | null;
+                            createdAt: string;
+                            startedAt: string | null;
+                            finishedAt: string | null;
+                        };
+                    };
+                };
+                /** @description Request rejected. */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Request rejected. */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Request rejected. */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Request rejected. */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Request rejected. */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/agent-runs/{runId}/events": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: {
+                    afterSequence?: number | null;
+                    limit?: number;
+                };
+                header?: never;
+                path: {
+                    runId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Successful response. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            events: {
+                                sequence: number;
+                                type: string;
+                                createdAt: string;
+                                metadata: {
+                                    [key: string]: unknown;
+                                };
+                            }[];
+                            nextAfterSequence: number | null;
+                        };
+                    };
+                };
+                /** @description Request rejected. */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Request rejected. */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Request rejected. */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Request rejected. */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Request rejected. */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;

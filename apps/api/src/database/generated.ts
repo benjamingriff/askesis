@@ -27,6 +27,36 @@ export type Numeric = ColumnType<string, number | string, number | string>;
 
 export type Timestamp = ColumnType<Date, Date | string, Date | string>;
 
+export interface AgentRunEvents {
+  created_at: Generated<Timestamp>;
+  metadata: Generated<Json>;
+  run_id: string;
+  sequence: number;
+  type: string;
+}
+
+export interface AgentRuns {
+  cancel_requested_at: Timestamp | null;
+  context: Json | null;
+  conversation_id: string;
+  cost_amount: Numeric | null;
+  cost_currency: string | null;
+  created_at: Generated<Timestamp>;
+  deadline_at: Generated<Timestamp>;
+  failure_code: string | null;
+  finished_at: Timestamp | null;
+  id: Generated<string>;
+  input_tokens: number | null;
+  model: string | null;
+  output_tokens: number | null;
+  owner_id: string;
+  plan_id: string | null;
+  provider: string | null;
+  started_at: Timestamp | null;
+  status: Generated<string>;
+  user_message_id: string;
+}
+
 export interface ApiIdempotencyKeys {
   athlete_id: string;
   command_scope: string;
@@ -96,6 +126,29 @@ export interface CalibrationZones {
   target_value: Numeric | null;
   unit: string;
   zone_key: string;
+}
+
+export interface ConversationMessages {
+  content: string;
+  context: Json | null;
+  conversation_id: string;
+  created_at: Generated<Timestamp>;
+  id: Generated<string>;
+  producing_run_id: string | null;
+  role: string;
+  sequence: number;
+}
+
+export interface Conversations {
+  activity_at: Generated<Timestamp>;
+  archived_at: Timestamp | null;
+  created_at: Generated<Timestamp>;
+  id: Generated<string>;
+  next_sequence: Generated<number>;
+  owner_id: string;
+  plan_id: string | null;
+  state_version: Generated<number>;
+  title: string;
 }
 
 export interface MovementDefinitions {
@@ -319,12 +372,16 @@ export interface WorkoutTags {
 }
 
 export interface DB {
+  agent_run_events: AgentRunEvents;
+  agent_runs: AgentRuns;
   api_idempotency_keys: ApiIdempotencyKeys;
   athlete_identities: AthleteIdentities;
   athletes: Athletes;
   "atlas_schema_revisions.atlas_schema_revisions": AtlasSchemaRevisionsAtlasSchemaRevisions;
   calibration_profiles: CalibrationProfiles;
   calibration_zones: CalibrationZones;
+  conversation_messages: ConversationMessages;
+  conversations: Conversations;
   movement_definitions: MovementDefinitions;
   plan_brief_weekdays: PlanBriefWeekdays;
   plan_briefs: PlanBriefs;

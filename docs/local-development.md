@@ -80,6 +80,24 @@ The Vite server runs at <http://localhost:5173> and proxies `/api/*` to <http://
 
 ## Validation commands
 
+### Phase 4 chat test executor
+
+Real coaching arrives in Phase 5. For the Phase 4 local walkthrough, run these in separate terminals after applying migrations:
+
+```bash
+PORT=3002 CHAT_EXECUTION_MODE=test CLERK_AUTHORIZED_PARTIES=http://localhost:5175 pnpm dev:api
+```
+
+```bash
+VITE_API_PROXY_TARGET=http://localhost:3002 pnpm --filter @askesis/web exec vite --port 5175 --strictPort
+```
+
+Open <http://localhost:5175/chat> and sign in with your Clerk development account. Ordinary messages receive a clearly labelled test reply after about three seconds. Use `/test slow` for a 15-second response you can stop, `/test fail` for a deliberate failure, and `/test timeout` for a 30-second timeout. Reload to verify persistence; open a plan's **Chat about this plan** action to test associated conversations. Archive and restore a conversation from its controls or the chat archive.
+
+The test executor makes no provider calls or plan changes. It runs only when explicitly enabled and configuration rejects it in production. The normal Docker/production path keeps execution unavailable while retaining conversation management and history. Restarting the development API checks queued/nonterminal runs again; work past its 30-second deadline fails rather than spinning indefinitely.
+
+### Repository checks
+
 Run the lightweight CI-equivalent checks:
 
 ```bash

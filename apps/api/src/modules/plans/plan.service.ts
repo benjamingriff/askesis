@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import { assertPlanIdle, createConversationRow } from '../chat/chat.core.js';
 import { sql, type Transaction } from 'kysely';
 import type { z } from '@hono/zod-openapi';
 import { getDatabase } from '../../database/client.js';
@@ -172,6 +173,7 @@ export async function organizePlan(
       }
       stateMatches(plan, expectedStateVersion);
       // One UPDATE: archived rows only permit the unarchive transition.
+      if (action === 'archive') await assertPlanIdle(db, planId);
       await db
         .updateTable('plans')
         .set({
@@ -265,7 +267,11 @@ export async function createPlan(
   athleteId: string,
   displayName: string,
   key: string,
-  dates: { startDate?: string | undefined; endDate?: string | undefined } = {},
+  dates: {
+    startDate?: string | undefined;
+    endDate?: string | undefined;
+    createConversation?: boolean | undefined;
+  } = {},
 ) {
   return idempotent(athleteId, 'plan.create', key, { displayName, ...dates }, async (db) => {
     const planId = randomUUID();
@@ -288,7 +294,13 @@ export async function createPlan(
         end_date: dates.endDate ?? null,
       })
       .execute();
-    return detail(db, athleteId, planId);
+    const conversationId = dates.createConversation
+      ? await createConversationRow(db, athleteId, planId)
+      : undefined;
+    return {
+      ...(await detail(db, athleteId, planId)),
+      ...(conversationId ? { conversationId } : {}),
+    };
   });
 }
 export async function editDraft(
@@ -386,6 +398,7 @@ export async function previewLock(athleteId: string, planId: string) {
 export async function lockPlan(athleteId: string, planId: string, input: Command, key: string) {
   return idempotent(athleteId, 'plan.lock', key, { planId, ...input }, async (db) => {
     await ownerPlan(db, athleteId, planId, true);
+    await assertPlanIdle(db, planId);
     const plan = await detail(db, athleteId, planId);
     editable(plan);
     stateMatches(plan, input.expectedStateVersion);
@@ -459,6 +472,7 @@ export async function unlockPlan(athleteId: string, planId: string, expectedStat
     .transaction()
     .execute(async (db) => {
       await ownerPlan(db, athleteId, planId, true);
+      await assertPlanIdle(db, planId);
       const plan = await detail(db, athleteId, planId);
       editable(plan);
       if (plan.draft !== null) return plan;
@@ -496,6 +510,7 @@ export async function unlockPlan(athleteId: string, planId: string, expectedStat
 export async function discardDraft(athleteId: string, planId: string, input: Command, key: string) {
   return idempotent(athleteId, 'plan.discard', key, { planId, ...input }, async (db) => {
     await ownerPlan(db, athleteId, planId, true);
+    await assertPlanIdle(db, planId);
     const plan = await detail(db, athleteId, planId);
     editable(plan);
     stateMatches(plan, input.expectedStateVersion);
@@ -630,6 +645,7 @@ export async function restoreRevision(
     { planId, revisionId, ...input },
     async (db) => {
       await ownerPlan(db, athleteId, planId, true);
+      await assertPlanIdle(db, planId);
       const plan = await detail(db, athleteId, planId);
       stateMatches(plan, input.expectedStateVersion);
       const preview = await restorePreview(db, athleteId, plan, revisionId);

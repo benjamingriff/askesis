@@ -9,6 +9,15 @@ const validEnvironment = {
 };
 
 describe('parseApiConfig', () => {
+  it('keeps chat unavailable by default and rejects the test executor in production', () => {
+    expect(parseApiConfig(validEnvironment).CHAT_EXECUTION_MODE).toBe('unavailable');
+    expect(
+      parseApiConfig({ ...validEnvironment, CHAT_EXECUTION_MODE: 'test' }).CHAT_EXECUTION_MODE,
+    ).toBe('test');
+    expect(() =>
+      parseApiConfig({ ...validEnvironment, NODE_ENV: 'production', CHAT_EXECUTION_MODE: 'test' }),
+    ).toThrow('forbidden in production');
+  });
   it('parses authorized parties and defaults', () => {
     const config = parseApiConfig({
       ...validEnvironment,

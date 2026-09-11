@@ -74,6 +74,7 @@ export const router = createBrowserRouter([
           { path: '/plans/:planId/versions/:revisionId/brief', element: <PlanBriefPage /> },
           { path: '/plans/:planId/versions/:revisionId', element: <PlanRevisionPage /> },
           { path: '/chat', element: <ChatPage /> },
+          { path: '/chat/archive', element: <ChatPage archived /> },
           { path: '/chat/:conversationId', element: <ChatPage /> },
           { path: '/settings', element: <SettingsPage /> },
         ],

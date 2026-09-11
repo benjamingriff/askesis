@@ -30,6 +30,7 @@ export const VersionSchema = z.object({
   lockedAt: z.string().nullable(),
 });
 export const PlanSchema = z.object({
+  conversationId: Id.optional(),
   id: Id,
   displayName: z.string(),
   stateVersion: z.number().int(),
@@ -83,6 +84,7 @@ export const CommandSchema = z
   .strict();
 export const CreateSchema = z
   .object({
+    createConversation: z.boolean().optional(),
     displayName: z.string().trim().min(1).max(200),
     startDate: z.iso.date().optional(),
     endDate: z.iso.date().optional(),

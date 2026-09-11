@@ -21,6 +21,8 @@ This directory records the proposed direction for Askesis beyond the original fi
 - [Phase 3 plan brief and running pace calibration](./phase-3-plan-brief-and-calibration-refinement.md) — accepted product contract for plan-specific running context, human confirmation, and effective-dated pace guides.
 - [Phase 3 schema and API contract](./phase-3-schema-contract.md) — proposed brief, weekday, calibration, confirmation, effective-period, and workout-resolution contracts.
 - [Phase 3 implementation plan](./phase-3-implementation-plan.md) — proposed calculator-first delivery stages, API/UI work, verification, and Railway rollout.
+- [Phase 4 design](./phase-4-design.md) — approved durable conversation and run lifecycle contract, archive semantics, and recorded alpha decisions; real coaching arrives in Phase 5.
+- [Phase 4 implementation plan](./phase-4-implementation-plan.md) — delivery stages, Phase 3 integration seams, and acceptance checks for persistent chat.
 - [Example queries](./example-queries.md) — inspect plans, workout trees, weekly totals, and calibrations.
 - [Implementation roadmap](./implementation-roadmap.md) — the earlier data-model implementation sequence and deferred concerns.
 

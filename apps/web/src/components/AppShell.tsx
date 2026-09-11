@@ -16,14 +16,10 @@ import {
 } from 'lucide-react';
 import { useState } from 'react';
 import { NavLink, Outlet } from 'react-router';
-
-const mockChats = [
-  { id: 'travel-week', title: 'Adjust next week around travel' },
-  { id: 'hill-session', title: 'Explain Wednesday’s hill session' },
-  { id: 'cardiff-goal', title: 'Review my Cardiff goal' },
-];
+import { useConversations } from '../chat';
 
 export function AppShell() {
+  const chats = useConversations();
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [accountOpen, setAccountOpen] = useState(false);
@@ -110,11 +106,12 @@ export function AppShell() {
             </NavLink>
           </div>
           <div className="sidebar-chat-list">
-            {mockChats.map((chat) => (
+            {chats.data?.pages[0]?.conversations.map((chat) => (
               <NavLink to={`/chat/${chat.id}`} key={chat.id} onClick={() => setMobileOpen(false)}>
                 {chat.title}
               </NavLink>
             ))}
+            {chats.error && <span>Could not load chats.</span>}
           </div>
         </div>
 

@@ -754,6 +754,10 @@
                 "schema": {
                   "type": "object",
                   "properties": {
+                    "conversationId": {
+                      "type": "string",
+                      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+                    },
                     "id": {
                       "type": "string",
                       "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
@@ -1781,6 +1785,10 @@
                 "schema": {
                   "type": "object",
                   "properties": {
+                    "conversationId": {
+                      "type": "string",
+                      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+                    },
                     "id": {
                       "type": "string",
                       "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
@@ -2043,6 +2051,10 @@
                 "schema": {
                   "type": "object",
                   "properties": {
+                    "conversationId": {
+                      "type": "string",
+                      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+                    },
                     "id": {
                       "type": "string",
                       "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
@@ -2276,6 +2288,10 @@
                 "schema": {
                   "type": "object",
                   "properties": {
+                    "conversationId": {
+                      "type": "string",
+                      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+                    },
                     "id": {
                       "type": "string",
                       "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
@@ -2532,6 +2548,10 @@
                 "schema": {
                   "type": "object",
                   "properties": {
+                    "conversationId": {
+                      "type": "string",
+                      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+                    },
                     "id": {
                       "type": "string",
                       "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
@@ -2788,6 +2808,10 @@
                 "schema": {
                   "type": "object",
                   "properties": {
+                    "conversationId": {
+                      "type": "string",
+                      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+                    },
                     "id": {
                       "type": "string",
                       "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
@@ -3044,6 +3068,10 @@
                 "schema": {
                   "type": "object",
                   "properties": {
+                    "conversationId": {
+                      "type": "string",
+                      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+                    },
                     "id": {
                       "type": "string",
                       "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
@@ -3300,6 +3328,10 @@
                 "schema": {
                   "type": "object",
                   "properties": {
+                    "conversationId": {
+                      "type": "string",
+                      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+                    },
                     "id": {
                       "type": "string",
                       "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
@@ -3545,6 +3577,10 @@
                       "items": {
                         "type": "object",
                         "properties": {
+                          "conversationId": {
+                            "type": "string",
+                            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+                          },
                           "id": {
                             "type": "string",
                             "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
@@ -3784,6 +3820,9 @@
               "schema": {
                 "type": "object",
                 "properties": {
+                  "createConversation": {
+                    "type": "boolean"
+                  },
                   "displayName": {
                     "type": "string",
                     "minLength": 1,
@@ -3814,6 +3853,10 @@
                 "schema": {
                   "type": "object",
                   "properties": {
+                    "conversationId": {
+                      "type": "string",
+                      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+                    },
                     "id": {
                       "type": "string",
                       "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
@@ -4305,6 +4348,10 @@
                 "schema": {
                   "type": "object",
                   "properties": {
+                    "conversationId": {
+                      "type": "string",
+                      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+                    },
                     "id": {
                       "type": "string",
                       "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
@@ -4594,6 +4641,10 @@
                 "schema": {
                   "type": "object",
                   "properties": {
+                    "conversationId": {
+                      "type": "string",
+                      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+                    },
                     "id": {
                       "type": "string",
                       "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
@@ -4883,6 +4934,10 @@
                 "schema": {
                   "type": "object",
                   "properties": {
+                    "conversationId": {
+                      "type": "string",
+                      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+                    },
                     "id": {
                       "type": "string",
                       "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
@@ -5082,6 +5137,2697 @@
             }
           },
           "422": {
+            "description": "Request rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/chat-capabilities": {
+      "get": {
+        "tags": [
+          "Chat"
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "executionAvailable": {
+                      "type": "boolean"
+                    },
+                    "mode": {
+                      "type": "string",
+                      "enum": [
+                        "unavailable",
+                        "test"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "executionAvailable",
+                    "mode"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Request rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Request rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Request rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Request rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Request rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/conversations": {
+      "get": {
+        "tags": [
+          "Chat"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "open",
+                "archive"
+              ],
+              "default": "open"
+            },
+            "required": false,
+            "name": "collection",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+            },
+            "required": false,
+            "name": "planId",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "maxLength": 300
+            },
+            "required": false,
+            "name": "cursor",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 50
+            },
+            "required": false,
+            "name": "limit",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "conversations": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+                          },
+                          "title": {
+                            "type": "string"
+                          },
+                          "planId": {
+                            "type": "string",
+                            "nullable": true,
+                            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+                          },
+                          "planName": {
+                            "type": "string",
+                            "nullable": true
+                          },
+                          "archived": {
+                            "type": "boolean"
+                          },
+                          "planArchived": {
+                            "type": "boolean"
+                          },
+                          "stateVersion": {
+                            "type": "integer"
+                          },
+                          "createdAt": {
+                            "type": "string"
+                          },
+                          "activityAt": {
+                            "type": "string"
+                          },
+                          "context": {
+                            "type": "object",
+                            "nullable": true,
+                            "properties": {
+                              "versionId": {
+                                "type": "string",
+                                "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+                              },
+                              "state": {
+                                "type": "string",
+                                "enum": [
+                                  "draft",
+                                  "locked"
+                                ]
+                              },
+                              "versionNumber": {
+                                "type": "integer",
+                                "nullable": true
+                              },
+                              "editNumber": {
+                                "type": "integer",
+                                "minimum": 0,
+                                "exclusiveMinimum": true
+                              }
+                            },
+                            "required": [
+                              "versionId",
+                              "state",
+                              "versionNumber",
+                              "editNumber"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "title",
+                          "planId",
+                          "planName",
+                          "archived",
+                          "planArchived",
+                          "stateVersion",
+                          "createdAt",
+                          "activityAt",
+                          "context"
+                        ]
+                      }
+                    },
+                    "nextCursor": {
+                      "type": "string",
+                      "nullable": true
+                    }
+                  },
+                  "required": [
+                    "conversations",
+                    "nextCursor"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Request rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Request rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Request rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Request rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Request rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Chat"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 200
+            },
+            "required": true,
+            "name": "idempotency-key",
+            "in": "header"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "planId": {
+                    "type": "string",
+                    "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+                  },
+                  "initialMessage": {
+                    "type": "object",
+                    "properties": {
+                      "content": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 32000
+                      },
+                      "target": {
+                        "type": "object",
+                        "nullable": true,
+                        "properties": {
+                          "versionId": {
+                            "type": "string",
+                            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+                          },
+                          "editNumber": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "exclusiveMinimum": true
+                          }
+                        },
+                        "default": null,
+                        "required": [
+                          "versionId",
+                          "editNumber"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "content"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "conversation": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+                        },
+                        "title": {
+                          "type": "string"
+                        },
+                        "planId": {
+                          "type": "string",
+                          "nullable": true,
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+                        },
+                        "planName": {
+                          "type": "string",
+                          "nullable": true
+                        },
+                        "archived": {
+                          "type": "boolean"
+                        },
+                        "planArchived": {
+                          "type": "boolean"
+                        },
+                        "stateVersion": {
+                          "type": "integer"
+                        },
+                        "createdAt": {
+                          "type": "string"
+                        },
+                        "activityAt": {
+                          "type": "string"
+                        },
+                        "context": {
+                          "type": "object",
+                          "nullable": true,
+                          "properties": {
+                            "versionId": {
+                              "type": "string",
+                              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+                            },
+                            "state": {
+                              "type": "string",
+                              "enum": [
+                                "draft",
+                                "locked"
+                              ]
+                            },
+                            "versionNumber": {
+                              "type": "integer",
+                              "nullable": true
+                            },
+                            "editNumber": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "exclusiveMinimum": true
+                            }
+                          },
+                          "required": [
+                            "versionId",
+                            "state",
+                            "versionNumber",
+                            "editNumber"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "title",
+                        "planId",
+                        "planName",
+                        "archived",
+                        "planArchived",
+                        "stateVersion",
+                        "createdAt",
+                        "activityAt",
+                        "context"
+                      ]
+                    },
+                    "accepted": {
+                      "type": "object",
+                      "nullable": true,
+                      "properties": {
+                        "message": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+                            },
+                            "conversationId": {
+                              "type": "string",
+                              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+                            },
+                            "sequence": {
+                              "type": "integer"
+                            },
+                            "role": {
+                              "type": "string",
+                              "enum": [
+                                "user",
+                                "assistant"
+                              ]
+                            },
+                            "content": {
+                              "type": "string"
+                            },
+                            "producingRunId": {
+                              "type": "string",
+                              "nullable": true,
+                              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+                            },
+                            "context": {
+                              "type": "object",
+                              "nullable": true,
+                              "properties": {
+                                "versionId": {
+                                  "type": "string",
+                                  "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+                                },
+                                "state": {
+                                  "type": "string",
+                                  "enum": [
+                                    "draft",
+                                    "locked"
+                                  ]
+                                },
+                                "versionNumber": {
+                                  "type": "integer",
+                                  "nullable": true
+                                },
+                                "editNumber": {
+                                  "type": "integer",
+                                  "minimum": 0,
+                                  "exclusiveMinimum": true
+                                }
+                              },
+                              "required": [
+                                "versionId",
+                                "state",
+                                "versionNumber",
+                                "editNumber"
+                              ]
+                            },
+                            "createdAt": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "conversationId",
+                            "sequence",
+                            "role",
+                            "content",
+                            "producingRunId",
+                            "context",
+                            "createdAt"
+                          ]
+                        },
+                        "run": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+                            },
+                            "conversationId": {
+                              "type": "string",
+                              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+                            },
+                            "planId": {
+                              "type": "string",
+                              "nullable": true,
+                              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+                            },
+                            "userMessageId": {
+                              "type": "string",
+                              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+                            },
+                            "status": {
+                              "type": "string",
+                              "enum": [
+                                "queued",
+                                "running",
+                                "cancelling",
+                                "completed",
+                                "failed",
+                                "cancelled"
+                              ]
+                            },
+                            "context": {
+                              "type": "object",
+                              "nullable": true,
+                              "properties": {
+                                "versionId": {
+                                  "type": "string",
+                                  "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+                                },
+                                "state": {
+                                  "type": "string",
+                                  "enum": [
+                                    "draft",
+                                    "locked"
+                                  ]
+                                },
+                                "versionNumber": {
+                                  "type": "integer",
+                                  "nullable": true
+                                },
+                                "editNumber": {
+                                  "type": "integer",
+                                  "minimum": 0,
+                                  "exclusiveMinimum": true
+                                }
+                              },
+                              "required": [
+                                "versionId",
+                                "state",
+                                "versionNumber",
+                                "editNumber"
+                              ]
+                            },
+                            "failureCode": {
+                              "type": "string",
+                              "nullable": true
+                            },
+                            "createdAt": {
+                              "type": "string"
+                            },
+                            "startedAt": {
+                              "type": "string",
+                              "nullable": true
+                            },
+                            "finishedAt": {
+                              "type": "string",
+                              "nullable": true
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "conversationId",
+                            "planId",
+                            "userMessageId",
+                            "status",
+                            "context",
+                            "failureCode",
+                            "createdAt",
+                            "startedAt",
+                            "finishedAt"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "message",
+                        "run"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "conversation",
+                    "accepted"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Request rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Request rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Request rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Request rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Request rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/conversations/{conversationId}": {
+      "get": {
+        "tags": [
+          "Chat"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+            },
+            "required": true,
+            "name": "conversationId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "planId": {
+                      "type": "string",
+                      "nullable": true,
+                      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+                    },
+                    "planName": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "archived": {
+                      "type": "boolean"
+                    },
+                    "planArchived": {
+                      "type": "boolean"
+                    },
+                    "stateVersion": {
+                      "type": "integer"
+                    },
+                    "createdAt": {
+                      "type": "string"
+                    },
+                    "activityAt": {
+                      "type": "string"
+                    },
+                    "context": {
+                      "type": "object",
+                      "nullable": true,
+                      "properties": {
+                        "versionId": {
+                          "type": "string",
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+                        },
+                        "state": {
+                          "type": "string",
+                          "enum": [
+                            "draft",
+                            "locked"
+                          ]
+                        },
+                        "versionNumber": {
+                          "type": "integer",
+                          "nullable": true
+                        },
+                        "editNumber": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "exclusiveMinimum": true
+                        }
+                      },
+                      "required": [
+                        "versionId",
+                        "state",
+                        "versionNumber",
+                        "editNumber"
+                      ]
+                    },
+                    "activeRun": {
+                      "type": "object",
+                      "nullable": true,
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+                        },
+                        "conversationId": {
+                          "type": "string",
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+                        },
+                        "planId": {
+                          "type": "string",
+                          "nullable": true,
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+                        },
+                        "userMessageId": {
+                          "type": "string",
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+                        },
+                        "status": {
+                          "type": "string",
+                          "enum": [
+                            "queued",
+                            "running",
+                            "cancelling",
+                            "completed",
+                            "failed",
+                            "cancelled"
+                          ]
+                        },
+                        "context": {
+                          "type": "object",
+                          "nullable": true,
+                          "properties": {
+                            "versionId": {
+                              "type": "string",
+                              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+                            },
+                            "state": {
+                              "type": "string",
+                              "enum": [
+                                "draft",
+                                "locked"
+                              ]
+                            },
+                            "versionNumber": {
+                              "type": "integer",
+                              "nullable": true
+                            },
+                            "editNumber": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "exclusiveMinimum": true
+                            }
+                          },
+                          "required": [
+                            "versionId",
+                            "state",
+                            "versionNumber",
+                            "editNumber"
+                          ]
+                        },
+                        "failureCode": {
+                          "type": "string",
+                          "nullable": true
+                        },
+                        "createdAt": {
+                          "type": "string"
+                        },
+                        "startedAt": {
+                          "type": "string",
+                          "nullable": true
+                        },
+                        "finishedAt": {
+                          "type": "string",
+                          "nullable": true
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "conversationId",
+                        "planId",
+                        "userMessageId",
+                        "status",
+                        "context",
+                        "failureCode",
+                        "createdAt",
+                        "startedAt",
+                        "finishedAt"
+                      ]
+                    },
+                    "latestRun": {
+                      "type": "object",
+                      "nullable": true,
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+                        },
+                        "conversationId": {
+                          "type": "string",
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+                        },
+                        "planId": {
+                          "type": "string",
+                          "nullable": true,
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+                        },
+                        "userMessageId": {
+                          "type": "string",
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+                        },
+                        "status": {
+                          "type": "string",
+                          "enum": [
+                            "queued",
+                            "running",
+                            "cancelling",
+                            "completed",
+                            "failed",
+                            "cancelled"
+                          ]
+                        },
+                        "context": {
+                          "type": "object",
+                          "nullable": true,
+                          "properties": {
+                            "versionId": {
+                              "type": "string",
+                              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+                            },
+                            "state": {
+                              "type": "string",
+                              "enum": [
+                                "draft",
+                                "locked"
+                              ]
+                            },
+                            "versionNumber": {
+                              "type": "integer",
+                              "nullable": true
+                            },
+                            "editNumber": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "exclusiveMinimum": true
+                            }
+                          },
+                          "required": [
+                            "versionId",
+                            "state",
+                            "versionNumber",
+                            "editNumber"
+                          ]
+                        },
+                        "failureCode": {
+                          "type": "string",
+                          "nullable": true
+                        },
+                        "createdAt": {
+                          "type": "string"
+                        },
+                        "startedAt": {
+                          "type": "string",
+                          "nullable": true
+                        },
+                        "finishedAt": {
+                          "type": "string",
+                          "nullable": true
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "conversationId",
+                        "planId",
+                        "userMessageId",
+                        "status",
+                        "context",
+                        "failureCode",
+                        "createdAt",
+                        "startedAt",
+                        "finishedAt"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "title",
+                    "planId",
+                    "planName",
+                    "archived",
+                    "planArchived",
+                    "stateVersion",
+                    "createdAt",
+                    "activityAt",
+                    "context",
+                    "activeRun",
+                    "latestRun"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Request rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Request rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Request rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Request rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Request rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "Chat"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+            },
+            "required": true,
+            "name": "conversationId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "expectedStateVersion": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "exclusiveMinimum": true
+                  },
+                  "title": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 120
+                  }
+                },
+                "required": [
+                  "expectedStateVersion",
+                  "title"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "planId": {
+                      "type": "string",
+                      "nullable": true,
+                      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+                    },
+                    "planName": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "archived": {
+                      "type": "boolean"
+                    },
+                    "planArchived": {
+                      "type": "boolean"
+                    },
+                    "stateVersion": {
+                      "type": "integer"
+                    },
+                    "createdAt": {
+                      "type": "string"
+                    },
+                    "activityAt": {
+                      "type": "string"
+                    },
+                    "context": {
+                      "type": "object",
+                      "nullable": true,
+                      "properties": {
+                        "versionId": {
+                          "type": "string",
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+                        },
+                        "state": {
+                          "type": "string",
+                          "enum": [
+                            "draft",
+                            "locked"
+                          ]
+                        },
+                        "versionNumber": {
+                          "type": "integer",
+                          "nullable": true
+                        },
+                        "editNumber": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "exclusiveMinimum": true
+                        }
+                      },
+                      "required": [
+                        "versionId",
+                        "state",
+                        "versionNumber",
+                        "editNumber"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "title",
+                    "planId",
+                    "planName",
+                    "archived",
+                    "planArchived",
+                    "stateVersion",
+                    "createdAt",
+                    "activityAt",
+                    "context"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Request rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Request rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Request rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Request rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Request rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/conversations/{conversationId}/archive": {
+      "post": {
+        "tags": [
+          "Chat"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+            },
+            "required": true,
+            "name": "conversationId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "expectedStateVersion": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "exclusiveMinimum": true
+                  }
+                },
+                "required": [
+                  "expectedStateVersion"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "planId": {
+                      "type": "string",
+                      "nullable": true,
+                      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+                    },
+                    "planName": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "archived": {
+                      "type": "boolean"
+                    },
+                    "planArchived": {
+                      "type": "boolean"
+                    },
+                    "stateVersion": {
+                      "type": "integer"
+                    },
+                    "createdAt": {
+                      "type": "string"
+                    },
+                    "activityAt": {
+                      "type": "string"
+                    },
+                    "context": {
+                      "type": "object",
+                      "nullable": true,
+                      "properties": {
+                        "versionId": {
+                          "type": "string",
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+                        },
+                        "state": {
+                          "type": "string",
+                          "enum": [
+                            "draft",
+                            "locked"
+                          ]
+                        },
+                        "versionNumber": {
+                          "type": "integer",
+                          "nullable": true
+                        },
+                        "editNumber": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "exclusiveMinimum": true
+                        }
+                      },
+                      "required": [
+                        "versionId",
+                        "state",
+                        "versionNumber",
+                        "editNumber"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "title",
+                    "planId",
+                    "planName",
+                    "archived",
+                    "planArchived",
+                    "stateVersion",
+                    "createdAt",
+                    "activityAt",
+                    "context"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Request rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Request rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Request rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Request rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Request rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/conversations/{conversationId}/unarchive": {
+      "post": {
+        "tags": [
+          "Chat"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+            },
+            "required": true,
+            "name": "conversationId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "expectedStateVersion": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "exclusiveMinimum": true
+                  }
+                },
+                "required": [
+                  "expectedStateVersion"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "planId": {
+                      "type": "string",
+                      "nullable": true,
+                      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+                    },
+                    "planName": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "archived": {
+                      "type": "boolean"
+                    },
+                    "planArchived": {
+                      "type": "boolean"
+                    },
+                    "stateVersion": {
+                      "type": "integer"
+                    },
+                    "createdAt": {
+                      "type": "string"
+                    },
+                    "activityAt": {
+                      "type": "string"
+                    },
+                    "context": {
+                      "type": "object",
+                      "nullable": true,
+                      "properties": {
+                        "versionId": {
+                          "type": "string",
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+                        },
+                        "state": {
+                          "type": "string",
+                          "enum": [
+                            "draft",
+                            "locked"
+                          ]
+                        },
+                        "versionNumber": {
+                          "type": "integer",
+                          "nullable": true
+                        },
+                        "editNumber": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "exclusiveMinimum": true
+                        }
+                      },
+                      "required": [
+                        "versionId",
+                        "state",
+                        "versionNumber",
+                        "editNumber"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "title",
+                    "planId",
+                    "planName",
+                    "archived",
+                    "planArchived",
+                    "stateVersion",
+                    "createdAt",
+                    "activityAt",
+                    "context"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Request rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Request rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Request rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Request rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Request rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/plans/{planId}/conversations/open": {
+      "post": {
+        "tags": [
+          "Chat"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+            },
+            "required": true,
+            "name": "planId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "planId": {
+                      "type": "string",
+                      "nullable": true,
+                      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+                    },
+                    "planName": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "archived": {
+                      "type": "boolean"
+                    },
+                    "planArchived": {
+                      "type": "boolean"
+                    },
+                    "stateVersion": {
+                      "type": "integer"
+                    },
+                    "createdAt": {
+                      "type": "string"
+                    },
+                    "activityAt": {
+                      "type": "string"
+                    },
+                    "context": {
+                      "type": "object",
+                      "nullable": true,
+                      "properties": {
+                        "versionId": {
+                          "type": "string",
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+                        },
+                        "state": {
+                          "type": "string",
+                          "enum": [
+                            "draft",
+                            "locked"
+                          ]
+                        },
+                        "versionNumber": {
+                          "type": "integer",
+                          "nullable": true
+                        },
+                        "editNumber": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "exclusiveMinimum": true
+                        }
+                      },
+                      "required": [
+                        "versionId",
+                        "state",
+                        "versionNumber",
+                        "editNumber"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "title",
+                    "planId",
+                    "planName",
+                    "archived",
+                    "planArchived",
+                    "stateVersion",
+                    "createdAt",
+                    "activityAt",
+                    "context"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Request rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Request rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Request rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Request rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Request rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/conversations/{conversationId}/messages": {
+      "get": {
+        "tags": [
+          "Chat"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+            },
+            "required": true,
+            "name": "conversationId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "exclusiveMinimum": true
+            },
+            "required": false,
+            "name": "beforeSequence",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 50
+            },
+            "required": false,
+            "name": "limit",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "messages": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+                          },
+                          "conversationId": {
+                            "type": "string",
+                            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+                          },
+                          "sequence": {
+                            "type": "integer"
+                          },
+                          "role": {
+                            "type": "string",
+                            "enum": [
+                              "user",
+                              "assistant"
+                            ]
+                          },
+                          "content": {
+                            "type": "string"
+                          },
+                          "producingRunId": {
+                            "type": "string",
+                            "nullable": true,
+                            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+                          },
+                          "context": {
+                            "type": "object",
+                            "nullable": true,
+                            "properties": {
+                              "versionId": {
+                                "type": "string",
+                                "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+                              },
+                              "state": {
+                                "type": "string",
+                                "enum": [
+                                  "draft",
+                                  "locked"
+                                ]
+                              },
+                              "versionNumber": {
+                                "type": "integer",
+                                "nullable": true
+                              },
+                              "editNumber": {
+                                "type": "integer",
+                                "minimum": 0,
+                                "exclusiveMinimum": true
+                              }
+                            },
+                            "required": [
+                              "versionId",
+                              "state",
+                              "versionNumber",
+                              "editNumber"
+                            ]
+                          },
+                          "createdAt": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "conversationId",
+                          "sequence",
+                          "role",
+                          "content",
+                          "producingRunId",
+                          "context",
+                          "createdAt"
+                        ]
+                      }
+                    },
+                    "nextBeforeSequence": {
+                      "type": "number",
+                      "nullable": true
+                    }
+                  },
+                  "required": [
+                    "messages",
+                    "nextBeforeSequence"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Request rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Request rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Request rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Request rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Request rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Chat"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+            },
+            "required": true,
+            "name": "conversationId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 200
+            },
+            "required": true,
+            "name": "idempotency-key",
+            "in": "header"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "content": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 32000
+                  },
+                  "target": {
+                    "type": "object",
+                    "nullable": true,
+                    "properties": {
+                      "versionId": {
+                        "type": "string",
+                        "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+                      },
+                      "editNumber": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "exclusiveMinimum": true
+                      }
+                    },
+                    "default": null,
+                    "required": [
+                      "versionId",
+                      "editNumber"
+                    ]
+                  }
+                },
+                "required": [
+                  "content"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+                        },
+                        "conversationId": {
+                          "type": "string",
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+                        },
+                        "sequence": {
+                          "type": "integer"
+                        },
+                        "role": {
+                          "type": "string",
+                          "enum": [
+                            "user",
+                            "assistant"
+                          ]
+                        },
+                        "content": {
+                          "type": "string"
+                        },
+                        "producingRunId": {
+                          "type": "string",
+                          "nullable": true,
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+                        },
+                        "context": {
+                          "type": "object",
+                          "nullable": true,
+                          "properties": {
+                            "versionId": {
+                              "type": "string",
+                              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+                            },
+                            "state": {
+                              "type": "string",
+                              "enum": [
+                                "draft",
+                                "locked"
+                              ]
+                            },
+                            "versionNumber": {
+                              "type": "integer",
+                              "nullable": true
+                            },
+                            "editNumber": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "exclusiveMinimum": true
+                            }
+                          },
+                          "required": [
+                            "versionId",
+                            "state",
+                            "versionNumber",
+                            "editNumber"
+                          ]
+                        },
+                        "createdAt": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "conversationId",
+                        "sequence",
+                        "role",
+                        "content",
+                        "producingRunId",
+                        "context",
+                        "createdAt"
+                      ]
+                    },
+                    "run": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+                        },
+                        "conversationId": {
+                          "type": "string",
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+                        },
+                        "planId": {
+                          "type": "string",
+                          "nullable": true,
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+                        },
+                        "userMessageId": {
+                          "type": "string",
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+                        },
+                        "status": {
+                          "type": "string",
+                          "enum": [
+                            "queued",
+                            "running",
+                            "cancelling",
+                            "completed",
+                            "failed",
+                            "cancelled"
+                          ]
+                        },
+                        "context": {
+                          "type": "object",
+                          "nullable": true,
+                          "properties": {
+                            "versionId": {
+                              "type": "string",
+                              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+                            },
+                            "state": {
+                              "type": "string",
+                              "enum": [
+                                "draft",
+                                "locked"
+                              ]
+                            },
+                            "versionNumber": {
+                              "type": "integer",
+                              "nullable": true
+                            },
+                            "editNumber": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "exclusiveMinimum": true
+                            }
+                          },
+                          "required": [
+                            "versionId",
+                            "state",
+                            "versionNumber",
+                            "editNumber"
+                          ]
+                        },
+                        "failureCode": {
+                          "type": "string",
+                          "nullable": true
+                        },
+                        "createdAt": {
+                          "type": "string"
+                        },
+                        "startedAt": {
+                          "type": "string",
+                          "nullable": true
+                        },
+                        "finishedAt": {
+                          "type": "string",
+                          "nullable": true
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "conversationId",
+                        "planId",
+                        "userMessageId",
+                        "status",
+                        "context",
+                        "failureCode",
+                        "createdAt",
+                        "startedAt",
+                        "finishedAt"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "message",
+                    "run"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Request rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Request rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Request rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Request rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Request rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/agent-runs/{runId}": {
+      "get": {
+        "tags": [
+          "Chat"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+            },
+            "required": true,
+            "name": "runId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+                    },
+                    "conversationId": {
+                      "type": "string",
+                      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+                    },
+                    "planId": {
+                      "type": "string",
+                      "nullable": true,
+                      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+                    },
+                    "userMessageId": {
+                      "type": "string",
+                      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "queued",
+                        "running",
+                        "cancelling",
+                        "completed",
+                        "failed",
+                        "cancelled"
+                      ]
+                    },
+                    "context": {
+                      "type": "object",
+                      "nullable": true,
+                      "properties": {
+                        "versionId": {
+                          "type": "string",
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+                        },
+                        "state": {
+                          "type": "string",
+                          "enum": [
+                            "draft",
+                            "locked"
+                          ]
+                        },
+                        "versionNumber": {
+                          "type": "integer",
+                          "nullable": true
+                        },
+                        "editNumber": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "exclusiveMinimum": true
+                        }
+                      },
+                      "required": [
+                        "versionId",
+                        "state",
+                        "versionNumber",
+                        "editNumber"
+                      ]
+                    },
+                    "failureCode": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "createdAt": {
+                      "type": "string"
+                    },
+                    "startedAt": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "finishedAt": {
+                      "type": "string",
+                      "nullable": true
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "conversationId",
+                    "planId",
+                    "userMessageId",
+                    "status",
+                    "context",
+                    "failureCode",
+                    "createdAt",
+                    "startedAt",
+                    "finishedAt"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Request rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Request rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Request rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Request rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Request rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/agent-runs/{runId}/cancel": {
+      "post": {
+        "tags": [
+          "Chat"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+            },
+            "required": true,
+            "name": "runId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+                    },
+                    "conversationId": {
+                      "type": "string",
+                      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+                    },
+                    "planId": {
+                      "type": "string",
+                      "nullable": true,
+                      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+                    },
+                    "userMessageId": {
+                      "type": "string",
+                      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "queued",
+                        "running",
+                        "cancelling",
+                        "completed",
+                        "failed",
+                        "cancelled"
+                      ]
+                    },
+                    "context": {
+                      "type": "object",
+                      "nullable": true,
+                      "properties": {
+                        "versionId": {
+                          "type": "string",
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+                        },
+                        "state": {
+                          "type": "string",
+                          "enum": [
+                            "draft",
+                            "locked"
+                          ]
+                        },
+                        "versionNumber": {
+                          "type": "integer",
+                          "nullable": true
+                        },
+                        "editNumber": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "exclusiveMinimum": true
+                        }
+                      },
+                      "required": [
+                        "versionId",
+                        "state",
+                        "versionNumber",
+                        "editNumber"
+                      ]
+                    },
+                    "failureCode": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "createdAt": {
+                      "type": "string"
+                    },
+                    "startedAt": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "finishedAt": {
+                      "type": "string",
+                      "nullable": true
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "conversationId",
+                    "planId",
+                    "userMessageId",
+                    "status",
+                    "context",
+                    "failureCode",
+                    "createdAt",
+                    "startedAt",
+                    "finishedAt"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Request rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Request rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Request rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Request rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Request rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/agent-runs/{runId}/events": {
+      "get": {
+        "tags": [
+          "Chat"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+            },
+            "required": true,
+            "name": "runId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "nullable": true,
+              "minimum": 0,
+              "default": 0
+            },
+            "required": false,
+            "name": "afterSequence",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 50
+            },
+            "required": false,
+            "name": "limit",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "events": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "sequence": {
+                            "type": "integer"
+                          },
+                          "type": {
+                            "type": "string"
+                          },
+                          "createdAt": {
+                            "type": "string"
+                          },
+                          "metadata": {
+                            "type": "object",
+                            "additionalProperties": {
+                              "nullable": true
+                            }
+                          }
+                        },
+                        "required": [
+                          "sequence",
+                          "type",
+                          "createdAt",
+                          "metadata"
+                        ]
+                      }
+                    },
+                    "nextAfterSequence": {
+                      "type": "number",
+                      "nullable": true
+                    }
+                  },
+                  "required": [
+                    "events",
+                    "nextAfterSequence"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Request rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Request rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Request rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Request rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
             "description": "Request rejected.",
             "content": {
               "application/json": {

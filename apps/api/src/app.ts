@@ -11,6 +11,8 @@ import { registerWorkoutRoutes } from './modules/workouts/workout.routes.js';
 import { registerPlanRoutes } from './modules/plans/plan.routes.js';
 import { registerBriefRoutes } from './modules/plans/brief.routes.js';
 import { PlanError } from './modules/plans/plan.service.js';
+import { ChatError } from './modules/chat/chat.core.js';
+import { registerChatRoutes } from './modules/chat/chat.routes.js';
 
 export const app = new OpenAPIHono<AppEnvironment>({
   defaultHook: (result, context) => {
@@ -32,7 +34,7 @@ app.use('*', requestContext);
 
 app.onError((error, context) => {
   const requestId = context.get('requestId');
-  if (error instanceof PlanError) {
+  if (error instanceof PlanError || error instanceof ChatError) {
     return context.json(
       { error: { code: error.code, message: error.message, requestId } },
       error.status,
@@ -87,7 +89,7 @@ app.get('/api/ready', async (context) => {
     select exists (
       select 1
       from atlas_schema_revisions.atlas_schema_revisions
-      where version = '20260909120000'
+      where version = '20260910120000'
     ) as migrated
   `.execute(getDatabase());
 
@@ -110,6 +112,7 @@ app.use('/api/v1/*', requireAuthentication);
 
 registerWorkoutRoutes(app);
 registerPlanRoutes(app);
+registerChatRoutes(app);
 registerBriefRoutes(app);
 
 app.doc('/api/openapi.json', {

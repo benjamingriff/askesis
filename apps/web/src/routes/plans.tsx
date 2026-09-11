@@ -173,6 +173,18 @@ export function PlanPage() {
 }
 
 function PlanEditor({ plan }: { plan: Plan }) {
+  const navigate = useNavigate();
+  const openChat = useMutation({
+    mutationFn: async () =>
+      result(
+        await api.POST('/api/v1/plans/{planId}/conversations/open', {
+          params: { path: { planId: plan.id } },
+        }),
+      ),
+    onSuccess: (conversation) => {
+      void navigate(`/chat/${conversation.id}`);
+    },
+  });
   const client = useQueryClient();
   const preferences = usePlanPreferences();
   const [name, setName] = useState(plan.displayName);
@@ -308,6 +320,10 @@ function PlanEditor({ plan }: { plan: Plan }) {
   return (
     <>
       <h1>{plan.displayName}</h1>
+      <button disabled={plan.archived || openChat.isPending} onClick={() => openChat.mutate()}>
+        Chat about this plan
+      </button>
+      {openChat.error && <p role="alert">{openChat.error.message}</p>}
       <p>
         {plan.archived
           ? 'Archived · read-only'

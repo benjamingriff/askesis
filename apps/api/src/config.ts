@@ -3,6 +3,7 @@ import { z } from 'zod';
 const ApiConfigSchema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
   PORT: z.coerce.number().int().min(1).max(65535).default(3000),
+  CHAT_EXECUTION_MODE: z.enum(['unavailable', 'test']).default('unavailable'),
   DATABASE_URL: z
     .string()
     .url()
@@ -37,6 +38,9 @@ export function parseApiConfig(environment: NodeJS.ProcessEnv): ApiConfig {
 
   const publishableKey =
     result.data.CLERK_PUBLISHABLE_KEY ?? result.data.VITE_CLERK_PUBLISHABLE_KEY;
+  if (result.data.NODE_ENV === 'production' && result.data.CHAT_EXECUTION_MODE === 'test') {
+    throw new Error('Test chat execution is forbidden in production.');
+  }
   if (publishableKey === undefined) {
     throw new Error('Invalid API environment configuration: CLERK_PUBLISHABLE_KEY');
   }
