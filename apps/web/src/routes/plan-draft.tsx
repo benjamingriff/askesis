@@ -75,16 +75,24 @@ export function PlanDraftPage() {
           </details>
         </>
       ) : null}
-      {version && workouts.isPending ? <LoadingState>Loading draft schedule…</LoadingState> : null}
+      {version && (workouts.isPending || brief.isPending) ? (
+        <LoadingState>Loading draft schedule…</LoadingState>
+      ) : null}
       {workouts.error ? (
         <ErrorState message={workouts.error.message} onRetry={() => void workouts.refetch()} />
       ) : null}
-      {version && workouts.data ? (
+      {brief.error ? (
+        <ErrorState
+          message={`Couldn’t load this draft’s coverage: ${brief.error.message}`}
+          onRetry={() => void brief.refetch()}
+        />
+      ) : null}
+      {version && workouts.data && brief.data && !brief.error ? (
         <Schedule
           workouts={workouts.data}
           startDate={version.startDate}
           endDate={version.endDate}
-          coverage={brief.data?.coverage ?? null}
+          coverage={brief.data.coverage}
           units={units}
           today={localToday()}
         />

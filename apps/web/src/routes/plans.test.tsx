@@ -249,6 +249,59 @@ it('keeps edits and the refresh action when loading the latest plan fails', asyn
   expect(screen.getByLabelText('Description')).toHaveValue('Unsaved changes');
 });
 
+it('disables all plan-detail inputs until a pending save settles', async () => {
+  let finish!: () => void;
+  vi.mocked(api.PATCH).mockImplementation(
+    (() =>
+      new Promise<{ data: Plan; response: Response }>((resolve) => {
+        finish = () => resolve({ data: current, response: new Response() });
+      })) as typeof api.PATCH,
+  );
+  mount();
+  await openMenuItem('Edit details');
+  fireEvent.change(screen.getByLabelText('Description'), { target: { value: 'Revised' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Save changes' }));
+  await waitFor(() => expect(api.PATCH).toHaveBeenCalledTimes(1));
+  for (const label of ['Plan name', 'Description', 'Start date', 'End date'])
+    expect(screen.getByLabelText(label)).toBeDisabled();
+  finish();
+  await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+});
+
+it.each(['locked', 'discarded'])(
+  'preserves unsaved content when the draft was %s elsewhere',
+  async (action) => {
+    vi.mocked(api.PATCH).mockRejectedValue(new Error('The draft is no longer available.'));
+    mount();
+    await openMenuItem('Edit details');
+    fireEvent.change(screen.getByLabelText('Description'), {
+      target: { value: 'Unsaved changes' },
+    });
+    fireEvent.change(screen.getByLabelText('Plan name'), { target: { value: 'Unsaved name' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save changes' }));
+    await screen.findByText('The draft is no longer available.');
+    current =
+      action === 'locked'
+        ? lockedPlan(current)
+        : {
+            ...lockedPlan(current),
+            locked: { ...draft, state: 'locked', versionNumber: 1, id: 'previous' },
+          };
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh latest plan' }));
+    await screen.findByText(
+      'The draft is no longer available. Your unsaved details are preserved here.',
+    );
+    expect(screen.getByLabelText('Description')).toHaveValue('Unsaved changes');
+    expect(screen.getByLabelText('Plan name')).toHaveValue('Unsaved name');
+    expect(screen.getByRole('button', { name: 'Save changes' })).toBeDisabled();
+    // Form submission also refuses the unsavable content rather than saving only the name.
+    fireEvent.submit(screen.getByLabelText('Description').closest('form')!);
+    await screen.findByText('These description or date changes need an editable draft.');
+    expect(api.PATCH).toHaveBeenCalledTimes(1);
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+  },
+);
+
 it('does not offer locking an unchanged draft', async () => {
   vi.mocked(api.POST).mockResolvedValue({
     data: { ...preview, hasChanges: false },

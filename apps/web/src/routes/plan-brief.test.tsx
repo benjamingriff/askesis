@@ -136,6 +136,34 @@ it('requires explicit review and warning acknowledgement before confirmation', a
   );
 });
 
+it('reveals a failed confirmation and lets the athlete refresh and review the latest brief', async () => {
+  vi.mocked(api.POST).mockRejectedValueOnce(new Error('The brief changed elsewhere.'));
+  mount();
+  fireEvent.click(await screen.findByRole('button', { name: 'Review brief for confirmation' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Confirm brief' }));
+  expect(await screen.findByRole('alert')).toHaveTextContent('The brief changed elsewhere.');
+  expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  state = {
+    ...state,
+    editNumber: 2,
+    hash: 'latest-hash',
+    brief: { ...state.brief, goal: 'Updated goal' },
+  };
+  fireEvent.click(screen.getByRole('button', { name: 'Refresh latest brief' }));
+  await waitFor(() => expect(screen.getByLabelText('Goal')).toHaveValue('Updated goal'));
+  fireEvent.click(screen.getByRole('button', { name: 'Review brief for confirmation' }));
+  vi.mocked(api.POST).mockResolvedValue({ data: state, response: new Response() });
+  fireEvent.click(screen.getByRole('button', { name: 'Confirm brief' }));
+  await waitFor(() => expect(api.POST).toHaveBeenCalledTimes(2));
+  expect(api.POST).toHaveBeenLastCalledWith(
+    '/api/v1/plans/{planId}/draft/brief/confirm',
+    expect.objectContaining({
+      body: expect.objectContaining({ expectedEditNumber: 2, expectedHash: 'latest-hash' }),
+    }),
+  );
+  await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+});
+
 it('converts a miles threshold input to canonical seconds per kilometre', async () => {
   state.brief.unit = 'miles';
   mount();

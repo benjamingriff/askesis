@@ -190,6 +190,9 @@ function BriefEditor({ state, planId }: { state: State; planId: string }) {
       await client.invalidateQueries({ queryKey: ['plans'] });
       await client.invalidateQueries({ queryKey: ['plan-workouts'] });
     },
+    onError: (_error, action) => {
+      if (action === 'confirm') setReview(false);
+    },
   });
   const disabled = state.readOnly || !editing || mutation.isPending;
   const patch = <K extends keyof Brief>(key: K, value: Brief[K]) =>
@@ -284,7 +287,22 @@ function BriefEditor({ state, planId }: { state: State; planId: string }) {
         </Notice>
       ) : null}
       {mutation.error ? (
-        <Notice tone="danger" role="alert">
+        <Notice
+          tone="danger"
+          role="alert"
+          action={
+            mutation.variables === 'confirm' ? (
+              <Button
+                size="sm"
+                onClick={() =>
+                  void client.invalidateQueries({ queryKey: ['plans', planId, 'brief'] })
+                }
+              >
+                Refresh latest brief
+              </Button>
+            ) : undefined
+          }
+        >
           {mutation.error.message}
         </Notice>
       ) : null}

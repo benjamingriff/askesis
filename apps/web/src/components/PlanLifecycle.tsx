@@ -708,6 +708,8 @@ function EditDetailsDialog({
     mutationFn: async () => {
       let latest = saved.current ?? plan;
       const current = latest.draft;
+      if (!current && contentDirty)
+        throw new Error('These description or date changes need an editable draft.');
       const pending =
         !!current &&
         (description !== (current.description ?? '') ||
@@ -754,6 +756,7 @@ function EditDetailsDialog({
   const refreshedVersion = refresh.data?.draft ?? refresh.data?.locked;
   const busy = save.isPending || refresh.isPending;
   const editableContent = !!plan.draft;
+  const contentUnavailable = !editableContent && contentDirty;
   // Unsaved details survive accidental navigation, as the earlier inline editor did.
   const dirty = (nameDirty || contentDirty) && !save.isSuccess;
   const blocker = useBlocker(dirty);
@@ -785,7 +788,7 @@ function EditDetailsDialog({
             type="submit"
             form="plan-details-form"
             busy={save.isPending}
-            disabled={busy || !name.trim() || (!nameDirty && !contentDirty)}
+            disabled={busy || contentUnavailable || !name.trim() || (!nameDirty && !contentDirty)}
           >
             Save changes
           </Button>
@@ -802,9 +805,15 @@ function EditDetailsDialog({
       >
         <label className="field">
           <span>Plan name</span>
-          <input required maxLength={200} value={name} onChange={(e) => setName(e.target.value)} />
+          <input
+            required
+            disabled={busy}
+            maxLength={200}
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+          />
         </label>
-        <fieldset disabled={!editableContent} className="form-stack">
+        <fieldset disabled={!editableContent || busy} className="form-stack">
           <label className="field">
             <span>Description</span>
             <textarea
@@ -832,6 +841,16 @@ function EditDetailsDialog({
         </fieldset>
         {!editableContent ? (
           <p className="muted">Unlock the plan to change its dates or description.</p>
+        ) : null}
+        {contentUnavailable ? (
+          <Notice tone="warning" role="alert">
+            <strong>
+              The draft is no longer available. Your unsaved details are preserved here.
+            </strong>
+            <span>
+              Keep a copy of your edits, then cancel and unlock the plan to edit its details again.
+            </span>
+          </Notice>
         ) : null}
         {blocker.state === 'blocked' ? (
           <Notice

@@ -175,17 +175,19 @@ export function PlanView({
             </Notice>
           ) : null}
 
-          {workouts.isPending && version ? <LoadingState>Loading schedule…</LoadingState> : null}
+          {(workouts.isPending || brief.isPending) && version ? (
+            <LoadingState>Loading schedule…</LoadingState>
+          ) : null}
           {workouts.error ? (
             <ErrorState message={workouts.error.message} onRetry={() => void workouts.refetch()} />
           ) : null}
-          {workouts.data && version ? (
+          {workouts.data && version && brief.data && !brief.error ? (
             <Schedule
               key={version.id}
               workouts={workouts.data}
               startDate={version.startDate}
               endDate={version.endDate}
-              coverage={brief.data ? brief.data.coverage : null}
+              coverage={brief.data.coverage}
               units={units}
               today={today}
               onAskCoach={
