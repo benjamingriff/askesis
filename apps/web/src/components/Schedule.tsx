@@ -32,6 +32,7 @@ import {
 } from '../lib/workouts';
 import type { Units } from '../settings';
 import { readStorage, writeStorage } from '../lib/storage';
+import type { PlanVersion } from '../plan-data';
 import { Stat, WeekChart } from './PlanWidgets';
 import { DayRow, WorkoutCard, WorkoutDialog } from './Workout';
 import { Button, Card, EmptyState, IconButton, Pill, Segmented, cx } from './ui';
@@ -42,6 +43,7 @@ const MODE_KEY = 'askesis-schedule-mode';
 /** Runna-style schedule: weekly volume, a week at a time, or a month calendar. */
 export function Schedule({
   workouts,
+  version,
   startDate,
   endDate,
   coverage,
@@ -51,6 +53,7 @@ export function Schedule({
   onPlanRest,
 }: {
   workouts: WorkoutSummary[];
+  version?: Pick<PlanVersion, 'id' | 'editNumber'> | null | undefined;
   startDate: string | null;
   endDate: string | null;
   coverage: CoverageRange[] | null;
@@ -196,6 +199,7 @@ export function Schedule({
       )}
       <WorkoutDialog
         workout={open}
+        version={version}
         units={units}
         onClose={() => setOpen(null)}
         onAskCoach={

@@ -38,6 +38,7 @@ import {
   useWorkoutDetail,
   useWorkouts,
   type Plan,
+  type PlanVersion,
 } from '../plan-data';
 import { usePlanPreferences } from '../plan-selection';
 import { useUnits, type Units } from '../settings';
@@ -215,7 +216,13 @@ function TodayForPlan({ plan, today }: { plan: Plan; today: string }) {
             </Card>
           ) : null}
           {selectedWorkouts.map((workout) => (
-            <HeroWorkout key={workout.id} workout={workout} units={units} onOpen={setOpen} />
+            <HeroWorkout
+              key={workout.id}
+              workout={workout}
+              version={version}
+              units={units}
+              onOpen={setOpen}
+            />
           ))}
 
           {plan.draft ? (
@@ -307,6 +314,7 @@ function TodayForPlan({ plan, today }: { plan: Plan; today: string }) {
       </div>
       <WorkoutDialog
         workout={open}
+        version={version}
         units={units}
         onClose={() => setOpen(null)}
         onAskCoach={(workout) => {
@@ -320,15 +328,17 @@ function TodayForPlan({ plan, today }: { plan: Plan; today: string }) {
 
 function HeroWorkout({
   workout,
+  version,
   units,
   onOpen,
 }: {
   workout: WorkoutSummary;
+  version: PlanVersion | null;
   units: Units;
   onOpen: (workout: WorkoutSummary) => void;
 }) {
   const kind = KIND_META[inferKind(workout)];
-  const detail = useWorkoutDetail(workout.id);
+  const detail = useWorkoutDetail(workout.id, version);
   const { estimatedDistanceMetres: metres, estimatedDurationSeconds: seconds } = workout;
   return (
     <button

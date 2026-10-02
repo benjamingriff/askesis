@@ -208,6 +208,10 @@ it('retries an uncertain first send with the same key and navigates to the durab
   fireEvent.click(screen.getByRole('button', { name: 'Send message' }));
   await screen.findByText(/Network interrupted/);
   expect(screen.getByLabelText('Message')).toHaveValue('Hello');
+  const suggestion = screen.getByRole('button', { name: 'How should I pace my long run?' });
+  expect(suggestion).toBeDisabled();
+  fireEvent.click(suggestion);
+  expect(screen.getByLabelText('Message')).toHaveValue('Hello');
   fireEvent.click(screen.getByRole('button', { name: 'Retry send' }));
   await waitFor(() => expect(router.state.location.pathname).toBe('/chat/c1'));
   const calls = vi.mocked(api.POST).mock.calls;

@@ -208,7 +208,6 @@ export function PlanPage() {
   const [view, setView] = useState<View>('draft');
   const query = useQuery({
     queryKey: ['plans', planId],
-    refetchOnWindowFocus: false,
     queryFn: async () =>
       result(await api.GET('/api/v1/plans/{planId}', { params: { path: { planId } } })),
   });
@@ -224,20 +223,28 @@ export function PlanPage() {
         <LoadingState>Loading plan…</LoadingState>
       </div>
     );
-  if (query.error)
+  if (!query.data)
     return (
       <div className="page">
         {back}
-        <ErrorState message={query.error.message} onRetry={() => void query.refetch()} />
+        <ErrorState
+          message={query.error?.message ?? 'Couldn’t load the plan.'}
+          onRetry={() => void query.refetch()}
+        />
       </div>
     );
   return (
-    <PlanView
-      key={query.data.id}
-      plan={query.data}
-      view={view}
-      onViewChange={setView}
-      eyebrow={back}
-    />
+    <>
+      {query.error ? (
+        <ErrorState message={query.error.message} onRetry={() => void query.refetch()} />
+      ) : null}
+      <PlanView
+        key={query.data.id}
+        plan={query.data}
+        view={view}
+        onViewChange={setView}
+        eyebrow={back}
+      />
+    </>
   );
 }

@@ -90,6 +90,7 @@ export function PlanDraftPage() {
       {version && workouts.data && brief.data && !brief.error ? (
         <Schedule
           workouts={workouts.data}
+          version={version}
           startDate={version.startDate}
           endDate={version.endDate}
           coverage={brief.data.coverage}

@@ -318,6 +318,7 @@ function RevisionView({ planId, revisionId }: { planId: string; revisionId: stri
           {workouts.data && brief.data && !brief.error ? (
             <Schedule
               workouts={workouts.data}
+              version={revision}
               startDate={revision.startDate}
               endDate={revision.endDate}
               coverage={brief.data.coverage}

@@ -1,7 +1,7 @@
 import { cleanup, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { AccountQueryProvider } from './query-provider';
-import { useBriefState, type PlanVersion } from './plan-data';
+import { useBriefState, useWorkoutDetail, type PlanVersion } from './plan-data';
 
 const mocks = vi.hoisted(() => ({ get: vi.fn() }));
 vi.mock('./api', () => ({ api: { GET: mocks.get } }));
@@ -25,6 +25,10 @@ function Brief({ version }: { version: PlanVersion }) {
       {brief.data?.calibrations[0]?.secondsPerKilometre}
     </div>
   );
+}
+function Workout({ version }: { version: PlanVersion }) {
+  const detail = useWorkoutDetail('workout', version);
+  return <div>{detail.data?.workout.title}</div>;
 }
 beforeEach(() => mocks.get.mockReset());
 afterEach(cleanup);
@@ -65,3 +69,22 @@ it.each([
     expect(mocks.get).toHaveBeenCalledTimes(2);
   },
 );
+
+it('reloads a recently viewed workout when the draft edit advances', async () => {
+  mocks.get
+    .mockResolvedValueOnce({ data: { workout: { title: 'Earlier prescription' } } })
+    .mockResolvedValueOnce({ data: { workout: { title: 'Latest prescription' } } });
+  const page = render(
+    <AccountQueryProvider>
+      <Workout version={version} />
+    </AccountQueryProvider>,
+  );
+  await screen.findByText('Earlier prescription');
+  page.rerender(
+    <AccountQueryProvider>
+      <Workout version={{ ...version, editNumber: 2 }} />
+    </AccountQueryProvider>,
+  );
+  await screen.findByText('Latest prescription');
+  expect(mocks.get).toHaveBeenCalledTimes(2);
+});

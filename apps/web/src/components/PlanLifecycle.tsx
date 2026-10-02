@@ -710,7 +710,11 @@ function EditDetailsDialog({
   onSaved: (plan: Plan) => void;
 }) {
   const client = useQueryClient();
-  const version = plan.draft ?? plan.locked;
+  // Focus refreshes may advance the surrounding plan. Save against the form's baseline
+  // until the athlete explicitly refreshes and reviews it, or this dialog saves content.
+  const [baseline, setBaseline] = useState(plan);
+  const saved = useRef<Plan>(plan);
+  const version = baseline.draft ?? baseline.locked;
   const [name, setName] = useState(plan.displayName);
   const [description, setDescription] = useState(version?.description ?? '');
   const [startDate, setStartDate] = useState(version?.startDate ?? '');
@@ -719,13 +723,12 @@ function EditDetailsDialog({
     description !== (version?.description ?? '') ||
     startDate !== (version?.startDate ?? '') ||
     endDate !== (version?.endDate ?? '');
-  const nameDirty = name.trim() !== plan.displayName;
+  const nameDirty = name.trim() !== baseline.displayName;
   // The plan as last saved by this dialog, so a retry after a partial failure (content saved,
   // rename failed) continues from the new edit number instead of repeating a stale save.
-  const saved = useRef<Plan | null>(null);
   const save = useMutation({
     mutationFn: async () => {
-      let latest = saved.current ?? plan;
+      let latest = saved.current;
       const current = latest.draft;
       if (!current && contentDirty)
         throw new Error('These description or date changes need an editable draft.');
@@ -748,6 +751,7 @@ function EditDetailsDialog({
           }),
         );
         saved.current = latest;
+        setBaseline(latest);
         client.setQueryData(['plans', plan.id], latest);
       }
       if (name.trim() !== latest.displayName)
@@ -768,6 +772,7 @@ function EditDetailsDialog({
       // Keep the form values, but replace even a partially saved baseline with the latest
       // concurrency metadata. The athlete can review the saved details before retrying.
       saved.current = latest;
+      setBaseline(latest);
       client.setQueryData(['plans', plan.id], latest);
       save.reset();
     },

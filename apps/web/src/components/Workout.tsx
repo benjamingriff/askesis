@@ -11,7 +11,7 @@ import {
   weekdayIndex,
 } from '../lib/format';
 import { inferKind, KIND_META } from '../lib/workouts';
-import { useWorkoutDetail } from '../plan-data';
+import { useWorkoutDetail, type PlanVersion } from '../plan-data';
 import type { Units } from '../settings';
 import { IntensityChart } from './IntensityChart';
 import { Stat } from './PlanWidgets';
@@ -220,16 +220,18 @@ function StepItem({ step, units }: { step: WorkoutStep; units: Units }) {
 /** Workout detail: kind header, key numbers, effort profile and the full prescription. */
 export function WorkoutDialog({
   workout,
+  version,
   units,
   onClose,
   onAskCoach,
 }: {
   workout: WorkoutSummary | null;
+  version?: Pick<PlanVersion, 'id' | 'editNumber'> | null | undefined;
   units: Units;
   onClose: () => void;
   onAskCoach?: ((workout: WorkoutSummary) => void) | undefined;
 }) {
-  const detail = useWorkoutDetail(workout?.id);
+  const detail = useWorkoutDetail(workout?.id, version);
   if (!workout) return null;
   const kind = KIND_META[inferKind(workout)];
   const { estimatedDistanceMetres: metres, estimatedDurationSeconds: seconds } = workout;

@@ -186,6 +186,7 @@ export function PlanView({
             <Schedule
               key={version.id}
               workouts={workouts.data}
+              version={version}
               startDate={version.startDate}
               endDate={version.endDate}
               coverage={brief.data.coverage}

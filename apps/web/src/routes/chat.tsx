@@ -583,6 +583,7 @@ function ConversationPanel({ conversationId }: { conversationId: string | undefi
                     key={suggestion}
                     type="button"
                     className="suggestion"
+                    disabled={send.isPending || !!attempt}
                     onClick={() => {
                       setText(suggestion);
                       input.current?.focus();
