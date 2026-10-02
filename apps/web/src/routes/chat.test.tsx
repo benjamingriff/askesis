@@ -125,6 +125,24 @@ it('does not create a conversation when opening an empty chat and disables unava
   expect(screen.getByRole('button', { name: 'Send message' })).toBeDisabled();
   expect(api.POST).not.toHaveBeenCalled();
 });
+it('keeps history and an unsent question when an agent worker goes offline and recovers', async () => {
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  mount('/chat/c1', client);
+  await screen.findByText('Saved message');
+  await screen.findByText(/Test mode · replies are simulated/);
+  fireEvent.change(screen.getByLabelText('Message'), { target: { value: 'Pending question' } });
+  client.setQueryData(['chat', 'capabilities'], { executionAvailable: false, mode: 'agent' });
+  await screen.findByText(/Coaching is not available yet/);
+  expect(screen.getByText('Saved message')).toBeInTheDocument();
+  expect(screen.getByLabelText('Message')).toHaveValue('Pending question');
+  expect(screen.getByRole('button', { name: 'Send message' })).toBeDisabled();
+  expect(api.POST).not.toHaveBeenCalled();
+  client.setQueryData(['chat', 'capabilities'], { executionAvailable: true, mode: 'agent' });
+  await waitFor(() => expect(screen.getByRole('button', { name: 'Send message' })).toBeEnabled());
+  expect(screen.queryByText(/Coaching is not available yet/)).not.toBeInTheDocument();
+  expect(screen.getByLabelText('Message')).toHaveValue('Pending question');
+  client.clear();
+});
 it('retries an uncertain first send with the same key and navigates to the durable conversation', async () => {
   vi.mocked(api.POST)
     .mockRejectedValueOnce(new TypeError('Network interrupted'))

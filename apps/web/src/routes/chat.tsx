@@ -431,7 +431,7 @@ function ConversationPanel({
                 )}
                 <div>
                   <span className="message-author">
-                    {message.role === 'user' ? 'You' : 'Askesis · test reply'}
+                    {message.role === 'user' ? 'You' : 'Askesis'}
                   </span>
                   <p className="chat-text">{message.content}</p>
                 </div>
@@ -457,7 +457,7 @@ function ConversationPanel({
             <RunEvents run={run} />
           </div>
         )}
-        {capabilities.data?.mode === 'unavailable' && (
+        {capabilities.data && !capabilities.data.executionAvailable && (
           <p className="chat-notice">
             Coaching is not available yet. Your conversation history is still available.
           </p>
