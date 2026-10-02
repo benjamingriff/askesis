@@ -3,6 +3,8 @@ import { createMemoryRouter, RouterProvider } from 'react-router';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { AccountQueryProvider } from '../query-provider';
 import { TodayPage } from './today';
+import type { WorkoutSummary } from '@askesis/api-client';
+import { focusManager } from '@tanstack/react-query';
 
 const mocks = vi.hoisted(() => ({ get: vi.fn(), post: vi.fn() }));
 vi.mock('../api', () => ({ api: { GET: mocks.get, POST: mocks.post } }));
@@ -106,6 +108,7 @@ beforeEach(() => {
 afterEach(() => {
   vi.useRealTimers();
   cleanup();
+  focusManager.setFocused(undefined);
 });
 
 it('shows the locked schedule and links pace details to the locked brief', async () => {
@@ -212,4 +215,86 @@ it('shows failed Today coach shortcuts and retries the original planning request
   expect(router.state.location.state).toEqual({ prefill: 'Plan the remaining weeks' });
   expect(mocks.post).toHaveBeenCalledTimes(2);
   expect(mocks.post.mock.calls[0]).toEqual(mocks.post.mock.calls[1]);
+});
+
+it('closes a superseded workout after locking a new version without resetting the browsed date', async () => {
+  const originalWorkout: WorkoutSummary = {
+    id: 'old-workout',
+    planId: plan.id,
+    planVersionId: locked.id,
+    planTitle: plan.displayName,
+    weekNumber: 2,
+    scheduledDate: '2027-01-11',
+    title: 'Original session',
+    description: null,
+    purpose: null,
+    discipline: 'running',
+    priority: 'medium',
+    estimatedDurationSeconds: 1800,
+    estimatedDistanceMetres: 5000,
+  };
+  const replacement = {
+    ...originalWorkout,
+    id: 'new-workout',
+    planVersionId: 'locked-b',
+    title: 'Replacement session',
+  };
+  let currentPlan = { ...plan, draft: plan.draft as typeof plan.draft | null };
+  mocks.get.mockImplementation(
+    async (
+      path: string,
+      options?: { params?: { path?: { workoutId: string }; query?: { planVersionId: string } } },
+    ) => ({
+      data:
+        path === '/api/v1/plans'
+          ? { plans: [currentPlan] }
+          : path === '/api/v1/workouts'
+            ? {
+                workouts: [
+                  options?.params?.query?.planVersionId === locked.id
+                    ? originalWorkout
+                    : replacement,
+                ],
+              }
+            : path === '/api/v1/workouts/{workoutId}'
+              ? {
+                  workout:
+                    options?.params?.path?.workoutId === originalWorkout.id
+                      ? originalWorkout
+                      : replacement,
+                  tags: [],
+                  prescription: { kind: 'sequence', steps: [] },
+                }
+              : brief,
+    }),
+  );
+  mount();
+  await screen.findByText('Rest day');
+  fireEvent.click(screen.getByRole('button', { name: 'Monday 11 January' }));
+  fireEvent.click(await screen.findByRole('button', { name: /Original session/ }));
+  await screen.findByRole('dialog', { name: /Original session/ });
+  const oldDetailCalls = () =>
+    mocks.get.mock.calls.filter(
+      ([path, options]) =>
+        path === '/api/v1/workouts/{workoutId}' &&
+        options.params.path.workoutId === originalWorkout.id,
+    ).length;
+  await waitFor(() => expect(oldDetailCalls()).toBe(1));
+  currentPlan = {
+    ...plan,
+    stateVersion: 2,
+    draft: null,
+    locked: { ...locked, id: 'locked-b', versionNumber: 2 },
+  };
+  focusManager.setFocused(false);
+  focusManager.setFocused(true);
+  await screen.findByRole('button', { name: /Replacement session/ });
+  expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Monday 11 January' })).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  );
+  expect(oldDetailCalls()).toBe(1);
+  fireEvent.click(screen.getByRole('button', { name: /Replacement session/ }));
+  await screen.findByRole('dialog', { name: /Replacement session/ });
 });

@@ -43,6 +43,7 @@ import { usePlanPreferences } from '../plan-selection';
 import { useUnits, type Units } from '../settings';
 import { useActivePlans } from './active-plans';
 import { useLocalToday } from '../lib/use-local-today';
+import { useWorkoutSelection } from '../lib/use-workout-selection';
 
 export function TodayPage() {
   const preferences = usePlanPreferences();
@@ -96,12 +97,12 @@ function TodayForPlan({ plan, today }: { plan: Plan; today: string }) {
   const chat = useOpenPlanChat(plan.id);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const selected = selectedDate ?? today;
-  const [open, setOpen] = useState<WorkoutSummary | null>(null);
   const days = useMemo(
     () => Array.from({ length: 7 }, (_, i) => addDays(startOfWeek(today), i)),
     [today],
   );
   const all = workouts.data ?? [];
+  const dialog = useWorkoutSelection(all, version?.id);
   const week = all.filter((w) => w.scheduledDate >= days[0]! && w.scheduledDate <= days[6]!);
   const weekMetres = week.reduce((sum, w) => sum + (w.estimatedDistanceMetres ?? 0), 0);
   const plannedSoFar = week
@@ -222,7 +223,7 @@ function TodayForPlan({ plan, today }: { plan: Plan; today: string }) {
               workout={workout}
               version={version}
               units={units}
-              onOpen={setOpen}
+              onOpen={dialog.open}
             />
           ))}
 
@@ -314,12 +315,12 @@ function TodayForPlan({ plan, today }: { plan: Plan; today: string }) {
         </div>
       </div>
       <WorkoutDialog
-        workout={open}
+        workout={dialog.workout}
         version={version}
         units={units}
-        onClose={() => setOpen(null)}
+        onClose={dialog.close}
         onAskCoach={(workout) => {
-          setOpen(null);
+          dialog.close();
           chat.mutate(`About “${workout.title}” on ${workout.scheduledDate}: `);
         }}
       />

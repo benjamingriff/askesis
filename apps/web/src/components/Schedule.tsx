@@ -33,6 +33,7 @@ import {
 import type { Units } from '../settings';
 import { readStorage, writeStorage } from '../lib/storage';
 import type { PlanVersion } from '../plan-data';
+import { useWorkoutSelection } from '../lib/use-workout-selection';
 import { Stat, WeekChart } from './PlanWidgets';
 import { DayRow, WorkoutCard, WorkoutDialog } from './Workout';
 import { Button, Card, EmptyState, IconButton, Pill, Segmented, cx } from './ui';
@@ -73,7 +74,7 @@ export function Schedule({
     readStorage(MODE_KEY) === 'calendar' ? 'calendar' : 'weeks',
   );
   const [selectedWeek, setSelectedWeek] = useState<number | null>(null);
-  const [open, setOpen] = useState<WorkoutSummary | null>(null);
+  const dialog = useWorkoutSelection(workouts, version?.id);
   const week = weeks.find((w) => w.number === (selectedWeek ?? firstUpcoming)) ?? weeks[0];
   const knownCoverage = coverage && coverage.length > 0 ? coverage : null;
   const dayStatus = (date: string) =>
@@ -168,7 +169,7 @@ export function Schedule({
                     workouts={workoutsOn(week.workouts, date)}
                     status={dayStatus(date)}
                     units={units}
-                    onOpen={setOpen}
+                    onOpen={dialog.open}
                   />
                 ))}
               </ol>
@@ -198,18 +199,18 @@ export function Schedule({
           startDate={startDate}
           endDate={endDate}
           units={units}
-          onOpen={setOpen}
+          onOpen={dialog.open}
         />
       )}
       <WorkoutDialog
-        workout={open}
+        workout={dialog.workout}
         version={version}
         units={units}
-        onClose={() => setOpen(null)}
+        onClose={dialog.close}
         onAskCoach={
           onAskCoach
             ? (workout) => {
-                setOpen(null);
+                dialog.close();
                 onAskCoach(workout);
               }
             : undefined
