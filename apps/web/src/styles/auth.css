@@ -1,0 +1,34 @@
+.auth-loading {
+  display: grid;
+  min-height: 100dvh;
+  place-content: center;
+  justify-items: center;
+  gap: 12px;
+  color: var(--text-dim);
+  font-size: 13px;
+}
+.auth-page {
+  display: flex;
+  min-height: 100dvh;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 20px;
+  background: radial-gradient(circle at 50% 0%, var(--accent-soft), transparent 55%), var(--bg);
+}
+.auth-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 24px;
+}
+.auth-brand strong {
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+}
+.auth-page > p {
+  margin-top: 20px;
+  color: var(--text-dim);
+  font-size: 13px;
+}

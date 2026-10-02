@@ -1,20 +1,37 @@
 import { useEffect, useRef, useState } from 'react';
 import {
-  ArrowUp,
   Archive,
-  Bot,
-  MessageCircle,
+  ArchiveRestore,
+  ArrowLeft,
+  ArrowRight,
+  ArrowUp,
+  CalendarDays,
+  Check,
+  ChevronDown,
+  ChevronUp,
+  Loader2,
+  Lock,
+  MessageSquarePlus,
   MoreHorizontal,
-  PanelLeftClose,
-  PanelLeftOpen,
-  Plus,
+  PencilLine,
   Sparkles,
   Square,
+  TriangleAlert,
 } from 'lucide-react';
-import { Link, NavLink, useNavigate, useParams } from 'react-router';
+import { Link, useLocation, useNavigate, useParams } from 'react-router';
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '../api';
 import { ChatMarkdown } from '../components/ChatMarkdown';
+import {
+  Button,
+  Dialog,
+  IconButton,
+  Menu,
+  Notice,
+  ProgressBar,
+  Segmented,
+  cx,
+} from '../components/ui';
 import {
   ChatRequestError,
   chatResult,
@@ -24,118 +41,173 @@ import {
   type Run,
   type Target,
 } from '../chat';
+import { daysBetween, formatShort, relativeTime } from '../lib/format';
+import { useSettings } from '../settings';
 
-export function ChatPage({ archived = false }: { archived?: boolean }) {
+function findLastIndex<T>(items: T[], predicate: (item: T) => boolean) {
+  for (let index = items.length - 1; index >= 0; index -= 1)
+    if (predicate(items[index]!)) return index;
+  return -1;
+}
+
+const SUGGESTIONS = [
+  'Help me build a plan for my next race',
+  'How should I pace my long run?',
+  'I missed a session this week — what now?',
+  'Explain my pace guides',
+];
+
+export function ChatPage({
+  archived = false,
+  composing = false,
+}: {
+  archived?: boolean | undefined;
+  composing?: boolean | undefined;
+}) {
   const { conversationId } = useParams();
   return (
     <ChatWorkspace
       key={conversationId ?? (archived ? 'archive' : 'new')}
       conversationId={conversationId}
       archived={archived}
+      composing={composing}
     />
   );
 }
+
 function ChatWorkspace({
   conversationId,
   archived,
+  composing,
 }: {
   conversationId: string | undefined;
   archived: boolean;
+  composing: boolean;
 }) {
-  const list = useConversations(archived);
-  const [panelOpen, setPanelOpen] = useState(
-    () => !window.matchMedia?.('(max-width: 720px)').matches,
+  // On narrow screens the list and the conversation are separate screens, like the mobile app.
+  return (
+    <div className={cx('chat-layout', (conversationId || composing) && 'has-conversation')}>
+      <ConversationList archived={archived} activeId={conversationId} />
+      {archived ? (
+        <section className="chat-main chat-placeholder">
+          <div className="chat-empty">
+            <span className="empty-icon">
+              <Archive size={22} aria-hidden="true" />
+            </span>
+            <h1>Conversation archive</h1>
+            <p className="muted">Select a conversation to read it or restore it.</p>
+          </div>
+        </section>
+      ) : (
+        <ConversationPanel conversationId={conversationId} />
+      )}
+    </div>
   );
+}
+
+/** The Coach list: open and archived conversations, newest activity first. */
+function ConversationList({
+  archived,
+  activeId,
+}: {
+  archived: boolean;
+  activeId: string | undefined;
+}) {
+  const navigate = useNavigate();
+  const list = useConversations(archived);
   const rows = [
     ...new Map(
       list.data?.pages.flatMap((page) => page.conversations).map((row) => [row.id, row]),
     ).values(),
   ];
   return (
-    <div className={`chat-layout${panelOpen ? '' : ' context-closed'}`}>
-      <aside className="chat-context-panel">
-        <div className="context-header">
-          <div>
-            <span className="assistant-icon">
-              <Sparkles size={17} />
-            </span>
-            <strong>Askesis coach</strong>
-          </div>
-          <button
-            className="icon-button"
-            aria-label="Hide conversations"
-            onClick={() => setPanelOpen(false)}
-          >
-            <PanelLeftClose size={18} />
-          </button>
-        </div>
-        <Link className="new-chat-button" to="/chat">
-          <Plus size={17} /> New conversation
-        </Link>
-        <Link className="chat-archive-link" to={archived ? '/chat' : '/chat/archive'}>
-          <Archive size={14} /> {archived ? 'Open conversations' : 'Archived conversations'}
-        </Link>
-        <h2 className="conversation-heading">{archived ? 'Archive' : 'Conversations'}</h2>
-        {list.isPending && <p role="status">Loading conversations…</p>}
-        {list.error && (
-          <p role="alert">
-            {list.error.message} <button onClick={() => void list.refetch()}>Retry</button>
-          </p>
-        )}
-        {!list.isPending && !rows.length && <p>No conversations yet.</p>}
-        <nav className="conversation-list">
-          {rows.map((row) => (
-            <NavLink
-              key={row.id}
-              to={`/chat/${row.id}`}
-              onClick={() => {
-                if (window.matchMedia?.('(max-width: 720px)').matches) setPanelOpen(false);
-              }}
-            >
-              <MessageCircle size={17} />
-              <span>
-                <strong>{row.title}</strong>
-                <small>{row.planName ?? 'Standalone chat'}</small>
-              </span>
-            </NavLink>
-          ))}
-        </nav>
-        {list.hasNextPage && (
-          <button disabled={list.isFetchingNextPage} onClick={() => void list.fetchNextPage()}>
-            More conversations
-          </button>
-        )}
-      </aside>
-      {archived ? (
-        <section className="chat-main">
-          <button className="chat-panel-open" onClick={() => setPanelOpen(true)}>
-            Show conversations
-          </button>
-          <div className="chat-empty-state">
-            <h1>Conversation archive</h1>
-            <p>Select a conversation to read it or restore it.</p>
-          </div>
-        </section>
-      ) : (
-        <ConversationPanel
-          conversationId={conversationId}
-          onShowConversations={() => setPanelOpen(true)}
+    <aside className="conversation-list-panel" aria-label="Conversations">
+      <div className="conversation-list-header">
+        <h1>Coach</h1>
+        <IconButton
+          icon={MessageSquarePlus}
+          label="New chat"
+          tone="accent"
+          onClick={() => void navigate('/chat/new')}
         />
-      )}
-    </div>
+      </div>
+      <Segmented<'open' | 'archived'>
+        label="Conversation collection"
+        value={archived ? 'archived' : 'open'}
+        onChange={(next) => void navigate(next === 'archived' ? '/chat/archive' : '/chat')}
+        options={[
+          { value: 'open', label: 'Open' },
+          { value: 'archived', label: 'Archived' },
+        ]}
+      />
+      {list.isPending ? (
+        <p className="muted" role="status">
+          Loading conversations…
+        </p>
+      ) : null}
+      {list.error ? (
+        <Notice
+          tone="danger"
+          role="alert"
+          action={
+            <Button size="sm" variant="ghost" onClick={() => void list.refetch()}>
+              Retry
+            </Button>
+          }
+        >
+          {list.error.message}
+        </Notice>
+      ) : null}
+      {!list.isPending && !rows.length ? (
+        <p className="muted conversation-empty">
+          {archived ? 'Nothing archived.' : 'No conversations yet. Start one below.'}
+        </p>
+      ) : null}
+      <nav className="conversation-list">
+        {rows.map((row) => (
+          <Link
+            key={row.id}
+            to={`/chat/${row.id}`}
+            className={cx('conversation-row', row.id === activeId && 'active')}
+            aria-current={row.id === activeId ? 'page' : undefined}
+          >
+            <span className="conversation-row-top">
+              <strong>{row.title}</strong>
+              <small>{relativeTime(row.activityAt)}</small>
+            </span>
+            <span className="conversation-row-meta">
+              {row.planName ? (
+                <>
+                  <CalendarDays size={12} aria-hidden="true" /> {row.planName}
+                </>
+              ) : (
+                'Standalone chat'
+              )}
+            </span>
+          </Link>
+        ))}
+      </nav>
+      {list.hasNextPage ? (
+        <Button
+          size="sm"
+          variant="ghost"
+          disabled={list.isFetchingNextPage}
+          busy={list.isFetchingNextPage}
+          onClick={() => void list.fetchNextPage()}
+        >
+          More conversations
+        </Button>
+      ) : null}
+    </aside>
   );
 }
 
-function ConversationPanel({
-  conversationId,
-  onShowConversations,
-}: {
-  conversationId: string | undefined;
-  onShowConversations: () => void;
-}) {
+function ConversationPanel({ conversationId }: { conversationId: string | undefined }) {
   const client = useQueryClient();
   const navigate = useNavigate();
-  const [text, setText] = useState('');
+  const location = useLocation();
+  const prefill = (location.state as { prefill?: string } | null)?.prefill;
+  const [text, setText] = useState(prefill ?? '');
   const [target, setTarget] = useState<Target | undefined>(undefined);
   const [attempt, setAttempt] = useState<{ key: string; content: string; target: Target } | null>(
     null,
@@ -143,7 +215,8 @@ function ConversationPanel({
   const [title, setTitle] = useState('');
   const [renaming, setRenaming] = useState(false);
   const [actionKey] = useState(() => crypto.randomUUID());
-  const end = useRef<HTMLDivElement>(null);
+  const scroller = useRef<HTMLDivElement>(null);
+  const input = useRef<HTMLTextAreaElement>(null);
   const capabilities = useQuery({
     queryKey: ['chat', 'capabilities'],
     refetchInterval: 10000,
@@ -191,8 +264,10 @@ function ConversationPanel({
   ].sort((a, b) => a.sequence - b.sequence);
   const latestMessageId = messages.at(-1)?.id;
   useEffect(() => {
-    end.current?.scrollIntoView?.({ behavior: 'smooth' });
-  }, [latestMessageId]);
+    // Scroll only the transcript, never the page around it.
+    const node = scroller.current;
+    node?.scrollTo?.({ top: node.scrollHeight, behavior: 'smooth' });
+  }, [latestMessageId, run?.status]);
   const refresh = async () => {
     await client.invalidateQueries({ queryKey: ['chat'] });
   };
@@ -218,6 +293,7 @@ function ConversationPanel({
       setAttempt(null);
       setText('');
       setTarget(undefined);
+      if (input.current) input.current.style.height = 'auto';
       void refresh();
       if (!conversationId) void navigate(`/chat/${id}`);
     },
@@ -290,66 +366,118 @@ function ConversationPanel({
     setAttempt(next);
     send.mutate(next);
   }
+  const running = isActive(run);
+  const testMode = capabilities.data?.mode === 'test';
+  const subtitle = running
+    ? 'Coach is working…'
+    : conversation?.planId
+      ? conversation.context?.state === 'draft'
+        ? 'Draft · coach can edit'
+        : `Locked v${conversation.context?.versionNumber ?? ''} · unlock to edit`
+      : 'Standalone chat';
+  const lastRunMessage = run
+    ? findLastIndex(messages, (m) => m.producingRunId === run.id || m.id === run.userMessageId)
+    : -1;
+
   return (
     <section className="chat-main">
       <header className="chat-topbar">
-        <button
-          className="icon-button chat-panel-open"
-          aria-label="Show conversations"
-          onClick={onShowConversations}
-        >
-          <PanelLeftOpen size={19} />
-        </button>
+        <Link to="/chat" className="chat-back" aria-label="All conversations">
+          <ArrowLeft size={18} aria-hidden="true" />
+        </Link>
         <div className="chat-heading">
-          <h1>{conversation?.title ?? 'Askesis coach'}</h1>
-          {conversation?.planId && (
-            <Link to={`/plans/${conversation.planId}`}>
-              {conversation.planName}
-              <span> · {conversation.context?.state === 'draft' ? 'Draft' : 'Locked'}</span>
-            </Link>
-          )}
+          <h1>{conversation?.title ?? 'New conversation'}</h1>
+          {conversationId ? (
+            <span className="chat-subtitle">
+              <i
+                className={cx(
+                  'status-dot',
+                  running ? 'running' : conversation?.context?.state === 'locked' && 'locked',
+                )}
+              />
+              {subtitle}
+            </span>
+          ) : null}
         </div>
-        {conversation && (
-          <details className="chat-options">
-            <summary className="icon-button" aria-label="Conversation options">
-              <MoreHorizontal size={20} />
-            </summary>
-            <div className="chat-menu">
-              <button
-                disabled={conversation.archived || change.isPending}
-                onClick={() => {
+        {conversation?.planId ? (
+          <Link
+            to={`/plans/${conversation.planId}`}
+            className="plan-chip"
+            title="Open the plan this conversation edits"
+          >
+            {conversation.context?.state === 'locked' ? (
+              <Lock size={13} aria-hidden="true" />
+            ) : (
+              <PencilLine size={13} aria-hidden="true" />
+            )}
+            <span>{conversation.planName}</span>
+            <span className="plan-chip-state">
+              {conversation.context?.state === 'draft' ? 'Draft' : 'Locked'}
+            </span>
+          </Link>
+        ) : null}
+        {conversation ? (
+          <Menu
+            label="Conversation options"
+            icon={MoreHorizontal}
+            items={[
+              {
+                label: 'Rename conversation',
+                icon: PencilLine,
+                disabled: conversation.archived || change.isPending,
+                onSelect: () => {
                   setTitle(conversation.title);
                   setRenaming(true);
-                }}
-              >
-                Rename conversation
-              </button>
-              <button
-                disabled={conversation.planArchived || change.isPending || isActive(run)}
-                onClick={() => change.mutate(conversation.archived ? 'unarchive' : 'archive')}
-              >
-                {conversation.archived ? 'Restore conversation' : 'Archive conversation'}
-              </button>
-              <button
-                disabled={conversation.planArchived || change.isPending}
-                onClick={() => change.mutate('new')}
-              >
-                {conversation.planId ? 'New chat for this plan' : 'New standalone chat'}
-              </button>
-            </div>
-          </details>
-        )}
+                },
+              },
+              {
+                label: conversation.planId ? 'New chat for this plan' : 'New standalone chat',
+                icon: MessageSquarePlus,
+                disabled: conversation.planArchived || change.isPending,
+                onSelect: () => change.mutate('new'),
+              },
+              'divider',
+              {
+                label: conversation.archived ? 'Restore conversation' : 'Archive conversation',
+                icon: conversation.archived ? ArchiveRestore : Archive,
+                disabled: conversation.planArchived || change.isPending || running,
+                onSelect: () => change.mutate(conversation.archived ? 'unarchive' : 'archive'),
+              },
+            ]}
+          />
+        ) : null}
       </header>
-      {renaming && (
+      <Dialog
+        open={renaming}
+        size="sm"
+        busy={change.isPending}
+        onClose={() => setRenaming(false)}
+        title="Rename conversation"
+        footer={
+          <>
+            <Button variant="ghost" onClick={() => setRenaming(false)}>
+              Cancel
+            </Button>
+            <Button
+              variant="primary"
+              type="submit"
+              form="rename-conversation"
+              disabled={!title.trim() || change.isPending}
+            >
+              Save
+            </Button>
+          </>
+        }
+      >
         <form
-          className="chat-rename"
+          id="rename-conversation"
           onSubmit={(e) => {
             e.preventDefault();
             change.mutate('rename');
           }}
         >
-          <label>
-            Conversation title
+          <label className="field">
+            <span>Conversation title</span>
             <input
               autoFocus
               maxLength={120}
@@ -357,129 +485,163 @@ function ConversationPanel({
               onChange={(e) => setTitle(e.target.value)}
             />
           </label>
-          <button className="primary-button" disabled={!title.trim() || change.isPending}>
-            Save
-          </button>
-          <button className="chat-text-button" type="button" onClick={() => setRenaming(false)}>
-            Cancel
-          </button>
         </form>
-      )}
-      {(change.error || cancel.error) && (
-        <p className="chat-notice" role="alert">
-          {change.error?.message ?? cancel.error?.message}
-        </p>
-      )}
-      {conversationId && detail.isPending && (
-        <p className="chat-notice" role="status">
-          Loading conversation…
-        </p>
-      )}
-      {detail.error && (
-        <p className="chat-notice" role="alert">
-          {detail.error.message} <button onClick={() => void detail.refetch()}>Retry</button>
-        </p>
-      )}
-      {conversation?.archived && (
-        <p className="chat-notice">
-          This conversation is archived and read-only.{' '}
-          {conversation.planArchived ? (
-            <Link to={`/plans/${conversation.planId}`}>Restore its plan to continue.</Link>
-          ) : (
-            <button className="chat-text-button" onClick={() => change.mutate('unarchive')}>
-              Restore conversation
-            </button>
-          )}
-        </p>
-      )}
-      <div className={`message-scroll${messages.length === 0 ? ' empty' : ''}`}>
-        {history.hasNextPage && (
-          <button
-            className="chat-load-more"
+      </Dialog>
+      <div className="chat-notices">
+        {change.error || cancel.error ? (
+          <Notice tone="danger" role="alert">
+            {change.error?.message ?? cancel.error?.message}
+          </Notice>
+        ) : null}
+        {conversationId && detail.isPending ? (
+          <p className="muted" role="status">
+            Loading conversation…
+          </p>
+        ) : null}
+        {detail.error ? (
+          <Notice
+            tone="danger"
+            role="alert"
+            action={
+              <Button size="sm" variant="ghost" onClick={() => void detail.refetch()}>
+                Retry
+              </Button>
+            }
+          >
+            {detail.error.message}
+          </Notice>
+        ) : null}
+        {conversation?.archived ? (
+          <Notice
+            icon={Archive}
+            action={
+              conversation.planArchived ? (
+                <Link className="text-link" to={`/plans/${conversation.planId}`}>
+                  Restore its plan to continue.
+                </Link>
+              ) : (
+                <Button size="sm" variant="ghost" onClick={() => change.mutate('unarchive')}>
+                  Restore conversation
+                </Button>
+              )
+            }
+          >
+            This conversation is archived and read-only.
+          </Notice>
+        ) : null}
+      </div>
+      <div ref={scroller} className={cx('message-scroll', messages.length === 0 && 'empty')}>
+        {history.hasNextPage ? (
+          <Button
+            size="sm"
+            variant="ghost"
+            className="load-older"
             disabled={history.isFetchingNextPage}
             onClick={() => void history.fetchNextPage()}
           >
             Load older messages
-          </button>
-        )}
-        {history.error && (
-          <p className="chat-notice" role="alert">
-            {history.error.message}{' '}
-            <button onClick={() => void history.refetch()}>Retry history</button>
-          </p>
-        )}
-        {!messages.length && (
-          <div className="chat-empty-state">
-            <span className="empty-spark">
-              <Sparkles size={24} />
+          </Button>
+        ) : null}
+        {history.error ? (
+          <Notice
+            tone="danger"
+            role="alert"
+            action={
+              <Button size="sm" variant="ghost" onClick={() => void history.refetch()}>
+                Retry history
+              </Button>
+            }
+          >
+            {history.error.message}
+          </Notice>
+        ) : null}
+        {!messages.length ? (
+          <div className="chat-empty">
+            <span className="coach-avatar large" aria-hidden="true">
+              <Sparkles size={22} />
             </span>
             <h2>How can I help with your training?</h2>
-            <p>
-              {capabilities.data?.mode === 'test'
+            <p className="muted">
+              {testMode
                 ? 'Try a conversation. Your messages are saved, with simulated replies for now.'
-                : 'A space to talk about your plan, your workouts, and your week.'}
+                : 'Talk through your goals, your plan, your workouts and your week.'}
             </p>
+            {!conversationId ? (
+              <div className="suggestions">
+                {SUGGESTIONS.map((suggestion) => (
+                  <button
+                    key={suggestion}
+                    type="button"
+                    className="suggestion"
+                    onClick={() => {
+                      setText(suggestion);
+                      input.current?.focus();
+                    }}
+                  >
+                    {suggestion}
+                  </button>
+                ))}
+              </div>
+            ) : null}
           </div>
-        )}
-        {messages.length > 0 && (
+        ) : null}
+        {messages.length > 0 ? (
           <div className="messages">
-            {messages.map((message) => (
-              <article className={`message ${message.role}`} key={message.id}>
-                {message.role === 'assistant' && (
-                  <span className="message-avatar">
-                    <Bot size={17} />
-                  </span>
-                )}
-                <div>
-                  <span className="message-author">
-                    {message.role === 'user' ? 'You' : 'Askesis'}
-                  </span>
+            {messages.map((message, index) => (
+              <div key={message.id} className="message-group">
+                <article className={`message ${message.role}`}>
+                  {message.role === 'assistant' ? (
+                    <span className="message-author">
+                      <span className="coach-avatar" aria-hidden="true">
+                        <Sparkles size={12} />
+                      </span>
+                      Askesis
+                      {testMode ? <small> · test reply</small> : null}
+                    </span>
+                  ) : (
+                    <span className="sr-only">You</span>
+                  )}
                   {message.role === 'assistant' ? (
                     <ChatMarkdown content={message.content} />
                   ) : (
                     <p className="chat-text">{message.content}</p>
                   )}
-                </div>
-              </article>
+                </article>
+                {run && index === lastRunMessage ? (
+                  <RunActivity run={run} conversation={conversation} />
+                ) : null}
+              </div>
             ))}
-            <div ref={end} />
+            {run && lastRunMessage === -1 ? (
+              <RunActivity run={run} conversation={conversation} />
+            ) : null}
           </div>
-        )}
+        ) : null}
       </div>
       <div className="composer-wrap">
-        {run && (
-          <div className="chat-run" role="status">
-            <RunStatus run={run} conversation={conversation} />
-            {isActive(run) && (
-              <button
-                className="chat-stop"
-                disabled={cancel.isPending || run.status === 'cancelling'}
-                onClick={() => cancel.mutate()}
-              >
-                <Square size={11} fill="currentColor" /> Stop
-              </button>
-            )}
-            <RunEvents run={run} />
-          </div>
-        )}
-        {capabilities.data && !capabilities.data.executionAvailable && (
-          <p className="chat-notice">
+        {capabilities.data && !capabilities.data.executionAvailable ? (
+          <Notice tone="warning" icon={TriangleAlert}>
             Coaching is not available yet. Your conversation history is still available.
-          </p>
-        )}
-        {capabilities.error && (
-          <p className="chat-notice" role="alert">
-            Could not connect to chat.{' '}
-            <button className="chat-text-button" onClick={() => void capabilities.refetch()}>
-              Reconnect
-            </button>
-          </p>
-        )}
-        {capabilities.isPending && (
-          <p className="chat-notice" role="status">
+          </Notice>
+        ) : null}
+        {capabilities.error ? (
+          <Notice
+            tone="danger"
+            role="alert"
+            action={
+              <Button size="sm" variant="ghost" onClick={() => void capabilities.refetch()}>
+                Reconnect
+              </Button>
+            }
+          >
+            Could not connect to chat.
+          </Notice>
+        ) : null}
+        {capabilities.isPending ? (
+          <p className="muted" role="status">
             Connecting to chat…
           </p>
-        )}
+        ) : null}
         <form
           className="chat-composer"
           onSubmit={(e) => {
@@ -488,6 +650,7 @@ function ConversationPanel({
           }}
         >
           <textarea
+            ref={input}
             aria-label="Message"
             rows={1}
             maxLength={32000}
@@ -497,7 +660,7 @@ function ConversationPanel({
               if (!text) setTarget(conversation?.context ?? null);
               setText(e.target.value);
               e.target.style.height = 'auto';
-              e.target.style.height = Math.min(e.target.scrollHeight, 130) + 'px';
+              e.target.style.height = Math.min(e.target.scrollHeight, 160) + 'px';
             }}
             onKeyDown={(e) => {
               if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
@@ -505,41 +668,68 @@ function ConversationPanel({
                 submit();
               }
             }}
-            placeholder="Ask anything about your training"
-          />
-          <button
-            className="send-button"
-            aria-label={
-              send.isPending ? 'Sending message' : attempt ? 'Retry send' : 'Send message'
+            placeholder={
+              conversation?.context?.state === 'draft'
+                ? 'Ask for a change, or just talk it through…'
+                : 'Ask your coach anything…'
             }
-            title={send.isPending ? 'Sending…' : attempt ? 'Retry send' : 'Send message · Enter'}
-            disabled={disabled || !text.trim()}
-            type="submit"
-          >
-            <ArrowUp size={19} />
-          </button>
+          />
+          {running && !attempt ? (
+            <button
+              type="button"
+              className="composer-button stop"
+              aria-label="Stop"
+              title="Stop the coach. Changes already saved stay in the draft."
+              disabled={cancel.isPending || run?.status === 'cancelling'}
+              onClick={() => cancel.mutate()}
+            >
+              <Square size={13} fill="currentColor" aria-hidden="true" />
+            </button>
+          ) : (
+            <button
+              className="composer-button send"
+              aria-label={
+                send.isPending ? 'Sending message' : attempt ? 'Retry send' : 'Send message'
+              }
+              title={send.isPending ? 'Sending…' : attempt ? 'Retry send' : 'Send message · Enter'}
+              disabled={disabled || !text.trim()}
+              type="submit"
+            >
+              {send.isPending ? (
+                <Loader2 className="spin" size={18} aria-hidden="true" />
+              ) : (
+                <ArrowUp size={19} aria-hidden="true" />
+              )}
+            </button>
+          )}
         </form>
-        {send.error && (
-          <p role="alert" className="chat-send-error">
+        {send.error ? (
+          <Notice
+            tone="danger"
+            role="alert"
+            action={
+              conversation?.planId && !attempt ? (
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => {
+                    void detail.refetch().then((result) => {
+                      setTarget(result.data?.context ?? null);
+                      send.reset();
+                    });
+                  }}
+                >
+                  Refresh context
+                </Button>
+              ) : undefined
+            }
+          >
             {send.error.message}
             {attempt ? ' Retry sends the same request safely.' : ''}
-            {conversation?.planId && !attempt && (
-              <button
-                className="chat-text-button"
-                onClick={() => {
-                  void detail.refetch().then((result) => {
-                    setTarget(result.data?.context ?? null);
-                    send.reset();
-                  });
-                }}
-              >
-                Refresh context
-              </button>
-            )}
-          </p>
-        )}
-        {capabilities.data?.mode === 'test' ? (
-          <details className="chat-test-info">
+          </Notice>
+        ) : null}
+        {testMode ? (
+          <details className="chat-footnote">
             <summary>Test mode · replies are simulated</summary>
             <p>
               No coaching or plan changes yet. Try <code>/test slow</code> to test Stop,{' '}
@@ -547,71 +737,174 @@ function ConversationPanel({
             </p>
           </details>
         ) : (
-          <p>Your coach can update the draft. Review the plan before locking a version.</p>
+          <p className="chat-footnote">
+            Your coach can edit drafts. Only you can confirm assumptions and lock a version.
+          </p>
         )}
       </div>
     </section>
   );
 }
-function RunStatus({ run, conversation }: { run: Run; conversation: Conversation | undefined }) {
-  const labels = {
-    queued: 'Queued',
-    running: 'Working',
-    cancelling: 'Stopping…',
-    completed: 'Completed',
-    failed: 'Failed',
-    cancelled: 'Cancelled',
-  };
-  return (
-    <span>
-      {labels[run.status]}
-      {run.failureCode &&
-        ` · ${run.failureCode === 'STALE_CONTEXT' ? 'The plan changed; refresh context before sending again.' : run.failureCode === 'EXECUTION_TIMEOUT' ? 'Execution timed out. You can send another message.' : 'Execution stopped. You can send another message.'}`}
-      {(run.status === 'failed' || run.status === 'cancelled') &&
-        ' · Completed plan changes remain saved; review your draft before continuing.'}
-      {run.generation && (
-        <>
-          {' '}
-          · Intended horizon: {run.generation.startDate} – {run.generation.endDate}
-          {run.generation.status === 'completed'
-            ? ' · Schedule generation completed.'
-            : run.generation.status === 'interrupted'
-              ? ' · Schedule generation remains unfinished.'
-              : ' · Schedule generation in progress.'}
-          {run.generation.prescribedThrough &&
-            ` Fully prescribed through ${run.generation.prescribedThrough}.`}
-        </>
-      )}
-      {conversation && run.conversationId !== conversation.id && (
-        <>
-          {' '}
-          in <Link to={`/chat/${run.conversationId}`}>another chat for this plan</Link>
-        </>
-      )}
-    </span>
-  );
-}
-function RunEvents({ run }: { run: Run }) {
+
+const TOOL_LABELS: Record<string, { running: string; done: string; edits?: boolean }> = {
+  read_plan_context: { running: 'Reading your plan', done: 'Read your plan' },
+  read_schedule: { running: 'Reading the schedule', done: 'Read the schedule' },
+  create_plan_draft: {
+    running: 'Creating a plan draft',
+    done: 'Created a plan draft',
+    edits: true,
+  },
+  update_plan_brief: {
+    running: 'Updating planning assumptions',
+    done: 'Updated planning assumptions',
+    edits: true,
+  },
+  set_fitness_calibration: { running: 'Setting pace guides', done: 'Set pace guides', edits: true },
+  apply_schedule_changes: { running: 'Updating workouts', done: 'Updated workouts', edits: true },
+  replace_schedule_range: {
+    running: 'Writing the schedule',
+    done: 'Wrote the schedule',
+    edits: true,
+  },
+  validate_plan: { running: 'Checking the plan', done: 'Checked the plan' },
+};
+
+const RUN_LABELS: Record<Run['status'], string> = {
+  queued: 'Queued',
+  running: 'Working',
+  cancelling: 'Stopping…',
+  completed: 'Completed',
+  failed: 'Failed',
+  cancelled: 'Cancelled',
+};
+
+/**
+ * T3-style activity card for the latest run: what the coach is doing, what it changed, and any
+ * schedule generation progress. Committed changes always stay saved, even after Stop.
+ */
+function RunActivity({ run, conversation }: { run: Run; conversation: Conversation | undefined }) {
+  const { settings } = useSettings();
+  const active = isActive(run);
+  const [open, setOpen] = useState(false);
   const events = useQuery({
     queryKey: ['chat', 'events', run.id, run.status],
-    refetchInterval: isActive(run) ? 2000 : false,
+    refetchInterval: active ? 2000 : false,
     queryFn: async () =>
       chatResult(
         await api.GET('/api/v1/agent-runs/{runId}/events', { params: { path: { runId: run.id } } }),
       ),
   });
+  const tools = (events.data?.events ?? [])
+    .filter((event) => event.type === 'tool_completed')
+    .map((event) => String(event.metadata.name ?? 'tool'));
+  const edited = tools.some((name) => TOOL_LABELS[name]?.edits);
+  const seconds =
+    run.startedAt && run.finishedAt
+      ? Math.max(1, Math.round((Date.parse(run.finishedAt) - Date.parse(run.startedAt)) / 1000))
+      : null;
+  const generation = run.generation;
+  const generationProgress =
+    generation && generation.prescribedThrough
+      ? Math.min(
+          1,
+          (daysBetween(generation.startDate, generation.prescribedThrough) + 1) /
+            (daysBetween(generation.startDate, generation.endDate) + 1),
+        )
+      : 0;
+  const latestTool = tools.at(-1);
+  const summary = active
+    ? run.status === 'running'
+      ? latestTool
+        ? `${RUN_LABELS.running} · ${TOOL_LABELS[latestTool]?.done ?? latestTool.replaceAll('_', ' ')}`
+        : RUN_LABELS.running
+      : RUN_LABELS[run.status]
+    : `${RUN_LABELS[run.status]}${seconds ? ` · ${seconds}s` : ''}${tools.length ? ` · ${tools.length} ${tools.length === 1 ? 'action' : 'actions'}` : ''}`;
+  const failure =
+    run.failureCode === 'STALE_CONTEXT'
+      ? 'The plan changed; refresh context before sending again.'
+      : run.failureCode === 'EXECUTION_TIMEOUT'
+        ? 'Execution timed out. You can send another message.'
+        : run.failureCode
+          ? 'Execution stopped. You can send another message.'
+          : null;
   return (
-    <details>
-      <summary>Run activity</summary>
-      {events.error ? (
-        <p>{events.error.message}</p>
-      ) : (
-        <ol>
-          {events.data?.events.map((event) => (
-            <li key={event.sequence}>{event.type.replaceAll('_', ' ')}</li>
+    <div className={cx('run-activity', run.status)} role="status">
+      <button
+        type="button"
+        className="run-summary"
+        aria-expanded={open}
+        disabled={!settings.showActivity || !tools.length}
+        onClick={() => setOpen((value) => !value)}
+      >
+        {active ? (
+          <Loader2 className="spin" size={15} aria-hidden="true" />
+        ) : run.status === 'completed' ? (
+          <Check size={15} aria-hidden="true" className="ok" />
+        ) : (
+          <TriangleAlert size={15} aria-hidden="true" className="warn" />
+        )}
+        <span>{summary}</span>
+        {settings.showActivity && tools.length ? (
+          open ? (
+            <ChevronUp size={14} aria-hidden="true" />
+          ) : (
+            <ChevronDown size={14} aria-hidden="true" />
+          )
+        ) : null}
+      </button>
+      {open && settings.showActivity ? (
+        <ol className="run-steps">
+          {tools.map((name, index) => (
+            <li key={index}>
+              <Check size={13} aria-hidden="true" />
+              {TOOL_LABELS[name]?.done ?? name.replaceAll('_', ' ')}
+            </li>
           ))}
         </ol>
-      )}
-    </details>
+      ) : null}
+      {generation ? (
+        <div className="generation">
+          <div className="generation-copy">
+            <CalendarDays size={14} aria-hidden="true" />
+            <span>
+              {generation.status === 'completed'
+                ? 'Schedule generation completed.'
+                : generation.status === 'interrupted'
+                  ? 'Schedule generation remains unfinished.'
+                  : 'Schedule generation in progress.'}{' '}
+              Intended horizon {formatShort(generation.startDate)} –{' '}
+              {formatShort(generation.endDate)}
+              {generation.prescribedThrough
+                ? ` · fully prescribed through ${formatShort(generation.prescribedThrough)}`
+                : ''}
+            </span>
+          </div>
+          <ProgressBar value={generationProgress} label="Schedule generation progress" />
+        </div>
+      ) : null}
+      {failure ? <p className="run-note">{failure}</p> : null}
+      {run.status === 'failed' || run.status === 'cancelled' ? (
+        <p className="run-note">
+          Completed plan changes remain saved; review your draft before continuing.
+        </p>
+      ) : null}
+      {edited && !active && conversation?.planId && conversation.context?.state === 'draft' ? (
+        <Link className="plan-update" to={`/plans/${conversation.planId}`}>
+          <span className="callout-icon">
+            <CalendarDays size={16} aria-hidden="true" />
+          </span>
+          <span>
+            <strong>Plan draft updated</strong>
+            <small>Review the changes, then lock when you’re happy.</small>
+          </span>
+          <ArrowRight size={16} aria-hidden="true" />
+        </Link>
+      ) : null}
+      {conversation && run.conversationId !== conversation.id ? (
+        <p className="run-note">
+          Running in <Link to={`/chat/${run.conversationId}`}>another chat for this plan</Link>
+        </p>
+      ) : null}
+    </div>
   );
 }

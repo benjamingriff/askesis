@@ -1,176 +1,135 @@
-import { useClerk, useUser } from '@clerk/react';
+import { useUser } from '@clerk/react';
 import {
   CalendarDays,
-  ChevronLeft,
-  ChevronRight,
-  CircleHelp,
-  FileText,
-  LogOut,
-  Menu,
-  MessageSquare,
-  Moon,
-  Plus,
-  Settings,
-  UserRound,
-  X,
+  Library,
+  MessageSquarePlus,
+  MessagesSquare,
+  PanelLeftClose,
+  PanelLeftOpen,
+  Zap,
+  CircleUserRound,
+  type LucideIcon,
 } from 'lucide-react';
 import { useState } from 'react';
-import { NavLink, Outlet } from 'react-router';
+import { Link, NavLink, Outlet, useLocation } from 'react-router';
 import { useConversations } from '../chat';
+import { cx } from './ui';
 
-export function AppShell() {
-  const chats = useConversations();
-  const [collapsed, setCollapsed] = useState(false);
-  const [mobileOpen, setMobileOpen] = useState(false);
-  const [accountOpen, setAccountOpen] = useState(false);
-  const { user } = useUser();
-  const clerk = useClerk();
-  const displayName = user?.fullName ?? user?.firstName ?? 'Askesis athlete';
-  const email = user?.primaryEmailAddress?.emailAddress ?? '';
-  const initials =
-    displayName
+const TABS: { to: string; label: string; icon: LucideIcon }[] = [
+  { to: '/today', label: 'Today', icon: Zap },
+  { to: '/plan', label: 'Plan', icon: CalendarDays },
+  { to: '/chat', label: 'Coach', icon: MessagesSquare },
+  { to: '/settings', label: 'You', icon: CircleUserRound },
+];
+
+export function initialsFor(name: string) {
+  return (
+    name
       .split(/\s+/)
       .map((part) => part.at(0))
       .join('')
       .slice(0, 2)
-      .toUpperCase() || 'A';
+      .toUpperCase() || 'A'
+  );
+}
+
+/**
+ * Desktop: a T3 Code-style sidebar with navigation and recent chats.
+ * Narrow screens: the mobile app's floating tab bar.
+ */
+export function AppShell() {
+  const chats = useConversations();
+  const [collapsed, setCollapsed] = useState(
+    () => localStorage.getItem('askesis-sidebar-collapsed') === 'true',
+  );
+  const { user } = useUser();
+  const onChat = useLocation().pathname.startsWith('/chat');
+  const displayName = user?.fullName ?? user?.firstName ?? 'Askesis athlete';
+  const email = user?.primaryEmailAddress?.emailAddress ?? '';
+  const toggle = () =>
+    setCollapsed((value) => {
+      localStorage.setItem('askesis-sidebar-collapsed', String(!value));
+      return !value;
+    });
 
   return (
-    <div className={`app-shell${collapsed ? ' sidebar-collapsed' : ''}`}>
-      <button
-        className="mobile-menu-button"
-        type="button"
-        onClick={() => setMobileOpen(true)}
-        aria-label="Open navigation"
-      >
-        <Menu size={20} />
-      </button>
-      {mobileOpen && (
-        <button
-          className="mobile-backdrop"
-          type="button"
-          aria-label="Close navigation"
-          onClick={() => setMobileOpen(false)}
-        />
-      )}
-
-      <aside className={`primary-sidebar${mobileOpen ? ' mobile-open' : ''}`}>
-        <div className="brand-row">
-          <NavLink
-            to="/plan"
-            className="brand"
-            onClick={() => setMobileOpen(false)}
-            aria-label="Askesis plan"
-          >
+    <div className={cx('app-shell', collapsed && 'sidebar-collapsed', onChat && 'on-chat')}>
+      <aside className="sidebar" aria-label="Sidebar">
+        <div className="sidebar-brand">
+          <Link to="/today" className="brand" aria-label="Askesis home">
             <span className="brand-mark">A</span>
             <strong>Askesis</strong>
-          </NavLink>
+          </Link>
           <button
-            className="icon-button sidebar-close-mobile"
             type="button"
-            onClick={() => setMobileOpen(false)}
-            aria-label="Close navigation"
-          >
-            <X size={18} />
-          </button>
-          <button
-            className="icon-button sidebar-collapse"
-            type="button"
-            onClick={() => setCollapsed((value) => !value)}
+            className="icon-btn icon-btn-plain"
+            onClick={toggle}
             aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+            title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
           >
-            {collapsed ? <ChevronRight size={17} /> : <ChevronLeft size={17} />}
+            {collapsed ? <PanelLeftOpen size={18} /> : <PanelLeftClose size={18} />}
           </button>
         </div>
 
-        <nav className="primary-nav" aria-label="Primary navigation">
-          <NavLink to="/plans" onClick={() => setMobileOpen(false)}>
-            <FileText size={19} />
-            <span>Plan library</span>
-          </NavLink>
-          <NavLink to="/plan" onClick={() => setMobileOpen(false)}>
-            <CalendarDays size={19} />
-            <span>Plan</span>
-          </NavLink>
-          <NavLink to="/chat" onClick={() => setMobileOpen(false)}>
-            <MessageSquare size={19} />
-            <span>Chat</span>
+        <Link to="/chat/new" className="sidebar-new-chat" title="New chat">
+          <MessageSquarePlus size={17} aria-hidden="true" />
+          <span>New chat</span>
+        </Link>
+
+        <nav className="sidebar-nav" aria-label="Primary navigation">
+          {TABS.slice(0, 3).map(({ to, label, icon: Icon }) => (
+            <NavLink key={to} to={to} title={label}>
+              <Icon size={18} aria-hidden="true" />
+              <span>{label}</span>
+            </NavLink>
+          ))}
+          <NavLink to="/plans" end={false} title="All plans">
+            <Library size={18} aria-hidden="true" />
+            <span>All plans</span>
           </NavLink>
         </nav>
 
-        <div className="sidebar-section chat-history-nav">
-          <div className="sidebar-section-heading">
-            <span>Chats</span>
-            <NavLink to="/chat" aria-label="New chat">
-              <Plus size={16} />
-            </NavLink>
-          </div>
-          <div className="sidebar-chat-list">
-            {chats.data?.pages[0]?.conversations.map((chat) => (
-              <NavLink to={`/chat/${chat.id}`} key={chat.id} onClick={() => setMobileOpen(false)}>
-                {chat.title}
+        <div className="sidebar-section">
+          <span className="label">Recent chats</span>
+          <div className="sidebar-chats">
+            {chats.data?.pages[0]?.conversations.slice(0, 12).map((chat) => (
+              <NavLink to={`/chat/${chat.id}`} key={chat.id} title={chat.title}>
+                <span>{chat.title}</span>
+                {chat.planName ? <small>{chat.planName}</small> : null}
               </NavLink>
             ))}
-            {chats.error && <span>Could not load chats.</span>}
+            {chats.error ? <span className="muted">Could not load chats.</span> : null}
+            {chats.data && !chats.data.pages[0]?.conversations.length ? (
+              <span className="muted">No chats yet.</span>
+            ) : null}
           </div>
         </div>
 
-        <div className="sidebar-spacer" />
-        <nav className="utility-nav">
-          <NavLink to="/settings">
-            <Settings size={18} />
-            <span>Settings</span>
-          </NavLink>
-          <a href="/api/docs">
-            <FileText size={18} />
-            <span>API docs</span>
-          </a>
-        </nav>
-
-        <div className="account-area">
-          {accountOpen && (
-            <div className="account-popover">
-              <div className="account-popover-identity">
-                <strong>{displayName}</strong>
-                <span>{email}</span>
-              </div>
-              <button type="button" onClick={() => clerk.openUserProfile()}>
-                <UserRound size={16} /> Profile
-              </button>
-              <button type="button">
-                <Moon size={16} /> Appearance
-              </button>
-              <button type="button">
-                <CircleHelp size={16} /> Help
-              </button>
-              <button type="button" onClick={() => void clerk.signOut({ redirectUrl: '/sign-in' })}>
-                <LogOut size={16} /> Sign out
-              </button>
-            </div>
+        <NavLink to="/settings" className="sidebar-account" title="You">
+          {user?.hasImage ? (
+            <img className="avatar" src={user.imageUrl} alt="" />
+          ) : (
+            <span className="avatar">{initialsFor(displayName)}</span>
           )}
-          <button
-            className="account-button"
-            type="button"
-            onClick={() => setAccountOpen((value) => !value)}
-            aria-expanded={accountOpen}
-          >
-            {user?.hasImage ? (
-              <img className="avatar" src={user.imageUrl} alt="" />
-            ) : (
-              <span className="avatar">{initials}</span>
-            )}
-            <span className="account-copy">
-              <strong>{displayName}</strong>
-              <small>{email || 'Personal account'}</small>
-            </span>
-            <span className="account-more">•••</span>
-          </button>
-        </div>
+          <span className="account-copy">
+            <strong>{displayName}</strong>
+            <small>{email || 'Personal account'}</small>
+          </span>
+        </NavLink>
       </aside>
 
       <div className="workspace">
         <Outlet />
       </div>
+
+      <nav className="tab-bar" aria-label="Primary navigation">
+        {TABS.map(({ to, label, icon: Icon }) => (
+          <NavLink key={to} to={to} className="tab">
+            <Icon size={22} aria-hidden="true" />
+            <span>{label}</span>
+          </NavLink>
+        ))}
+      </nav>
     </div>
   );
 }

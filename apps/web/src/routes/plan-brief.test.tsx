@@ -64,16 +64,16 @@ it('distinguishes the intended month from completed coverage after generation st
   ];
   render(<CoverageSummary state={state} />);
   expect(screen.getByLabelText('Generation attempts')).toHaveTextContent(
-    'Intended horizon: 2026-09-01 – 2026-09-30',
+    'Intended horizon: 1 Sept – 30 Sept 2026',
   );
   expect(screen.getByLabelText('Generation attempts')).toHaveTextContent(
     'Generation stopped before the intended horizon was complete',
   );
   expect(screen.getByLabelText('Generation attempts')).toHaveTextContent(
-    'Fully prescribed through 2026-09-07',
+    'Fully prescribed through 7 Sept 2026',
   );
-  expect(screen.getByText('Still unplanned:')).toBeInTheDocument();
-  expect(screen.getByText('2026-09-08 – 2026-12-01')).toBeInTheDocument();
+  expect(screen.getByText('Still unplanned')).toBeInTheDocument();
+  expect(screen.getByText('8 Sept – 1 Dec 2026')).toBeInTheDocument();
 });
 function mount() {
   const router = createMemoryRouter(
@@ -175,8 +175,8 @@ it('shows a partial prescribed horizon, the unplanned remainder and estimated pa
     },
   ];
   mount();
-  expect(await screen.findByText('2026-09-01 – 2026-09-30')).toBeInTheDocument();
-  expect(screen.getByText('2026-10-01 – 2026-12-01')).toBeInTheDocument();
+  expect(await screen.findByText('1 Sept – 30 Sept 2026')).toBeInTheDocument();
+  expect(screen.getByText('1 Oct – 1 Dec 2026')).toBeInTheDocument();
   expect(screen.getAllByText(/Coach estimate: Reported comfortable pace/).length).toBeGreaterThan(
     0,
   );

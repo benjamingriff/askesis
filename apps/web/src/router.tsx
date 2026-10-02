@@ -14,11 +14,11 @@ import { SignInPage, SignUpPage } from './routes/auth';
 import { ChatPage } from './routes/chat';
 import { SettingsPage } from './routes/settings';
 import { PlanPage, PlansPage } from './routes/plans';
-import { workoutDetailLoader } from './routes/workouts';
 import { ActivePlansPage } from './routes/active-plans';
 import { PlanRevisionPage } from './routes/plan-history';
 import { PlanDraftPage } from './routes/plan-draft';
 import { PlanBriefPage } from './routes/plan-brief';
+import { TodayPage } from './routes/today';
 
 function RequireAuthentication() {
   const { isSignedIn } = useAuth();
@@ -44,10 +44,14 @@ function ErrorPage() {
 
   return (
     <main className="error-page">
-      <p className="page-kicker">Askesis</p>
+      <span className="label">Askesis</span>
       <h1>Something went wrong</h1>
-      <p>{message}</p>
-      <button className="primary-button" type="button" onClick={() => window.location.reload()}>
+      <p className="muted">{message}</p>
+      <button
+        className="btn btn-primary btn-md"
+        type="button"
+        onClick={() => window.location.reload()}
+      >
         Try again
       </button>
     </main>
@@ -64,7 +68,8 @@ export const router = createBrowserRouter([
         element: <AppShell />,
         errorElement: <ErrorPage />,
         children: [
-          { index: true, element: <Navigate to="/plan" replace /> },
+          { index: true, element: <Navigate to="/today" replace /> },
+          { path: '/today', element: <TodayPage /> },
           { path: '/plan', element: <ActivePlansPage /> },
           { path: '/plans/archive', element: <PlansPage archived /> },
           { path: '/plans', element: <PlansPage /> },
@@ -74,14 +79,11 @@ export const router = createBrowserRouter([
           { path: '/plans/:planId/versions/:revisionId/brief', element: <PlanBriefPage /> },
           { path: '/plans/:planId/versions/:revisionId', element: <PlanRevisionPage /> },
           { path: '/chat', element: <ChatPage /> },
+          { path: '/chat/new', element: <ChatPage composing /> },
           { path: '/chat/archive', element: <ChatPage archived /> },
           { path: '/chat/:conversationId', element: <ChatPage /> },
           { path: '/settings', element: <SettingsPage /> },
         ],
-      },
-      {
-        path: '/workouts/:workoutId/detail',
-        loader: workoutDetailLoader,
       },
     ],
   },

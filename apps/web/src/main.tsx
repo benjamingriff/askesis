@@ -6,7 +6,8 @@ import { RouterProvider } from 'react-router';
 import { configureAuthTokenProvider } from './api';
 import { router } from './router';
 import { AccountQueryProvider } from './query-provider';
-import './styles.css';
+import { SettingsProvider, useTheme } from './settings';
+import './styles/index.css';
 
 Sentry.init({
   dsn: import.meta.env.VITE_SENTRY_DSN,
@@ -55,21 +56,37 @@ function AuthenticatedRouter() {
 const root = document.getElementById('root');
 if (root === null) throw new Error('Missing #root element');
 
-createRoot(root).render(
-  <StrictMode>
+function ThemedClerk() {
+  const theme = useTheme();
+  return (
     <ClerkProvider
-      publishableKey={publishableKey}
+      publishableKey={publishableKey!}
       signInUrl="/sign-in"
       signUpUrl="/sign-up"
       afterSignOutUrl="/sign-in"
       appearance={{
         variables: {
-          colorPrimary: '#171717',
-          borderRadius: '0.625rem',
+          colorPrimary: theme.accent,
+          colorPrimaryForeground: theme.onAccent,
+          colorBackground: theme.colors.surface,
+          colorForeground: theme.colors.text,
+          colorMutedForeground: theme.colors.textDim,
+          colorInput: theme.colors.surfaceRaised,
+          colorInputForeground: theme.colors.text,
+          colorNeutral: theme.colors.text,
+          borderRadius: '0.875rem',
         },
       }}
     >
       <AuthenticatedRouter />
     </ClerkProvider>
+  );
+}
+
+createRoot(root).render(
+  <StrictMode>
+    <SettingsProvider>
+      <ThemedClerk />
+    </SettingsProvider>
   </StrictMode>,
 );

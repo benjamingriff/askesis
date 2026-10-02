@@ -1,8 +1,9 @@
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { createMemoryRouter, RouterProvider } from 'react-router';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { AccountQueryProvider } from '../query-provider';
 import { api } from '../api';
+import type { Plan } from '../plan-data';
 import { PlanPage, PlansPage } from './plans';
 
 vi.mock('../api', () => ({ api: { GET: vi.fn(), POST: vi.fn(), PATCH: vi.fn() } }));
@@ -18,14 +19,44 @@ const draft = {
   supersedesVersionId: null,
   lockedAt: null,
 };
+const lockedPlan = (base: Plan): Plan => ({
+  ...base,
+  draft: null,
+  locked: { ...draft, state: 'locked', versionNumber: 1 },
+});
 const plan = {
   id: 'plan-1',
   displayName: 'Autumn running',
   stateVersion: 1,
   active: false,
   archived: false,
-  draft,
-  locked: null,
+  draft: draft as typeof draft | null,
+  locked: null as
+    (typeof draft & { state: 'locked' | 'draft'; versionNumber: number | null }) | null,
+};
+const briefState = {
+  versionId: draft.id,
+  editNumber: 1,
+  startDate: draft.startDate,
+  endDate: draft.endDate,
+  readOnly: false,
+  confirmed: false,
+  hash: 'c'.repeat(64),
+  scheduleReviewRequired: false,
+  coverage: [{ startDate: '2026-09-01', endDate: '2026-09-07', current: true }],
+  calibrations: [],
+  findings: [],
+  brief: {
+    goal: 'Comfortable 10K',
+    unit: 'kilometres',
+    timezone: 'Europe/London',
+    weeklyDistance: { status: 'known', value: 20000 },
+    currentRuns: { status: 'known', value: 3 },
+    longestRun: { status: 'known', value: 8000 },
+    desiredRuns: 3,
+    weekdays: Array(7).fill('available'),
+    context: '',
+  },
 };
 const preview = {
   draftId: draft.id,
@@ -44,11 +75,13 @@ const preview = {
   ],
   summary: { headerChanges: ['startDate', 'endDate'], entities: {} },
 };
+let current: Plan;
 function mount(path = '/plans/plan-1') {
   const router = createMemoryRouter(
     [
       { path: '/plans', element: <PlansPage /> },
       { path: '/plans/:planId', element: <PlanPage /> },
+      { path: '/chat/:conversationId', element: <h1>Plan chat</h1> },
     ],
     { initialEntries: [path] },
   );
@@ -57,22 +90,42 @@ function mount(path = '/plans/plan-1') {
       <RouterProvider router={router} />
     </AccountQueryProvider>,
   );
+  return router;
 }
 beforeEach(() => {
   vi.resetAllMocks();
-  vi.mocked(api.GET).mockResolvedValue({ data: structuredClone(plan), response: new Response() });
+  current = structuredClone(plan) as Plan;
+  vi.mocked(api.GET).mockImplementation((async (path: string) => {
+    const data =
+      path === '/api/v1/plans/{planId}'
+        ? structuredClone(current)
+        : path === '/api/v1/plans'
+          ? { plans: [] }
+          : path === '/api/v1/workouts'
+            ? { workouts: [] }
+            : path.endsWith('/revisions')
+              ? { revisions: [] }
+              : structuredClone(briefState);
+    return { data, response: new Response() };
+  }) as typeof api.GET);
 });
 afterEach(cleanup);
 
+async function openMenuItem(name: string) {
+  fireEvent.click(await screen.findByRole('button', { name: 'Plan options' }));
+  fireEvent.click(screen.getByRole('menuitem', { name }));
+}
+
 it('requires archive confirmation and describes retention and deactivation', async () => {
   mount();
-  fireEvent.click(await screen.findByRole('button', { name: 'Archive plan…' }));
+  await openMenuItem('Archive plan…');
   expect(api.POST).not.toHaveBeenCalled();
+  const dialog = screen.getByRole('dialog', { name: 'Archive this plan?' });
   expect(
-    screen.getByText(/All saved draft content and locked versions are retained/),
+    within(dialog).getByText(/All saved draft content and locked versions are retained/),
   ).toBeInTheDocument();
   vi.mocked(api.POST).mockRejectedValue(new Error('Test request'));
-  fireEvent.click(screen.getByRole('button', { name: 'Confirm archive' }));
+  fireEvent.click(within(dialog).getByRole('button', { name: 'Confirm archive' }));
   await screen.findByRole('alert');
   expect(api.POST).toHaveBeenCalledWith(
     '/api/v1/plans/{planId}/archive',
@@ -80,30 +133,28 @@ it('requires archive confirmation and describes retention and deactivation', asy
   );
 });
 
-it('keeps archived metadata read-only and offers explicit unarchive', async () => {
-  vi.mocked(api.GET).mockResolvedValue({
-    data: { ...plan, archived: true },
-    response: new Response(),
-  });
+it('keeps archived plans read-only and offers explicit unarchive', async () => {
+  current = { ...current, archived: true };
   mount();
-  expect(await screen.findByLabelText('Plan name')).toBeDisabled();
-  expect(screen.getByLabelText('Description')).toBeDisabled();
-  expect(screen.queryByRole('button', { name: 'Activate plan' })).not.toBeInTheDocument();
+  fireEvent.click(await screen.findByRole('button', { name: 'Plan options' }));
+  expect(screen.queryByRole('menuitem', { name: 'Edit details' })).not.toBeInTheDocument();
+  expect(screen.queryByRole('menuitem', { name: 'Activate plan' })).not.toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Chat about this plan' })).toBeDisabled();
   fireEvent.click(screen.getByRole('button', { name: 'Unarchive plan…' }));
   expect(screen.getByText(/The plan will remain inactive/)).toBeInTheDocument();
   expect(api.POST).not.toHaveBeenCalled();
 });
 
-it('renames a locked plan without unlocking', async () => {
-  vi.mocked(api.GET).mockResolvedValue({
-    data: { ...plan, draft: null, locked: { ...draft, state: 'locked', versionNumber: 1 } },
-    response: new Response(),
-  });
+it('renames a locked plan without unlocking and keeps locked content read-only', async () => {
+  current = lockedPlan(current);
   vi.mocked(api.PATCH).mockRejectedValue(new Error('Test request'));
   mount();
-  fireEvent.change(await screen.findByLabelText('Plan name'), { target: { value: 'New name' } });
-  fireEvent.click(screen.getByRole('button', { name: 'Rename plan' }));
+  await openMenuItem('Edit details');
+  expect(screen.getByLabelText('Description')).toBeDisabled();
+  fireEvent.change(screen.getByLabelText('Plan name'), { target: { value: 'New name' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Save changes' }));
   await screen.findByRole('alert');
+  expect(api.PATCH).toHaveBeenCalledTimes(1);
   expect(api.PATCH).toHaveBeenCalledWith(
     '/api/v1/plans/{planId}',
     expect.objectContaining({ body: { displayName: 'New name', expectedStateVersion: 1 } }),
@@ -111,13 +162,29 @@ it('renames a locked plan without unlocking', async () => {
   expect(api.POST).not.toHaveBeenCalled();
 });
 
-it('warns before navigating away from unsaved edits', async () => {
+it('saves draft details against the current edit and keeps edits after a failure', async () => {
+  vi.mocked(api.PATCH).mockResolvedValue({
+    error: {
+      error: { code: 'STALE_DRAFT', requestId: 'test', message: 'Refresh and review changes.' },
+    },
+    response: new Response(null, { status: 409 }),
+  });
   mount();
-  fireEvent.change(await screen.findByLabelText('Description'), { target: { value: 'Unsaved' } });
-  fireEvent.click(screen.getByRole('link', { name: '← Plan library' }));
-  expect(await screen.findByRole('heading', { name: 'Leave without saving?' })).toBeInTheDocument();
-  fireEvent.click(screen.getByRole('button', { name: 'Keep editing' }));
-  expect(screen.getByLabelText('Description')).toHaveValue('Unsaved');
+  await openMenuItem('Edit details');
+  fireEvent.change(screen.getByLabelText('Description'), { target: { value: 'Unsaved revision' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Save changes' }));
+  await screen.findByText('Refresh and review changes.');
+  expect(api.PATCH).toHaveBeenCalledWith(
+    '/api/v1/plans/{planId}/draft',
+    expect.objectContaining({
+      body: expect.objectContaining({
+        expectedDraftId: draft.id,
+        expectedEditNumber: 1,
+        description: 'Unsaved revision',
+      }),
+    }),
+  );
+  expect(screen.getByLabelText('Description')).toHaveValue('Unsaved revision');
 });
 
 it('does not offer locking an unchanged draft', async () => {
@@ -126,20 +193,25 @@ it('does not offer locking an unchanged draft', async () => {
     response: new Response(),
   });
   mount();
-  fireEvent.click(await screen.findByRole('button', { name: 'Validate and review lock' }));
+  fireEvent.click(await screen.findByRole('button', { name: 'Review and lock' }));
   const lock = await screen.findByRole('button', { name: 'Confirm and lock version' });
-  fireEvent.click(screen.getByRole('checkbox'));
+  await screen.findByText(/No content changes since the locked version/);
+  fireEvent.click(
+    screen.getByRole('checkbox', { name: 'I have reviewed and accept all warnings listed above.' }),
+  );
   expect(lock).toBeDisabled();
-  expect(screen.getByText(/No content changes since the locked version/)).toBeInTheDocument();
 });
 
 it('requires warning acknowledgement before sending the exact lock preview', async () => {
   vi.mocked(api.POST).mockResolvedValue({ data: preview, response: new Response() });
   mount();
-  fireEvent.click(await screen.findByRole('button', { name: 'Validate and review lock' }));
+  fireEvent.click(await screen.findByRole('button', { name: 'Review and lock' }));
   const lock = await screen.findByRole('button', { name: 'Confirm and lock version' });
+  await screen.findByText(/The plan has no workouts/);
   expect(lock).toBeDisabled();
-  fireEvent.click(screen.getByRole('checkbox'));
+  fireEvent.click(
+    screen.getByRole('checkbox', { name: 'I have reviewed and accept all warnings listed above.' }),
+  );
   expect(lock).toBeEnabled();
   vi.mocked(api.POST).mockResolvedValue({
     error: {
@@ -148,7 +220,7 @@ it('requires warning acknowledgement before sending the exact lock preview', asy
     response: new Response(null, { status: 409 }),
   });
   fireEvent.click(lock);
-  await screen.findByRole('alert');
+  expect(await screen.findByRole('alert')).toHaveTextContent('The draft changed elsewhere.');
   expect(api.POST).toHaveBeenLastCalledWith(
     '/api/v1/plans/{planId}/lock',
     expect.objectContaining({
@@ -161,53 +233,25 @@ it('requires warning acknowledgement before sending the exact lock preview', asy
       }),
     }),
   );
-  expect(
-    screen.queryByRole('button', { name: 'Confirm and lock version' }),
-  ).not.toBeInTheDocument();
+  // A rejected lock discards the stale review; it must be validated again.
+  expect(screen.getByRole('button', { name: 'Confirm and lock version' })).toBeDisabled();
 });
 
-it('invalidates a preview when fields change and keeps unsaved edits on a failed save', async () => {
-  vi.mocked(api.POST).mockResolvedValue({ data: preview, response: new Response() });
-  vi.mocked(api.PATCH).mockResolvedValue({
-    error: {
-      error: {
-        code: 'STALE_DRAFT',
-        requestId: 'test',
-        message: 'Refresh and review your changes.',
-      },
-    },
-    response: new Response(null, { status: 409 }),
-  });
-  mount();
-  fireEvent.click(await screen.findByRole('button', { name: 'Validate and review lock' }));
-  await screen.findByRole('button', { name: 'Confirm and lock version' });
-  fireEvent.change(screen.getByLabelText('Description'), { target: { value: 'Unsaved revision' } });
-  expect(
-    screen.queryByRole('button', { name: 'Confirm and lock version' }),
-  ).not.toBeInTheDocument();
-  expect(screen.getByRole('button', { name: 'Validate and review lock' })).toBeDisabled();
-  fireEvent.click(screen.getByRole('button', { name: 'Save draft' }));
-  await screen.findByRole('alert');
-  expect(screen.getByLabelText('Description')).toHaveValue('Unsaved revision');
-});
-
-it('requires explicit unlock confirmation and makes locked fields read-only', async () => {
-  vi.mocked(api.GET).mockResolvedValue({
-    data: { ...plan, draft: null, locked: { ...draft, state: 'locked', versionNumber: 1 } },
-    response: new Response(),
-  });
+it('requires explicit unlock confirmation', async () => {
+  current = lockedPlan(current);
   mount();
   fireEvent.click(await screen.findByRole('button', { name: 'Unlock plan' }));
   expect(api.POST).not.toHaveBeenCalled();
-  expect(screen.getByLabelText('Description')).toBeDisabled();
-  fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
-  expect(screen.queryByRole('button', { name: 'Confirm unlock' })).not.toBeInTheDocument();
+  expect(screen.getByRole('dialog', { name: 'Plan v1 is locked' })).toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: 'Keep locked' }));
+  expect(screen.queryByRole('button', { name: 'Unlock and edit' })).not.toBeInTheDocument();
+  expect(api.POST).not.toHaveBeenCalled();
 });
 
 it('reuses a create request key when retrying after a connection failure', async () => {
-  vi.mocked(api.GET).mockResolvedValue({ data: { plans: [] }, response: new Response() });
   vi.mocked(api.POST).mockRejectedValue(new Error('Connection lost'));
   mount('/plans');
+  fireEvent.click(await screen.findByRole('button', { name: 'New plan' }));
   fireEvent.change(screen.getByLabelText('Plan name'), { target: { value: 'A new plan' } });
   fireEvent.change(screen.getByLabelText('Start date'), { target: { value: '2026-09-10' } });
   fireEvent.change(screen.getByLabelText('End date'), { target: { value: '2026-12-10' } });
@@ -219,33 +263,9 @@ it('reuses a create request key when retrying after a connection failure', async
 });
 
 it('requires review of assumptions and sends combined confirmation and lock as one command', async () => {
-  const briefReview = {
-    versionId: draft.id,
-    editNumber: 1,
-    startDate: draft.startDate,
-    endDate: draft.endDate,
-    readOnly: false,
-    confirmed: false,
-    hash: 'c'.repeat(64),
-    scheduleReviewRequired: false,
-    coverage: [{ startDate: '2026-09-01', endDate: '2026-09-07', current: true }],
-    calibrations: [],
-    findings: [],
-    brief: {
-      goal: 'Comfortable 10K',
-      unit: 'kilometres',
-      timezone: 'Europe/London',
-      weeklyDistance: { status: 'known', value: 20000 },
-      currentRuns: { status: 'known', value: 3 },
-      longestRun: { status: 'known', value: 8000 },
-      desiredRuns: 3,
-      weekdays: Array(7).fill('available'),
-      context: '',
-    },
-  };
   const reviewed = {
     ...preview,
-    briefReview,
+    briefReview: briefState,
     findings: [
       {
         code: 'brief.confirmation_required',
@@ -256,19 +276,18 @@ it('requires review of assumptions and sends combined confirmation and lock as o
     ],
   };
   vi.mocked(api.POST).mockImplementation(async (path) => ({
-    data: String(path).endsWith('/validate')
-      ? reviewed
-      : { ...plan, draft: null, locked: { ...draft, state: 'locked', versionNumber: 1 } },
+    data: String(path).endsWith('/validate') ? reviewed : lockedPlan(current),
     response: new Response(),
   }));
   mount();
-  fireEvent.click(await screen.findByRole('button', { name: 'Validate and review lock' }));
+  fireEvent.click(await screen.findByRole('button', { name: 'Review and lock' }));
   const lock = await screen.findByRole('button', { name: 'Confirm and lock version' });
+  const dialog = screen.getByRole('dialog');
+  await within(dialog).findByText('Comfortable 10K');
   expect(lock).toBeDisabled();
-  expect(screen.getByText('Comfortable 10K')).toBeInTheDocument();
   fireEvent.click(
     screen.getByRole('checkbox', {
-      name: 'I confirm the planning assumptions and pace guides shown above.',
+      name: /I confirm the planning assumptions and pace guides shown above/,
     }),
   );
   expect(lock).not.toBeDisabled();
@@ -278,11 +297,22 @@ it('requires review of assumptions and sends combined confirmation and lock as o
       '/api/v1/plans/{planId}/lock',
       expect.objectContaining({
         body: expect.objectContaining({
-          confirmBriefHash: briefReview.hash,
+          confirmBriefHash: briefState.hash,
           expectedContentHash: preview.contentHash,
           expectedValidationDigest: preview.validationDigest,
         }),
       }),
     ),
   );
+  expect(await screen.findByRole('dialog', { name: 'Plan v1 locked' })).toBeInTheDocument();
+});
+
+it('opens the plan conversation from the toolbar', async () => {
+  vi.mocked(api.POST).mockResolvedValue({ data: { id: 'c1' }, response: new Response() });
+  const router = mount();
+  fireEvent.click(await screen.findByRole('button', { name: 'Chat about this plan' }));
+  await waitFor(() => expect(router.state.location.pathname).toBe('/chat/c1'));
+  expect(api.POST).toHaveBeenCalledWith('/api/v1/plans/{planId}/conversations/open', {
+    params: { path: { planId: 'plan-1' } },
+  });
 });
