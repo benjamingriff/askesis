@@ -1,6 +1,8 @@
 packages:
   - 'apps/*'
   - 'packages/*'
+  # Expo app is installed with npm (Metro needs a flat node_modules); see apps/mobile/README.md
+  - '!apps/mobile'
 
 engineStrict: true
 
