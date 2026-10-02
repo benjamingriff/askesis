@@ -187,6 +187,68 @@ it('saves draft details against the current edit and keeps edits after a failure
   expect(screen.getByLabelText('Description')).toHaveValue('Unsaved revision');
 });
 
+it('refreshes stale details without losing edits and retries with the latest draft metadata', async () => {
+  vi.mocked(api.PATCH).mockResolvedValueOnce({
+    error: {
+      error: { code: 'STALE_DRAFT', requestId: 'test', message: 'The draft changed elsewhere.' },
+    },
+    response: new Response(null, { status: 409 }),
+  });
+  mount();
+  await openMenuItem('Edit details');
+  fireEvent.change(screen.getByLabelText('Description'), {
+    target: { value: 'My unsaved changes' },
+  });
+  fireEvent.change(screen.getByLabelText('Start date'), { target: { value: '2026-09-02' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Save changes' }));
+  await screen.findByText('The draft changed elsewhere.');
+  current = {
+    ...current,
+    stateVersion: 3,
+    draft: { ...draft, editNumber: 4, description: 'Changes from another session' },
+  };
+  fireEvent.click(screen.getByRole('button', { name: 'Refresh latest plan' }));
+  await screen.findByText('Saved description: Changes from another session');
+  expect(screen.getByLabelText('Description')).toHaveValue('My unsaved changes');
+  expect(screen.getByLabelText('Start date')).toHaveValue('2026-09-02');
+  vi.mocked(api.PATCH).mockImplementation((async () => {
+    current = {
+      ...current,
+      draft: { ...current.draft!, description: 'My unsaved changes', startDate: '2026-09-02' },
+    };
+    return { data: current, response: new Response() };
+  }) as typeof api.PATCH);
+  fireEvent.click(screen.getByRole('button', { name: 'Save changes' }));
+  await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+  expect(api.PATCH).toHaveBeenLastCalledWith(
+    '/api/v1/plans/{planId}/draft',
+    expect.objectContaining({
+      body: expect.objectContaining({
+        expectedDraftId: draft.id,
+        expectedEditNumber: 4,
+        description: 'My unsaved changes',
+        startDate: '2026-09-02',
+      }),
+    }),
+  );
+});
+
+it('keeps edits and the refresh action when loading the latest plan fails', async () => {
+  vi.mocked(api.PATCH).mockRejectedValue(new Error('The draft changed elsewhere.'));
+  mount();
+  await openMenuItem('Edit details');
+  fireEvent.change(screen.getByLabelText('Description'), { target: { value: 'Unsaved changes' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Save changes' }));
+  await screen.findByText('The draft changed elsewhere.');
+  vi.mocked(api.GET).mockRejectedValueOnce(new Error('Connection lost'));
+  fireEvent.click(screen.getByRole('button', { name: 'Refresh latest plan' }));
+  await screen.findByText('Couldn’t refresh the plan: Connection lost');
+  expect(screen.getByLabelText('Description')).toHaveValue('Unsaved changes');
+  fireEvent.click(screen.getByRole('button', { name: 'Refresh latest plan' }));
+  await screen.findByText('Latest plan loaded. Your edits are preserved.');
+  expect(screen.getByLabelText('Description')).toHaveValue('Unsaved changes');
+});
+
 it('does not offer locking an unchanged draft', async () => {
   vi.mocked(api.POST).mockResolvedValue({
     data: { ...preview, hasChanges: false },
@@ -374,6 +436,42 @@ it('retries only the rename after the content save succeeded', async () => {
   ]);
   expect((vi.mocked(api.PATCH).mock.calls as unknown as [string, unknown][])[2]![1]).toEqual(
     expect.objectContaining({ body: { displayName: 'Renamed', expectedStateVersion: 2 } }),
+  );
+});
+
+it('refreshes concurrency metadata after a partially saved details edit', async () => {
+  const savedPlan = {
+    ...current,
+    stateVersion: 2,
+    draft: { ...draft, editNumber: 2, description: 'Revised' },
+  };
+  vi.mocked(api.PATCH)
+    .mockResolvedValueOnce({ data: savedPlan, response: new Response() })
+    .mockResolvedValueOnce({
+      error: {
+        error: { code: 'STALE_PLAN', requestId: 'test', message: 'The plan changed elsewhere.' },
+      },
+      response: new Response(null, { status: 409 }),
+    });
+  mount();
+  await openMenuItem('Edit details');
+  fireEvent.change(screen.getByLabelText('Description'), { target: { value: 'Revised' } });
+  fireEvent.change(screen.getByLabelText('Plan name'), { target: { value: 'Renamed' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Save changes' }));
+  await screen.findByText('The plan changed elsewhere.');
+  current = { ...savedPlan, stateVersion: 3, displayName: 'Another name' };
+  fireEvent.click(screen.getByRole('button', { name: 'Refresh latest plan' }));
+  await screen.findByText('Saved name: Another name');
+  vi.mocked(api.PATCH).mockImplementation((async () => {
+    current = { ...current, displayName: 'Renamed' };
+    return { data: current, response: new Response() };
+  }) as typeof api.PATCH);
+  fireEvent.click(screen.getByRole('button', { name: 'Save changes' }));
+  await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+  expect(api.PATCH).toHaveBeenCalledTimes(3);
+  expect(api.PATCH).toHaveBeenLastCalledWith(
+    '/api/v1/plans/{planId}',
+    expect.objectContaining({ body: { displayName: 'Renamed', expectedStateVersion: 3 } }),
   );
 });
 

@@ -740,6 +740,19 @@ function EditDetailsDialog({
     },
     onSuccess: onSaved,
   });
+  const refresh = useMutation({
+    mutationFn: async () =>
+      result(await api.GET('/api/v1/plans/{planId}', { params: { path: { planId: plan.id } } })),
+    onSuccess: (latest) => {
+      // Keep the form values, but replace even a partially saved baseline with the latest
+      // concurrency metadata. The athlete can review the saved details before retrying.
+      saved.current = latest;
+      client.setQueryData(['plans', plan.id], latest);
+      save.reset();
+    },
+  });
+  const refreshedVersion = refresh.data?.draft ?? refresh.data?.locked;
+  const busy = save.isPending || refresh.isPending;
   const editableContent = !!plan.draft;
   // Unsaved details survive accidental navigation, as the earlier inline editor did.
   const dirty = (nameDirty || contentDirty) && !save.isSuccess;
@@ -758,13 +771,13 @@ function EditDetailsDialog({
   return (
     <Dialog
       open
-      busy={save.isPending}
+      busy={busy}
       onClose={onClose}
       title="Plan details"
       description="The name is not versioned. Dates and description belong to the draft."
       footer={
         <>
-          <Button variant="ghost" disabled={save.isPending} onClick={onClose}>
+          <Button variant="ghost" disabled={busy} onClick={onClose}>
             Cancel
           </Button>
           <Button
@@ -772,7 +785,7 @@ function EditDetailsDialog({
             type="submit"
             form="plan-details-form"
             busy={save.isPending}
-            disabled={save.isPending || !name.trim() || (!nameDirty && !contentDirty)}
+            disabled={busy || !name.trim() || (!nameDirty && !contentDirty)}
           >
             Save changes
           </Button>
@@ -784,7 +797,7 @@ function EditDetailsDialog({
         className="form-stack"
         onSubmit={(event) => {
           event.preventDefault();
-          save.mutate();
+          if (!busy) save.mutate();
         }}
       >
         <label className="field">
@@ -840,8 +853,38 @@ function EditDetailsDialog({
           </Notice>
         ) : null}
         {save.error ? (
-          <Notice tone="danger" role="alert">
+          <Notice
+            tone="danger"
+            role="alert"
+            action={
+              <Button
+                size="sm"
+                busy={refresh.isPending}
+                disabled={busy}
+                onClick={() => refresh.mutate()}
+              >
+                Refresh latest plan
+              </Button>
+            }
+          >
             {save.error.message}
+          </Notice>
+        ) : null}
+        {refresh.error ? (
+          <Notice tone="danger" role="alert">
+            Couldn’t refresh the plan: {refresh.error.message}
+          </Notice>
+        ) : null}
+        {refresh.data ? (
+          <Notice tone="warning">
+            <strong>Latest plan loaded. Your edits are preserved.</strong>
+            <span>Review your edits against these saved details before saving again.</span>
+            <ul className="plain-list">
+              <li>Saved name: {refresh.data.displayName}</li>
+              <li>Saved description: {refreshedVersion?.description || 'None'}</li>
+              <li>Saved start date: {refreshedVersion?.startDate ?? 'None'}</li>
+              <li>Saved end date: {refreshedVersion?.endDate ?? 'None'}</li>
+            </ul>
           </Notice>
         ) : null}
       </form>

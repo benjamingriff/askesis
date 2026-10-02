@@ -303,16 +303,24 @@ function RevisionView({ planId, revisionId }: { planId: string; revisionId: stri
             </Notice>
             {preview ? <ChangeSummary summary={preview.summary} /> : null}
           </Dialog>
-          {workouts.isPending ? <LoadingState>Loading historical schedule…</LoadingState> : null}
+          {workouts.isPending || brief.isPending ? (
+            <LoadingState>Loading historical schedule…</LoadingState>
+          ) : null}
           {workouts.error ? (
             <ErrorState message={workouts.error.message} onRetry={() => void workouts.refetch()} />
           ) : null}
-          {workouts.data ? (
+          {brief.error ? (
+            <ErrorState
+              message={`Couldn’t load this version’s coverage: ${brief.error.message}`}
+              onRetry={() => void brief.refetch()}
+            />
+          ) : null}
+          {workouts.data && brief.data && !brief.error ? (
             <Schedule
               workouts={workouts.data}
               startDate={revision.startDate}
               endDate={revision.endDate}
-              coverage={brief.data?.coverage ?? null}
+              coverage={brief.data.coverage}
               units={units}
               today={localToday()}
             />
