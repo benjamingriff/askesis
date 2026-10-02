@@ -217,3 +217,72 @@ it('reuses a create request key when retrying after a connection failure', async
   await waitFor(() => expect(api.POST).toHaveBeenCalledTimes(2));
   expect(vi.mocked(api.POST).mock.calls[0]).toEqual(vi.mocked(api.POST).mock.calls[1]);
 });
+
+it('requires review of assumptions and sends combined confirmation and lock as one command', async () => {
+  const briefReview = {
+    versionId: draft.id,
+    editNumber: 1,
+    startDate: draft.startDate,
+    endDate: draft.endDate,
+    readOnly: false,
+    confirmed: false,
+    hash: 'c'.repeat(64),
+    scheduleReviewRequired: false,
+    coverage: [{ startDate: '2026-09-01', endDate: '2026-09-07', current: true }],
+    calibrations: [],
+    findings: [],
+    brief: {
+      goal: 'Comfortable 10K',
+      unit: 'kilometres',
+      timezone: 'Europe/London',
+      weeklyDistance: { status: 'known', value: 20000 },
+      currentRuns: { status: 'known', value: 3 },
+      longestRun: { status: 'known', value: 8000 },
+      desiredRuns: 3,
+      weekdays: Array(7).fill('available'),
+      context: '',
+    },
+  };
+  const reviewed = {
+    ...preview,
+    briefReview,
+    findings: [
+      {
+        code: 'brief.confirmation_required',
+        severity: 'error',
+        message: 'Confirm current assumptions',
+        path: 'brief',
+      },
+    ],
+  };
+  vi.mocked(api.POST).mockImplementation(async (path) => ({
+    data: String(path).endsWith('/validate')
+      ? reviewed
+      : { ...plan, draft: null, locked: { ...draft, state: 'locked', versionNumber: 1 } },
+    response: new Response(),
+  }));
+  mount();
+  fireEvent.click(await screen.findByRole('button', { name: 'Validate and review lock' }));
+  const lock = await screen.findByRole('button', { name: 'Confirm and lock version' });
+  expect(lock).toBeDisabled();
+  expect(screen.getByText('Comfortable 10K')).toBeInTheDocument();
+  fireEvent.click(
+    screen.getByRole('checkbox', {
+      name: 'I confirm the planning assumptions and pace guides shown above.',
+    }),
+  );
+  expect(lock).not.toBeDisabled();
+  fireEvent.click(lock);
+  await waitFor(() =>
+    expect(api.POST).toHaveBeenCalledWith(
+      '/api/v1/plans/{planId}/lock',
+      expect.objectContaining({
+        body: expect.objectContaining({
+          confirmBriefHash: briefReview.hash,
+          expectedContentHash: preview.contentHash,
+          expectedValidationDigest: preview.validationDigest,
+        }),
+      }),
+    ),
+  );
+});

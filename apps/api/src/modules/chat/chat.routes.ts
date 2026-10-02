@@ -57,11 +57,14 @@ export function registerChatRoutes(app: OpenAPIHono<AppEnvironment>) {
       responses: {
         ...errors,
         200: response(
-          z.object({ executionAvailable: z.boolean(), mode: z.enum(['unavailable', 'test']) }),
+          z.object({
+            executionAvailable: z.boolean(),
+            mode: z.enum(['unavailable', 'test', 'agent']),
+          }),
         ),
       },
     }),
-    (c) => c.json(chatCapabilities(), 200),
+    async (c) => c.json(await chatCapabilities(), 200),
   );
   app.openapi(
     createRoute({

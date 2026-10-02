@@ -25,6 +25,8 @@ export const logger = pino(
         'headers.authorization',
         'req.headers.authorization',
         'CLERK_SECRET_KEY',
+        'AGENT_BOOTSTRAP_TOKEN',
+        'OPENAI_API_KEY',
         'DATABASE_URL',
         '*.token',
         '*.secret',

@@ -62,6 +62,8 @@ services:
     environment:
       NODE_ENV: test
       PORT: 3000
+      CHAT_EXECUTION_MODE: agent
+      AGENT_BOOTSTRAP_TOKEN: askesis-smoke-bootstrap-token-32-characters
       DATABASE_URL: postgres://askesis_smoke:askesis_smoke@postgres:5432/askesis_smoke
       CLERK_SECRET_KEY: sk_test_smoke_tests
       CLERK_PUBLISHABLE_KEY: pk_test_c21va2UtdGVzdHMuY2xlcmsuYWNjb3VudHMuZGV2JA
@@ -80,6 +82,20 @@ services:
     depends_on:
       publish-fixture:
         condition: service_completed_successfully
+
+  agent:
+    build:
+      context: .
+      dockerfile: apps/agent/Dockerfile
+    environment:
+      NODE_ENV: test
+      AGENT_API_URL: http://api:3000
+      AGENT_BOOTSTRAP_TOKEN: askesis-smoke-bootstrap-token-32-characters
+      OPENAI_API_KEY: scripted-smoke-no-provider-request
+    command: ['node', 'apps/agent/dist/smoke.js']
+    depends_on:
+      api:
+        condition: service_healthy
 
   web:
     build:

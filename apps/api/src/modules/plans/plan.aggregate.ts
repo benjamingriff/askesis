@@ -6,6 +6,7 @@ import type { ValidationPlan } from './plan.validation.js';
 export type Database = Kysely<DB> | Transaction<DB>;
 type Row = Record<string, string | number | Date | null>;
 export const contentTables = [
+  'plan_schedule_coverage',
   'plan_briefs',
   'plan_brief_weekdays',
   'calibration_profiles',
@@ -81,7 +82,11 @@ export async function readAggregate(db: Database, versionId: string): Promise<Ag
     return Object.fromEntries(
       Object.entries(row)
         .filter(
-          ([key]) => !excluded.has(key) && !key.endsWith('_id') && key !== 'definition_number',
+          ([key]) =>
+            !excluded.has(key) &&
+            !key.endsWith('_id') &&
+            key !== 'definition_number' &&
+            !(version.content_schema_version < 3 && ['provenance', 'estimate_basis'].includes(key)),
         )
         .map(([key, value]) => [
           key,
@@ -170,6 +175,13 @@ export async function readAggregate(db: Database, versionId: string): Promise<Ag
       endDate: version.end_date === null ? null : date(version.end_date),
       brief: ordered(rows.plan_briefs.map((row) => leaf('plan_briefs', row))),
       weekdays: ordered(rows.plan_brief_weekdays.map((row) => leaf('plan_brief_weekdays', row))),
+      ...(version.content_schema_version >= 3
+        ? {
+            coverage: ordered(
+              rows.plan_schedule_coverage.map((row) => leaf('plan_schedule_coverage', row)),
+            ),
+          }
+        : {}),
       blocks: ordered(blocks),
       calibrations: ordered(
         rows.calibration_profiles.map((profile) =>

@@ -6,7 +6,7 @@ export class ChatError extends Error {
   constructor(
     public code: string,
     message: string,
-    public status: 400 | 404 | 409 | 503 = 409,
+    public status: 400 | 401 | 404 | 409 | 503 = 409,
   ) {
     super(message);
   }
@@ -16,7 +16,7 @@ export async function assertPlanIdle(db: Transaction<DB>, planId: string) {
   const run = await db
     .selectFrom('agent_runs')
     .select('id')
-    .where('plan_id', '=', planId)
+    .where((eb) => eb.or([eb('plan_id', '=', planId), eb('execution_plan_id', '=', planId)]))
     .where('status', 'in', activeStatuses)
     .executeTakeFirst();
   if (run) throw new ChatError('RUN_ACTIVE', 'Stop the active chat run before changing this plan.');

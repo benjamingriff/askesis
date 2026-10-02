@@ -1,3 +1,4 @@
+import { registerAgentRoutes } from './modules/agent/agent.routes.js';
 import * as Sentry from '@sentry/node';
 import { swaggerUI } from '@hono/swagger-ui';
 import { OpenAPIHono } from '@hono/zod-openapi';
@@ -89,7 +90,7 @@ app.get('/api/ready', async (context) => {
     select exists (
       select 1
       from atlas_schema_revisions.atlas_schema_revisions
-      where version = '20260910120000'
+      where version = '20261002090000'
     ) as migrated
   `.execute(getDatabase());
 
@@ -110,6 +111,7 @@ app.get('/api/ready', async (context) => {
 });
 app.use('/api/v1/*', requireAuthentication);
 
+registerAgentRoutes(app);
 registerWorkoutRoutes(app);
 registerPlanRoutes(app);
 registerChatRoutes(app);

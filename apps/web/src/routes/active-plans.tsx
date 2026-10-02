@@ -1,3 +1,4 @@
+import { CurrentCoverage } from '../components/PlanningReview';
 import { useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
 import { Link } from 'react-router';
@@ -95,6 +96,9 @@ export function ActivePlansPage() {
               {version?.startDate} – {version?.endDate}
             </p>
             {version?.description && <p>{version.description}</p>}
+            {version && (
+              <CurrentCoverage planId={plan.id} versionId={version.id} draft={view === 'draft'} />
+            )}
             <Link to={`/plans/${plan.id}`}>Plan details</Link>
           </>
         )}

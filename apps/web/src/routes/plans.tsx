@@ -1,3 +1,4 @@
+import { PlanningReview } from '../components/PlanningReview';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useRef, useState } from 'react';
 import { Link, useBeforeUnload, useBlocker, useNavigate, useParams } from 'react-router';
@@ -51,12 +52,12 @@ export function PlansPage({ archived = false }: { archived?: boolean }) {
       result(
         await api.POST('/api/v1/plans', {
           params: { header: { 'idempotency-key': requestKey([name.trim(), startDate, endDate]) } },
-          body: { displayName: name.trim(), startDate, endDate },
+          body: { displayName: name.trim(), startDate, endDate, createConversation: true },
         }),
       ),
     onSuccess: async (plan) => {
       await client.invalidateQueries({ queryKey: ['plans'] });
-      void navigate(`/plans/${plan.id}/brief`);
+      void navigate(plan.conversationId ? `/chat/${plan.conversationId}` : `/plans/${plan.id}`);
     },
   });
   return (
@@ -67,8 +68,8 @@ export function PlansPage({ archived = false }: { archived?: boolean }) {
         {archived ? 'Back to library' : 'View archive'}
       </Link>
       <p>
-        Create a plan, edit a draft, then review and lock a version. Plans remain private to your
-        account.
+        Create a plan, discuss it with your coach, then review and lock a version. Plans remain
+        private to your account.
       </p>
       {!archived && (
         <form
@@ -194,6 +195,7 @@ function PlanEditor({ plan }: { plan: Plan }) {
   const [startDate, setStartDate] = useState(version?.startDate ?? '');
   const [endDate, setEndDate] = useState(version?.endDate ?? '');
   const [preview, setPreview] = useState<Preview | null>(null);
+  const [briefConfirmed, setBriefConfirmed] = useState(false);
   const [acknowledged, setAcknowledged] = useState(false);
   const [confirm, setConfirm] = useState<'unlock' | 'discard' | 'archive' | 'unarchive' | null>(
     null,
@@ -252,6 +254,7 @@ function PlanEditor({ plan }: { plan: Plan }) {
       if (action === 'validate') {
         const next = result(await api.POST('/api/v1/plans/{planId}/validate', { params }));
         setPreview(next);
+        setBriefConfirmed(false);
         setAcknowledged(false);
         return null;
       }
@@ -276,7 +279,9 @@ function PlanEditor({ plan }: { plan: Plan }) {
       };
       if (action === 'unlock')
         return result(await api.POST('/api/v1/plans/{planId}/unlock', { params, body }));
-      const header = { 'idempotency-key': requestKey({ action, body, preview, acknowledged }) };
+      const header = {
+        'idempotency-key': requestKey({ action, body, preview, acknowledged, briefConfirmed }),
+      };
       if (action === 'discard')
         return result(
           await api.POST('/api/v1/plans/{planId}/discard', { params: { ...params, header }, body }),
@@ -287,6 +292,9 @@ function PlanEditor({ plan }: { plan: Plan }) {
             params: { ...params, header },
             body: {
               ...body,
+              ...(briefConfirmed && preview.briefReview && !preview.briefReview.confirmed
+                ? { confirmBriefHash: preview.briefReview.hash }
+                : {}),
               expectedContentHash: preview.contentHash,
               expectedValidationDigest: preview.validationDigest,
               acknowledgedWarningCodes: acknowledged
@@ -568,6 +576,17 @@ function PlanEditor({ plan }: { plan: Plan }) {
                 current schedule with the restored content while preserving all previous versions.
               </p>
             )}
+          {preview.briefReview && <PlanningReview state={preview.briefReview} />}
+          {preview.briefReview && !preview.briefReview.confirmed && (
+            <label className="plan-acknowledgement">
+              <input
+                type="checkbox"
+                checked={briefConfirmed}
+                onChange={(e) => setBriefConfirmed(e.target.checked)}
+              />
+              I confirm the planning assumptions and pace guides shown above.
+            </label>
+          )}
           {!preview.hasChanges && (
             <p>
               No content changes since the locked version. Edit the draft or discard it; no new
@@ -619,7 +638,11 @@ function PlanEditor({ plan }: { plan: Plan }) {
             disabled={
               mutation.isPending ||
               !preview.hasChanges ||
-              preview.findings.some((f) => f.severity === 'error') ||
+              preview.findings.some(
+                (f) =>
+                  f.severity === 'error' &&
+                  !(f.code === 'brief.confirmation_required' && briefConfirmed),
+              ) ||
               (warnings && !acknowledged)
             }
             onClick={() => mutation.mutate('lock')}

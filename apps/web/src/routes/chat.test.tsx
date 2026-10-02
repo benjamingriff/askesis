@@ -125,6 +125,24 @@ it('does not create a conversation when opening an empty chat and disables unava
   expect(screen.getByRole('button', { name: 'Send message' })).toBeDisabled();
   expect(api.POST).not.toHaveBeenCalled();
 });
+it('keeps history and an unsent question when an agent worker goes offline and recovers', async () => {
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  mount('/chat/c1', client);
+  await screen.findByText('Saved message');
+  await screen.findByText(/Test mode · replies are simulated/);
+  fireEvent.change(screen.getByLabelText('Message'), { target: { value: 'Pending question' } });
+  client.setQueryData(['chat', 'capabilities'], { executionAvailable: false, mode: 'agent' });
+  await screen.findByText(/Coaching is not available yet/);
+  expect(screen.getByText('Saved message')).toBeInTheDocument();
+  expect(screen.getByLabelText('Message')).toHaveValue('Pending question');
+  expect(screen.getByRole('button', { name: 'Send message' })).toBeDisabled();
+  expect(api.POST).not.toHaveBeenCalled();
+  client.setQueryData(['chat', 'capabilities'], { executionAvailable: true, mode: 'agent' });
+  await waitFor(() => expect(screen.getByRole('button', { name: 'Send message' })).toBeEnabled());
+  expect(screen.queryByText(/Coaching is not available yet/)).not.toBeInTheDocument();
+  expect(screen.getByLabelText('Message')).toHaveValue('Pending question');
+  client.clear();
+});
 it('retries an uncertain first send with the same key and navigates to the durable conversation', async () => {
   vi.mocked(api.POST)
     .mockRejectedValueOnce(new TypeError('Network interrupted'))
@@ -150,4 +168,28 @@ it('loads durable history after navigation and enforces archive read-only state'
   expect(screen.getByLabelText('Message')).toBeDisabled();
   for (const button of screen.getAllByRole('button', { name: 'Restore conversation' }))
     expect(button).toBeEnabled();
+});
+it('formats assistant Markdown while preserving the literal user message', async () => {
+  const original = vi.mocked(api.GET).getMockImplementation()!;
+  vi.mocked(api.GET).mockImplementation(((path: string, ...args: unknown[]) =>
+    path.endsWith('/messages')
+      ? Promise.resolve(
+          response({
+            messages: [
+              { id: 'm1', sequence: 1, role: 'user', content: '**My question**', context: null },
+              {
+                id: 'm2',
+                sequence: 2,
+                role: 'assistant',
+                content: '**Easy running** is the goal.',
+                context: null,
+              },
+            ],
+            nextBeforeSequence: null,
+          }),
+        )
+      : Reflect.apply(original, api, [path, ...args])) as typeof api.GET);
+  mount('/chat/c1');
+  expect(await screen.findByText('**My question**')).toBeInTheDocument();
+  expect(await screen.findByText('Easy running', { selector: 'strong' })).toBeInTheDocument();
 });

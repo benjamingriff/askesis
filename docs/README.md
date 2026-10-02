@@ -23,6 +23,8 @@ This directory records the proposed direction for Askesis beyond the original fi
 - [Phase 3 implementation plan](./phase-3-implementation-plan.md) — proposed calculator-first delivery stages, API/UI work, verification, and Railway rollout.
 - [Phase 4 design](./phase-4-design.md) — approved durable conversation and run lifecycle contract, archive semantics, and recorded alpha decisions; real coaching arrives in Phase 5.
 - [Phase 4 implementation plan](./phase-4-implementation-plan.md) — delivery stages, Phase 3 integration seams, and acceptance checks for persistent chat.
+- [Phase 5 design](./phase-5-design.md) — refined coaching behavior, OpenAI Agents SDK worker, authorized domain tools, and partial planning horizons.
+- [Phase 5 implementation plan](./phase-5-implementation-plan.md) — delivery stages, worker reliability, and acceptance checks.
 - [Example queries](./example-queries.md) — inspect plans, workout trees, weekly totals, and calibrations.
 - [Implementation roadmap](./implementation-roadmap.md) — the earlier data-model implementation sequence and deferred concerns.
 
@@ -37,3 +39,5 @@ These documents combine implemented architecture with agreed future direction. E
 5. Core plan and workout data is relational rather than stored in JSONB.
 6. Nested API responses are assembled by the application from relational rows.
 7. Metrics are derived from prescriptions; macro targets express the desired result.
+
+- [Phase 5 runtime](./phase-5-runtime.md) — local worker setup, private deployment configuration, lease recovery and verification.

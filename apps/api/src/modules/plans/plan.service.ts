@@ -25,7 +25,7 @@ import {
   DraftDetailSchema,
 } from './plan.schemas.js';
 import { validatePlan, VALIDATOR_VERSION } from './plan.validation.js';
-import { briefLockFindings } from './brief.service.js';
+import { briefLockFindings, confirmBriefRows, readBrief } from './brief.service.js';
 
 export class PlanError extends Error {
   constructor(
@@ -51,7 +51,7 @@ async function ownerPlan(db: Database, athleteId: string, planId: string, lock =
   if (plan === undefined) throw new PlanError('PLAN_NOT_FOUND', 'Plan not found.', 404);
   return plan;
 }
-async function detail(db: Database, athleteId: string, planId: string): Promise<Plan> {
+export async function detail(db: Database, athleteId: string, planId: string): Promise<Plan> {
   const plan = await ownerPlan(db, athleteId, planId);
   const versions = await db
     .selectFrom('plan_versions')
@@ -274,26 +274,7 @@ export async function createPlan(
   } = {},
 ) {
   return idempotent(athleteId, 'plan.create', key, { displayName, ...dates }, async (db) => {
-    const planId = randomUUID();
-    const draftId = randomUUID();
-    await db
-      .insertInto('plans')
-      .values({
-        id: planId,
-        owner_id: athleteId,
-        display_name: displayName,
-        current_draft_version_id: draftId,
-      })
-      .execute();
-    await db
-      .insertInto('plan_versions')
-      .values({
-        id: draftId,
-        plan_id: planId,
-        start_date: dates.startDate ?? null,
-        end_date: dates.endDate ?? null,
-      })
-      .execute();
+    const { planId } = await createPlanRows(db, athleteId, displayName, dates);
     const conversationId = dates.createConversation
       ? await createConversationRow(db, athleteId, planId)
       : undefined;
@@ -302,6 +283,34 @@ export async function createPlan(
       ...(conversationId ? { conversationId } : {}),
     };
   });
+}
+export async function createPlanRows(
+  db: Transaction<DB>,
+  athleteId: string,
+  displayName: string,
+  dates: { startDate?: string | undefined; endDate?: string | undefined } = {},
+) {
+  const planId = randomUUID();
+  const draftId = randomUUID();
+  await db
+    .insertInto('plans')
+    .values({
+      id: planId,
+      owner_id: athleteId,
+      display_name: displayName,
+      current_draft_version_id: draftId,
+    })
+    .execute();
+  await db
+    .insertInto('plan_versions')
+    .values({
+      id: draftId,
+      plan_id: planId,
+      start_date: dates.startDate ?? null,
+      end_date: dates.endDate ?? null,
+    })
+    .execute();
+  return { planId, draftId };
 }
 export async function editDraft(
   athleteId: string,
@@ -359,7 +368,7 @@ export async function editDraft(
       return detail(db, athleteId, planId);
     });
 }
-async function preview(db: Database, plan: Plan) {
+export async function preview(db: Database, plan: Plan) {
   if (plan.draft === null) throw new PlanError('DRAFT_REQUIRED', 'There is no editable draft.');
   const aggregate = await readAggregate(db, plan.draft.id);
   const previous = plan.locked === null ? null : await readAggregate(db, plan.locked.id);
@@ -373,6 +382,7 @@ async function preview(db: Database, plan: Plan) {
     return plan.draft![field] !== (plan.locked?.[field] ?? null);
   });
   return {
+    briefReview: await readBrief(db, plan.draft.id),
     draftId: plan.draft.id,
     editNumber: plan.draft.editNumber,
     stateVersion: plan.stateVersion,
@@ -403,12 +413,19 @@ export async function lockPlan(athleteId: string, planId: string, input: Command
     editable(plan);
     stateMatches(plan, input.expectedStateVersion);
     const draft = draftMatches(plan, input.expectedDraftId, input.expectedEditNumber);
-    const result = await preview(db, plan);
+    let result = await preview(db, plan);
     if (
       result.contentHash !== input.expectedContentHash ||
       result.validationDigest !== input.expectedValidationDigest
     )
       throw new PlanError('STALE_VALIDATION', 'Validate the current draft again before locking.');
+    if (input.confirmBriefHash) {
+      await confirmBriefRows(db, await readBrief(db, draft.id), {
+        expectedHash: input.confirmBriefHash,
+        acknowledgedWarningCodes: input.acknowledgedWarningCodes ?? [],
+      });
+      result = await preview(db, plan);
+    }
     if (result.findings.some((finding) => finding.severity === 'error'))
       throw new PlanError('PLAN_INVALID', 'Resolve validation errors before locking.', 422);
     if (
@@ -598,7 +615,7 @@ async function restorePreview(db: Database, athleteId: string, plan: Plan, revis
     );
   if (!plan.locked)
     throw new PlanError('LOCKED_VERSION_REQUIRED', 'There is no current locked version.');
-  if (source.content_schema_version !== 2)
+  if (![2, 3].includes(source.content_schema_version))
     throw new PlanError(
       'UNSUPPORTED_CONTENT_SCHEMA',
       'This version needs a content upgrade before restoration.',

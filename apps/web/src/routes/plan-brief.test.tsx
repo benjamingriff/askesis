@@ -5,6 +5,7 @@ import type { paths } from '@askesis/api-client';
 import { AccountQueryProvider } from '../query-provider';
 import { api } from '../api';
 import { PlanBriefPage } from './plan-brief';
+import { CoverageSummary } from '../components/PlanningReview';
 
 vi.mock('../api', () => ({ api: { GET: vi.fn(), POST: vi.fn(), PUT: vi.fn() } }));
 type State =
@@ -22,6 +23,7 @@ beforeEach(() => {
     hash: 'hash',
     scheduleReviewRequired: false,
     findings: [],
+    coverage: [],
     calibrations: [],
     brief: {
       goal: 'Run a comfortable half marathon',
@@ -49,6 +51,30 @@ beforeEach(() => {
   }));
 });
 afterEach(cleanup);
+it('distinguishes the intended month from completed coverage after generation stops', () => {
+  state.coverage = [{ startDate: '2026-09-01', endDate: '2026-09-07', current: true }];
+  state.generations = [
+    {
+      runId: 'run-1',
+      startDate: '2026-09-01',
+      endDate: '2026-09-30',
+      prescribedThrough: '2026-09-07',
+      status: 'interrupted',
+    },
+  ];
+  render(<CoverageSummary state={state} />);
+  expect(screen.getByLabelText('Generation attempts')).toHaveTextContent(
+    'Intended horizon: 2026-09-01 – 2026-09-30',
+  );
+  expect(screen.getByLabelText('Generation attempts')).toHaveTextContent(
+    'Generation stopped before the intended horizon was complete',
+  );
+  expect(screen.getByLabelText('Generation attempts')).toHaveTextContent(
+    'Fully prescribed through 2026-09-07',
+  );
+  expect(screen.getByText('Still unplanned:')).toBeInTheDocument();
+  expect(screen.getByText('2026-09-08 – 2026-12-01')).toBeInTheDocument();
+});
 function mount() {
   const router = createMemoryRouter(
     [{ path: '/plans/:planId/brief', element: <PlanBriefPage /> }],
@@ -129,4 +155,30 @@ it('converts a miles threshold input to canonical seconds per kilometre', async 
       }),
     ),
   );
+});
+
+it('shows a partial prescribed horizon, the unplanned remainder and estimated pace provenance', async () => {
+  state.coverage = [{ startDate: '2026-09-01', endDate: '2026-09-30', current: true }];
+  state.calibrations = [
+    {
+      id: 'estimate',
+      effectiveFrom: '2026-09-01',
+      effectiveUntil: null,
+      method: 'threshold_pace',
+      distanceMetres: null,
+      durationSeconds: null,
+      secondsPerKilometre: 330,
+      calculatorVersion: 'v1',
+      provenance: 'agent_estimate',
+      estimateBasis: 'Reported comfortable pace; refine after early runs.',
+      zones: [],
+    },
+  ];
+  mount();
+  expect(await screen.findByText('2026-09-01 – 2026-09-30')).toBeInTheDocument();
+  expect(screen.getByText('2026-10-01 – 2026-12-01')).toBeInTheDocument();
+  expect(screen.getAllByText(/Coach estimate: Reported comfortable pace/).length).toBeGreaterThan(
+    0,
+  );
+  expect(screen.getAllByText(/These paces are estimates/).length).toBeGreaterThan(0);
 });

@@ -39,7 +39,7 @@ For the v1 prototype:
 - The generated OpenAPI client remains the shared API contract.
 - Clerk remains responsible for human authentication.
 - Railway remains the planned hosted prototype platform.
-- The future Pi agent runs as a separate private worker and receives no database credentials.
+- The agent runs as a separate private worker and receives no database credentials. Phase 5 refinement selects the OpenAI Agents SDK for TypeScript.
 
 ### Adopt TanStack Query
 
@@ -94,7 +94,7 @@ After the prototype has been used for several months, the team may reassess whet
 ### Required for the private alpha
 
 - Persistent conversations and messages
-- A working Pi-based agent worker
+- A working independently deployed coaching agent worker
 - Agent tools for plan creation and modification
 - Streaming chat output and live plan updates
 - Multiple plans with clear selection and activation controls
@@ -164,12 +164,14 @@ A brand-new account sees an empty Plan view with **Create a plan** as its primar
 1. **Create a plan** creates an initial draft and its first associated chat.
 2. The agent asks focused questions about goals, dates, availability, current training, fitness evidence, and constraints.
 3. The agent assembles a structured plan brief.
-4. The user reviews and confirms the brief.
-5. The agent generates the training schedule.
-6. The user reviews and explicitly locks Version 1.
+4. Through discussion, the agent judges when enough context exists and generates a training schedule for an appropriate planning horizon.
+5. The user reviews and confirms the current brief, either separately or alongside schedule review. Discussion may continue to refine both.
+6. The user reviews and explicitly locks Version 1. Workouts may cover an initial period rather than the entire plan date range; later revisions can extend the programme after feedback from early runs.
 7. The locked plan may then be activated.
 
 Chat is the primary editing interface. The Plan UI is primarily for review and navigation, with direct controls for organizational metadata and lifecycle actions. A full manual workout editor is deferred.
+
+Phase 5 refinement, 2026-10-01: generation is agent-led within the conversation and does not require a separate generation command or prior brief confirmation. Locking still requires human confirmation of the current brief. Full schedule coverage through the plan's end date is not required. See [Phase 5 design](./phase-5-design.md) for the current product decisions.
 
 ### Plan states and activation
 
@@ -738,9 +740,9 @@ POST   /api/v1/agent-runs/:runId/cancel
 - Archived chats are read-only and cannot start agent runs.
 - Archiving a plan also archives all associated chats.
 
-## Phase 5: Pi agent worker and domain tools
+## Phase 5: coaching agent worker and domain tools
 
-Create `apps/agent` as an independently deployable private service using Pi's TypeScript SDK.
+Create `apps/agent` as an independently deployable private service using the OpenAI Agents SDK for TypeScript, initially OpenAI/GPT-6.1 Sol with configurable model and reasoning settings. This supersedes the original Pi choice following refinement on 2026-10-01. See the [refined design](./phase-5-design.md) and [implementation plan](./phase-5-implementation-plan.md).
 
 ### Service boundaries
 
@@ -762,19 +764,19 @@ The worker never receives:
 Tools should express domain operations rather than SQL or arbitrary HTTP:
 
 ```text
-read_athlete_profile
-read_fitness_calibrations
-read_plan_draft
+read_plan_context
+read_schedule
 create_plan_draft
-add_workout
-update_workout
-move_workout
-delete_workout
+update_plan_brief
+set_fitness_calibration
+apply_schedule_changes
+replace_schedule_range
 validate_plan
-lock_plan
 ```
 
 Every mutation must be authorized against the athlete and plan associated with the agent run. Tools must be idempotent where retries are possible.
+
+Brief confirmation and plan locking/unlocking remain human-only. The worker uses plan-specific context rather than a global athlete profile. Schedule generation begins naturally after discussion and may cover only an initial period; locking does not require prescriptions through the plan's end date.
 
 ### Reliability controls
 
@@ -782,16 +784,19 @@ Every mutation must be authorized against the athlete and plan associated with t
 - Cancellation
 - Bounded retries
 - Tool-call audit trail
-- Per-run token or cost budget
+- Per-run execution, token, and tool-operation bounds; usage/cost attribution
 - Clear terminal failure states
 - Recovery from worker restart
 - No partial multi-operation commits where atomicity is required
+
+Aggregate spend ceilings are deferred to provider setup at the user's request. They do not replace bounded agent execution.
 
 ### Exit criteria
 
 - A chat can launch a durable agent run.
 - The agent can create a running plan through authorized API tools.
 - The agent can modify only the permitted unlocked draft.
+- A user can lock an initial planning period, then extend it in a later revision.
 - Tool calls and failures are visible and auditable.
 - Worker failure does not corrupt or expose plan data.
 
@@ -997,7 +1002,7 @@ Prompt and skill revisions should preserve an original platform version and supp
 
 - Persistent conversations
 - Durable agent runs
-- Separate Pi worker
+- Separate coaching worker using the OpenAI Agents SDK
 - Authorized domain tools
 - Plan creation and modification through chat
 
