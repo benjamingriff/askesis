@@ -1,7 +1,7 @@
 # Current agent handoff
 
 **Updated:** 2026-10-02
-**Current phase:** Phase 4 deployed to Railway; Phase 5 is built and deterministic verification passes locally; real-provider acceptance is pending. Broad UI refinement is deferred until after Phase 5.
+**Current phase:** Phase 4 deployed to Railway; Phase 5 is complete locally, including real-provider acceptance, and is ready for pull-request review. Phase 6 live synchronization is next. Phase 5 has not been deployed to Railway.
 **Completed phase:** Phase 1 — engineering foundation and Railway deployment validation
 
 ## Purpose
@@ -18,6 +18,35 @@ Before making changes, read:
 Do not place credentials, Clerk tokens, database URLs, Sentry credentials, or Railway secrets in chat, logs, commits, or this file.
 
 ## Repository state at handoff
+
+### Phase 5 live acceptance and PR preparation — 2026-10-02
+
+The direct OpenAI Responses/tool smoke and signed-in coaching walkthrough passed
+against the local Compose API and database with `gpt-6.1-sol`, medium reasoning,
+and `running-coach-v2`. The walkthrough exercised discussion before generation,
+estimated paces, a four-week horizon, human partial-plan locking, immutable
+revisions, feedback-driven extension, cancellation after saved batches, date
+boundary validation, standalone discussion and worker downtime/recovery.
+See the [validation report](./phase-5-validation.md) for observed results,
+synthetic test artifacts and generation timing evidence.
+
+Follow-up fixes correct assistant labels and worker availability feedback and
+render assistant Markdown, including scrollable schedule tables. Full
+`pnpm check` passes with 79 tests (11 worker, 31 API, 37 web). The earlier 53
+database integration tests, migration-preservation rehearsal and disposable
+worker/API/SDK smoke passed; the later changes affect web presentation only.
+The current branch is `phase-5-coaching-worker`.
+
+Four-week generation took 92–105 seconds. Instrumenting model/tool latency,
+reducing prescription payloads, benchmarking reasoning settings and showing live
+progress remain Phase 6 follow-ups. The model and runtime settings are unchanged.
+User-configurable prompts, web search and automatic workout ingestion remain
+deferred. Keep the independent worker private; apply migrations through
+`20261002090000` and configure its provider and machine credentials when deploying.
+No Phase 5 production deployment is recorded here.
+
+The older checkpoints below retain their verification status at the time they
+were written; their pending live acceptance gates have now been completed.
 
 ### Phase 5 review fixes — 2026-10-02
 
