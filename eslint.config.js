@@ -10,6 +10,7 @@ export default tseslint.config(
     ignores: [
       '**/dist/**',
       '**/coverage/**',
+      'apps/mobile/**',
       'apps/api/src/database/generated.ts',
       'packages/api-client/src/schema.ts',
     ],
