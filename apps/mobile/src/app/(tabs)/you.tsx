@@ -1,3 +1,4 @@
+import { useTabBarInset } from '../../components/FloatingTabBar';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import type { ReactNode } from 'react';
@@ -112,6 +113,7 @@ function Row({
 }
 
 export default function YouScreen() {
+  const tabInset = useTabBarInset();
   const theme = useTheme();
   const { settings, update } = useSettings();
   const themeDef = THEME_BY_ID[theme.themeId];
@@ -119,7 +121,7 @@ export default function YouScreen() {
   return (
     <Screen>
       <ScrollView
-        contentContainerStyle={{ paddingBottom: 48 }}
+        contentContainerStyle={{ paddingBottom: tabInset }}
         showsVerticalScrollIndicator={false}
       >
         <View style={{ paddingHorizontal: 20, paddingTop: 12 }}>

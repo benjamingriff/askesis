@@ -1,3 +1,4 @@
+import { useTabBarInset } from '../../components/FloatingTabBar';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useMemo, useState } from 'react';
@@ -40,6 +41,7 @@ import { useTheme } from '../../state/settings';
 type View_ = 'weeks' | 'calendar';
 
 export default function PlanScreen() {
+  const tabInset = useTabBarInset();
   const theme = useTheme();
   const { meta, workouts, today, status, version, unlock } = usePlan();
   const currentWeek = Math.min(meta.totalWeeks, Math.max(1, weekNumberFor(meta, today)));
@@ -66,7 +68,7 @@ export default function PlanScreen() {
   return (
     <Screen>
       <ScrollView
-        contentContainerStyle={{ paddingBottom: 40 }}
+        contentContainerStyle={{ paddingBottom: tabInset }}
         showsVerticalScrollIndicator={false}
       >
         <View

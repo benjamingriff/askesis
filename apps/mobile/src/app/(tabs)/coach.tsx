@@ -1,3 +1,4 @@
+import { useTabBarInset } from '../../components/FloatingTabBar';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useMemo, useState } from 'react';
@@ -24,6 +25,7 @@ function preview(c: Conversation): string {
 }
 
 export default function CoachScreen() {
+  const tabInset = useTabBarInset();
   const theme = useTheme();
   const { conversations, createConversation, archive } = useChat();
   const [tab, setTab] = useState<'open' | 'archived'>('open');
@@ -72,7 +74,7 @@ export default function CoachScreen() {
         contentContainerStyle={{
           paddingHorizontal: 20,
           paddingTop: 16,
-          paddingBottom: 32,
+          paddingBottom: tabInset,
           gap: 10,
           flexGrow: 1,
         }}

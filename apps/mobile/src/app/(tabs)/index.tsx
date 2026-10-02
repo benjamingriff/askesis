@@ -1,3 +1,4 @@
+import { useTabBarInset } from '../../components/FloatingTabBar';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
@@ -40,6 +41,7 @@ import { useSettings, useTheme } from '../../state/settings';
 import { alpha, ZONE_COLORS } from '../../theme/palette';
 
 export default function TodayScreen() {
+  const tabInset = useTabBarInset();
   const theme = useTheme();
   const { settings } = useSettings();
   const { meta, workouts, today, status, version } = usePlan();
@@ -66,7 +68,7 @@ export default function TodayScreen() {
   return (
     <Screen>
       <ScrollView
-        contentContainerStyle={{ paddingBottom: 32 }}
+        contentContainerStyle={{ paddingBottom: tabInset }}
         showsVerticalScrollIndicator={false}
       >
         <View
