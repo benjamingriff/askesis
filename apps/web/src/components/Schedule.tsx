@@ -24,6 +24,7 @@ import {
 } from '../lib/format';
 import {
   inferKind,
+  isCovered,
   KIND_META,
   summarizeWeeks,
   workoutsOn,
@@ -70,6 +71,13 @@ export function Schedule({
   const [selectedWeek, setSelectedWeek] = useState(firstUpcoming);
   const [open, setOpen] = useState<WorkoutSummary | null>(null);
   const week = weeks.find((w) => w.number === selectedWeek) ?? weeks[0];
+  const knownCoverage = coverage && coverage.length > 0 ? coverage : null;
+  const dayStatus = (date: string) =>
+    (startDate && date < startDate) || (endDate && date > endDate)
+      ? ('outside' as const)
+      : knownCoverage && !isCovered(date, knownCoverage)
+        ? ('unplanned' as const)
+        : ('planned' as const);
 
   if (!weeks.length || !week)
     return (
@@ -150,6 +158,7 @@ export function Schedule({
                     date={date}
                     today={today}
                     workouts={workoutsOn(week.workouts, date)}
+                    status={dayStatus(date)}
                     units={units}
                     onOpen={setOpen}
                   />

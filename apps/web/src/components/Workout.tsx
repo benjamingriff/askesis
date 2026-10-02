@@ -1,5 +1,5 @@
 import type { StepTarget, WorkoutStep, WorkoutSummary } from '@askesis/api-client';
-import { ChevronRight, MessageSquare, Moon, Repeat } from 'lucide-react';
+import { CalendarOff, ChevronRight, MessageSquare, Moon, Repeat } from 'lucide-react';
 import type { CSSProperties } from 'react';
 import {
   dayNumber,
@@ -34,9 +34,12 @@ export function DayRow({
   units,
   onOpen,
   showDate = true,
+  status = 'planned',
 }: {
   date: string;
   today: string;
+  /** Empty planned days are rest; unplanned or out-of-plan days are not. */
+  status?: 'planned' | 'unplanned' | 'outside' | undefined;
   workouts: WorkoutSummary[];
   units: Units;
   onOpen: (workout: WorkoutSummary) => void;
@@ -53,7 +56,12 @@ export function DayRow({
         </time>
       ) : null}
       <div className="day-items">
-        {workouts.length === 0 ? (
+        {workouts.length === 0 && status !== 'planned' ? (
+          <div className="rest-card unplanned">
+            <CalendarOff size={16} aria-hidden="true" />{' '}
+            {status === 'outside' ? 'Outside plan dates' : 'Not planned yet'}
+          </div>
+        ) : workouts.length === 0 ? (
           <div className="rest-card">
             <Moon size={16} aria-hidden="true" /> Rest day
           </div>

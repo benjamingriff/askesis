@@ -350,6 +350,12 @@
   font-size: 13px;
   font-weight: 600;
 }
+.rest-card.unplanned {
+  border-style: dashed;
+  color: var(--warning);
+  background: var(--warning-soft);
+  border-color: color-mix(in srgb, var(--warning) 30%, transparent);
+}
 .workout-card {
   display: flex;
   align-items: center;
@@ -1290,10 +1296,14 @@
     width: 100%;
     justify-content: space-between;
   }
-  .plan-toolbar .btn .btn-text {
+  /* Only buttons whose label has an accessible-name fallback collapse to icons. */
+  .plan-toolbar .btn.collapsible .btn-text {
     display: none;
   }
-  .plan-toolbar .btn {
+  .plan-toolbar {
+    flex-wrap: wrap;
+  }
+  .plan-toolbar .btn.collapsible {
     width: 42px;
     padding: 0;
     border-radius: 50%;

@@ -193,3 +193,27 @@ it('formats assistant Markdown while preserving the literal user message', async
   expect(await screen.findByText('**My question**')).toBeInTheDocument();
   expect(await screen.findByText('Easy running', { selector: 'strong' })).toBeInTheDocument();
 });
+
+it('shows a plan-wide run from another chat in an empty conversation', async () => {
+  const original = vi.mocked(api.GET).getMockImplementation()!;
+  vi.mocked(api.GET).mockImplementation(((path: string, ...args: unknown[]) =>
+    path.endsWith('/messages')
+      ? Promise.resolve(response({ messages: [], nextBeforeSequence: null }))
+      : Reflect.apply(original, api, [path, ...args])) as typeof api.GET);
+  detail = {
+    ...conversation,
+    planId: 'plan-1',
+    activeRun: {
+      id: 'run-9',
+      conversationId: 'other',
+      status: 'running',
+      failureCode: null,
+    },
+  } as never;
+  mount('/chat/c1');
+  expect(await screen.findByText('Working')).toBeInTheDocument();
+  expect(screen.getByRole('link', { name: 'another chat for this plan' })).toHaveAttribute(
+    'href',
+    '/chat/other',
+  );
+});

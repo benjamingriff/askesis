@@ -616,6 +616,11 @@ function ConversationPanel({ conversationId }: { conversationId: string | undefi
               <RunActivity run={run} conversation={conversation} />
             ) : null}
           </div>
+        ) : run ? (
+          // A plan-wide run can belong to another chat; show it so Stop is never anonymous.
+          <div className="messages">
+            <RunActivity run={run} conversation={conversation} />
+          </div>
         ) : null}
       </div>
       <div className="composer-wrap">

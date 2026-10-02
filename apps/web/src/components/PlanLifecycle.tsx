@@ -197,6 +197,7 @@ export function PlanToolbar({
     <>
       <div className="plan-toolbar" role="toolbar" aria-label="Plan actions">
         <Button
+          className="collapsible"
           icon={MessageSquare}
           aria-label="Chat about this plan"
           title="Chat about this plan"
@@ -212,6 +213,7 @@ export function PlanToolbar({
           </Button>
         ) : plan.draft ? (
           <Button
+            className="collapsible"
             variant="primary"
             icon={Lock}
             aria-label="Review and lock"
@@ -223,6 +225,7 @@ export function PlanToolbar({
           </Button>
         ) : (
           <Button
+            className="collapsible"
             icon={LockOpen}
             aria-label="Unlock plan"
             title="Unlock to create an editable draft"
