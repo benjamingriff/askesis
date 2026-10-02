@@ -1,8 +1,9 @@
 #!/usr/bin/env sh
 set -eu
 
-export TEST_DATABASE_URL="${TEST_DATABASE_URL:-postgres://askesis_test:askesis_test@127.0.0.1:55432/askesis_test}"
-expected='postgres://askesis_test:askesis_test@127.0.0.1:55432/askesis_test'
+export TEST_DATABASE_PORT="${TEST_DATABASE_PORT:-55432}"
+export TEST_DATABASE_URL="${TEST_DATABASE_URL:-postgres://askesis_test:askesis_test@127.0.0.1:${TEST_DATABASE_PORT}/askesis_test}"
+expected="postgres://askesis_test:askesis_test@127.0.0.1:${TEST_DATABASE_PORT}/askesis_test"
 if [ "$TEST_DATABASE_URL" != "$expected" ]; then
   echo "Refusing to run: TEST_DATABASE_URL must target the disposable local Askesis test database." >&2
   exit 1

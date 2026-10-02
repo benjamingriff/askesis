@@ -1,3 +1,4 @@
+import { CoverageSummary } from '../components/PlanningReview';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useRef, useState, useCallback } from 'react';
 import { Link, useParams, useBeforeUnload, useBlocker } from 'react-router';
@@ -155,7 +156,14 @@ function BriefEditor({ state, planId }: { state: State; planId: string }) {
       return result(
         await api.POST('/api/v1/plans/{planId}/draft/calibrations', {
           params,
-          body: { ...request, input },
+          body: {
+            ...request,
+            input,
+            provenance: method === 'threshold_pace' ? 'user_estimate' : 'user_supplied',
+            ...(method === 'threshold_pace'
+              ? { estimateBasis: 'Threshold pace estimated by the user.' }
+              : {}),
+          },
         }),
       );
     },
@@ -212,6 +220,17 @@ function BriefEditor({ state, planId }: { state: State; planId: string }) {
           ? `${c.distanceMetres! / (brief.unit === 'miles' ? 1609.344 : 1000)} ${brief.unit} in ${Math.floor(c.durationSeconds! / 60)}:${String(c.durationSeconds! % 60).padStart(2, '0')}`
           : `Estimated threshold ${formatPace(c.secondsPerKilometre!, brief.unit)}`}
       </p>
+      {c.estimateBasis && (
+        <p>
+          {c.provenance === 'agent_estimate' ? 'Coach estimate: ' : 'Pace evidence: '}
+          {c.estimateBasis}
+        </p>
+      )}
+      {(c.provenance === 'agent_estimate' ||
+        c.provenance === 'user_estimate' ||
+        c.method === 'threshold_pace') && (
+        <p>These paces are estimates. Update the paces and plan after a few runs.</p>
+      )}
       <table className="pace-guides">
         <thead>
           <tr>
@@ -252,6 +271,7 @@ function BriefEditor({ state, planId }: { state: State; planId: string }) {
         {state.startDate ?? 'Set a start date in plan details'} –{' '}
         {state.endDate ?? 'Set an end date in plan details'}
       </p>
+      <CoverageSummary state={state} />
       <p role="status">
         {state.confirmed ? 'Brief confirmed' : 'Brief needs confirmation'}
         {state.readOnly ? ' · Read-only version' : ''}

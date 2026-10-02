@@ -4092,6 +4092,439 @@
                 "schema": {
                   "type": "object",
                   "properties": {
+                    "briefReview": {
+                      "type": "object",
+                      "properties": {
+                        "versionId": {
+                          "type": "string",
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+                        },
+                        "editNumber": {
+                          "type": "number"
+                        },
+                        "startDate": {
+                          "type": "string",
+                          "nullable": true
+                        },
+                        "endDate": {
+                          "type": "string",
+                          "nullable": true
+                        },
+                        "readOnly": {
+                          "type": "boolean"
+                        },
+                        "brief": {
+                          "type": "object",
+                          "properties": {
+                            "goal": {
+                              "type": "string",
+                              "maxLength": 20000
+                            },
+                            "unit": {
+                              "type": "string",
+                              "enum": [
+                                "kilometres",
+                                "miles"
+                              ]
+                            },
+                            "timezone": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 100
+                            },
+                            "weeklyDistance": {
+                              "oneOf": [
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "status": {
+                                      "type": "string",
+                                      "enum": [
+                                        "unanswered"
+                                      ]
+                                    },
+                                    "value": {
+                                      "nullable": true
+                                    }
+                                  },
+                                  "required": [
+                                    "status",
+                                    "value"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "status": {
+                                      "type": "string",
+                                      "enum": [
+                                        "unknown"
+                                      ]
+                                    },
+                                    "value": {
+                                      "nullable": true
+                                    }
+                                  },
+                                  "required": [
+                                    "status",
+                                    "value"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "status": {
+                                      "type": "string",
+                                      "enum": [
+                                        "known"
+                                      ]
+                                    },
+                                    "value": {
+                                      "type": "number",
+                                      "minimum": 0,
+                                      "maximum": 1000000
+                                    }
+                                  },
+                                  "required": [
+                                    "status",
+                                    "value"
+                                  ],
+                                  "additionalProperties": false
+                                }
+                              ]
+                            },
+                            "currentRuns": {
+                              "oneOf": [
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "status": {
+                                      "type": "string",
+                                      "enum": [
+                                        "unanswered"
+                                      ]
+                                    },
+                                    "value": {
+                                      "nullable": true
+                                    }
+                                  },
+                                  "required": [
+                                    "status",
+                                    "value"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "status": {
+                                      "type": "string",
+                                      "enum": [
+                                        "unknown"
+                                      ]
+                                    },
+                                    "value": {
+                                      "nullable": true
+                                    }
+                                  },
+                                  "required": [
+                                    "status",
+                                    "value"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "status": {
+                                      "type": "string",
+                                      "enum": [
+                                        "known"
+                                      ]
+                                    },
+                                    "value": {
+                                      "type": "number",
+                                      "minimum": 0,
+                                      "maximum": 1000000
+                                    }
+                                  },
+                                  "required": [
+                                    "status",
+                                    "value"
+                                  ],
+                                  "additionalProperties": false
+                                }
+                              ]
+                            },
+                            "longestRun": {
+                              "oneOf": [
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "status": {
+                                      "type": "string",
+                                      "enum": [
+                                        "unanswered"
+                                      ]
+                                    },
+                                    "value": {
+                                      "nullable": true
+                                    }
+                                  },
+                                  "required": [
+                                    "status",
+                                    "value"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "status": {
+                                      "type": "string",
+                                      "enum": [
+                                        "unknown"
+                                      ]
+                                    },
+                                    "value": {
+                                      "nullable": true
+                                    }
+                                  },
+                                  "required": [
+                                    "status",
+                                    "value"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "status": {
+                                      "type": "string",
+                                      "enum": [
+                                        "known"
+                                      ]
+                                    },
+                                    "value": {
+                                      "type": "number",
+                                      "minimum": 0,
+                                      "maximum": 1000000
+                                    }
+                                  },
+                                  "required": [
+                                    "status",
+                                    "value"
+                                  ],
+                                  "additionalProperties": false
+                                }
+                              ]
+                            },
+                            "desiredRuns": {
+                              "type": "integer",
+                              "nullable": true,
+                              "minimum": 1,
+                              "maximum": 14
+                            },
+                            "weekdays": {
+                              "type": "array",
+                              "items": {
+                                "type": "string",
+                                "enum": [
+                                  "available",
+                                  "preferred",
+                                  "unavailable"
+                                ]
+                              }
+                            },
+                            "context": {
+                              "type": "string",
+                              "maxLength": 20000
+                            }
+                          },
+                          "required": [
+                            "goal",
+                            "unit",
+                            "timezone",
+                            "weeklyDistance",
+                            "currentRuns",
+                            "longestRun",
+                            "desiredRuns",
+                            "weekdays",
+                            "context"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "confirmed": {
+                          "type": "boolean"
+                        },
+                        "hash": {
+                          "type": "string"
+                        },
+                        "scheduleReviewRequired": {
+                          "type": "boolean"
+                        },
+                        "findings": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "code": {
+                                "type": "string"
+                              },
+                              "severity": {
+                                "type": "string",
+                                "enum": [
+                                  "error",
+                                  "warning"
+                                ]
+                              },
+                              "message": {
+                                "type": "string"
+                              },
+                              "path": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "code",
+                              "severity",
+                              "message",
+                              "path"
+                            ]
+                          }
+                        },
+                        "coverage": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "startDate": {
+                                "type": "string"
+                              },
+                              "endDate": {
+                                "type": "string"
+                              },
+                              "current": {
+                                "type": "boolean"
+                              }
+                            },
+                            "required": [
+                              "startDate",
+                              "endDate",
+                              "current"
+                            ]
+                          }
+                        },
+                        "calibrations": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+                              },
+                              "effectiveFrom": {
+                                "type": "string"
+                              },
+                              "effectiveUntil": {
+                                "type": "string",
+                                "nullable": true
+                              },
+                              "method": {
+                                "type": "string",
+                                "enum": [
+                                  "race_result",
+                                  "threshold_pace"
+                                ]
+                              },
+                              "distanceMetres": {
+                                "type": "number",
+                                "nullable": true
+                              },
+                              "durationSeconds": {
+                                "type": "number",
+                                "nullable": true
+                              },
+                              "secondsPerKilometre": {
+                                "type": "number",
+                                "nullable": true
+                              },
+                              "calculatorVersion": {
+                                "type": "string"
+                              },
+                              "provenance": {
+                                "type": "string",
+                                "enum": [
+                                  "user_supplied",
+                                  "user_estimate",
+                                  "agent_estimate"
+                                ]
+                              },
+                              "estimateBasis": {
+                                "type": "string",
+                                "nullable": true
+                              },
+                              "zones": {
+                                "type": "array",
+                                "items": {
+                                  "type": "object",
+                                  "properties": {
+                                    "key": {
+                                      "type": "string"
+                                    },
+                                    "fast": {
+                                      "type": "number"
+                                    },
+                                    "target": {
+                                      "type": "number"
+                                    },
+                                    "slow": {
+                                      "type": "number"
+                                    }
+                                  },
+                                  "required": [
+                                    "key",
+                                    "fast",
+                                    "target",
+                                    "slow"
+                                  ]
+                                }
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "effectiveFrom",
+                              "effectiveUntil",
+                              "method",
+                              "distanceMetres",
+                              "durationSeconds",
+                              "secondsPerKilometre",
+                              "calculatorVersion",
+                              "provenance",
+                              "estimateBasis",
+                              "zones"
+                            ]
+                          }
+                        }
+                      },
+                      "required": [
+                        "versionId",
+                        "editNumber",
+                        "startDate",
+                        "endDate",
+                        "readOnly",
+                        "brief",
+                        "confirmed",
+                        "hash",
+                        "scheduleReviewRequired",
+                        "findings",
+                        "coverage",
+                        "calibrations"
+                      ]
+                    },
                     "draftId": {
                       "type": "string",
                       "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
@@ -4303,6 +4736,10 @@
               "schema": {
                 "type": "object",
                 "properties": {
+                  "confirmBriefHash": {
+                    "type": "string",
+                    "pattern": "^[a-f0-9]{64}$"
+                  },
                   "expectedStateVersion": {
                     "type": "integer",
                     "minimum": 0,
@@ -4596,6 +5033,10 @@
               "schema": {
                 "type": "object",
                 "properties": {
+                  "confirmBriefHash": {
+                    "type": "string",
+                    "pattern": "^[a-f0-9]{64}$"
+                  },
                   "expectedStateVersion": {
                     "type": "integer",
                     "minimum": 0,
@@ -4889,6 +5330,10 @@
               "schema": {
                 "type": "object",
                 "properties": {
+                  "confirmBriefHash": {
+                    "type": "string",
+                    "pattern": "^[a-f0-9]{64}$"
+                  },
                   "expectedStateVersion": {
                     "type": "integer",
                     "minimum": 0,
@@ -5169,7 +5614,8 @@
                       "type": "string",
                       "enum": [
                         "unavailable",
-                        "test"
+                        "test",
+                        "agent"
                       ]
                     }
                   },
@@ -8164,6 +8610,28 @@
                         ]
                       }
                     },
+                    "coverage": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "startDate": {
+                            "type": "string"
+                          },
+                          "endDate": {
+                            "type": "string"
+                          },
+                          "current": {
+                            "type": "boolean"
+                          }
+                        },
+                        "required": [
+                          "startDate",
+                          "endDate",
+                          "current"
+                        ]
+                      }
+                    },
                     "calibrations": {
                       "type": "array",
                       "items": {
@@ -8202,6 +8670,18 @@
                           "calculatorVersion": {
                             "type": "string"
                           },
+                          "provenance": {
+                            "type": "string",
+                            "enum": [
+                              "user_supplied",
+                              "user_estimate",
+                              "agent_estimate"
+                            ]
+                          },
+                          "estimateBasis": {
+                            "type": "string",
+                            "nullable": true
+                          },
                           "zones": {
                             "type": "array",
                             "items": {
@@ -8238,6 +8718,8 @@
                           "durationSeconds",
                           "secondsPerKilometre",
                           "calculatorVersion",
+                          "provenance",
+                          "estimateBasis",
                           "zones"
                         ]
                       }
@@ -8254,6 +8736,7 @@
                     "hash",
                     "scheduleReviewRequired",
                     "findings",
+                    "coverage",
                     "calibrations"
                   ]
                 }
@@ -8910,6 +9393,28 @@
                         ]
                       }
                     },
+                    "coverage": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "startDate": {
+                            "type": "string"
+                          },
+                          "endDate": {
+                            "type": "string"
+                          },
+                          "current": {
+                            "type": "boolean"
+                          }
+                        },
+                        "required": [
+                          "startDate",
+                          "endDate",
+                          "current"
+                        ]
+                      }
+                    },
                     "calibrations": {
                       "type": "array",
                       "items": {
@@ -8948,6 +9453,18 @@
                           "calculatorVersion": {
                             "type": "string"
                           },
+                          "provenance": {
+                            "type": "string",
+                            "enum": [
+                              "user_supplied",
+                              "user_estimate",
+                              "agent_estimate"
+                            ]
+                          },
+                          "estimateBasis": {
+                            "type": "string",
+                            "nullable": true
+                          },
                           "zones": {
                             "type": "array",
                             "items": {
@@ -8984,6 +9501,8 @@
                           "durationSeconds",
                           "secondsPerKilometre",
                           "calculatorVersion",
+                          "provenance",
+                          "estimateBasis",
                           "zones"
                         ]
                       }
@@ -9000,6 +9519,7 @@
                     "hash",
                     "scheduleReviewRequired",
                     "findings",
+                    "coverage",
                     "calibrations"
                   ]
                 }
@@ -9392,6 +9912,28 @@
                         ]
                       }
                     },
+                    "coverage": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "startDate": {
+                            "type": "string"
+                          },
+                          "endDate": {
+                            "type": "string"
+                          },
+                          "current": {
+                            "type": "boolean"
+                          }
+                        },
+                        "required": [
+                          "startDate",
+                          "endDate",
+                          "current"
+                        ]
+                      }
+                    },
                     "calibrations": {
                       "type": "array",
                       "items": {
@@ -9430,6 +9972,18 @@
                           "calculatorVersion": {
                             "type": "string"
                           },
+                          "provenance": {
+                            "type": "string",
+                            "enum": [
+                              "user_supplied",
+                              "user_estimate",
+                              "agent_estimate"
+                            ]
+                          },
+                          "estimateBasis": {
+                            "type": "string",
+                            "nullable": true
+                          },
                           "zones": {
                             "type": "array",
                             "items": {
@@ -9466,6 +10020,8 @@
                           "durationSeconds",
                           "secondsPerKilometre",
                           "calculatorVersion",
+                          "provenance",
+                          "estimateBasis",
                           "zones"
                         ]
                       }
@@ -9482,6 +10038,7 @@
                     "hash",
                     "scheduleReviewRequired",
                     "findings",
+                    "coverage",
                     "calibrations"
                   ]
                 }
@@ -9865,6 +10422,28 @@
                         ]
                       }
                     },
+                    "coverage": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "startDate": {
+                            "type": "string"
+                          },
+                          "endDate": {
+                            "type": "string"
+                          },
+                          "current": {
+                            "type": "boolean"
+                          }
+                        },
+                        "required": [
+                          "startDate",
+                          "endDate",
+                          "current"
+                        ]
+                      }
+                    },
                     "calibrations": {
                       "type": "array",
                       "items": {
@@ -9903,6 +10482,18 @@
                           "calculatorVersion": {
                             "type": "string"
                           },
+                          "provenance": {
+                            "type": "string",
+                            "enum": [
+                              "user_supplied",
+                              "user_estimate",
+                              "agent_estimate"
+                            ]
+                          },
+                          "estimateBasis": {
+                            "type": "string",
+                            "nullable": true
+                          },
                           "zones": {
                             "type": "array",
                             "items": {
@@ -9939,6 +10530,8 @@
                           "durationSeconds",
                           "secondsPerKilometre",
                           "calculatorVersion",
+                          "provenance",
+                          "estimateBasis",
                           "zones"
                         ]
                       }
@@ -9955,6 +10548,7 @@
                     "hash",
                     "scheduleReviewRequired",
                     "findings",
+                    "coverage",
                     "calibrations"
                   ]
                 }
@@ -10380,6 +10974,28 @@
                         ]
                       }
                     },
+                    "coverage": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "startDate": {
+                            "type": "string"
+                          },
+                          "endDate": {
+                            "type": "string"
+                          },
+                          "current": {
+                            "type": "boolean"
+                          }
+                        },
+                        "required": [
+                          "startDate",
+                          "endDate",
+                          "current"
+                        ]
+                      }
+                    },
                     "calibrations": {
                       "type": "array",
                       "items": {
@@ -10418,6 +11034,18 @@
                           "calculatorVersion": {
                             "type": "string"
                           },
+                          "provenance": {
+                            "type": "string",
+                            "enum": [
+                              "user_supplied",
+                              "user_estimate",
+                              "agent_estimate"
+                            ]
+                          },
+                          "estimateBasis": {
+                            "type": "string",
+                            "nullable": true
+                          },
                           "zones": {
                             "type": "array",
                             "items": {
@@ -10454,6 +11082,8 @@
                           "durationSeconds",
                           "secondsPerKilometre",
                           "calculatorVersion",
+                          "provenance",
+                          "estimateBasis",
                           "zones"
                         ]
                       }
@@ -10470,6 +11100,7 @@
                     "hash",
                     "scheduleReviewRequired",
                     "findings",
+                    "coverage",
                     "calibrations"
                   ]
                 }
@@ -10853,6 +11484,28 @@
                         ]
                       }
                     },
+                    "coverage": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "startDate": {
+                            "type": "string"
+                          },
+                          "endDate": {
+                            "type": "string"
+                          },
+                          "current": {
+                            "type": "boolean"
+                          }
+                        },
+                        "required": [
+                          "startDate",
+                          "endDate",
+                          "current"
+                        ]
+                      }
+                    },
                     "calibrations": {
                       "type": "array",
                       "items": {
@@ -10891,6 +11544,18 @@
                           "calculatorVersion": {
                             "type": "string"
                           },
+                          "provenance": {
+                            "type": "string",
+                            "enum": [
+                              "user_supplied",
+                              "user_estimate",
+                              "agent_estimate"
+                            ]
+                          },
+                          "estimateBasis": {
+                            "type": "string",
+                            "nullable": true
+                          },
                           "zones": {
                             "type": "array",
                             "items": {
@@ -10927,6 +11592,8 @@
                           "durationSeconds",
                           "secondsPerKilometre",
                           "calculatorVersion",
+                          "provenance",
+                          "estimateBasis",
                           "zones"
                         ]
                       }
@@ -10943,6 +11610,7 @@
                     "hash",
                     "scheduleReviewRequired",
                     "findings",
+                    "coverage",
                     "calibrations"
                   ]
                 }
@@ -11088,6 +11756,19 @@
                         "additionalProperties": false
                       }
                     ]
+                  },
+                  "provenance": {
+                    "type": "string",
+                    "enum": [
+                      "user_supplied",
+                      "user_estimate",
+                      "agent_estimate"
+                    ]
+                  },
+                  "estimateBasis": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 4000
                   }
                 },
                 "required": [
@@ -11408,6 +12089,28 @@
                         ]
                       }
                     },
+                    "coverage": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "startDate": {
+                            "type": "string"
+                          },
+                          "endDate": {
+                            "type": "string"
+                          },
+                          "current": {
+                            "type": "boolean"
+                          }
+                        },
+                        "required": [
+                          "startDate",
+                          "endDate",
+                          "current"
+                        ]
+                      }
+                    },
                     "calibrations": {
                       "type": "array",
                       "items": {
@@ -11446,6 +12149,18 @@
                           "calculatorVersion": {
                             "type": "string"
                           },
+                          "provenance": {
+                            "type": "string",
+                            "enum": [
+                              "user_supplied",
+                              "user_estimate",
+                              "agent_estimate"
+                            ]
+                          },
+                          "estimateBasis": {
+                            "type": "string",
+                            "nullable": true
+                          },
                           "zones": {
                             "type": "array",
                             "items": {
@@ -11482,6 +12197,8 @@
                           "durationSeconds",
                           "secondsPerKilometre",
                           "calculatorVersion",
+                          "provenance",
+                          "estimateBasis",
                           "zones"
                         ]
                       }
@@ -11498,6 +12215,7 @@
                     "hash",
                     "scheduleReviewRequired",
                     "findings",
+                    "coverage",
                     "calibrations"
                   ]
                 }
@@ -11920,6 +12638,28 @@
                         ]
                       }
                     },
+                    "coverage": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "startDate": {
+                            "type": "string"
+                          },
+                          "endDate": {
+                            "type": "string"
+                          },
+                          "current": {
+                            "type": "boolean"
+                          }
+                        },
+                        "required": [
+                          "startDate",
+                          "endDate",
+                          "current"
+                        ]
+                      }
+                    },
                     "calibrations": {
                       "type": "array",
                       "items": {
@@ -11958,6 +12698,18 @@
                           "calculatorVersion": {
                             "type": "string"
                           },
+                          "provenance": {
+                            "type": "string",
+                            "enum": [
+                              "user_supplied",
+                              "user_estimate",
+                              "agent_estimate"
+                            ]
+                          },
+                          "estimateBasis": {
+                            "type": "string",
+                            "nullable": true
+                          },
                           "zones": {
                             "type": "array",
                             "items": {
@@ -11994,6 +12746,8 @@
                           "durationSeconds",
                           "secondsPerKilometre",
                           "calculatorVersion",
+                          "provenance",
+                          "estimateBasis",
                           "zones"
                         ]
                       }
@@ -12010,6 +12764,7 @@
                     "hash",
                     "scheduleReviewRequired",
                     "findings",
+                    "coverage",
                     "calibrations"
                   ]
                 }

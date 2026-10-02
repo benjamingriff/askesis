@@ -145,6 +145,7 @@ function ConversationPanel({
   const end = useRef<HTMLDivElement>(null);
   const capabilities = useQuery({
     queryKey: ['chat', 'capabilities'],
+    refetchInterval: 10000,
     queryFn: async () => chatResult(await api.GET('/api/v1/chat-capabilities')),
   });
   const detail = useQuery({
@@ -179,7 +180,9 @@ function ConversationPanel({
     if (conversationId)
       void client.invalidateQueries({ queryKey: ['chat', 'messages', conversationId] });
     void client.invalidateQueries({ queryKey: ['chat', 'list'] });
-  }, [client, conversationId, run?.id, run?.status]);
+    void client.invalidateQueries({ queryKey: ['plans'] });
+    void client.invalidateQueries({ queryKey: ['plan-workouts'] });
+  }, [client, conversationId, run?.id, run?.status, conversation?.context?.editNumber]);
   const messages = [
     ...new Map(
       history.data?.pages.flatMap((page) => page.messages).map((message) => [message.id, message]),
@@ -539,7 +542,7 @@ function ConversationPanel({
             </p>
           </details>
         ) : (
-          <p>Review your plan before applying changes.</p>
+          <p>Your coach can update the draft. Review the plan before locking a version.</p>
         )}
       </div>
     </section>
@@ -558,7 +561,9 @@ function RunStatus({ run, conversation }: { run: Run; conversation: Conversation
     <span>
       {labels[run.status]}
       {run.failureCode &&
-        ` · ${run.failureCode === 'STALE_CONTEXT' ? 'The plan changed; refresh context before sending again.' : run.failureCode === 'EXECUTION_TIMEOUT' ? 'Execution timed out. You can send another message.' : 'Test failure. You can send another message.'}`}
+        ` · ${run.failureCode === 'STALE_CONTEXT' ? 'The plan changed; refresh context before sending again.' : run.failureCode === 'EXECUTION_TIMEOUT' ? 'Execution timed out. You can send another message.' : 'Execution stopped. You can send another message.'}`}
+      {(run.status === 'failed' || run.status === 'cancelled') &&
+        ' · Completed plan changes remain saved; review your draft before continuing.'}
       {conversation && run.conversationId !== conversation.id && (
         <>
           {' '}
@@ -571,6 +576,7 @@ function RunStatus({ run, conversation }: { run: Run; conversation: Conversation
 function RunEvents({ run }: { run: Run }) {
   const events = useQuery({
     queryKey: ['chat', 'events', run.id, run.status],
+    refetchInterval: isActive(run) ? 2000 : false,
     queryFn: async () =>
       chatResult(
         await api.GET('/api/v1/agent-runs/{runId}/events', { params: { path: { runId: run.id } } }),

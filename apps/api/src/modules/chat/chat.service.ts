@@ -1,3 +1,4 @@
+import { workerReady } from '../agent/agent.service.js';
 import { randomUUID } from 'node:crypto';
 import { sql, type Transaction, type Selectable } from 'kysely';
 import { getDatabase } from '../../database/client.js';
@@ -26,12 +27,12 @@ type Run = Selectable<DB['agent_runs']>;
 const json = (value: unknown): Json => JSON.parse(JSON.stringify(value)) as Json;
 const iso = (value: Date | string | null) => (value instanceof Date ? value.toISOString() : value);
 const notFound = () => new ChatError('NOT_FOUND', 'Conversation or run not found.', 404);
-export function chatCapabilities() {
+export async function chatCapabilities() {
   const mode = getApiConfig().CHAT_EXECUTION_MODE;
-  return { executionAvailable: mode === 'test', mode };
+  return { executionAvailable: mode === 'test' || (await workerReady()), mode };
 }
-function available() {
-  if (!chatCapabilities().executionAvailable)
+async function available() {
+  if (!(await chatCapabilities()).executionAvailable)
     throw new ChatError(
       'AGENT_UNAVAILABLE',
       'Coaching is not available yet. Conversation history is still available.',
@@ -95,7 +96,7 @@ async function ownedPlan(db: Tx, owner: string, id: string) {
   if (!plan) throw notFound();
   return plan;
 }
-async function ownedConversation(db: Tx, owner: string, id: string, lock = false) {
+export async function ownedConversation(db: Tx, owner: string, id: string, lock = false) {
   const row = await db
     .selectFrom('conversations')
     .selectAll()
@@ -113,7 +114,7 @@ async function ownedConversation(db: Tx, owner: string, id: string, lock = false
     .forUpdate()
     .executeTakeFirstOrThrow();
 }
-async function contextFor(db: Tx, conversation: Conversation): Promise<Context> {
+export async function contextFor(db: Tx, conversation: Conversation): Promise<Context> {
   if (!conversation.plan_id) return null;
   const plan = await db
     .selectFrom('plans')
@@ -189,11 +190,13 @@ function messageView(row: Selectable<DB['conversation_messages']>) {
 async function activeRun(db: Tx, row: Conversation) {
   let query = db.selectFrom('agent_runs').selectAll().where('status', 'in', activeStatuses);
   query = row.plan_id
-    ? query.where('plan_id', '=', row.plan_id)
+    ? query.where((eb) =>
+        eb.or([eb('plan_id', '=', row.plan_id!), eb('execution_plan_id', '=', row.plan_id!)]),
+      )
     : query.where('conversation_id', '=', row.id);
   return await query.executeTakeFirst();
 }
-function targetMatches(context: Context, target: Target) {
+export function targetMatches(context: Context, target: Target) {
   if (
     (context === null) !== (target === null) ||
     (context &&
@@ -206,7 +209,7 @@ function targetMatches(context: Context, target: Target) {
     );
   }
 }
-async function appendEvent(db: Tx, runId: string, type: string, metadata: unknown = {}) {
+export async function appendEvent(db: Tx, runId: string, type: string, metadata: unknown = {}) {
   const last = await db
     .selectFrom('agent_run_events')
     .select('sequence')
@@ -218,7 +221,7 @@ async function appendEvent(db: Tx, runId: string, type: string, metadata: unknow
     .values({ run_id: runId, sequence: (last?.sequence ?? 0) + 1, type, metadata: json(metadata) })
     .execute();
 }
-async function appendMessage(
+export async function appendMessage(
   db: Tx,
   row: Conversation,
   role: 'user' | 'assistant',
@@ -250,7 +253,7 @@ async function appendMessage(
 }
 async function accept(db: Tx, row: Conversation, input: Send) {
   await writable(db, row);
-  available();
+  await available();
   const context = await contextFor(db, row);
   targetMatches(context, input.target);
   if (await activeRun(db, row))
@@ -275,6 +278,9 @@ async function accept(db: Tx, row: Conversation, input: Send) {
       plan_id: row.plan_id,
       user_message_id: message.id,
       context: context === null ? null : json(context),
+      deadline_at: new Date(
+        Date.now() + (getApiConfig().CHAT_EXECUTION_MODE === 'agent' ? 15 * 60000 : 30000),
+      ),
     })
     .returningAll()
     .executeTakeFirstOrThrow();
@@ -293,7 +299,7 @@ export async function createConversation(
       if (plan.archived_at)
         throw new ChatError('PLAN_ARCHIVED', 'Unarchive this plan before creating a conversation.');
     }
-    if (input.initialMessage) available();
+    if (input.initialMessage) await available();
     const id = await createConversationRow(db, owner, input.planId ?? null);
     const row = await ownedConversation(db, owner, id, true);
     const accepted = input.initialMessage ? await accept(db, row, input.initialMessage) : null;
@@ -506,7 +512,7 @@ export async function listMessages(
       };
     });
 }
-async function ownedRun(db: Tx, owner: string, id: string, lock = false) {
+export async function ownedRun(db: Tx, owner: string, id: string, lock = false) {
   const run = await db
     .selectFrom('agent_runs')
     .selectAll()
@@ -553,7 +559,7 @@ export async function listEvents(owner: string, id: string, after: number, limit
       };
     });
 }
-async function transition(
+export async function transition(
   db: Tx,
   row: Run,
   status: string,
@@ -593,7 +599,7 @@ export async function cancelRun(owner: string, id: string) {
 
 // Internal development executor. No browser route can call this or choose terminal state.
 export async function tickTestRun(owner: string, id: string, now = Date.now()) {
-  available();
+  await available();
   return getDatabase()
     .transaction()
     .execute(async (db) => {
@@ -635,7 +641,7 @@ export async function tickTestRun(owner: string, id: string, now = Date.now()) {
 }
 
 export async function sweepTestRuns() {
-  available();
+  await available();
   const runs = await getDatabase()
     .selectFrom('agent_runs')
     .select(['id', 'owner_id'])

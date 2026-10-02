@@ -22,6 +22,7 @@ beforeEach(() => {
     hash: 'hash',
     scheduleReviewRequired: false,
     findings: [],
+    coverage: [],
     calibrations: [],
     brief: {
       goal: 'Run a comfortable half marathon',
@@ -129,4 +130,30 @@ it('converts a miles threshold input to canonical seconds per kilometre', async 
       }),
     ),
   );
+});
+
+it('shows a partial prescribed horizon, the unplanned remainder and estimated pace provenance', async () => {
+  state.coverage = [{ startDate: '2026-09-01', endDate: '2026-09-30', current: true }];
+  state.calibrations = [
+    {
+      id: 'estimate',
+      effectiveFrom: '2026-09-01',
+      effectiveUntil: null,
+      method: 'threshold_pace',
+      distanceMetres: null,
+      durationSeconds: null,
+      secondsPerKilometre: 330,
+      calculatorVersion: 'v1',
+      provenance: 'agent_estimate',
+      estimateBasis: 'Reported comfortable pace; refine after early runs.',
+      zones: [],
+    },
+  ];
+  mount();
+  expect(await screen.findByText('2026-09-01 – 2026-09-30')).toBeInTheDocument();
+  expect(screen.getByText('2026-10-01 – 2026-12-01')).toBeInTheDocument();
+  expect(screen.getAllByText(/Coach estimate: Reported comfortable pace/).length).toBeGreaterThan(
+    0,
+  );
+  expect(screen.getAllByText(/These paces are estimates/).length).toBeGreaterThan(0);
 });

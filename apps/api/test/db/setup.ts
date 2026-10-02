@@ -1,4 +1,4 @@
-const expected = 'postgres://askesis_test:askesis_test@127.0.0.1:55432/askesis_test';
+const expected = `postgres://askesis_test:askesis_test@127.0.0.1:${process.env.TEST_DATABASE_PORT ?? '55432'}/askesis_test`;
 if (process.env.TEST_DATABASE_URL !== expected) {
   throw new Error('Database tests require the disposable local Askesis test database.');
 }

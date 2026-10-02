@@ -42,19 +42,50 @@ export interface AgentRuns {
   cost_amount: Numeric | null;
   cost_currency: string | null;
   created_at: Generated<Timestamp>;
+  credential_digest: string | null;
   deadline_at: Generated<Timestamp>;
+  execution_edit_number: number | null;
+  execution_plan_id: string | null;
+  execution_version_id: string | null;
   failure_code: string | null;
   finished_at: Timestamp | null;
   id: Generated<string>;
   input_tokens: number | null;
+  lease_expires_at: Timestamp | null;
+  lease_generation: Generated<number>;
   model: string | null;
   output_tokens: number | null;
   owner_id: string;
   plan_id: string | null;
+  prompt_version: string | null;
   provider: string | null;
+  reasoning: string | null;
   started_at: Timestamp | null;
   status: Generated<string>;
+  tool_count: Generated<number>;
   user_message_id: string;
+  worker_id: string | null;
+}
+
+export interface AgentToolReceipts {
+  created_at: Generated<Timestamp>;
+  edit_number: number | null;
+  input_hash: string;
+  operation_id: string;
+  response: Json;
+  run_id: string;
+  target_version_id: string | null;
+  tool_name: string;
+}
+
+export interface AgentWorkers {
+  id: string;
+  last_seen_at: Generated<Timestamp>;
+  model: string;
+  prompt_version: string;
+  provider: string;
+  ready: Generated<boolean>;
+  reasoning: string;
 }
 
 export interface ApiIdempotencyKeys {
@@ -104,11 +135,13 @@ export interface CalibrationProfiles {
   calculator_version: string;
   created_at: Generated<Timestamp>;
   discipline: string;
+  estimate_basis: string | null;
   fitness_value: Numeric | null;
   id: Generated<string>;
   lineage_id: Generated<string>;
   method: string;
   plan_version_id: string;
+  provenance: Generated<string>;
   race_distance_metres: Numeric | null;
   race_duration_seconds: number | null;
   system: string;
@@ -215,6 +248,15 @@ export interface Plans {
   owner_id: string;
   state_version: Generated<number>;
   updated_at: Generated<Timestamp>;
+}
+
+export interface PlanScheduleCoverage {
+  brief_hash: string;
+  end_date: Timestamp;
+  id: Generated<string>;
+  lineage_id: Generated<string>;
+  plan_version_id: string;
+  start_date: Timestamp;
 }
 
 export interface PlanVersions {
@@ -374,6 +416,8 @@ export interface WorkoutTags {
 export interface DB {
   agent_run_events: AgentRunEvents;
   agent_runs: AgentRuns;
+  agent_tool_receipts: AgentToolReceipts;
+  agent_workers: AgentWorkers;
   api_idempotency_keys: ApiIdempotencyKeys;
   athlete_identities: AthleteIdentities;
   athletes: Athletes;
@@ -386,6 +430,7 @@ export interface DB {
   plan_brief_weekdays: PlanBriefWeekdays;
   plan_briefs: PlanBriefs;
   plan_calibration_periods: PlanCalibrationPeriods;
+  plan_schedule_coverage: PlanScheduleCoverage;
   plan_versions: PlanVersions;
   plans: Plans;
   seed_runs: SeedRuns;

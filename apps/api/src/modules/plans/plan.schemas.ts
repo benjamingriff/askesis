@@ -1,9 +1,9 @@
 import { z } from '@hono/zod-openapi';
 
 // PostgreSQL accepts UUIDs without RFC version/variant bits (including local fixtures).
-export const Id = z
-  .string()
-  .regex(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i);
+export { Id, FindingSchema } from './plan.common.js';
+import { Id, FindingSchema } from './plan.common.js';
+import { BriefStateSchema } from './brief.schemas.js';
 export const PlanParams = z.object({ planId: Id });
 export const PlanListQuery = z.object({
   collection: z.enum(['library', 'active', 'archive']).default('library'),
@@ -11,12 +11,6 @@ export const PlanListQuery = z.object({
 export const StateCommandSchema = z
   .object({ expectedStateVersion: z.number().int().positive() })
   .strict();
-export const FindingSchema = z.object({
-  code: z.string(),
-  severity: z.enum(['error', 'warning']),
-  message: z.string(),
-  path: z.string(),
-});
 export const VersionSchema = z.object({
   id: Id,
   state: z.enum(['draft', 'locked']),
@@ -57,6 +51,7 @@ export const SummarySchema = z.object({
   ),
 });
 export const PreviewSchema = z.object({
+  briefReview: BriefStateSchema.optional(),
   draftId: Id,
   editNumber: z.number().int(),
   stateVersion: z.number().int(),
@@ -68,6 +63,10 @@ export const PreviewSchema = z.object({
 });
 export const CommandSchema = z
   .object({
+    confirmBriefHash: z
+      .string()
+      .regex(/^[a-f0-9]{64}$/)
+      .optional(),
     expectedStateVersion: z.number().int().positive(),
     expectedDraftId: Id.optional(),
     expectedEditNumber: z.number().int().positive().optional(),

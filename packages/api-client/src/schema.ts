@@ -1816,6 +1816,96 @@ export interface paths {
                     };
                     content: {
                         "application/json": {
+                            briefReview?: {
+                                versionId: string;
+                                editNumber: number;
+                                startDate: string | null;
+                                endDate: string | null;
+                                readOnly: boolean;
+                                brief: {
+                                    goal: string;
+                                    /** @enum {string} */
+                                    unit: "kilometres" | "miles";
+                                    timezone: string;
+                                    weeklyDistance: {
+                                        /** @enum {string} */
+                                        status: "unanswered";
+                                        value: unknown;
+                                    } | {
+                                        /** @enum {string} */
+                                        status: "unknown";
+                                        value: unknown;
+                                    } | {
+                                        /** @enum {string} */
+                                        status: "known";
+                                        value: number;
+                                    };
+                                    currentRuns: {
+                                        /** @enum {string} */
+                                        status: "unanswered";
+                                        value: unknown;
+                                    } | {
+                                        /** @enum {string} */
+                                        status: "unknown";
+                                        value: unknown;
+                                    } | {
+                                        /** @enum {string} */
+                                        status: "known";
+                                        value: number;
+                                    };
+                                    longestRun: {
+                                        /** @enum {string} */
+                                        status: "unanswered";
+                                        value: unknown;
+                                    } | {
+                                        /** @enum {string} */
+                                        status: "unknown";
+                                        value: unknown;
+                                    } | {
+                                        /** @enum {string} */
+                                        status: "known";
+                                        value: number;
+                                    };
+                                    desiredRuns: number | null;
+                                    weekdays: ("available" | "preferred" | "unavailable")[];
+                                    context: string;
+                                };
+                                confirmed: boolean;
+                                hash: string;
+                                scheduleReviewRequired: boolean;
+                                findings: {
+                                    code: string;
+                                    /** @enum {string} */
+                                    severity: "error" | "warning";
+                                    message: string;
+                                    path: string;
+                                }[];
+                                coverage: {
+                                    startDate: string;
+                                    endDate: string;
+                                    current: boolean;
+                                }[];
+                                calibrations: {
+                                    id: string;
+                                    effectiveFrom: string;
+                                    effectiveUntil: string | null;
+                                    /** @enum {string} */
+                                    method: "race_result" | "threshold_pace";
+                                    distanceMetres: number | null;
+                                    durationSeconds: number | null;
+                                    secondsPerKilometre: number | null;
+                                    calculatorVersion: string;
+                                    /** @enum {string} */
+                                    provenance: "user_supplied" | "user_estimate" | "agent_estimate";
+                                    estimateBasis: string | null;
+                                    zones: {
+                                        key: string;
+                                        fast: number;
+                                        target: number;
+                                        slow: number;
+                                    }[];
+                                }[];
+                            };
                             draftId: string;
                             editNumber: number;
                             stateVersion: number;
@@ -1925,6 +2015,7 @@ export interface paths {
             requestBody: {
                 content: {
                     "application/json": {
+                        confirmBriefHash?: string;
                         expectedStateVersion: number;
                         expectedDraftId?: string;
                         expectedEditNumber?: number;
@@ -2057,6 +2148,7 @@ export interface paths {
             requestBody: {
                 content: {
                     "application/json": {
+                        confirmBriefHash?: string;
                         expectedStateVersion: number;
                         expectedDraftId?: string;
                         expectedEditNumber?: number;
@@ -2189,6 +2281,7 @@ export interface paths {
             requestBody: {
                 content: {
                     "application/json": {
+                        confirmBriefHash?: string;
                         expectedStateVersion: number;
                         expectedDraftId?: string;
                         expectedEditNumber?: number;
@@ -2323,7 +2416,7 @@ export interface paths {
                         "application/json": {
                             executionAvailable: boolean;
                             /** @enum {string} */
-                            mode: "unavailable" | "test";
+                            mode: "unavailable" | "test" | "agent";
                         };
                     };
                 };
@@ -3763,6 +3856,11 @@ export interface paths {
                                 message: string;
                                 path: string;
                             }[];
+                            coverage: {
+                                startDate: string;
+                                endDate: string;
+                                current: boolean;
+                            }[];
                             calibrations: {
                                 id: string;
                                 effectiveFrom: string;
@@ -3773,6 +3871,9 @@ export interface paths {
                                 durationSeconds: number | null;
                                 secondsPerKilometre: number | null;
                                 calculatorVersion: string;
+                                /** @enum {string} */
+                                provenance: "user_supplied" | "user_estimate" | "agent_estimate";
+                                estimateBasis: string | null;
                                 zones: {
                                     key: string;
                                     fast: number;
@@ -3967,6 +4068,11 @@ export interface paths {
                                 message: string;
                                 path: string;
                             }[];
+                            coverage: {
+                                startDate: string;
+                                endDate: string;
+                                current: boolean;
+                            }[];
                             calibrations: {
                                 id: string;
                                 effectiveFrom: string;
@@ -3977,6 +4083,9 @@ export interface paths {
                                 durationSeconds: number | null;
                                 secondsPerKilometre: number | null;
                                 calculatorVersion: string;
+                                /** @enum {string} */
+                                provenance: "user_supplied" | "user_estimate" | "agent_estimate";
+                                estimateBasis: string | null;
                                 zones: {
                                     key: string;
                                     fast: number;
@@ -4130,6 +4239,11 @@ export interface paths {
                                 message: string;
                                 path: string;
                             }[];
+                            coverage: {
+                                startDate: string;
+                                endDate: string;
+                                current: boolean;
+                            }[];
                             calibrations: {
                                 id: string;
                                 effectiveFrom: string;
@@ -4140,6 +4254,9 @@ export interface paths {
                                 durationSeconds: number | null;
                                 secondsPerKilometre: number | null;
                                 calculatorVersion: string;
+                                /** @enum {string} */
+                                provenance: "user_supplied" | "user_estimate" | "agent_estimate";
+                                estimateBasis: string | null;
                                 zones: {
                                     key: string;
                                     fast: number;
@@ -4295,6 +4412,11 @@ export interface paths {
                                 message: string;
                                 path: string;
                             }[];
+                            coverage: {
+                                startDate: string;
+                                endDate: string;
+                                current: boolean;
+                            }[];
                             calibrations: {
                                 id: string;
                                 effectiveFrom: string;
@@ -4305,6 +4427,9 @@ export interface paths {
                                 durationSeconds: number | null;
                                 secondsPerKilometre: number | null;
                                 calculatorVersion: string;
+                                /** @enum {string} */
+                                provenance: "user_supplied" | "user_estimate" | "agent_estimate";
+                                estimateBasis: string | null;
                                 zones: {
                                     key: string;
                                     fast: number;
@@ -4468,6 +4593,11 @@ export interface paths {
                                 message: string;
                                 path: string;
                             }[];
+                            coverage: {
+                                startDate: string;
+                                endDate: string;
+                                current: boolean;
+                            }[];
                             calibrations: {
                                 id: string;
                                 effectiveFrom: string;
@@ -4478,6 +4608,9 @@ export interface paths {
                                 durationSeconds: number | null;
                                 secondsPerKilometre: number | null;
                                 calculatorVersion: string;
+                                /** @enum {string} */
+                                provenance: "user_supplied" | "user_estimate" | "agent_estimate";
+                                estimateBasis: string | null;
                                 zones: {
                                     key: string;
                                     fast: number;
@@ -4629,6 +4762,11 @@ export interface paths {
                                 message: string;
                                 path: string;
                             }[];
+                            coverage: {
+                                startDate: string;
+                                endDate: string;
+                                current: boolean;
+                            }[];
                             calibrations: {
                                 id: string;
                                 effectiveFrom: string;
@@ -4639,6 +4777,9 @@ export interface paths {
                                 durationSeconds: number | null;
                                 secondsPerKilometre: number | null;
                                 calculatorVersion: string;
+                                /** @enum {string} */
+                                provenance: "user_supplied" | "user_estimate" | "agent_estimate";
+                                estimateBasis: string | null;
                                 zones: {
                                     key: string;
                                     fast: number;
@@ -4722,6 +4863,9 @@ export interface paths {
                             method: "threshold_pace";
                             secondsPerKilometre: number;
                         };
+                        /** @enum {string} */
+                        provenance?: "user_supplied" | "user_estimate" | "agent_estimate";
+                        estimateBasis?: string;
                     };
                 };
             };
@@ -4796,6 +4940,11 @@ export interface paths {
                                 message: string;
                                 path: string;
                             }[];
+                            coverage: {
+                                startDate: string;
+                                endDate: string;
+                                current: boolean;
+                            }[];
                             calibrations: {
                                 id: string;
                                 effectiveFrom: string;
@@ -4806,6 +4955,9 @@ export interface paths {
                                 durationSeconds: number | null;
                                 secondsPerKilometre: number | null;
                                 calculatorVersion: string;
+                                /** @enum {string} */
+                                provenance: "user_supplied" | "user_estimate" | "agent_estimate";
+                                estimateBasis: string | null;
                                 zones: {
                                     key: string;
                                     fast: number;
@@ -4968,6 +5120,11 @@ export interface paths {
                                 message: string;
                                 path: string;
                             }[];
+                            coverage: {
+                                startDate: string;
+                                endDate: string;
+                                current: boolean;
+                            }[];
                             calibrations: {
                                 id: string;
                                 effectiveFrom: string;
@@ -4978,6 +5135,9 @@ export interface paths {
                                 durationSeconds: number | null;
                                 secondsPerKilometre: number | null;
                                 calculatorVersion: string;
+                                /** @enum {string} */
+                                provenance: "user_supplied" | "user_estimate" | "agent_estimate";
+                                estimateBasis: string | null;
                                 zones: {
                                     key: string;
                                     fast: number;

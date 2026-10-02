@@ -1,7 +1,7 @@
 # Current agent handoff
 
-**Updated:** 2026-09-11
-**Current phase:** Phase 4 deployed to Railway; Phase 5 implementation is next. UI refinement is deferred until after Phase 5.
+**Updated:** 2026-10-01
+**Current phase:** Phase 4 deployed to Railway; Phase 5 is built and deterministic verification passes locally; real-provider acceptance is pending. Broad UI refinement is deferred until after Phase 5.
 **Completed phase:** Phase 1 — engineering foundation and Railway deployment validation
 
 ## Purpose
@@ -18,6 +18,32 @@ Before making changes, read:
 Do not place credentials, Clerk tokens, database URLs, Sentry credentials, or Railway secrets in chat, logs, commits, or this file.
 
 ## Repository state at handoff
+
+### Phase 5 implementation — 2026-10-01
+
+Implemented on `phase-5-coaching-worker`: additive worker/lease/receipt/coverage migration; private machine API; transactional planning tools; standalone conversation binding; OpenAI Agents SDK 0.18.0 worker; configurable GPT-6.1 Sol/medium defaults; versioned coaching prompt; human combined or separate brief confirmation and locking; planned-horizon and estimate provenance UI; Docker/Compose and deterministic worker smoke.
+
+See [worker operations](./phase-5-runtime.md) for setup, private Railway service settings, execution limits and recovery. No deployment or push has been performed. Completed tools remain saved after failure/cancellation; generated coverage can be shorter than the total plan dates. Old schema 2 projections retain their historical hashes, and legacy coverage remains unknown. Worker edits upgrade editable legacy content to schema 3 without changing locked versions.
+
+Verification completed: 71 unit/UI/SDK tests; 43 database integration tests plus SQL invariants; populated Phase 4 migration preservation; disposable API/web/worker SDK smoke; and full `pnpm check` in an isolated source snapshot excluding unrelated mobile scaffolding. The production audit passes its high-severity gate after pinning Undici 7.29.1; nine low/moderate findings remain. Root `pnpm check` still stops on the separate mobile app's formatting. The snapshot uses a dummy publishable Clerk key and no copied secrets.
+
+The sweeper also runs when chat execution is unavailable, so disabling or losing the worker cannot indefinitely retain expired run slots. Tests exercise cleanup in that mode.
+
+The user is away from their machine and will supply `OPENAI_API_KEY` later. Continue deterministic verification; the live Responses/tool smoke and signed-in real-coaching walkthrough are pending. Do not mark Phase 5 complete on scripted-model evidence alone.
+
+A separately developed Expo app appeared in `apps/mobile` during implementation. Preserve that work; it is excluded from the pnpm workspace. Root formatting currently reports that app's unfinished files, so Phase 5 validation also uses an isolated source snapshot.
+
+### Phase 5 refinement — 2026-10-01
+
+Product decisions are recorded in the [Phase 5 design](./phase-5-design.md), with delivery stages and acceptance gates in the [implementation plan](./phase-5-implementation-plan.md). This checkpoint contains planning documents only; no worker implementation or deployment has been performed.
+
+The runtime direction changes from Pi to the OpenAI Agents SDK for TypeScript in an independent private worker, initially direct OpenAI/GPT-6.1 Sol with configurable model and reasoning settings. T3 Code's provider/event boundaries inform a small internal adapter; its full application stack is not adopted.
+
+The coach collects context through natural discussion and decides when to generate. Users may lock an initial period, such as one month, and extend it in a later revision. Full plan-date coverage is not a locking prerequisite. Estimated pace targets must be labelled and revisited after early run feedback. Brief confirmation may happen separately or alongside lock review; all confirmation/lock/unlock authority remains human-only.
+
+The implementation contract covers machine authentication, scoped run claims and leases, API-backed domain mutation tools, partial planning coverage, estimate provenance, cancellation/recovery, and the limited UI work needed for real coaching. Monthly spend configuration is deferred to provider setup. Advanced prompt settings, web search, automatic workout ingestion, broad UI polish, and streaming remain deferred.
+
+Read the Phase 5 documents before implementation. Their verification gates are requirements, not already-passing tests. Keep production coaching unavailable until a ready real worker is connected; never enable test execution on Railway.
 
 ### Phase 4 deployment — 2026-09-11
 
@@ -468,10 +494,10 @@ Phase 3 has been refined in parallel so it is ready for review after Phase 2. It
 - Core plan data remains normalized rather than authoritative JSONB.
 - Atlas exclusively owns schema migrations; deployed migrations are append-only.
 - Only the core API may access PostgreSQL.
-- The web and future Pi agent use the same domain API.
+- The web and agent worker use the same domain API.
 - Clerk identities remain separate from internal athlete UUIDs.
 - Lazy provisioning must recover mappings after database resets.
-- The future Pi worker receives no `DATABASE_URL` or `CLERK_SECRET_KEY`.
+- The agent worker receives no `DATABASE_URL` or `CLERK_SECRET_KEY`.
 - Chat is the primary plan-editing interface.
 - Agents cannot lock or unlock plans; both require human confirmation.
 - Plan assumptions, calibration, zones, and workouts are versioned as one aggregate.

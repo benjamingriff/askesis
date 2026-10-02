@@ -10,4 +10,5 @@ allowBuilds:
   unrs-resolver: true
 
 overrides:
+  undici: 7.29.1
   nanoid: 3.3.18

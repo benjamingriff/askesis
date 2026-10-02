@@ -61,7 +61,7 @@ export async function readBrief(db: Database, versionId: string, readOnly = fals
     : emptyBrief();
   const periods =
     await sql<Row>`SELECT p.*, c.method, c.race_distance_metres, c.race_duration_seconds,
-    c.threshold_seconds_per_kilometre, c.calculator_version FROM plan_calibration_periods p
+    c.threshold_seconds_per_kilometre, c.calculator_version, c.provenance, c.estimate_basis FROM plan_calibration_periods p
     JOIN calibration_profiles c ON c.id = p.profile_id AND c.plan_version_id = p.plan_version_id
     WHERE p.plan_version_id = ${versionId}::uuid ORDER BY p.effective_from`.execute(db);
   const zones =
@@ -77,6 +77,8 @@ export async function readBrief(db: Database, versionId: string, readOnly = fals
     durationSeconds: number(period.race_duration_seconds),
     secondsPerKilometre: number(period.threshold_seconds_per_kilometre),
     calculatorVersion: period.calculator_version,
+    provenance: period.provenance,
+    estimateBasis: period.estimate_basis,
     zones: zones.rows
       .filter((zone) => zone.profile_id === period.profile_id)
       .map((zone) => ({
@@ -93,9 +95,17 @@ export async function readBrief(db: Database, versionId: string, readOnly = fals
       brief: facts,
       startDate: date(version.start_date),
       endDate: date(version.end_date),
-      calibrations: calibrations.map(({ id: _id, ...values }) => values),
+      calibrations: calibrations.map(({ id: _id, provenance, estimateBasis, ...values }) =>
+        version.content_schema_version < 3 ? values : { ...values, provenance, estimateBasis },
+      ),
     }),
   );
+  const coverage = await db
+    .selectFrom('plan_schedule_coverage')
+    .selectAll()
+    .where('plan_version_id', '=', versionId)
+    .orderBy('start_date')
+    .execute();
   const findings: ValidationFinding[] = [];
   const add = (code: string, message: string, severity: 'error' | 'warning' = 'error') =>
     findings.push({ code, message, severity, path: 'brief' });
@@ -151,6 +161,11 @@ export async function readBrief(db: Database, versionId: string, readOnly = fals
     confirmed: row?.confirmed_hash === hash,
     scheduleReviewRequired: row?.schedule_review_required ?? false,
     findings,
+    coverage: coverage.map((c) => ({
+      startDate: date(c.start_date)!,
+      endDate: date(c.end_date)!,
+      current: c.brief_hash === hash,
+    })),
     calibrations,
   });
 }
@@ -248,7 +263,7 @@ async function mutate(
       return result;
     });
 }
-async function changed(db: Database, id: string, clear: boolean, stale: boolean) {
+export async function changed(db: Database, id: string, clear: boolean, stale: boolean) {
   if (clear)
     await sql`UPDATE plan_briefs SET confirmed_hash = NULL, confirmed_at = NULL,
     confirmed_edit_number = NULL, validator_version = NULL, acknowledged_warning_codes = NULL,
@@ -266,12 +281,20 @@ export async function saveBrief(
   input: z.infer<typeof SaveBriefSchema>,
 ) {
   return mutate(athleteId, planId, input, async (db, state) => {
-    const b = input.brief;
-    if (JSON.stringify(b) === JSON.stringify(state.brief)) return;
-    const { unit: _a, ...oldFacts } = state.brief;
-    const { unit: _b, ...newFacts } = b;
-    const clear = contentHash(semantic(oldFacts)) !== contentHash(semantic(newFacts));
-    await sql`INSERT INTO plan_briefs (plan_version_id, goal_text, distance_unit, timezone,
+    await saveBriefRows(db, state, input.brief);
+  });
+}
+export async function saveBriefRows(
+  db: Database,
+  state: Awaited<ReturnType<typeof readBrief>>,
+  brief: z.infer<typeof BriefSchema>,
+) {
+  const b = brief;
+  if (JSON.stringify(b) === JSON.stringify(state.brief)) return;
+  const { unit: _a, ...oldFacts } = state.brief;
+  const { unit: _b, ...newFacts } = b;
+  const clear = contentHash(semantic(oldFacts)) !== contentHash(semantic(newFacts));
+  await sql`INSERT INTO plan_briefs (plan_version_id, goal_text, distance_unit, timezone,
       weekly_distance_status, weekly_distance_metres, current_runs_status, current_runs_per_week,
       longest_run_status, longest_run_metres, desired_runs_per_week, context)
       VALUES (${state.versionId}::uuid, ${b.goal}, ${b.unit}, ${b.timezone}, ${b.weeklyDistance.status}, ${b.weeklyDistance.value},
@@ -281,15 +304,14 @@ export async function saveBrief(
       current_runs_status = EXCLUDED.current_runs_status, current_runs_per_week = EXCLUDED.current_runs_per_week,
       longest_run_status = EXCLUDED.longest_run_status, longest_run_metres = EXCLUDED.longest_run_metres,
       desired_runs_per_week = EXCLUDED.desired_runs_per_week, context = EXCLUDED.context`.execute(
+    db,
+  );
+  for (const [i, availability] of b.weekdays.entries())
+    await sql`INSERT INTO plan_brief_weekdays (plan_version_id, weekday, availability) VALUES (${state.versionId}::uuid,${i + 1},${availability})
+        ON CONFLICT (plan_version_id,weekday) DO UPDATE SET availability = EXCLUDED.availability`.execute(
       db,
     );
-    for (const [i, availability] of b.weekdays.entries())
-      await sql`INSERT INTO plan_brief_weekdays (plan_version_id, weekday, availability) VALUES (${state.versionId}::uuid,${i + 1},${availability})
-        ON CONFLICT (plan_version_id,weekday) DO UPDATE SET availability = EXCLUDED.availability`.execute(
-        db,
-      );
-    await changed(db, state.versionId, clear, true);
-  });
+  await changed(db, state.versionId, clear, true);
 }
 export async function confirmBrief(
   athleteId: string,
@@ -301,24 +323,27 @@ export async function confirmBrief(
     planId,
     input,
     async (db, state) => {
-      if (state.hash !== input.expectedHash)
-        throw new PlanError('STALE_BRIEF', 'Review the current brief before confirming.');
-      if (
-        state.findings.some(
-          (f) => f.severity === 'error' || !input.acknowledgedWarningCodes.includes(f.code),
-        )
-      )
-        throw new PlanError(
-          'BRIEF_INVALID',
-          'Complete the brief and acknowledge each warning.',
-          422,
-        );
-      await sql`UPDATE plan_briefs SET confirmed_hash = ${state.hash}, confirmed_at = now(), confirmed_edit_number = ${state.editNumber},
-      validator_version = 1, acknowledged_warning_codes = ${input.acknowledgedWarningCodes}::text[] WHERE plan_version_id = ${state.versionId}::uuid`.execute(
-        db,
-      );
+      await confirmBriefRows(db, state, input);
     },
     'confirm',
+  );
+}
+export async function confirmBriefRows(
+  db: Database,
+  state: Awaited<ReturnType<typeof readBrief>>,
+  input: Pick<z.infer<typeof ConfirmBriefSchema>, 'expectedHash' | 'acknowledgedWarningCodes'>,
+) {
+  if (state.hash !== input.expectedHash)
+    throw new PlanError('STALE_BRIEF', 'Review the current brief before confirming.');
+  if (
+    state.findings.some(
+      (f) => f.severity === 'error' || !input.acknowledgedWarningCodes.includes(f.code),
+    )
+  )
+    throw new PlanError('BRIEF_INVALID', 'Complete the brief and acknowledge each warning.', 422);
+  await sql`UPDATE plan_briefs SET confirmed_hash = ${state.hash}, confirmed_at = now(), confirmed_edit_number = ${state.editNumber},
+      validator_version = 1, acknowledged_warning_codes = ${input.acknowledgedWarningCodes}::text[] WHERE plan_version_id = ${state.versionId}::uuid`.execute(
+    db,
   );
 }
 export async function addCalibration(
@@ -332,52 +357,61 @@ export async function addCalibration(
     planId,
     input,
     async (db, state) => {
-      if (!state.startDate)
-        throw new PlanError('DATES_REQUIRED', 'Set a plan start date first.', 422);
-      if (
-        !(
-          await sql`SELECT 1 FROM plan_briefs WHERE plan_version_id = ${state.versionId}::uuid`.execute(
-            db,
-          )
-        ).rows.length
-      )
-        throw new PlanError('BRIEF_REQUIRED', 'Save the brief before adding calibration.', 422);
-      let calculated;
-      try {
-        calculated = calculatePaces(input.input);
-      } catch (error) {
-        throw new PlanError('CALIBRATION_INVALID', (error as Error).message, 422);
-      }
-      const latest = state.calibrations.at(-1);
-      if (
-        latest?.calculatorVersion === calculated.calculatorVersion &&
-        latest.method === input.input.method &&
-        (input.input.method === 'race_result'
-          ? latest.distanceMetres === Number(input.input.distanceMetres.toFixed(3)) &&
-            latest.durationSeconds === input.input.durationSeconds
-          : latest.secondsPerKilometre === Number(input.input.secondsPerKilometre.toFixed(6)))
-      )
-        return;
-      const profile = await sql<{
-        id: string;
-      }>`INSERT INTO calibration_profiles (plan_version_id, discipline, system, method, fitness_value,
-      race_distance_metres, race_duration_seconds, threshold_seconds_per_kilometre, calculator_version)
-      VALUES (${state.versionId}::uuid,'run','run_pace',${input.input.method},${calculated.fitness},
-      ${input.input.method === 'race_result' ? input.input.distanceMetres : null},
-      ${input.input.method === 'race_result' ? input.input.durationSeconds : null},
-      ${input.input.method === 'threshold_pace' ? input.input.secondsPerKilometre : null},${calculated.calculatorVersion}) RETURNING id`.execute(
-        db,
-      );
-      const id = profile.rows[0]!.id;
-      for (const zone of calculated.zones)
-        await sql`INSERT INTO calibration_zones (plan_version_id,profile_id,zone_key,metric,minimum_value,target_value,maximum_value,unit)
-      VALUES (${state.versionId}::uuid,${id}::uuid,${zone.key},'pace',${zone.fast},${zone.target},${zone.slow},'seconds_per_kilometre')`.execute(
-          db,
-        );
-      await applyProfile(db, state, id, now);
+      await addCalibrationRows(db, state, input, now);
     },
     'calibrate',
   );
+}
+export async function addCalibrationRows(
+  db: Database,
+  state: Awaited<ReturnType<typeof readBrief>>,
+  input: Pick<z.infer<typeof CalibrationCommand>, 'input' | 'provenance' | 'estimateBasis'>,
+  now = new Date(),
+) {
+  if (!state.startDate) throw new PlanError('DATES_REQUIRED', 'Set a plan start date first.', 422);
+  if (
+    !(
+      await sql`SELECT 1 FROM plan_briefs WHERE plan_version_id = ${state.versionId}::uuid`.execute(
+        db,
+      )
+    ).rows.length
+  )
+    throw new PlanError('BRIEF_REQUIRED', 'Save the brief before adding calibration.', 422);
+  let calculated;
+  try {
+    calculated = calculatePaces(input.input);
+  } catch (error) {
+    throw new PlanError('CALIBRATION_INVALID', (error as Error).message, 422);
+  }
+  const latest = state.calibrations.at(-1);
+  if (
+    latest?.calculatorVersion === calculated.calculatorVersion &&
+    latest.provenance === (input.provenance ?? 'user_supplied') &&
+    latest.estimateBasis === (input.estimateBasis ?? null) &&
+    latest.method === input.input.method &&
+    (input.input.method === 'race_result'
+      ? latest.distanceMetres === Number(input.input.distanceMetres.toFixed(3)) &&
+        latest.durationSeconds === input.input.durationSeconds
+      : latest.secondsPerKilometre === Number(input.input.secondsPerKilometre.toFixed(6)))
+  )
+    return;
+  const profile = await sql<{
+    id: string;
+  }>`INSERT INTO calibration_profiles (plan_version_id, discipline, system, method, fitness_value,
+      race_distance_metres, race_duration_seconds, threshold_seconds_per_kilometre, calculator_version, provenance, estimate_basis)
+      VALUES (${state.versionId}::uuid,'run','run_pace',${input.input.method},${calculated.fitness},
+      ${input.input.method === 'race_result' ? input.input.distanceMetres : null},
+      ${input.input.method === 'race_result' ? input.input.durationSeconds : null},
+      ${input.input.method === 'threshold_pace' ? input.input.secondsPerKilometre : null},${calculated.calculatorVersion}, ${input.provenance ?? 'user_supplied'}, ${input.estimateBasis ?? null}) RETURNING id`.execute(
+    db,
+  );
+  const id = profile.rows[0]!.id;
+  for (const zone of calculated.zones)
+    await sql`INSERT INTO calibration_zones (plan_version_id,profile_id,zone_key,metric,minimum_value,target_value,maximum_value,unit)
+      VALUES (${state.versionId}::uuid,${id}::uuid,${zone.key},'pace',${zone.fast},${zone.target},${zone.slow},'seconds_per_kilometre')`.execute(
+      db,
+    );
+  await applyProfile(db, state, id, now);
 }
 async function applyProfile(
   db: Database,

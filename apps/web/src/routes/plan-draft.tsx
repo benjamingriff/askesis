@@ -1,3 +1,4 @@
+import { CurrentCoverage } from '../components/PlanningReview';
 import { useQuery } from '@tanstack/react-query';
 import { Link, useParams } from 'react-router';
 import { api } from '../api';
@@ -47,6 +48,7 @@ export function PlanDraftPage() {
               {version?.endDate ?? 'No end date'}
             </p>
             <p>{version?.description}</p>
+            {version && <CurrentCoverage planId={planId} versionId={version.id} draft />}
             <h2>Current validation findings</h2>
             <ul>
               {draft.data.findings.map((finding, index) => (

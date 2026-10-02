@@ -1,5 +1,5 @@
 import { z } from '@hono/zod-openapi';
-import { Id, FindingSchema } from './plan.schemas.js';
+import { Id, FindingSchema } from './plan.common.js';
 
 const Answer = z.discriminatedUnion('status', [
   z.object({ status: z.literal('unanswered'), value: z.null() }).strict(),
@@ -54,7 +54,11 @@ export const PaceInputSchema = z.discriminatedUnion('method', [
     .object({ method: z.literal('threshold_pace'), secondsPerKilometre: z.number().positive() })
     .strict(),
 ]);
-export const CalibrationCommand = BriefCommand.extend({ input: PaceInputSchema }).strict();
+export const CalibrationCommand = BriefCommand.extend({
+  input: PaceInputSchema,
+  provenance: z.enum(['user_supplied', 'user_estimate', 'agent_estimate']).optional(),
+  estimateBasis: z.string().trim().min(1).max(4000).optional(),
+}).strict();
 export const ConfirmBriefSchema = BriefCommand.extend({
   expectedHash: z.string(),
   acknowledgedWarningCodes: z.array(z.string()),
@@ -68,6 +72,8 @@ export const CalibrationSchema = z.object({
   durationSeconds: z.number().nullable(),
   secondsPerKilometre: z.number().nullable(),
   calculatorVersion: z.string(),
+  provenance: z.enum(['user_supplied', 'user_estimate', 'agent_estimate']),
+  estimateBasis: z.string().nullable(),
   zones: z.array(
     z.object({ key: z.string(), fast: z.number(), target: z.number(), slow: z.number() }),
   ),
@@ -83,6 +89,7 @@ export const BriefStateSchema = z.object({
   hash: z.string(),
   scheduleReviewRequired: z.boolean(),
   findings: z.array(FindingSchema),
+  coverage: z.array(z.object({ startDate: z.string(), endDate: z.string(), current: z.boolean() })),
   calibrations: z.array(CalibrationSchema),
 });
 export type BriefState = z.infer<typeof BriefStateSchema>;
