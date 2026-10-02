@@ -60,6 +60,29 @@ export function useOpenPlanChat(planId: string) {
   });
 }
 
+export function PlanChatError({ chat }: { chat: ReturnType<typeof useOpenPlanChat> }) {
+  if (!chat.error) return null;
+  return (
+    <Notice
+      tone="danger"
+      role="alert"
+      action={
+        <Button
+          size="sm"
+          busy={chat.isPending}
+          disabled={chat.isPending}
+          onClick={() => chat.mutate(chat.variables)}
+        >
+          Retry opening coach
+        </Button>
+      }
+    >
+      <span>Couldn’t open your coach conversation: {chat.error.message}</span>
+      {chat.variables ? <span>{chat.variables}</span> : null}
+    </Notice>
+  );
+}
+
 /**
  * All human-only lifecycle controls for a plan. State is shown separately by the status pill;
  * this toolbar only carries actions, each confirmed in a dialog anchored to the user's focus.
@@ -302,11 +325,7 @@ export function PlanToolbar({
           {mutation.error.message}
         </Notice>
       ) : null}
-      {chat.error ? (
-        <Notice tone="danger" role="alert">
-          {chat.error.message}
-        </Notice>
-      ) : null}
+      <PlanChatError chat={chat} />
 
       <ConfirmDialog
         confirm={confirm}

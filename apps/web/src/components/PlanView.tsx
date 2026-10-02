@@ -12,7 +12,7 @@ import {
 } from '../plan-data';
 import { PlanHistory } from '../routes/plan-history';
 import { useUnits } from '../settings';
-import { useOpenPlanChat, PlanToolbar } from './PlanLifecycle';
+import { useOpenPlanChat, PlanChatError, PlanToolbar } from './PlanLifecycle';
 import { CalibrationSource, CoverageNote, PaceGuides, StatusPill } from './PlanWidgets';
 import { Schedule } from './Schedule';
 import {
@@ -175,6 +175,7 @@ export function PlanView({
             </Notice>
           ) : null}
 
+          <PlanChatError chat={chat} />
           {(workouts.isPending || brief.isPending) && version ? (
             <LoadingState>Loading schedule…</LoadingState>
           ) : null}

@@ -116,6 +116,73 @@ async function openMenuItem(name: string) {
   fireEvent.click(screen.getByRole('menuitem', { name }));
 }
 
+it.each(['workout', 'remaining'])(
+  'shows failed coach shortcuts and retries with the %s context',
+  async (shortcut) => {
+    current = { ...current, draft: { ...draft, startDate: '2027-01-11', endDate: '2027-01-24' } };
+    const original = vi.mocked(api.GET).getMockImplementation()!;
+    vi.mocked(api.GET).mockImplementation((async (path: string, ...args: unknown[]) => {
+      if (path === '/api/v1/workouts')
+        return {
+          data: {
+            workouts:
+              shortcut === 'workout'
+                ? [
+                    {
+                      id: 'w1',
+                      planId: current.id,
+                      planVersionId: draft.id,
+                      planTitle: current.displayName,
+                      weekNumber: 1,
+                      scheduledDate: '2027-01-12',
+                      title: 'Easy run',
+                      description: null,
+                      purpose: null,
+                      discipline: 'running',
+                      priority: 'medium',
+                      estimatedDurationSeconds: 2400,
+                      estimatedDistanceMetres: 6000,
+                    },
+                  ]
+                : [],
+          },
+          response: new Response(),
+        };
+      if (path.endsWith('/brief'))
+        return {
+          data: {
+            ...briefState,
+            coverage: [{ startDate: '2027-01-11', endDate: '2027-01-12', current: true }],
+          },
+          response: new Response(),
+        };
+      if (path === '/api/v1/workouts/{workoutId}') throw new Error('Prescription unavailable');
+      return Reflect.apply(original, api, [path, ...args]);
+    }) as typeof api.GET);
+    vi.mocked(api.POST)
+      .mockRejectedValueOnce(new Error('Connection lost'))
+      .mockResolvedValueOnce({ data: { id: 'chat-id' }, response: new Response() } as never);
+    const router = mount();
+    if (shortcut === 'workout') {
+      fireEvent.click(await screen.findByRole('button', { name: /Easy run/ }));
+      fireEvent.click(screen.getByRole('button', { name: 'Ask your coach about this' }));
+    } else {
+      await screen.findByRole('button', { name: 'Next week' });
+      fireEvent.click(screen.getByRole('button', { name: 'Next week' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Plan it with your coach' }));
+    }
+    const context =
+      shortcut === 'workout' ? 'About “Easy run” on 2027-01-12: ' : 'Plan the remaining weeks';
+    expect(await screen.findByRole('alert')).toHaveTextContent('Connection lost');
+    expect(screen.getByRole('alert')).toHaveTextContent(context.trim());
+    fireEvent.click(screen.getByRole('button', { name: 'Retry opening coach' }));
+    await screen.findByRole('heading', { name: 'Plan chat' });
+    expect(router.state.location.state).toEqual({ prefill: context });
+    expect(api.POST).toHaveBeenCalledTimes(2);
+    expect(vi.mocked(api.POST).mock.calls[0]).toEqual(vi.mocked(api.POST).mock.calls[1]);
+  },
+);
+
 it('requires archive confirmation and describes retention and deactivation', async () => {
   mount();
   await openMenuItem('Archive plan…');

@@ -3,7 +3,7 @@ import { ArrowRight, CalendarDays, Library, MessageSquare, Moon, Sparkles } from
 import { useMemo, useState, type CSSProperties } from 'react';
 import { Link, useNavigate } from 'react-router';
 import { IntensityChart } from '../components/IntensityChart';
-import { useOpenPlanChat } from '../components/PlanLifecycle';
+import { useOpenPlanChat, PlanChatError } from '../components/PlanLifecycle';
 import { planProgress } from '../components/PlanView';
 import { PaceGuides, Stat } from '../components/PlanWidgets';
 import { WorkoutDialog } from '../components/Workout';
@@ -162,6 +162,7 @@ function TodayForPlan({ plan, today }: { plan: Plan; today: string }) {
           <span className="label">
             {selected === today ? 'Today’s workout' : formatLong(selected)}
           </span>
+          <PlanChatError chat={chat} />
           {workouts.isPending ? <LoadingState>Loading schedule…</LoadingState> : null}
           {workouts.error ? (
             <ErrorState message={workouts.error.message} onRetry={() => void workouts.refetch()} />

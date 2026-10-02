@@ -4,8 +4,8 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { AccountQueryProvider } from '../query-provider';
 import { TodayPage } from './today';
 
-const mocks = vi.hoisted(() => ({ get: vi.fn() }));
-vi.mock('../api', () => ({ api: { GET: mocks.get, POST: vi.fn() } }));
+const mocks = vi.hoisted(() => ({ get: vi.fn(), post: vi.fn() }));
+vi.mock('../api', () => ({ api: { GET: mocks.get, POST: mocks.post } }));
 
 const locked = {
   id: 'locked-a',
@@ -67,14 +67,21 @@ const brief = {
   },
 };
 function mount() {
-  const router = createMemoryRouter([{ path: '/today', element: <TodayPage /> }], {
-    initialEntries: ['/today'],
-  });
+  const router = createMemoryRouter(
+    [
+      { path: '/today', element: <TodayPage /> },
+      { path: '/chat/:conversationId', element: <h1>Coach conversation</h1> },
+    ],
+    {
+      initialEntries: ['/today'],
+    },
+  );
   render(
     <AccountQueryProvider accountId="athlete">
       <RouterProvider router={router} />
     </AccountQueryProvider>,
   );
+  return router;
 }
 beforeEach(() => {
   vi.useFakeTimers({ toFake: ['Date'] });
@@ -86,6 +93,7 @@ beforeEach(() => {
     JSON.stringify({ planId: 'plan-a', view: 'draft' }),
   );
   mocks.get.mockReset();
+  mocks.post.mockReset();
   mocks.get.mockImplementation(async (path: string) => ({
     data:
       path === '/api/v1/plans'
@@ -138,4 +146,21 @@ it('does not declare a rest day when coverage could not be loaded', async () => 
   expect(await screen.findByText(/Couldn’t load this plan’s coverage/)).toBeInTheDocument();
   expect(screen.queryByText('Rest day')).not.toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Retry' })).toBeInTheDocument();
+});
+
+it('shows failed Today coach shortcuts and retries the original planning request', async () => {
+  mocks.post
+    .mockRejectedValueOnce(new Error('Connection lost'))
+    .mockResolvedValueOnce({ data: { id: 'chat-id' } });
+  const router = mount();
+  await screen.findByText('Rest day');
+  fireEvent.click(screen.getByRole('button', { name: 'Wednesday 13 January' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Plan it with your coach' }));
+  expect(await screen.findByRole('alert')).toHaveTextContent('Connection lost');
+  expect(screen.getByRole('alert')).toHaveTextContent('Plan the remaining weeks');
+  fireEvent.click(screen.getByRole('button', { name: 'Retry opening coach' }));
+  await screen.findByRole('heading', { name: 'Coach conversation' });
+  expect(router.state.location.state).toEqual({ prefill: 'Plan the remaining weeks' });
+  expect(mocks.post).toHaveBeenCalledTimes(2);
+  expect(mocks.post.mock.calls[0]).toEqual(mocks.post.mock.calls[1]);
 });
