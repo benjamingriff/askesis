@@ -1,6 +1,6 @@
 import type { WorkoutStep, WorkoutSummary } from '@askesis/api-client';
 import { describe, expect, it } from 'vitest';
-import { formatDistance, formatPace, formatRange, startOfWeek } from './format';
+import { METRES_PER_MILE, formatDistance, formatPace, formatRange, startOfWeek } from './format';
 import { inferKind, intensitySegments, summarizeWeeks } from './workouts';
 
 const workout = (date: string, metres: number, title = 'Easy run'): WorkoutSummary => ({
@@ -50,6 +50,93 @@ describe('summarizeWeeks', () => {
 });
 
 describe('intensitySegments', () => {
+  it.each([
+    ['zone', 'metres', 1000],
+    ['zone', 'kilometres', 1],
+    ['zone', 'miles', 1],
+    ['pace', 'metres', 1000],
+    ['pace', 'kilometres', 1],
+    ['pace', 'miles', 1],
+  ] as const)(
+    'keeps %s-target effort widths consistent across pace units for %s',
+    (type, unit, value) => {
+      const profile = (paceUnit: string, pace: number): WorkoutStep => {
+        const step: WorkoutStep = {
+          id: 'effort',
+          kind: 'effort',
+          role: 'work',
+          discipline: 'running',
+          repeatCount: null,
+          label: 'Effort',
+          instructions: null,
+          movement: null,
+          completion: { type: 'distance', unit, value, conditionType: null, conditionValue: null },
+          targets: [
+            {
+              type,
+              minimumValue: null,
+              targetValue: type === 'pace' ? pace : null,
+              maximumValue: null,
+              unit: type === 'pace' ? paceUnit : null,
+              zoneSystem: type === 'zone' ? 'run_pace' : null,
+              zoneKey: type === 'zone' ? 'interval' : null,
+              text: null,
+              resolvedZone:
+                type === 'zone'
+                  ? {
+                      profileId: 'calibration',
+                      method: 'threshold_pace',
+                      fitnessValue: null,
+                      metric: 'pace',
+                      minimumValue: null,
+                      targetValue: pace,
+                      maximumValue: null,
+                      unit: paceUnit,
+                    }
+                  : null,
+            },
+          ],
+          steps: [],
+        };
+        return {
+          ...step,
+          kind: 'sequence',
+          targets: [],
+          completion: null,
+          steps: [
+            step,
+            {
+              ...step,
+              id: 'recovery',
+              role: 'recovery',
+              targets: [],
+              completion: {
+                type: 'duration',
+                unit: 'seconds',
+                value: 180,
+                conditionType: null,
+                conditionValue: null,
+              },
+            },
+          ],
+        };
+      };
+      const kilometreSegments = intensitySegments(profile('seconds_per_kilometre', 240));
+      const mileSegments = intensitySegments(
+        profile('seconds_per_mile', (240 * METRES_PER_MILE) / 1000),
+      );
+      const kilometres =
+        unit === 'metres'
+          ? value / 1000
+          : unit === 'miles'
+            ? (value * METRES_PER_MILE) / 1000
+            : value;
+      expect(kilometreSegments[0]!.seconds).toBeCloseTo(kilometres * 240);
+      expect(mileSegments[0]!.seconds).toBeCloseTo(kilometreSegments[0]!.seconds);
+      expect(mileSegments[1]!.seconds).toBe(180);
+    },
+  );
+
   it('expands repeats so the profile shows every effort', () => {
     const effort = (id: string, zoneKey: string, seconds: number): WorkoutStep => ({
       id,

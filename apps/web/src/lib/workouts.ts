@@ -12,7 +12,7 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import { KIND_COLORS, ZONE_COLORS } from '../theme/palette';
-import { addDays, daysBetween, startOfWeek } from './format';
+import { METRES_PER_MILE, addDays, daysBetween, startOfWeek } from './format';
 
 export type WorkoutKind = keyof typeof KIND_COLORS | 'test';
 
@@ -62,6 +62,13 @@ const ZONE_LEVEL: Record<string, number> = {
 
 export type Segment = { seconds: number; level: number; color: string; label: string };
 
+function paceSecondsPerKm(value: number | null | undefined, unit: string | null | undefined) {
+  if (value == null) return null;
+  if (unit === 'seconds_per_kilometre') return value;
+  if (unit === 'seconds_per_mile') return value / (METRES_PER_MILE / 1000);
+  return null;
+}
+
 function stepSeconds(step: WorkoutStep, secondsPerKm: number | null): number {
   const completion = step.completion;
   if (!completion || completion.value === null) return 60;
@@ -77,7 +84,7 @@ function stepSeconds(step: WorkoutStep, secondsPerKm: number | null): number {
     case 'kilometres':
       return completion.value * (secondsPerKm ?? 360);
     case 'miles':
-      return completion.value * 1.609344 * (secondsPerKm ?? 360);
+      return completion.value * (METRES_PER_MILE / 1000) * (secondsPerKm ?? 360);
     default:
       return 60;
   }
@@ -94,9 +101,10 @@ export function intensitySegments(step: WorkoutStep): Segment[] {
   const key = zone?.zoneKey ?? null;
   const restful = step.role === 'recovery' || step.role === 'warmup' || step.role === 'cooldown';
   const level = key ? (ZONE_LEVEL[key] ?? 1.4) : restful ? 1 : 1.4;
-  const pace = zone?.resolvedZone?.targetValue ?? null;
+  const pace = step.targets.find((target) => target.type === 'pace');
   const secondsPerKm =
-    pace !== null && zone?.resolvedZone?.unit === 'seconds_per_kilometre' ? pace : null;
+    paceSecondsPerKm(pace?.targetValue, pace?.unit) ??
+    paceSecondsPerKm(zone?.resolvedZone?.targetValue, zone?.resolvedZone?.unit);
   return [
     {
       seconds: Math.max(stepSeconds(step, secondsPerKm), 20),
