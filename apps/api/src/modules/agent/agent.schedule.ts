@@ -20,7 +20,13 @@ const day = (value: string, delta: number) =>
 const inside = (start: string, end: string, range: Range) =>
   start >= range.startDate && end <= range.endDate;
 
-export async function writeSchedule(db: Tx, versionId: string, input: Schedule, range?: Range) {
+export async function writeSchedule(
+  db: Tx,
+  versionId: string,
+  input: Schedule,
+  runId: string,
+  range?: Range,
+) {
   const version = await db
     .selectFrom('plan_versions')
     .selectAll()
@@ -32,11 +38,50 @@ export async function writeSchedule(db: Tx, versionId: string, input: Schedule, 
       ? { startDate: String(version.start_date), endDate: String(version.end_date) }
       : null;
   if (!planRange) return bad('Set plan dates before prescribing workouts.');
-  for (const part of [range, input.coverage].filter((p): p is Range => !!p))
+  for (const part of [range, input.coverage, input.generation].filter((p): p is Range => !!p))
     if (part.endDate < part.startDate || !inside(part.startDate, part.endDate, planRange))
       bad('The prescribed range must fit within the plan dates.');
   if (range && input.coverage && !inside(input.coverage.startDate, input.coverage.endDate, range))
     bad('Replacement coverage must fit inside its explicit range.');
+  const run = await db
+    .selectFrom('agent_runs')
+    .selectAll()
+    .where('id', '=', runId)
+    .executeTakeFirstOrThrow();
+  let intended: Range;
+  if (run.generation_start_date && run.generation_end_date) {
+    intended = {
+      startDate: String(run.generation_start_date),
+      endDate: String(run.generation_end_date),
+    };
+    if (
+      input.generation &&
+      (input.generation.startDate !== intended.startDate ||
+        input.generation.endDate !== intended.endDate)
+    )
+      bad(
+        'Keep this run’s original generation horizon; continue a different horizon in a new turn.',
+      );
+  } else {
+    if (!input.generation)
+      throw new PlanError(
+        'GENERATION_REQUIRED',
+        'Set generation to the full intended horizon on the first schedule batch.',
+        422,
+      );
+    intended = input.generation;
+    await db
+      .updateTable('agent_runs')
+      .set({ generation_start_date: intended.startDate, generation_end_date: intended.endDate })
+      .where('id', '=', runId)
+      .execute();
+    // Previous coverage cannot make an unfinished regeneration appear complete.
+    // Workouts remain saved until the caller explicitly edits or replaces them.
+    await removeCoverage(db, versionId, intended);
+  }
+  for (const part of [range, input.coverage].filter((p): p is Range => !!p))
+    if (!inside(part.startDate, part.endDate, intended))
+      bad('Coverage and replacement ranges must fit within this run’s intended horizon.');
   if (input.workouts.reduce((n, w) => n + w.steps.length, 0) > 2000)
     bad('This batch contains too many prescription steps.');
   if (
@@ -289,6 +334,22 @@ export async function writeSchedule(db: Tx, versionId: string, input: Schedule, 
     .selectFrom('plan_schedule_coverage')
     .selectAll()
     .where('plan_version_id', '=', versionId)
+    .orderBy('start_date')
+    .execute();
+  let next = intended.startDate;
+  let prescribedThrough: string | null = null;
+  for (const c of coverage) {
+    if (c.brief_hash !== state.hash || String(c.end_date) < next) continue;
+    if (String(c.start_date) > next || next > intended.endDate) break;
+    prescribedThrough =
+      String(c.end_date) < intended.endDate ? String(c.end_date) : intended.endDate;
+    if (prescribedThrough === intended.endDate) break;
+    next = day(prescribedThrough, 1);
+  }
+  await db
+    .updateTable('agent_runs')
+    .set({ generation_prescribed_through: prescribedThrough })
+    .where('id', '=', runId)
     .execute();
   // Clear the stale review flag only when all existing workout dates have coverage
   // based on the current assumptions. A one-workout edit cannot clear it.

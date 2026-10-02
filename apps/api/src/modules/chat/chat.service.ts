@@ -1,4 +1,5 @@
 import { workerReady } from '../agent/agent.service.js';
+import { generationState } from '../plans/schedule-generation.js';
 import { randomUUID } from 'node:crypto';
 import { sql, type Transaction, type Selectable } from 'kysely';
 import { getDatabase } from '../../database/client.js';
@@ -170,6 +171,7 @@ function runView(row: Run) {
     status: row.status,
     context: row.context,
     failureCode: row.failure_code,
+    generation: generationState(row),
     createdAt: iso(row.created_at),
     startedAt: iso(row.started_at),
     finishedAt: iso(row.finished_at),

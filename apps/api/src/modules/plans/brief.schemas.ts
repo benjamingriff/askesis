@@ -1,5 +1,6 @@
 import { z } from '@hono/zod-openapi';
 import { Id, FindingSchema } from './plan.common.js';
+import { GenerationSchema } from './schedule-generation.js';
 
 const Answer = z.discriminatedUnion('status', [
   z.object({ status: z.literal('unanswered'), value: z.null() }).strict(),
@@ -90,6 +91,7 @@ export const BriefStateSchema = z.object({
   scheduleReviewRequired: z.boolean(),
   findings: z.array(FindingSchema),
   coverage: z.array(z.object({ startDate: z.string(), endDate: z.string(), current: z.boolean() })),
+  generations: z.array(GenerationSchema).optional(),
   calibrations: z.array(CalibrationSchema),
 });
 export type BriefState = z.infer<typeof BriefStateSchema>;

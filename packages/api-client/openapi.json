@@ -4417,6 +4417,43 @@
                             ]
                           }
                         },
+                        "generations": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "runId": {
+                                "type": "string",
+                                "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+                              },
+                              "startDate": {
+                                "type": "string"
+                              },
+                              "endDate": {
+                                "type": "string"
+                              },
+                              "prescribedThrough": {
+                                "type": "string",
+                                "nullable": true
+                              },
+                              "status": {
+                                "type": "string",
+                                "enum": [
+                                  "in_progress",
+                                  "completed",
+                                  "interrupted"
+                                ]
+                              }
+                            },
+                            "required": [
+                              "runId",
+                              "startDate",
+                              "endDate",
+                              "prescribedThrough",
+                              "status"
+                            ]
+                          }
+                        },
                         "calibrations": {
                           "type": "array",
                           "items": {
@@ -6185,6 +6222,41 @@
                               "type": "string",
                               "nullable": true
                             },
+                            "generation": {
+                              "type": "object",
+                              "nullable": true,
+                              "properties": {
+                                "runId": {
+                                  "type": "string",
+                                  "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+                                },
+                                "startDate": {
+                                  "type": "string"
+                                },
+                                "endDate": {
+                                  "type": "string"
+                                },
+                                "prescribedThrough": {
+                                  "type": "string",
+                                  "nullable": true
+                                },
+                                "status": {
+                                  "type": "string",
+                                  "enum": [
+                                    "in_progress",
+                                    "completed",
+                                    "interrupted"
+                                  ]
+                                }
+                              },
+                              "required": [
+                                "runId",
+                                "startDate",
+                                "endDate",
+                                "prescribedThrough",
+                                "status"
+                              ]
+                            },
                             "createdAt": {
                               "type": "string"
                             },
@@ -6433,6 +6505,41 @@
                           "type": "string",
                           "nullable": true
                         },
+                        "generation": {
+                          "type": "object",
+                          "nullable": true,
+                          "properties": {
+                            "runId": {
+                              "type": "string",
+                              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+                            },
+                            "startDate": {
+                              "type": "string"
+                            },
+                            "endDate": {
+                              "type": "string"
+                            },
+                            "prescribedThrough": {
+                              "type": "string",
+                              "nullable": true
+                            },
+                            "status": {
+                              "type": "string",
+                              "enum": [
+                                "in_progress",
+                                "completed",
+                                "interrupted"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "runId",
+                            "startDate",
+                            "endDate",
+                            "prescribedThrough",
+                            "status"
+                          ]
+                        },
                         "createdAt": {
                           "type": "string"
                         },
@@ -6525,6 +6632,41 @@
                         "failureCode": {
                           "type": "string",
                           "nullable": true
+                        },
+                        "generation": {
+                          "type": "object",
+                          "nullable": true,
+                          "properties": {
+                            "runId": {
+                              "type": "string",
+                              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+                            },
+                            "startDate": {
+                              "type": "string"
+                            },
+                            "endDate": {
+                              "type": "string"
+                            },
+                            "prescribedThrough": {
+                              "type": "string",
+                              "nullable": true
+                            },
+                            "status": {
+                              "type": "string",
+                              "enum": [
+                                "in_progress",
+                                "completed",
+                                "interrupted"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "runId",
+                            "startDate",
+                            "endDate",
+                            "prescribedThrough",
+                            "status"
+                          ]
                         },
                         "createdAt": {
                           "type": "string"
@@ -7720,6 +7862,41 @@
                           "type": "string",
                           "nullable": true
                         },
+                        "generation": {
+                          "type": "object",
+                          "nullable": true,
+                          "properties": {
+                            "runId": {
+                              "type": "string",
+                              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+                            },
+                            "startDate": {
+                              "type": "string"
+                            },
+                            "endDate": {
+                              "type": "string"
+                            },
+                            "prescribedThrough": {
+                              "type": "string",
+                              "nullable": true
+                            },
+                            "status": {
+                              "type": "string",
+                              "enum": [
+                                "in_progress",
+                                "completed",
+                                "interrupted"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "runId",
+                            "startDate",
+                            "endDate",
+                            "prescribedThrough",
+                            "status"
+                          ]
+                        },
                         "createdAt": {
                           "type": "string"
                         },
@@ -7895,6 +8072,41 @@
                       "type": "string",
                       "nullable": true
                     },
+                    "generation": {
+                      "type": "object",
+                      "nullable": true,
+                      "properties": {
+                        "runId": {
+                          "type": "string",
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+                        },
+                        "startDate": {
+                          "type": "string"
+                        },
+                        "endDate": {
+                          "type": "string"
+                        },
+                        "prescribedThrough": {
+                          "type": "string",
+                          "nullable": true
+                        },
+                        "status": {
+                          "type": "string",
+                          "enum": [
+                            "in_progress",
+                            "completed",
+                            "interrupted"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "runId",
+                        "startDate",
+                        "endDate",
+                        "prescribedThrough",
+                        "status"
+                      ]
+                    },
                     "createdAt": {
                       "type": "string"
                     },
@@ -8063,6 +8275,41 @@
                     "failureCode": {
                       "type": "string",
                       "nullable": true
+                    },
+                    "generation": {
+                      "type": "object",
+                      "nullable": true,
+                      "properties": {
+                        "runId": {
+                          "type": "string",
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+                        },
+                        "startDate": {
+                          "type": "string"
+                        },
+                        "endDate": {
+                          "type": "string"
+                        },
+                        "prescribedThrough": {
+                          "type": "string",
+                          "nullable": true
+                        },
+                        "status": {
+                          "type": "string",
+                          "enum": [
+                            "in_progress",
+                            "completed",
+                            "interrupted"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "runId",
+                        "startDate",
+                        "endDate",
+                        "prescribedThrough",
+                        "status"
+                      ]
                     },
                     "createdAt": {
                       "type": "string"
@@ -8629,6 +8876,43 @@
                           "startDate",
                           "endDate",
                           "current"
+                        ]
+                      }
+                    },
+                    "generations": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "runId": {
+                            "type": "string",
+                            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+                          },
+                          "startDate": {
+                            "type": "string"
+                          },
+                          "endDate": {
+                            "type": "string"
+                          },
+                          "prescribedThrough": {
+                            "type": "string",
+                            "nullable": true
+                          },
+                          "status": {
+                            "type": "string",
+                            "enum": [
+                              "in_progress",
+                              "completed",
+                              "interrupted"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "runId",
+                          "startDate",
+                          "endDate",
+                          "prescribedThrough",
+                          "status"
                         ]
                       }
                     },
@@ -9415,6 +9699,43 @@
                         ]
                       }
                     },
+                    "generations": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "runId": {
+                            "type": "string",
+                            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+                          },
+                          "startDate": {
+                            "type": "string"
+                          },
+                          "endDate": {
+                            "type": "string"
+                          },
+                          "prescribedThrough": {
+                            "type": "string",
+                            "nullable": true
+                          },
+                          "status": {
+                            "type": "string",
+                            "enum": [
+                              "in_progress",
+                              "completed",
+                              "interrupted"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "runId",
+                          "startDate",
+                          "endDate",
+                          "prescribedThrough",
+                          "status"
+                        ]
+                      }
+                    },
                     "calibrations": {
                       "type": "array",
                       "items": {
@@ -9934,6 +10255,43 @@
                         ]
                       }
                     },
+                    "generations": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "runId": {
+                            "type": "string",
+                            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+                          },
+                          "startDate": {
+                            "type": "string"
+                          },
+                          "endDate": {
+                            "type": "string"
+                          },
+                          "prescribedThrough": {
+                            "type": "string",
+                            "nullable": true
+                          },
+                          "status": {
+                            "type": "string",
+                            "enum": [
+                              "in_progress",
+                              "completed",
+                              "interrupted"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "runId",
+                          "startDate",
+                          "endDate",
+                          "prescribedThrough",
+                          "status"
+                        ]
+                      }
+                    },
                     "calibrations": {
                       "type": "array",
                       "items": {
@@ -10441,6 +10799,43 @@
                           "startDate",
                           "endDate",
                           "current"
+                        ]
+                      }
+                    },
+                    "generations": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "runId": {
+                            "type": "string",
+                            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+                          },
+                          "startDate": {
+                            "type": "string"
+                          },
+                          "endDate": {
+                            "type": "string"
+                          },
+                          "prescribedThrough": {
+                            "type": "string",
+                            "nullable": true
+                          },
+                          "status": {
+                            "type": "string",
+                            "enum": [
+                              "in_progress",
+                              "completed",
+                              "interrupted"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "runId",
+                          "startDate",
+                          "endDate",
+                          "prescribedThrough",
+                          "status"
                         ]
                       }
                     },
@@ -10996,6 +11391,43 @@
                         ]
                       }
                     },
+                    "generations": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "runId": {
+                            "type": "string",
+                            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+                          },
+                          "startDate": {
+                            "type": "string"
+                          },
+                          "endDate": {
+                            "type": "string"
+                          },
+                          "prescribedThrough": {
+                            "type": "string",
+                            "nullable": true
+                          },
+                          "status": {
+                            "type": "string",
+                            "enum": [
+                              "in_progress",
+                              "completed",
+                              "interrupted"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "runId",
+                          "startDate",
+                          "endDate",
+                          "prescribedThrough",
+                          "status"
+                        ]
+                      }
+                    },
                     "calibrations": {
                       "type": "array",
                       "items": {
@@ -11503,6 +11935,43 @@
                           "startDate",
                           "endDate",
                           "current"
+                        ]
+                      }
+                    },
+                    "generations": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "runId": {
+                            "type": "string",
+                            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+                          },
+                          "startDate": {
+                            "type": "string"
+                          },
+                          "endDate": {
+                            "type": "string"
+                          },
+                          "prescribedThrough": {
+                            "type": "string",
+                            "nullable": true
+                          },
+                          "status": {
+                            "type": "string",
+                            "enum": [
+                              "in_progress",
+                              "completed",
+                              "interrupted"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "runId",
+                          "startDate",
+                          "endDate",
+                          "prescribedThrough",
+                          "status"
                         ]
                       }
                     },
@@ -12111,6 +12580,43 @@
                         ]
                       }
                     },
+                    "generations": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "runId": {
+                            "type": "string",
+                            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+                          },
+                          "startDate": {
+                            "type": "string"
+                          },
+                          "endDate": {
+                            "type": "string"
+                          },
+                          "prescribedThrough": {
+                            "type": "string",
+                            "nullable": true
+                          },
+                          "status": {
+                            "type": "string",
+                            "enum": [
+                              "in_progress",
+                              "completed",
+                              "interrupted"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "runId",
+                          "startDate",
+                          "endDate",
+                          "prescribedThrough",
+                          "status"
+                        ]
+                      }
+                    },
                     "calibrations": {
                       "type": "array",
                       "items": {
@@ -12657,6 +13163,43 @@
                           "startDate",
                           "endDate",
                           "current"
+                        ]
+                      }
+                    },
+                    "generations": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "runId": {
+                            "type": "string",
+                            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+                          },
+                          "startDate": {
+                            "type": "string"
+                          },
+                          "endDate": {
+                            "type": "string"
+                          },
+                          "prescribedThrough": {
+                            "type": "string",
+                            "nullable": true
+                          },
+                          "status": {
+                            "type": "string",
+                            "enum": [
+                              "in_progress",
+                              "completed",
+                              "interrupted"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "runId",
+                          "startDate",
+                          "endDate",
+                          "prescribedThrough",
+                          "status"
                         ]
                       }
                     },

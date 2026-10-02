@@ -19,6 +19,23 @@ export function CoverageSummary({ state }: { state: State }) {
   return (
     <section aria-label="Prescribed coverage">
       <h3>Prescribed schedule</h3>
+      {!!state.generations?.length && (
+        <ul aria-label="Generation attempts">
+          {state.generations.map((generation) => (
+            <li key={generation.runId}>
+              Intended horizon: {generation.startDate} – {generation.endDate}.{' '}
+              {generation.status === 'completed'
+                ? 'Generation completed.'
+                : generation.status === 'in_progress'
+                  ? 'Generation in progress.'
+                  : 'Generation stopped before the intended horizon was complete.'}{' '}
+              {generation.prescribedThrough
+                ? `Fully prescribed through ${generation.prescribedThrough}.`
+                : 'No complete coverage was recorded for this attempt.'}
+            </li>
+          ))}
+        </ul>
+      )}
       {state.coverage.length ? (
         <>
           <ul>

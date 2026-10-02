@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { BriefSchema, PaceInputSchema } from '../plans/brief.schemas.js';
 import { Id } from '../plans/plan.schemas.js';
+export const PROMPT_VERSION = 'running-coach-v2';
 
 export const RegisterSchema = z
   .object({
@@ -8,7 +9,7 @@ export const RegisterSchema = z
     provider: z.literal('openai'),
     model: z.string().min(1).max(200),
     reasoning: z.enum(['low', 'medium', 'high', 'xhigh', 'max']),
-    promptVersion: z.literal('running-coach-v1'),
+    promptVersion: z.literal(PROMPT_VERSION),
     ready: z.boolean(),
   })
   .strict();
@@ -105,6 +106,7 @@ export const ScheduleSchema = z
     deleteWorkoutIds: z.array(Id).max(100),
     deleteWeekIds: z.array(Id).max(52),
     deleteBlockIds: z.array(Id).max(20),
+    generation: CoverageSchema.nullable(),
     coverage: CoverageSchema.nullable(),
   })
   .strict();
@@ -151,9 +153,9 @@ const descriptions: Record<ToolName, string> = {
   set_fitness_calibration:
     'Calculate running pace zones from a race result or estimated threshold pace. Persist estimate provenance and reasoning. Never treat age alone as measured evidence.',
   apply_schedule_changes:
-    'Atomically add/update/delete dated blocks, weeks and full workout trees. Local keys reference new parents; existing UUIDs may be parent keys. Steps are ordered, first root parentIndex null, later parentIndex points to an earlier container. Efforts need a completion and containers need children. Coverage asserts intentionally prescribed dates, including rest days; set null for isolated edits.',
+    'Atomically add/update/delete dated blocks, weeks and full workout trees. Set generation to the whole intended horizon on the first schedule batch of this run; subsequent batches may repeat it or use null. Local keys reference new parents; existing UUIDs may be parent keys. Steps are ordered, first root parentIndex null, later parentIndex points to an earlier container. Efforts need a completion and containers need children. Coverage asserts fully prescribed dates, including rest days; use null for unfinished chunks.',
   replace_schedule_range:
-    'Atomically replace workouts only inside the explicit range, preserving all content outside it. Existing parents may be referenced by UUID. New blocks/weeks must fit inside the range. Never declare coverage for an unfinished multi-call generation.',
+    'Atomically replace workouts only inside the explicit range, preserving all content outside it. Set generation to the whole intended horizon on the first schedule batch of this run; subsequent batches may repeat it or use null. Existing parents may be referenced by UUID. New blocks/weeks must fit inside the range. Never declare coverage for an unfinished chunk.',
   validate_plan:
     'Check draft structure and human review requirements; returns findings and current hashes. Does not confirm or lock.',
 };

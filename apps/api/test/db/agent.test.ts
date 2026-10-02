@@ -60,7 +60,7 @@ async function worker() {
     provider: 'openai',
     model: 'gpt-6.1-sol',
     reasoning: 'medium',
-    promptVersion: 'running-coach-v1',
+    promptVersion: 'running-coach-v2',
     ready: true,
   });
   return id;
@@ -158,6 +158,7 @@ const batch: z.infer<typeof ScheduleSchema> = {
   deleteWorkoutIds: [],
   deleteWeekIds: [],
   deleteBlockIds: [],
+  generation: { startDate: '2027-01-01', endDate: '2027-01-07' },
   coverage: { startDate: '2027-01-01', endDate: '2027-01-07' },
 };
 async function planning() {
@@ -534,6 +535,7 @@ it('extends an unlocked partial horizon into a second immutable revision while p
     ],
     workouts: [{ ...batch.workouts[0]!, key: 'easy2', weekKey: 'week2', date: '2027-01-09' }],
     coverage: { startDate: '2027-01-08', endDate: '2027-01-14' },
+    generation: { startDate: '2027-01-08', endDate: '2027-01-14' },
   });
   await finishRun(next.claim.runId, next.claim.token, {
     status: 'completed',
@@ -592,4 +594,313 @@ it('swaps dated workouts in one coherent transaction without intermediate unique
     .orderBy('scheduled_date')
     .execute();
   expect(workouts.map((w) => w.id)).toEqual([second.result.ids.second, first.result.ids.easy1]);
+});
+
+async function lockReviewedPartial(planId: string) {
+  const plan = await getPlan(owner, planId);
+  const state = await getBrief(owner, planId);
+  const review = await previewLock(owner, planId);
+  return lockPlan(
+    owner,
+    planId,
+    {
+      expectedStateVersion: plan.stateVersion,
+      expectedDraftId: review.draftId,
+      expectedEditNumber: review.editNumber,
+      expectedContentHash: review.contentHash,
+      expectedValidationDigest: review.validationDigest,
+      confirmBriefHash: state.hash,
+      acknowledgedWarningCodes: review.findings
+        .filter((f) => f.severity === 'warning')
+        .map((f) => f.code),
+    },
+    randomUUID(),
+  );
+}
+
+it('reconciles coverage after agent and human date edits and locks only in-range coverage', async () => {
+  const { claim, p } = await planning();
+  const first = (await tool(claim, 'apply_schedule_changes', batch)) as {
+    result: { ids: Record<string, string> };
+  };
+  await tool(claim, 'update_plan_brief', {
+    brief,
+    startDate: '2027-01-01',
+    endDate: '2027-01-05',
+    description: 'Shorter plan',
+  });
+  expect((await getBrief(owner, p.id)).coverage).toEqual([
+    { startDate: '2027-01-01', endDate: '2027-01-05', current: false },
+  ]);
+  // A different human writer must obey the same boundary rule.
+  const current = await getPlan(owner, p.id);
+  await editDraft(owner, p.id, {
+    expectedDraftId: current.draft!.id,
+    expectedEditNumber: current.draft!.editNumber,
+    startDate: '2027-01-02',
+    endDate: '2027-01-05',
+    description: 'Shorter plan',
+  });
+  expect((await getBrief(owner, p.id)).coverage).toEqual([
+    { startDate: '2027-01-02', endDate: '2027-01-05', current: false },
+  ]);
+  await finishRun(claim.runId, claim.token, { status: 'failed', failureCode: 'STALE_CONTEXT' });
+  const next = await accepted(p.id);
+  await tool(next.claim, 'apply_schedule_changes', {
+    ...batch,
+    generation: { startDate: '2027-01-02', endDate: '2027-01-05' },
+    blocks: [
+      {
+        ...batch.blocks[0]!,
+        id: first.result.ids.foundation!,
+        startDate: '2027-01-02',
+        endDate: '2027-01-05',
+      },
+    ],
+    weeks: [
+      {
+        ...batch.weeks[0]!,
+        id: first.result.ids.week1!,
+        startDate: '2027-01-02',
+        endDate: '2027-01-05',
+      },
+    ],
+    workouts: [],
+    coverage: { startDate: '2027-01-02', endDate: '2027-01-05' },
+  });
+  await finishRun(next.claim.runId, next.claim.token, {
+    status: 'completed',
+    content: 'Shortened schedule reviewed.',
+  });
+  const locked = await lockReviewedPartial(p.id);
+  expect((await getBrief(owner, p.id, locked.locked!.id)).coverage).toEqual([
+    { startDate: '2027-01-02', endDate: '2027-01-05', current: true },
+  ]);
+  await unlockPlan(owner, p.id, locked.stateVersion);
+  const draft = await getPlan(owner, p.id);
+  await editDraft(owner, p.id, {
+    expectedDraftId: draft.draft!.id,
+    expectedEditNumber: draft.draft!.editNumber,
+    startDate: '2027-02-01',
+    endDate: '2027-02-28',
+    description: 'Moved plan',
+  });
+  expect((await getBrief(owner, p.id)).coverage).toEqual([]);
+  expect((await getBrief(owner, p.id, locked.locked!.id)).coverage).toHaveLength(1);
+});
+
+it('rejects missing generation intent and rolls back invalid first-batch intent with its content', async () => {
+  const { claim, p } = await planning();
+  await expect(
+    tool(claim, 'apply_schedule_changes', { ...batch, generation: null }),
+  ).rejects.toMatchObject({ code: 'GENERATION_REQUIRED' });
+  await expect(
+    tool(claim, 'apply_schedule_changes', {
+      ...batch,
+      workouts: [{ ...batch.workouts[0]!, date: '2027-02-01' }],
+    }),
+  ).rejects.toMatchObject({ code: 'SCHEDULE_INVALID' });
+  expect((await getRun(owner, claim.runId)).generation).toBeNull();
+  expect((await getBrief(owner, p.id)).coverage).toEqual([]);
+  expect(
+    await db
+      .selectFrom('workouts')
+      .select('id')
+      .where('plan_version_id', '=', p.draft!.id)
+      .execute(),
+  ).toHaveLength(0);
+});
+
+it.each(['failed', 'cancelled', 'completed'] as const)(
+  'preserves the intended month and committed week when the run ends as %s',
+  async (status) => {
+    const { claim, p } = await planning();
+    await tool(claim, 'apply_schedule_changes', {
+      ...batch,
+      generation: { startDate: '2027-01-01', endDate: '2027-01-28' },
+    });
+    expect((await getRun(owner, claim.runId)).generation).toMatchObject({
+      status: 'in_progress',
+      prescribedThrough: '2027-01-07',
+    });
+    // A partial result may never redefine its original promise as the shorter completed week.
+    await expect(
+      tool(claim, 'apply_schedule_changes', {
+        ...batch,
+        blocks: [],
+        weeks: [],
+        workouts: [],
+      }),
+    ).rejects.toMatchObject({ code: 'SCHEDULE_INVALID' });
+    if (status === 'cancelled') await cancelRun(owner, claim.runId);
+    await finishRun(claim.runId, claim.token, {
+      status,
+      ...(status === 'completed'
+        ? { content: 'The saved first week is ready; the month remains unfinished.' }
+        : {}),
+    });
+    const generation = {
+      runId: claim.runId,
+      startDate: '2027-01-01',
+      endDate: '2027-01-28',
+      prescribedThrough: '2027-01-07',
+      status: 'interrupted',
+    };
+    expect((await getRun(owner, claim.runId)).generation).toEqual(generation);
+    expect((await getBrief(owner, p.id)).generations).toEqual([generation]);
+    expect((await previewLock(owner, p.id)).findings).toContainEqual(
+      expect.objectContaining({ code: 'brief.generation_incomplete', severity: 'warning' }),
+    );
+    const locked = await lockReviewedPartial(p.id);
+    expect((await getBrief(owner, p.id, locked.locked!.id)).generations).toEqual([generation]);
+  },
+);
+
+it('advances generation only through contiguous completed chunks and retains intent after worker expiry', async () => {
+  const { claim } = await planning();
+  const first = (await tool(claim, 'apply_schedule_changes', {
+    ...batch,
+    generation: { startDate: '2027-01-01', endDate: '2027-01-14' },
+  })) as { result: { ids: Record<string, string> } };
+  await tool(claim, 'apply_schedule_changes', {
+    ...batch,
+    generation: null,
+    blocks: [],
+    weeks: [
+      {
+        ...batch.weeks[0]!,
+        key: 'week2',
+        blockKey: first.result.ids.foundation!,
+        weekNumber: 2,
+        position: 2,
+        startDate: '2027-01-08',
+        endDate: '2027-01-14',
+      },
+    ],
+    workouts: [{ ...batch.workouts[0]!, key: 'easy2', weekKey: 'week2', date: '2027-01-09' }],
+    coverage: { startDate: '2027-01-09', endDate: '2027-01-14' },
+  });
+  expect((await getRun(owner, claim.runId)).generation).toMatchObject({
+    prescribedThrough: '2027-01-07',
+    status: 'in_progress',
+  });
+  await tool(claim, 'apply_schedule_changes', {
+    ...batch,
+    generation: null,
+    blocks: [],
+    weeks: [],
+    workouts: [],
+    coverage: { startDate: '2027-01-08', endDate: '2027-01-08' },
+  });
+  expect((await getRun(owner, claim.runId)).generation).toMatchObject({
+    prescribedThrough: '2027-01-14',
+    status: 'completed',
+  });
+  await finishRun(claim.runId, claim.token, {
+    status: 'completed',
+    content: 'Two weeks, including rest days, are ready.',
+  });
+  const other = await planning();
+  await tool(other.claim, 'apply_schedule_changes', {
+    ...batch,
+    generation: { startDate: '2027-01-01', endDate: '2027-01-28' },
+  });
+  await db
+    .updateTable('agent_runs')
+    .set({ lease_expires_at: new Date(Date.now() - 1) })
+    .where('id', '=', other.claim.runId)
+    .execute();
+  await startAgentSweeper()();
+  expect((await getRun(owner, other.claim.runId)).generation).toMatchObject({
+    endDate: '2027-01-28',
+    prescribedThrough: '2027-01-07',
+    status: 'interrupted',
+  });
+});
+
+it('invalidates previous coverage inside a regeneration horizon without deleting saved workouts', async () => {
+  const { claim, p } = await planning();
+  const first = (await tool(claim, 'apply_schedule_changes', batch)) as {
+    result: { ids: Record<string, string> };
+  };
+  await finishRun(claim.runId, claim.token, {
+    status: 'completed',
+    content: 'First week complete.',
+  });
+  const next = await accepted(p.id);
+  await tool(next.claim, 'apply_schedule_changes', {
+    ...batch,
+    blocks: [],
+    weeks: [],
+    generation: { startDate: '2027-01-01', endDate: '2027-01-07' },
+    coverage: null,
+    workouts: [
+      {
+        ...batch.workouts[0]!,
+        id: first.result.ids.easy1!,
+        weekKey: first.result.ids.week1!,
+        title: 'Revised easy run',
+      },
+    ],
+  });
+  await finishRun(next.claim.runId, next.claim.token, { status: 'failed' });
+  expect((await getBrief(owner, p.id)).coverage).toEqual([]);
+  expect((await getRun(owner, next.claim.runId)).generation).toMatchObject({
+    status: 'interrupted',
+    prescribedThrough: null,
+    endDate: '2027-01-07',
+  });
+  expect(
+    await db
+      .selectFrom('workouts')
+      .select('title')
+      .where('plan_version_id', '=', p.draft!.id)
+      .execute(),
+  ).toEqual([{ title: 'Revised easy run' }]);
+});
+
+it('guards coverage boundaries and the original generation horizon in the database', async () => {
+  const { claim, p } = await planning();
+  const state = await getBrief(owner, p.id);
+  await expect(
+    db
+      .insertInto('plan_schedule_coverage')
+      .values({
+        plan_version_id: p.draft!.id,
+        start_date: '2027-01-01',
+        end_date: '2027-04-01',
+        brief_hash: state.hash,
+      })
+      .execute(),
+  ).rejects.toMatchObject({ code: '23514' });
+  await tool(claim, 'apply_schedule_changes', batch);
+  await expect(
+    db
+      .updateTable('agent_runs')
+      .set({ generation_end_date: '2027-01-14' })
+      .where('id', '=', claim.runId)
+      .execute(),
+  ).rejects.toMatchObject({ code: '23514' });
+  expect((await getRun(owner, claim.runId)).generation).toMatchObject({ endDate: '2027-01-07' });
+});
+
+it('requires the current prompt contract before a worker contributes readiness or claims work', async () => {
+  const id = await worker();
+  await db.updateTable('agent_workers').set({ ready: false }).execute();
+  await db
+    .updateTable('agent_workers')
+    .set({ ready: true, prompt_version: 'running-coach-v1' })
+    .where('id', '=', id)
+    .execute();
+  expect((await chatCapabilities()).executionAvailable).toBe(false);
+  await expect(claimRun(id)).rejects.toMatchObject({ code: 'WORKER_NOT_READY' });
+  await registerWorker({
+    id,
+    provider: 'openai',
+    model: 'gpt-6.1-sol',
+    reasoning: 'medium',
+    promptVersion: 'running-coach-v2',
+    ready: true,
+  });
+  expect((await chatCapabilities()).executionAvailable).toBe(true);
 });

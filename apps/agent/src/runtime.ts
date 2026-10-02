@@ -101,6 +101,7 @@ export class SdkRuntime implements CoachingRuntime {
                   'PLAN_ALREADY_BOUND',
                   'DRAFT_REQUIRED',
                   'PLAN_REQUIRED',
+                  'GENERATION_REQUIRED',
                 ].includes(error.code)
               )
                 return JSON.stringify({

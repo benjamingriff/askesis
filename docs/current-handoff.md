@@ -1,6 +1,6 @@
 # Current agent handoff
 
-**Updated:** 2026-10-01
+**Updated:** 2026-10-02
 **Current phase:** Phase 4 deployed to Railway; Phase 5 is built and deterministic verification passes locally; real-provider acceptance is pending. Broad UI refinement is deferred until after Phase 5.
 **Completed phase:** Phase 1 — engineering foundation and Railway deployment validation
 
@@ -18,6 +18,16 @@ Before making changes, read:
 Do not place credentials, Clerk tokens, database URLs, Sentry credentials, or Railway secrets in chat, logs, commits, or this file.
 
 ## Repository state at handoff
+
+### Phase 5 review fixes — 2026-10-02
+
+Fixed both remaining review issues locally on `phase-5-coaching-worker`. Migration `20261002090000` adds durable generation intent/progress to runs and database guards that trim or remove coverage on plan date edits and reject out-of-range coverage. Lock review independently validates coverage boundaries. Previous migrations and immutable revisions remain unchanged.
+
+The first schedule batch must specify the entire intended horizon. The API records it atomically with the batch and prevents later shortening. Completed coherent chunks advance contiguous prescribed coverage; old coverage is cleared inside a regeneration horizon while workouts remain saved until explicitly changed. Chat and plan review show the original horizon, progress, and interrupted attempts. Incomplete generation adds a human-review warning, not a full-plan coverage gate; deliberately partial plans remain lockable. Terminal run attribution survives draft discard.
+
+The prompt contract is now `running-coach-v2`; older prompt versions cannot supply readiness or claim work. Apply migrations through `20261002090000` and update the API and worker together before enabling execution.
+
+Verification: full `pnpm check` passes in this repository (75 worker/API/UI tests); 53 database integration tests plus SQL invariants pass; the populated Phase 4 migration-preservation check passes through both Phase 5 migrations; the disposable API/web/worker SDK smoke passes. Real-provider smoke and the signed-in coaching walkthrough remain pending: no OpenAI key was configured during this verification. These follow-up fixes are committed locally; no push or deployment has been performed.
 
 ### Phase 5 implementation — 2026-10-01
 

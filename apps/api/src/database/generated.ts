@@ -49,6 +49,9 @@ export interface AgentRuns {
   execution_version_id: string | null;
   failure_code: string | null;
   finished_at: Timestamp | null;
+  generation_end_date: Timestamp | null;
+  generation_prescribed_through: Timestamp | null;
+  generation_start_date: Timestamp | null;
   id: Generated<string>;
   input_tokens: number | null;
   lease_expires_at: Timestamp | null;

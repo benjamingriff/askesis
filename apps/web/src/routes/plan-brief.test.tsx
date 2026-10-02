@@ -5,6 +5,7 @@ import type { paths } from '@askesis/api-client';
 import { AccountQueryProvider } from '../query-provider';
 import { api } from '../api';
 import { PlanBriefPage } from './plan-brief';
+import { CoverageSummary } from '../components/PlanningReview';
 
 vi.mock('../api', () => ({ api: { GET: vi.fn(), POST: vi.fn(), PUT: vi.fn() } }));
 type State =
@@ -50,6 +51,30 @@ beforeEach(() => {
   }));
 });
 afterEach(cleanup);
+it('distinguishes the intended month from completed coverage after generation stops', () => {
+  state.coverage = [{ startDate: '2026-09-01', endDate: '2026-09-07', current: true }];
+  state.generations = [
+    {
+      runId: 'run-1',
+      startDate: '2026-09-01',
+      endDate: '2026-09-30',
+      prescribedThrough: '2026-09-07',
+      status: 'interrupted',
+    },
+  ];
+  render(<CoverageSummary state={state} />);
+  expect(screen.getByLabelText('Generation attempts')).toHaveTextContent(
+    'Intended horizon: 2026-09-01 – 2026-09-30',
+  );
+  expect(screen.getByLabelText('Generation attempts')).toHaveTextContent(
+    'Generation stopped before the intended horizon was complete',
+  );
+  expect(screen.getByLabelText('Generation attempts')).toHaveTextContent(
+    'Fully prescribed through 2026-09-07',
+  );
+  expect(screen.getByText('Still unplanned:')).toBeInTheDocument();
+  expect(screen.getByText('2026-09-08 – 2026-12-01')).toBeInTheDocument();
+});
 function mount() {
   const router = createMemoryRouter(
     [{ path: '/plans/:planId/brief', element: <PlanBriefPage /> }],

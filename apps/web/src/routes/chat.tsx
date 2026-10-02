@@ -564,6 +564,19 @@ function RunStatus({ run, conversation }: { run: Run; conversation: Conversation
         ` · ${run.failureCode === 'STALE_CONTEXT' ? 'The plan changed; refresh context before sending again.' : run.failureCode === 'EXECUTION_TIMEOUT' ? 'Execution timed out. You can send another message.' : 'Execution stopped. You can send another message.'}`}
       {(run.status === 'failed' || run.status === 'cancelled') &&
         ' · Completed plan changes remain saved; review your draft before continuing.'}
+      {run.generation && (
+        <>
+          {' '}
+          · Intended horizon: {run.generation.startDate} – {run.generation.endDate}
+          {run.generation.status === 'completed'
+            ? ' · Schedule generation completed.'
+            : run.generation.status === 'interrupted'
+              ? ' · Schedule generation remains unfinished.'
+              : ' · Schedule generation in progress.'}
+          {run.generation.prescribedThrough &&
+            ` Fully prescribed through ${run.generation.prescribedThrough}.`}
+        </>
+      )}
       {conversation && run.conversationId !== conversation.id && (
         <>
           {' '}

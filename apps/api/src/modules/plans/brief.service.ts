@@ -1,4 +1,5 @@
 import { sql } from 'kysely';
+import { generationState } from './schedule-generation.js';
 import type { z } from '@hono/zod-openapi';
 import { getDatabase } from '../../database/client.js';
 import { PlanError } from './plan.service.js';
@@ -107,11 +108,33 @@ export async function readBrief(db: Database, versionId: string, readOnly = fals
     .orderBy('start_date')
     .execute();
   const findings: ValidationFinding[] = [];
+  const generationRuns = await db
+    .selectFrom('agent_runs')
+    .selectAll()
+    .where('execution_version_id', '=', versionId)
+    .where('generation_start_date', 'is not', null)
+    .orderBy('created_at')
+    .orderBy('id')
+    .execute();
+  const generations = generationRuns.flatMap((run) => {
+    const generation = generationState(run);
+    return generation ? [generation] : [];
+  });
   const add = (code: string, message: string, severity: 'error' | 'warning' = 'error') =>
     findings.push({ code, message, severity, path: 'brief' });
   if (!brief.goal) add('brief.goal_required', 'Describe your running goal.');
   if (!version.start_date || !version.end_date)
     add('brief.dates_required', 'Set the plan start and end dates.');
+  if (
+    coverage.some(
+      (c) =>
+        !version.start_date ||
+        !version.end_date ||
+        String(c.start_date) < date(version.start_date)! ||
+        String(c.end_date) > date(version.end_date)!,
+    )
+  )
+    add('brief.coverage_outside_plan', 'Prescribed coverage must fit within the plan dates.');
   for (const [key, value] of Object.entries({
     weeklyDistance: brief.weeklyDistance,
     currentRuns: brief.currentRuns,
@@ -166,6 +189,7 @@ export async function readBrief(db: Database, versionId: string, readOnly = fals
       endDate: date(c.end_date)!,
       current: c.brief_hash === hash,
     })),
+    generations,
     calibrations,
   });
 }
@@ -524,6 +548,14 @@ export async function briefLockFindings(
       severity: 'warning',
       message: 'Planning inputs changed. Review the existing schedule before locking.',
       path: 'brief',
+    });
+  if (state.generations?.at(-1)?.status === 'interrupted')
+    findings.push({
+      code: 'brief.generation_incomplete',
+      severity: 'warning',
+      message:
+        'Generation stopped before the intended horizon was fully prescribed. Review the saved partial schedule before locking.',
+      path: 'coverage',
     });
   return findings;
 }

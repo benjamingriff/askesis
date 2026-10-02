@@ -1,5 +1,6 @@
 import { z } from '@hono/zod-openapi';
 import { Id } from '../plans/plan.schemas.js';
+import { GenerationSchema } from '../plans/schedule-generation.js';
 
 export const ContextSchema = z.object({
   versionId: Id,
@@ -39,6 +40,7 @@ export const RunSchema = z.object({
   status: z.enum(['queued', 'running', 'cancelling', 'completed', 'failed', 'cancelled']),
   context: ContextSchema.nullable(),
   failureCode: z.string().nullable(),
+  generation: GenerationSchema.nullable().optional(),
   createdAt: z.string(),
   startedAt: z.string().nullable(),
   finishedAt: z.string().nullable(),

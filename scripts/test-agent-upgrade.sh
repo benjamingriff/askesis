@@ -25,7 +25,9 @@ DO $$ DECLARE table_name text; payload jsonb; BEGIN
  END LOOP;
 END $$;
 SQL
-run_sql < database/migrations/20261001120000_agent_worker.sql
+for migration in database/migrations/*.sql; do
+  case "$migration" in *20261001120000_agent_worker.sql|*20261002090000_schedule_generation.sql) run_sql < "$migration";; esac
+done
 run_sql <<'SQL'
 DO $$ DECLARE item record; current_payload jsonb; BEGIN
  FOR item IN SELECT * FROM upgrade_snapshot LOOP

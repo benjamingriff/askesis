@@ -1885,6 +1885,14 @@ export interface paths {
                                     endDate: string;
                                     current: boolean;
                                 }[];
+                                generations?: {
+                                    runId: string;
+                                    startDate: string;
+                                    endDate: string;
+                                    prescribedThrough: string | null;
+                                    /** @enum {string} */
+                                    status: "in_progress" | "completed" | "interrupted";
+                                }[];
                                 calibrations: {
                                     id: string;
                                     effectiveFrom: string;
@@ -2656,6 +2664,14 @@ export interface paths {
                                         editNumber: number;
                                     } | null;
                                     failureCode: string | null;
+                                    generation?: {
+                                        runId: string;
+                                        startDate: string;
+                                        endDate: string;
+                                        prescribedThrough: string | null;
+                                        /** @enum {string} */
+                                        status: "in_progress" | "completed" | "interrupted";
+                                    } | null;
                                     createdAt: string;
                                     startedAt: string | null;
                                     finishedAt: string | null;
@@ -2773,6 +2789,14 @@ export interface paths {
                                     editNumber: number;
                                 } | null;
                                 failureCode: string | null;
+                                generation?: {
+                                    runId: string;
+                                    startDate: string;
+                                    endDate: string;
+                                    prescribedThrough: string | null;
+                                    /** @enum {string} */
+                                    status: "in_progress" | "completed" | "interrupted";
+                                } | null;
                                 createdAt: string;
                                 startedAt: string | null;
                                 finishedAt: string | null;
@@ -2792,6 +2816,14 @@ export interface paths {
                                     editNumber: number;
                                 } | null;
                                 failureCode: string | null;
+                                generation?: {
+                                    runId: string;
+                                    startDate: string;
+                                    endDate: string;
+                                    prescribedThrough: string | null;
+                                    /** @enum {string} */
+                                    status: "in_progress" | "completed" | "interrupted";
+                                } | null;
                                 createdAt: string;
                                 startedAt: string | null;
                                 finishedAt: string | null;
@@ -3413,6 +3445,14 @@ export interface paths {
                                     editNumber: number;
                                 } | null;
                                 failureCode: string | null;
+                                generation?: {
+                                    runId: string;
+                                    startDate: string;
+                                    endDate: string;
+                                    prescribedThrough: string | null;
+                                    /** @enum {string} */
+                                    status: "in_progress" | "completed" | "interrupted";
+                                } | null;
                                 createdAt: string;
                                 startedAt: string | null;
                                 finishedAt: string | null;
@@ -3512,6 +3552,14 @@ export interface paths {
                                 editNumber: number;
                             } | null;
                             failureCode: string | null;
+                            generation?: {
+                                runId: string;
+                                startDate: string;
+                                endDate: string;
+                                prescribedThrough: string | null;
+                                /** @enum {string} */
+                                status: "in_progress" | "completed" | "interrupted";
+                            } | null;
                             createdAt: string;
                             startedAt: string | null;
                             finishedAt: string | null;
@@ -3614,6 +3662,14 @@ export interface paths {
                                 editNumber: number;
                             } | null;
                             failureCode: string | null;
+                            generation?: {
+                                runId: string;
+                                startDate: string;
+                                endDate: string;
+                                prescribedThrough: string | null;
+                                /** @enum {string} */
+                                status: "in_progress" | "completed" | "interrupted";
+                            } | null;
                             createdAt: string;
                             startedAt: string | null;
                             finishedAt: string | null;
@@ -3861,6 +3917,14 @@ export interface paths {
                                 endDate: string;
                                 current: boolean;
                             }[];
+                            generations?: {
+                                runId: string;
+                                startDate: string;
+                                endDate: string;
+                                prescribedThrough: string | null;
+                                /** @enum {string} */
+                                status: "in_progress" | "completed" | "interrupted";
+                            }[];
                             calibrations: {
                                 id: string;
                                 effectiveFrom: string;
@@ -4073,6 +4137,14 @@ export interface paths {
                                 endDate: string;
                                 current: boolean;
                             }[];
+                            generations?: {
+                                runId: string;
+                                startDate: string;
+                                endDate: string;
+                                prescribedThrough: string | null;
+                                /** @enum {string} */
+                                status: "in_progress" | "completed" | "interrupted";
+                            }[];
                             calibrations: {
                                 id: string;
                                 effectiveFrom: string;
@@ -4243,6 +4315,14 @@ export interface paths {
                                 startDate: string;
                                 endDate: string;
                                 current: boolean;
+                            }[];
+                            generations?: {
+                                runId: string;
+                                startDate: string;
+                                endDate: string;
+                                prescribedThrough: string | null;
+                                /** @enum {string} */
+                                status: "in_progress" | "completed" | "interrupted";
                             }[];
                             calibrations: {
                                 id: string;
@@ -4416,6 +4496,14 @@ export interface paths {
                                 startDate: string;
                                 endDate: string;
                                 current: boolean;
+                            }[];
+                            generations?: {
+                                runId: string;
+                                startDate: string;
+                                endDate: string;
+                                prescribedThrough: string | null;
+                                /** @enum {string} */
+                                status: "in_progress" | "completed" | "interrupted";
                             }[];
                             calibrations: {
                                 id: string;
@@ -4598,6 +4686,14 @@ export interface paths {
                                 endDate: string;
                                 current: boolean;
                             }[];
+                            generations?: {
+                                runId: string;
+                                startDate: string;
+                                endDate: string;
+                                prescribedThrough: string | null;
+                                /** @enum {string} */
+                                status: "in_progress" | "completed" | "interrupted";
+                            }[];
                             calibrations: {
                                 id: string;
                                 effectiveFrom: string;
@@ -4766,6 +4862,14 @@ export interface paths {
                                 startDate: string;
                                 endDate: string;
                                 current: boolean;
+                            }[];
+                            generations?: {
+                                runId: string;
+                                startDate: string;
+                                endDate: string;
+                                prescribedThrough: string | null;
+                                /** @enum {string} */
+                                status: "in_progress" | "completed" | "interrupted";
                             }[];
                             calibrations: {
                                 id: string;
@@ -4944,6 +5048,14 @@ export interface paths {
                                 startDate: string;
                                 endDate: string;
                                 current: boolean;
+                            }[];
+                            generations?: {
+                                runId: string;
+                                startDate: string;
+                                endDate: string;
+                                prescribedThrough: string | null;
+                                /** @enum {string} */
+                                status: "in_progress" | "completed" | "interrupted";
                             }[];
                             calibrations: {
                                 id: string;
@@ -5124,6 +5236,14 @@ export interface paths {
                                 startDate: string;
                                 endDate: string;
                                 current: boolean;
+                            }[];
+                            generations?: {
+                                runId: string;
+                                startDate: string;
+                                endDate: string;
+                                prescribedThrough: string | null;
+                                /** @enum {string} */
+                                status: "in_progress" | "completed" | "interrupted";
                             }[];
                             calibrations: {
                                 id: string;

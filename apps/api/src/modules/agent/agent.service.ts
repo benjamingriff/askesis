@@ -20,6 +20,7 @@ import { addCalibrationRows, changed, readBrief, saveBriefRows } from '../plans/
 import { createPlanRows, detail, PlanError, preview } from '../plans/plan.service.js';
 import {
   ToolSchemas,
+  PROMPT_VERSION,
   toolDefinitions,
   type RegisterSchema,
   type ToolRequestSchema,
@@ -41,6 +42,7 @@ export async function workerReady(db: Kysely<DB> | Tx = getDatabase()) {
     .selectFrom('agent_workers')
     .select('id')
     .where('ready', '=', true)
+    .where('prompt_version', '=', PROMPT_VERSION)
     .where('last_seen_at', '>', new Date(Date.now() - READY_MS))
     .executeTakeFirst());
 }
@@ -82,6 +84,7 @@ export async function claimRun(workerId: string) {
       if (
         !worker ||
         !worker.ready ||
+        worker.prompt_version !== PROMPT_VERSION ||
         new Date(worker.last_seen_at).getTime() < Date.now() - READY_MS
       )
         throw new ChatError('WORKER_NOT_READY', 'Register a ready worker before claiming.', 503);
@@ -490,10 +493,11 @@ export async function executeTool(
               db,
               versionId,
               ToolSchemas.apply_schedule_changes.parse(command.input),
+              id,
             );
           if (name === 'replace_schedule_range') {
             const input = ToolSchemas.replace_schedule_range.parse(command.input);
-            response = await writeSchedule(db, versionId, input, input.range);
+            response = await writeSchedule(db, versionId, input, id, input.range);
           }
           if (name === 'validate_plan')
             response = current.plan.draft ? await preview(db, current.plan) : { readOnly: true };
