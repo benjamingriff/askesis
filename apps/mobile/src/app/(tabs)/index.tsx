@@ -6,8 +6,6 @@ import { useMemo, useState } from 'react';
 import { ScrollView, View } from 'react-native';
 import {
   Card,
-  Button,
-  IconButton,
   PressableScale,
   ProgressBar,
   Screen,
@@ -71,27 +69,11 @@ export default function TodayScreen() {
         contentContainerStyle={{ paddingBottom: tabInset }}
         showsVerticalScrollIndicator={false}
       >
-        <View
-          style={{
-            paddingHorizontal: 20,
-            paddingTop: 12,
-            flexDirection: 'row',
-            alignItems: 'flex-start',
-            justifyContent: 'space-between',
-          }}
-        >
-          <View>
-            <Text variant="label">{formatLong(today)}</Text>
-            <Text variant="title" style={{ marginTop: 4 }}>
-              {greeting()}
-            </Text>
-          </View>
-          <IconButton
-            icon="chatbubble-ellipses"
-            tone="filled"
-            accessibilityLabel="Open coach"
-            onPress={() => router.push('/coach')}
-          />
+        <View style={{ paddingHorizontal: 20, paddingTop: 12 }}>
+          <Text variant="label">{formatLong(today)}</Text>
+          <Text variant="title" style={{ marginTop: 4 }}>
+            {greeting()}
+          </Text>
         </View>
 
         <PressableScale
@@ -440,17 +422,9 @@ export default function TodayScreen() {
           ))}
         </ScrollView>
 
-        <View style={{ paddingHorizontal: 20, marginTop: 24 }}>
-          <Button
-            label="Ask your coach"
-            icon="chatbubble-ellipses"
-            variant="secondary"
-            onPress={() => router.push('/coach')}
-          />
-          <Text variant="caption" color="muted" style={{ textAlign: 'center', marginTop: 12 }}>
-            {meta.goal} · {formatShort(meta.raceDate)}
-          </Text>
-        </View>
+        <Text variant="caption" color="muted" style={{ textAlign: 'center', marginTop: 24 }}>
+          {meta.goal} · {formatShort(meta.raceDate)}
+        </Text>
       </ScrollView>
     </Screen>
   );
