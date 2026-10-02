@@ -17,7 +17,7 @@ import {
 } from '../components/ui';
 import { formatDateTime, formatRange, formatShort, localToday } from '../lib/format';
 import { result } from '../lib/result';
-import { useWorkouts } from '../plan-data';
+import { useBriefState, useWorkouts } from '../plan-data';
 import { usePlanPreferences } from '../plan-selection';
 import { useUnits } from '../settings';
 
@@ -99,7 +99,12 @@ function RevisionView({ planId, revisionId }: { planId: string; revisionId: stri
   const workouts = useWorkouts(
     revision ? { id: revisionId, editNumber: revision.editNumber } : null,
   );
-  const units = useUnits();
+  // The revision brief carries the coverage saved with this version.
+  const brief = useBriefState(
+    planId,
+    revision ? { ...revision, id: revisionId, state: 'locked' } : null,
+  );
+  const units = useUnits(brief.data?.brief.unit);
   const [preview, setPreview] = useState<Preview | null>(null);
   const keys = useRef(new Map<string, string>());
   const mutation = useMutation({
@@ -307,7 +312,7 @@ function RevisionView({ planId, revisionId }: { planId: string; revisionId: stri
               workouts={workouts.data}
               startDate={revision.startDate}
               endDate={revision.endDate}
-              coverage={null}
+              coverage={brief.data?.coverage ?? null}
               units={units}
               today={localToday()}
             />

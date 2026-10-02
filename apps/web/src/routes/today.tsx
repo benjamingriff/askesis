@@ -166,7 +166,16 @@ function TodayForPlan({ plan, today }: { plan: Plan; today: string }) {
           {workouts.error ? (
             <ErrorState message={workouts.error.message} onRetry={() => void workouts.refetch()} />
           ) : null}
-          {workouts.data && selectedWorkouts.length === 0 && (unplanned || outsidePlan) ? (
+          {brief.error ? (
+            <ErrorState
+              message={`Couldn’t load this plan’s coverage: ${brief.error.message}`}
+              onRetry={() => void brief.refetch()}
+            />
+          ) : null}
+          {workouts.data &&
+          brief.data &&
+          selectedWorkouts.length === 0 &&
+          (unplanned || outsidePlan) ? (
             <EmptyState
               icon={Sparkles}
               title={outsidePlan ? 'Outside your plan dates' : 'Not planned yet'}
@@ -189,7 +198,11 @@ function TodayForPlan({ plan, today }: { plan: Plan; today: string }) {
                 : 'This date is inside your plan but hasn’t been prescribed yet.'}
             </EmptyState>
           ) : null}
-          {workouts.data && selectedWorkouts.length === 0 && !unplanned && !outsidePlan ? (
+          {workouts.data &&
+          brief.data &&
+          selectedWorkouts.length === 0 &&
+          !unplanned &&
+          !outsidePlan ? (
             <Card className="rest-hero">
               <span className="empty-icon">
                 <Moon size={22} aria-hidden="true" />

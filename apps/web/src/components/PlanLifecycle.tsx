@@ -17,8 +17,8 @@ import {
   Trash2,
   TriangleAlert,
 } from 'lucide-react';
-import { useRef, useState } from 'react';
-import { useNavigate } from 'react-router';
+import { useCallback, useRef, useState } from 'react';
+import { useBeforeUnload, useBlocker, useNavigate } from 'react-router';
 import { api } from '../api';
 import { formatShort } from '../lib/format';
 import { result } from '../lib/result';
@@ -741,6 +741,20 @@ function EditDetailsDialog({
     onSuccess: onSaved,
   });
   const editableContent = !!plan.draft;
+  // Unsaved details survive accidental navigation, as the earlier inline editor did.
+  const dirty = (nameDirty || contentDirty) && !save.isSuccess;
+  const blocker = useBlocker(dirty);
+  useBeforeUnload(
+    useCallback(
+      (event: BeforeUnloadEvent) => {
+        if (dirty) {
+          event.preventDefault();
+          event.returnValue = '';
+        }
+      },
+      [dirty],
+    ),
+  );
   return (
     <Dialog
       open
@@ -805,6 +819,25 @@ function EditDetailsDialog({
         </fieldset>
         {!editableContent ? (
           <p className="muted">Unlock the plan to change its dates or description.</p>
+        ) : null}
+        {blocker.state === 'blocked' ? (
+          <Notice
+            tone="warning"
+            role="alert"
+            action={
+              <div className="button-row">
+                <Button size="sm" variant="ghost" onClick={() => blocker.reset()}>
+                  Keep editing
+                </Button>
+                <Button size="sm" variant="danger" onClick={() => blocker.proceed()}>
+                  Leave without saving
+                </Button>
+              </div>
+            }
+          >
+            <strong>Leave without saving?</strong>
+            <span>Your unsaved plan details will be lost.</span>
+          </Notice>
         ) : null}
         {save.error ? (
           <Notice tone="danger" role="alert">

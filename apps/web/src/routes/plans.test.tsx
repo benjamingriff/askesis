@@ -376,3 +376,14 @@ it('retries only the rename after the content save succeeded', async () => {
     expect.objectContaining({ body: { displayName: 'Renamed', expectedStateVersion: 2 } }),
   );
 });
+
+it('guards unsaved plan details against navigation', async () => {
+  mount();
+  await openMenuItem('Edit details');
+  fireEvent.change(screen.getByLabelText('Description'), { target: { value: 'Unsaved' } });
+  fireEvent.click(screen.getByRole('link', { name: /All plans/ }));
+  expect(await screen.findByText('Leave without saving?')).toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: 'Keep editing' }));
+  expect(screen.getByLabelText('Description')).toHaveValue('Unsaved');
+  expect(screen.queryByText('Leave without saving?')).not.toBeInTheDocument();
+});

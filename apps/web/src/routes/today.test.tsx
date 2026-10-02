@@ -125,3 +125,17 @@ it('distinguishes dates beyond the prescribed coverage from rest days', async ()
   expect(screen.queryByText('Rest day')).not.toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Plan it with your coach' })).toBeInTheDocument();
 });
+
+it('does not declare a rest day when coverage could not be loaded', async () => {
+  mocks.get.mockImplementation(async (path: string) =>
+    path === '/api/v1/plans'
+      ? { data: { plans: [plan] } }
+      : path === '/api/v1/workouts'
+        ? { data: { workouts: [] } }
+        : { error: { error: { message: 'Brief unavailable' } } },
+  );
+  mount();
+  expect(await screen.findByText(/Couldn’t load this plan’s coverage/)).toBeInTheDocument();
+  expect(screen.queryByText('Rest day')).not.toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Retry' })).toBeInTheDocument();
+});
