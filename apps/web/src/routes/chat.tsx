@@ -14,6 +14,7 @@ import {
 import { Link, NavLink, useNavigate, useParams } from 'react-router';
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '../api';
+import { ChatMarkdown } from '../components/ChatMarkdown';
 import {
   ChatRequestError,
   chatResult,
@@ -433,7 +434,11 @@ function ConversationPanel({
                   <span className="message-author">
                     {message.role === 'user' ? 'You' : 'Askesis'}
                   </span>
-                  <p className="chat-text">{message.content}</p>
+                  {message.role === 'assistant' ? (
+                    <ChatMarkdown content={message.content} />
+                  ) : (
+                    <p className="chat-text">{message.content}</p>
+                  )}
                 </div>
               </article>
             ))}

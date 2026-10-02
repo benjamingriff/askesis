@@ -55,9 +55,10 @@ extension took 105 seconds. Short discussion replies took 5–19 seconds.
   mode. Agent mode remains configured when a worker is offline. A regression test
   verifies that history and an unsent question survive downtime and that sending
   becomes available again on recovery.
-- Assistant Markdown is currently displayed as plain text, including emphasis,
-  headings and pipe tables. Add safe Markdown rendering for readable coaching
-  replies; this remains outstanding.
+- Fixed assistant Markdown rendering with CommonMark and GFM tables. User
+  messages remain literal text. Raw HTML is ignored, unsafe links are filtered,
+  and embedded images display their alt text. Tables scroll within the message
+  on narrow screens.
 - Generation latency is noticeable. Week-by-week saves expose useful progress,
   but the UI would benefit from clearer progress feedback while waiting.
 
@@ -67,8 +68,56 @@ extension took 105 seconds. Short discussion replies took 5–19 seconds.
 - `pnpm test`: 75 tests passed (11 worker, 31 API, 33 web).
 - After the UI corrections: all 34 web tests passed, formatting and ESLint
   passed, and the Docker web production build passed.
+- After Markdown rendering: `pnpm check` passed, including all 79 tests (11
+  worker, 31 API, 37 web), production builds and the high-severity audit gate.
+  The live browser rendered five saved assistant replies with two schedule tables
+  and formatted emphasis. A table constrained to a 280-pixel message scrolled
+  internally with 419 pixels of content. Native browser viewport resizing timed
+  out, so this verifies a narrow message rather than a complete mobile viewport.
 - Public local API health returned 200; unauthenticated chat capabilities returned
   401; the public proxy returned 404 for the internal agent route.
+
+## Generation timing investigation
+
+Tool receipt timestamps show where the elapsed time accumulated:
+
+| Event                | Initial four weeks | Four-week extension |
+| -------------------- | ------------------ | ------------------- |
+| Context read saved   | 3.67 s             | 1.85 s              |
+| Schedule read saved  | 6.30 s             | 4.98 s              |
+| Brief update saved   | 13.75 s            | 15.09 s             |
+| Calibration saved    | 17.84 s            | Already present     |
+| Schedule batch saved | 80.10 s            | 95.78 s             |
+| Validation saved     | 81.98 s            | 97.75 s             |
+| Final response saved | 92.07 s            | 105.17 s            |
+
+There were six and five tool calls respectively, with one schedule write per
+four-week horizon. The longest intervals, 62.26 and 80.69 seconds, preceded the
+schedule writes. This points to preparing the detailed prescription payload as
+the main latency target. Receipt timestamps include model, transport and API
+execution time; they do not isolate those components, so precise attribution
+requires further instrumentation.
+
+The runs recorded 4,149 and 6,523 output tokens and cumulative input usage of
+80,298 and 155,780 tokens across model turns. The extension's schedule-read reply
+alone contained 32,633 bytes. Input totals are cumulative, not the size of one
+request; cached and reasoning-token breakdowns were not persisted.
+
+Recommended next steps:
+
+1. Measure each model request and API tool execution separately, without logging
+   prompts or plan payloads.
+2. Reduce repeated prescription JSON using reusable server-side defaults or
+   templates while preserving authoritative validation and complete workouts.
+3. Reduce redundant context reads and return only relevant schedule ranges.
+4. Compare low and medium reasoning on the same generation cases before changing
+   the default.
+5. Expose useful generation progress. Weekly saves improve time to first visible
+   content but can increase total time by adding model round trips.
+
+This follows the official OpenAI [latency optimization guidance](https://developers.openai.com/api/docs/guides/latency-optimization)
+on reducing generated tokens and sequential requests. The runtime and model
+settings have not been changed by this investigation.
 
 This is a live acceptance sample, not a guarantee of all possible model responses.
 It does not validate a Railway deployment, medical advice, wearable ingestion or

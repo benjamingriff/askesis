@@ -169,3 +169,27 @@ it('loads durable history after navigation and enforces archive read-only state'
   for (const button of screen.getAllByRole('button', { name: 'Restore conversation' }))
     expect(button).toBeEnabled();
 });
+it('formats assistant Markdown while preserving the literal user message', async () => {
+  const original = vi.mocked(api.GET).getMockImplementation()!;
+  vi.mocked(api.GET).mockImplementation(((path: string, ...args: unknown[]) =>
+    path.endsWith('/messages')
+      ? Promise.resolve(
+          response({
+            messages: [
+              { id: 'm1', sequence: 1, role: 'user', content: '**My question**', context: null },
+              {
+                id: 'm2',
+                sequence: 2,
+                role: 'assistant',
+                content: '**Easy running** is the goal.',
+                context: null,
+              },
+            ],
+            nextBeforeSequence: null,
+          }),
+        )
+      : Reflect.apply(original, api, [path, ...args])) as typeof api.GET);
+  mount('/chat/c1');
+  expect(await screen.findByText('**My question**')).toBeInTheDocument();
+  expect(await screen.findByText('Easy running', { selector: 'strong' })).toBeInTheDocument();
+});
