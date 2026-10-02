@@ -8,6 +8,7 @@ import { planProgress } from '../components/PlanView';
 import { PaceGuides, Stat } from '../components/PlanWidgets';
 import { WorkoutDialog } from '../components/Workout';
 import {
+  Button,
   ButtonLink,
   Card,
   EmptyState,
@@ -29,7 +30,7 @@ import {
   startOfWeek,
   WEEKDAYS_SHORT,
 } from '../lib/format';
-import { inferKind, KIND_META, workoutsOn } from '../lib/workouts';
+import { inferKind, isCovered, KIND_META, workoutsOn } from '../lib/workouts';
 import {
   latestCalibration,
   planVersion,
@@ -78,30 +79,16 @@ export function TodayPage() {
           Once a plan is locked and active, today’s session and your week appear here.
         </EmptyState>
       ) : null}
-      {plan ? (
-        <TodayForPlan
-          key={plan.id}
-          plan={plan}
-          today={today}
-          view={selection?.planId === plan.id ? selection.view : 'locked'}
-        />
-      ) : null}
+      {plan ? <TodayForPlan key={plan.id} plan={plan} today={today} /> : null}
     </div>
   );
 }
 
-function TodayForPlan({
-  plan,
-  today,
-  view,
-}: {
-  plan: Plan;
-  today: string;
-  view: 'locked' | 'draft';
-}) {
+/** Today always shows the locked schedule; unpublished drafts are only signposted. */
+function TodayForPlan({ plan, today }: { plan: Plan; today: string }) {
   const navigate = useNavigate();
   const prefs = usePlanPreferences();
-  const version = planVersion(plan, view === 'draft' && plan.draft ? 'draft' : 'locked');
+  const version = planVersion(plan, 'locked');
   const workouts = useWorkouts(version);
   const brief = useBriefState(plan.id, version);
   const units = useUnits(brief.data?.brief.unit);
@@ -129,6 +116,12 @@ function TodayForPlan({
   const progress = planProgress(version?.startDate ?? null, end ?? null, today);
   const daysToEnd = end ? daysBetween(today, end) : null;
   const calibration = latestCalibration(brief.data);
+  const outsidePlan =
+    (!!version?.startDate && selected < version.startDate) ||
+    (!!version?.endDate && selected > version.endDate);
+  // Legacy plans have no recorded coverage; only flag gaps when coverage is known.
+  const coverage = brief.data?.coverage ?? [];
+  const unplanned = !outsidePlan && coverage.length > 0 && !isCovered(selected, coverage);
 
   return (
     <>
@@ -173,7 +166,30 @@ function TodayForPlan({
           {workouts.error ? (
             <ErrorState message={workouts.error.message} onRetry={() => void workouts.refetch()} />
           ) : null}
-          {workouts.data && selectedWorkouts.length === 0 ? (
+          {workouts.data && selectedWorkouts.length === 0 && (unplanned || outsidePlan) ? (
+            <EmptyState
+              icon={Sparkles}
+              title={outsidePlan ? 'Outside your plan dates' : 'Not planned yet'}
+              dashed
+              action={
+                unplanned && !plan.archived ? (
+                  <Button
+                    variant="primary"
+                    icon={MessageSquare}
+                    busy={chat.isPending}
+                    onClick={() => chat.mutate('Plan the remaining weeks')}
+                  >
+                    Plan it with your coach
+                  </Button>
+                ) : undefined
+              }
+            >
+              {outsidePlan
+                ? 'This date falls outside the plan.'
+                : 'This date is inside your plan but hasn’t been prescribed yet.'}
+            </EmptyState>
+          ) : null}
+          {workouts.data && selectedWorkouts.length === 0 && !unplanned && !outsidePlan ? (
             <Card className="rest-hero">
               <span className="empty-icon">
                 <Moon size={22} aria-hidden="true" />
@@ -258,7 +274,14 @@ function TodayForPlan({
               <SectionHeader
                 title="Your pace guides"
                 action={
-                  <Link className="text-link" to={`/plans/${plan.id}/brief`}>
+                  <Link
+                    className="text-link"
+                    to={
+                      version?.state === 'locked'
+                        ? `/plans/${plan.id}/versions/${version.id}/brief`
+                        : `/plans/${plan.id}/brief`
+                    }
+                  >
                     Details
                   </Link>
                 }

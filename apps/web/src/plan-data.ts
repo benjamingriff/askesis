@@ -50,7 +50,8 @@ export function useWorkouts(version: Pick<PlanVersion, 'id' | 'editNumber'> | nu
 
 export function useWorkoutDetail(workoutId: string | null | undefined) {
   return useQuery<WorkoutDetail>({
-    queryKey: ['workout', workoutId],
+    // Under 'plan-workouts' so coach edits and calibration updates invalidate resolved paces.
+    queryKey: ['plan-workouts', 'detail', workoutId],
     enabled: !!workoutId,
     staleTime: 60_000,
     queryFn: async () =>

@@ -90,7 +90,10 @@ export function PlanToolbar({
       preferences.write({ planId: updated.id, view: updated.draft ? 'draft' : 'locked' });
     if (action === 'lock') preferences.write({ planId: updated.id, view: 'locked' });
     client.setQueryData(['plans', plan.id], updated);
-    await client.invalidateQueries({ queryKey: ['plans'] });
+    await Promise.all([
+      client.invalidateQueries({ queryKey: ['plans'] }),
+      client.invalidateQueries({ queryKey: ['plan-workouts'] }),
+    ]);
     onChanged?.(updated, action);
   };
 
@@ -118,12 +121,21 @@ export function PlanToolbar({
             body: { expectedStateVersion: plan.stateVersion },
           }),
         );
-      const body = {
-        expectedStateVersion: plan.stateVersion,
-        ...(plan.draft
-          ? { expectedDraftId: plan.draft.id, expectedEditNumber: plan.draft.editNumber }
-          : {}),
-      };
+      // Lock exactly what was reviewed: the preview carries the reviewed concurrency values,
+      // which stay correct even if this component's plan prop is stale.
+      const body =
+        action === 'lock' && preview
+          ? {
+              expectedStateVersion: preview.stateVersion,
+              expectedDraftId: preview.draftId,
+              expectedEditNumber: preview.editNumber,
+            }
+          : {
+              expectedStateVersion: plan.stateVersion,
+              ...(plan.draft
+                ? { expectedDraftId: plan.draft.id, expectedEditNumber: plan.draft.editNumber }
+                : {}),
+            };
       if (action === 'unlock')
         return result(await api.POST('/api/v1/plans/{planId}/unlock', { params, body }));
       const header = {
@@ -160,6 +172,8 @@ export function PlanToolbar({
     },
     onError: (_error, action) => {
       if (action === 'lock') setPreview(null);
+      // A conflict means the plan changed elsewhere; fetch it so the next attempt is current.
+      void client.invalidateQueries({ queryKey: ['plans'] });
     },
   });
 
@@ -314,7 +328,7 @@ export function PlanToolbar({
         lockedVersion={locked}
         onRetry={() => {
           mutation.reset();
-          validate.mutate();
+          void client.invalidateQueries({ queryKey: ['plans'] }).then(() => validate.mutate());
         }}
         onLock={() => mutation.mutate('lock')}
         onClose={close}
@@ -673,6 +687,7 @@ function EditDetailsDialog({
   onClose: () => void;
   onSaved: (plan: Plan) => void;
 }) {
+  const client = useQueryClient();
   const version = plan.draft ?? plan.locked;
   const [name, setName] = useState(plan.displayName);
   const [description, setDescription] = useState(version?.description ?? '');
@@ -683,23 +698,35 @@ function EditDetailsDialog({
     startDate !== (version?.startDate ?? '') ||
     endDate !== (version?.endDate ?? '');
   const nameDirty = name.trim() !== plan.displayName;
+  // The plan as last saved by this dialog, so a retry after a partial failure (content saved,
+  // rename failed) continues from the new edit number instead of repeating a stale save.
+  const saved = useRef<Plan | null>(null);
   const save = useMutation({
     mutationFn: async () => {
-      let latest = plan;
-      if (contentDirty && plan.draft)
+      let latest = saved.current ?? plan;
+      const current = latest.draft;
+      const pending =
+        !!current &&
+        (description !== (current.description ?? '') ||
+          startDate !== (current.startDate ?? '') ||
+          endDate !== (current.endDate ?? ''));
+      if (pending && current) {
         latest = result(
           await api.PATCH('/api/v1/plans/{planId}/draft', {
             params: { path: { planId: plan.id } },
             body: {
-              expectedDraftId: plan.draft.id,
-              expectedEditNumber: plan.draft.editNumber,
+              expectedDraftId: current.id,
+              expectedEditNumber: current.editNumber,
               description: description || null,
               startDate: startDate || null,
               endDate: endDate || null,
             },
           }),
         );
-      if (nameDirty)
+        saved.current = latest;
+        client.setQueryData(['plans', plan.id], latest);
+      }
+      if (name.trim() !== latest.displayName)
         latest = result(
           await api.PATCH('/api/v1/plans/{planId}', {
             params: { path: { planId: plan.id } },

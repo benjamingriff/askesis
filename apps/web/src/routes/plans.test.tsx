@@ -316,3 +316,63 @@ it('opens the plan conversation from the toolbar', async () => {
     params: { path: { planId: 'plan-1' } },
   });
 });
+
+it('locks with the reviewed concurrency values even when the plan prop is stale', async () => {
+  vi.mocked(api.POST).mockImplementation(async (path) => ({
+    data: String(path).endsWith('/validate')
+      ? { ...preview, findings: [], editNumber: 4, stateVersion: 7 }
+      : lockedPlan(current),
+    response: new Response(),
+  }));
+  mount();
+  fireEvent.click(await screen.findByRole('button', { name: 'Review and lock' }));
+  const lock = await screen.findByRole('button', { name: 'Confirm and lock version' });
+  await waitFor(() => expect(lock).toBeEnabled());
+  fireEvent.click(lock);
+  await waitFor(() =>
+    expect(api.POST).toHaveBeenCalledWith(
+      '/api/v1/plans/{planId}/lock',
+      expect.objectContaining({
+        body: expect.objectContaining({
+          expectedStateVersion: 7,
+          expectedDraftId: draft.id,
+          expectedEditNumber: 4,
+        }),
+      }),
+    ),
+  );
+});
+
+it('retries only the rename after the content save succeeded', async () => {
+  const savedPlan = {
+    ...current,
+    stateVersion: 2,
+    draft: { ...draft, editNumber: 2, description: 'Revised' },
+  };
+  vi.mocked(api.PATCH)
+    .mockResolvedValueOnce({ data: savedPlan, response: new Response() })
+    .mockRejectedValueOnce(new Error('Connection lost'))
+    .mockResolvedValueOnce({
+      data: { ...savedPlan, displayName: 'Renamed' },
+      response: new Response(),
+    });
+  mount();
+  await openMenuItem('Edit details');
+  fireEvent.change(screen.getByLabelText('Description'), { target: { value: 'Revised' } });
+  fireEvent.change(screen.getByLabelText('Plan name'), { target: { value: 'Renamed' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Save changes' }));
+  await screen.findByText('Connection lost');
+  fireEvent.click(screen.getByRole('button', { name: 'Save changes' }));
+  await waitFor(() => expect(api.PATCH).toHaveBeenCalledTimes(3));
+  const calls = (vi.mocked(api.PATCH).mock.calls as unknown as [string, unknown][]).map(
+    ([path]) => path,
+  );
+  expect(calls).toEqual([
+    '/api/v1/plans/{planId}/draft',
+    '/api/v1/plans/{planId}',
+    '/api/v1/plans/{planId}',
+  ]);
+  expect((vi.mocked(api.PATCH).mock.calls as unknown as [string, unknown][])[2]![1]).toEqual(
+    expect.objectContaining({ body: { displayName: 'Renamed', expectedStateVersion: 2 } }),
+  );
+});

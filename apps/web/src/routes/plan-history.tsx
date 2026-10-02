@@ -134,7 +134,10 @@ function RevisionView({ planId, revisionId }: { planId: string; revisionId: stri
       if (!updated) return;
       preferences.write({ planId, view: 'draft' });
       client.setQueryData(['plans', planId], updated);
-      await client.invalidateQueries({ queryKey: ['plans'] });
+      await Promise.all([
+        client.invalidateQueries({ queryKey: ['plans'] }),
+        client.invalidateQueries({ queryKey: ['plan-workouts'] }),
+      ]);
       void navigate(`/plans/${planId}`);
     },
     onError: () => setPreview(null),
