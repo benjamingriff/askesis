@@ -336,6 +336,9 @@ function ConversationPanel({ conversationId }: { conversationId: string | undefi
       await refresh();
       if (id) void navigate(`/chat/${id}`);
     },
+    onError: (_error, action) => {
+      if (action === 'rename') void detail.refetch();
+    },
   });
   const cancel = useMutation({
     mutationFn: async () => {
@@ -426,6 +429,7 @@ function ConversationPanel({ conversationId }: { conversationId: string | undefi
                 icon: PencilLine,
                 disabled: conversation.archived || change.isPending,
                 onSelect: () => {
+                  change.reset();
                   setTitle(conversation.title);
                   setRenaming(true);
                 },
@@ -455,7 +459,7 @@ function ConversationPanel({ conversationId }: { conversationId: string | undefi
         title="Rename conversation"
         footer={
           <>
-            <Button variant="ghost" onClick={() => setRenaming(false)}>
+            <Button variant="ghost" disabled={change.isPending} onClick={() => setRenaming(false)}>
               Cancel
             </Button>
             <Button
@@ -473,24 +477,30 @@ function ConversationPanel({ conversationId }: { conversationId: string | undefi
           id="rename-conversation"
           onSubmit={(e) => {
             e.preventDefault();
-            change.mutate('rename');
+            if (!change.isPending) change.mutate('rename');
           }}
         >
           <label className="field">
             <span>Conversation title</span>
             <input
               autoFocus
+              disabled={change.isPending}
               maxLength={120}
               value={title}
               onChange={(e) => setTitle(e.target.value)}
             />
           </label>
+          {change.error ? (
+            <Notice tone="danger" role="alert">
+              {change.error.message}
+            </Notice>
+          ) : null}
         </form>
       </Dialog>
       <div className="chat-notices">
-        {change.error || cancel.error ? (
+        {(!renaming && change.error) || cancel.error ? (
           <Notice tone="danger" role="alert">
-            {change.error?.message ?? cancel.error?.message}
+            {(!renaming && change.error?.message) || cancel.error?.message}
           </Notice>
         ) : null}
         {conversationId && detail.isPending ? (
