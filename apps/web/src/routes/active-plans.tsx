@@ -6,6 +6,7 @@ import { PlanView } from '../components/PlanView';
 import { ButtonLink, EmptyState, ErrorState, LoadingState } from '../components/ui';
 import { result } from '../lib/result';
 import { usePlanPreferences, type PlanSelection } from '../plan-selection';
+import type { Plan } from '../plan-data';
 
 export function useActivePlans() {
   return useQuery({
@@ -19,25 +20,49 @@ export function useActivePlans() {
 export function ActivePlansPage() {
   const preferences = usePlanPreferences();
   const [selection, setSelection] = useState<PlanSelection | null>(() => preferences.read());
+  const [editingPlan, setEditingPlan] = useState<Plan | null>(null);
   const plans = useActivePlans();
-  const plan = plans.data?.find((item) => item.id === selection?.planId) ?? plans.data?.[0];
+  // Collection membership can change without navigation. Keep the open editor's plan
+  // mounted, and read its current metadata even if it has been deactivated or archived.
+  const editing = useQuery({
+    queryKey: ['plans', editingPlan?.id],
+    enabled: !!editingPlan,
+    queryFn: async () =>
+      result(
+        await api.GET('/api/v1/plans/{planId}', {
+          params: { path: { planId: editingPlan!.id } },
+        }),
+      ),
+  });
+  const activePlans = plans.data ?? [];
+  const plan = editingPlan
+    ? (editing.data ?? activePlans.find((item) => item.id === editingPlan.id) ?? editingPlan)
+    : (activePlans.find((item) => item.id === selection?.planId) ?? activePlans[0]);
+  const selectablePlans =
+    plan && !activePlans.some((item) => item.id === plan.id) ? [plan, ...activePlans] : activePlans;
+  const error = plans.error ?? editing.error;
+  const retry = () => {
+    void plans.refetch();
+    if (editingPlan) void editing.refetch();
+  };
   const view =
     selection?.planId === plan?.id && selection?.view === 'draft' && plan?.draft
       ? 'draft'
       : 'locked';
 
   function select(next: PlanSelection) {
+    if (editingPlan && next.planId !== editingPlan.id) return;
     setSelection(next);
     preferences.write(next);
   }
 
-  if (plans.isPending)
+  if (plans.isPending && !editingPlan)
     return (
       <div className="page">
         <LoadingState>Loading your plan…</LoadingState>
       </div>
     );
-  if (plans.error && !plans.data)
+  if (plans.error && !plans.data && !editingPlan)
     return (
       <div className="page">
         <ErrorState message={plans.error.message} onRetry={() => void plans.refetch()} />
@@ -76,25 +101,28 @@ export function ActivePlansPage() {
 
   return (
     <>
-      {plans.error ? (
-        <ErrorState message={plans.error.message} onRetry={() => void plans.refetch()} />
-      ) : null}
+      {error ? <ErrorState message={error.message} onRetry={retry} /> : null}
       <PlanView
         key={plan.id}
         plan={plan}
         view={view}
         onViewChange={(next) => select({ planId: plan.id, view: next })}
+        onDetailsOpenChange={setEditingPlan}
         switcher={
-          plans.data && plans.data.length > 1 ? (
+          selectablePlans.length > 1 ? (
             <label className="plan-switcher">
               <span className="sr-only">Active plan</span>
               <select
                 value={plan.id}
+                disabled={!!editingPlan}
                 onChange={(event) => select({ planId: event.target.value, view: 'locked' })}
               >
-                {plans.data.map((item) => (
+                {selectablePlans.map((item) => (
                   <option key={item.id} value={item.id}>
                     {item.displayName}
+                    {!activePlans.some((active) => active.id === item.id)
+                      ? ' · No longer active'
+                      : ''}
                   </option>
                 ))}
               </select>

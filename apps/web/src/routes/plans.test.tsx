@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { createMemoryRouter, RouterProvider } from 'react-router';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { focusManager } from '@tanstack/react-query';
@@ -125,7 +125,7 @@ afterEach(() => {
 
 async function openMenuItem(name: string) {
   fireEvent.click(await screen.findByRole('button', { name: 'Plan options' }));
-  fireEvent.click(screen.getByRole('menuitem', { name }));
+  await act(async () => fireEvent.click(screen.getByRole('menuitem', { name })));
 }
 
 it.each(['/plans/plan-1', '/plan'])(
@@ -197,6 +197,123 @@ it.each(['/plans/plan-1', '/plan'])(
     await waitFor(() => expect(screen.queryByText('Connection lost')).not.toBeInTheDocument());
     expect(screen.getByRole('dialog')).toBeInTheDocument();
     expect(screen.getByLabelText('Description')).toHaveValue('Unsaved changes');
+  },
+);
+
+it.each([
+  [false, false],
+  [false, true],
+  [true, false],
+  [true, true],
+])(
+  'preserves removed active-plan edits (archived=%s, other plan=%s) until Cancel',
+  async (archived, otherPlan) => {
+    current.active = true;
+    mount('/plan');
+    await openMenuItem('Edit details');
+    fireEvent.change(screen.getByLabelText('Description'), {
+      target: { value: 'Unsaved changes' },
+    });
+    current = { ...current, active: false, archived, stateVersion: 2 };
+    const nextPlan = {
+      ...current,
+      id: 'plan-2',
+      displayName: 'Another plan',
+      active: true,
+      archived: false,
+    };
+    const original = vi.mocked(api.GET).getMockImplementation()!;
+    vi.mocked(api.GET).mockImplementation((async (path: string, ...args: unknown[]) =>
+      path === '/api/v1/plans'
+        ? { data: { plans: otherPlan ? [nextPlan] : [] }, response: new Response() }
+        : Reflect.apply(original, api, [path, ...args])) as typeof api.GET);
+    focusManager.setFocused(false);
+    focusManager.setFocused(true);
+    await waitFor(() => expect(screen.queryByText('Active')).not.toBeInTheDocument());
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+    expect(screen.getByLabelText('Description')).toHaveValue('Unsaved changes');
+    if (archived) {
+      expect(screen.getByRole('button', { name: 'Save changes' })).toBeDisabled();
+      expect(screen.getByText(/This plan is archived/)).toBeInTheDocument();
+    }
+    if (otherPlan) expect(screen.getByLabelText('Active plan')).toBeDisabled();
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    await screen.findByRole('heading', { name: otherPlan ? 'Another plan' : 'No active plans' });
+    expect(api.PATCH).not.toHaveBeenCalled();
+  },
+);
+
+it('keeps a deactivated plan selected until its pending details save succeeds', async () => {
+  current.active = true;
+  mount('/plan');
+  await openMenuItem('Edit details');
+  fireEvent.change(screen.getByLabelText('Description'), { target: { value: 'Unsaved changes' } });
+  current = { ...current, active: false, stateVersion: 2 };
+  const original = vi.mocked(api.GET).getMockImplementation()!;
+  vi.mocked(api.GET).mockImplementation((async (path: string, ...args: unknown[]) =>
+    path === '/api/v1/plans'
+      ? { data: { plans: [] }, response: new Response() }
+      : Reflect.apply(original, api, [path, ...args])) as typeof api.GET);
+  focusManager.setFocused(false);
+  focusManager.setFocused(true);
+  await waitFor(() => expect(screen.queryByText('Active')).not.toBeInTheDocument());
+  vi.mocked(api.PATCH).mockResolvedValueOnce({
+    data: { ...current, draft: { ...draft, editNumber: 2, description: 'Unsaved changes' } },
+  } as never);
+  fireEvent.click(screen.getByRole('button', { name: 'Save changes' }));
+  await screen.findByRole('heading', { name: 'No active plans' });
+  expect(api.PATCH).toHaveBeenCalledWith(
+    '/api/v1/plans/{planId}/draft',
+    expect.objectContaining({
+      params: { path: { planId: 'plan-1' } },
+      body: expect.objectContaining({ description: 'Unsaved changes' }),
+    }),
+  );
+});
+
+it('prevents switching active plans until the details dialog closes', async () => {
+  current.active = true;
+  const nextPlan = { ...current, id: 'plan-2', displayName: 'Another plan' };
+  const original = vi.mocked(api.GET).getMockImplementation()!;
+  vi.mocked(api.GET).mockImplementation((async (path: string, ...args: unknown[]) =>
+    path === '/api/v1/plans'
+      ? { data: { plans: [current, nextPlan] }, response: new Response() }
+      : Reflect.apply(original, api, [path, ...args])) as typeof api.GET);
+  mount('/plan');
+  await openMenuItem('Edit details');
+  fireEvent.change(screen.getByLabelText('Description'), { target: { value: 'Unsaved changes' } });
+  expect(screen.getByLabelText('Active plan')).toBeDisabled();
+  fireEvent.change(screen.getByLabelText('Active plan'), { target: { value: 'plan-2' } });
+  expect(screen.getByLabelText('Description')).toHaveValue('Unsaved changes');
+  expect(screen.getByRole('heading', { name: 'Autumn running' })).toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+  expect(screen.getByLabelText('Active plan')).toBeEnabled();
+  fireEvent.change(screen.getByLabelText('Active plan'), { target: { value: 'plan-2' } });
+  await screen.findByRole('heading', { name: 'Another plan' });
+});
+
+it.each(['/plans/plan-1', '/plan'])(
+  'does not rename an unchanged title while saving content on %s',
+  async (path) => {
+    current.active = true;
+    mount(path);
+    await openMenuItem('Edit details');
+    fireEvent.change(screen.getByLabelText('Description'), {
+      target: { value: 'Unsaved changes' },
+    });
+    current = {
+      ...current,
+      displayName: 'Renamed elsewhere',
+      stateVersion: 2,
+      draft: { ...draft, description: 'Unsaved changes', editNumber: 2 },
+    };
+    vi.mocked(api.PATCH).mockResolvedValueOnce({ data: structuredClone(current) } as never);
+    fireEvent.click(screen.getByRole('button', { name: 'Save changes' }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    await screen.findByRole('heading', { name: 'Renamed elsewhere' });
+    expect(api.PATCH).toHaveBeenCalledTimes(1);
+    expect(api.PATCH).toHaveBeenCalledWith('/api/v1/plans/{planId}/draft', expect.anything());
   },
 );
 

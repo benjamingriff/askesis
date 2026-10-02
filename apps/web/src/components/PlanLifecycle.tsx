@@ -91,10 +91,12 @@ export function PlanToolbar({
   plan,
   onChanged,
   onShowHistory,
+  onDetailsOpenChange,
 }: {
   plan: Plan;
   onChanged?: ((plan: Plan, action: Action | 'details') => void) | undefined;
   onShowHistory?: (() => void) | undefined;
+  onDetailsOpenChange?: ((plan: Plan | null) => void) | undefined;
 }) {
   const client = useQueryClient();
   const navigate = useNavigate();
@@ -201,6 +203,7 @@ export function PlanToolbar({
   });
 
   const open = (next: Confirm) => {
+    onDetailsOpenChange?.(next === 'details' ? plan : null);
     mutation.reset();
     setLocked(null);
     setConfirm(next);
@@ -208,6 +211,7 @@ export function PlanToolbar({
   };
   const close = () => {
     if (mutation.isPending) return;
+    if (confirm === 'details') onDetailsOpenChange?.(null);
     setConfirm(null);
     setPreview(null);
     setLocked(null);
@@ -360,6 +364,7 @@ export function PlanToolbar({
           plan={plan}
           onClose={close}
           onSaved={(updated) => {
+            onDetailsOpenChange?.(null);
             setConfirm(null);
             void settle(updated, 'details');
           }}
@@ -729,6 +734,8 @@ function EditDetailsDialog({
   const save = useMutation({
     mutationFn: async () => {
       let latest = saved.current;
+      if (plan.archived || latest.archived)
+        throw new Error('This plan is archived. Keep a copy of your edits before closing.');
       const current = latest.draft;
       if (!current && contentDirty)
         throw new Error('These description or date changes need an editable draft.');
@@ -754,7 +761,7 @@ function EditDetailsDialog({
         setBaseline(latest);
         client.setQueryData(['plans', plan.id], latest);
       }
-      if (name.trim() !== latest.displayName)
+      if (nameDirty && name.trim() !== latest.displayName)
         latest = result(
           await api.PATCH('/api/v1/plans/{planId}', {
             params: { path: { planId: plan.id } },
@@ -812,7 +819,13 @@ function EditDetailsDialog({
             type="submit"
             form="plan-details-form"
             busy={save.isPending}
-            disabled={busy || contentUnavailable || !name.trim() || (!nameDirty && !contentDirty)}
+            disabled={
+              busy ||
+              plan.archived ||
+              contentUnavailable ||
+              !name.trim() ||
+              (!nameDirty && !contentDirty)
+            }
           >
             Save changes
           </Button>
@@ -824,7 +837,7 @@ function EditDetailsDialog({
         className="form-stack"
         onSubmit={(event) => {
           event.preventDefault();
-          if (!busy) save.mutate();
+          if (!busy && !plan.archived) save.mutate();
         }}
       >
         <label className="field">
@@ -866,7 +879,14 @@ function EditDetailsDialog({
         {!editableContent ? (
           <p className="muted">Unlock the plan to change its dates or description.</p>
         ) : null}
-        {contentUnavailable ? (
+        {plan.archived ? (
+          <Notice tone="warning" role="alert">
+            <strong>This plan is archived. Your unsaved details are preserved here.</strong>
+            <span>
+              Keep a copy of your edits, then cancel and unarchive the plan before saving changes.
+            </span>
+          </Notice>
+        ) : contentUnavailable ? (
           <Notice tone="warning" role="alert">
             <strong>
               The draft is no longer available. Your unsaved details are preserved here.

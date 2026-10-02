@@ -53,12 +53,14 @@ export function PlanView({
   onViewChange,
   eyebrow,
   switcher,
+  onDetailsOpenChange,
 }: {
   plan: Plan;
   view: View;
   onViewChange: (view: View) => void;
   eyebrow?: ReactNode | undefined;
   switcher?: ReactNode | undefined;
+  onDetailsOpenChange?: ((plan: Plan | null) => void) | undefined;
 }) {
   const today = useLocalToday();
   const view: View =
@@ -96,6 +98,7 @@ export function PlanView({
           {switcher}
           <PlanToolbar
             plan={plan}
+            onDetailsOpenChange={onDetailsOpenChange}
             onChanged={(updated, action) => {
               if (action === 'unlock') onViewChange('draft');
               if (action === 'lock' || action === 'discard') onViewChange('locked');
