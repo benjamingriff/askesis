@@ -15,7 +15,8 @@ import {
   Notice,
   Pill,
 } from '../components/ui';
-import { formatDateTime, formatRange, formatShort, localToday } from '../lib/format';
+import { formatDateTime, formatRange, formatShort } from '../lib/format';
+import { useLocalToday } from '../lib/use-local-today';
 import { result } from '../lib/result';
 import { useBriefState, useWorkouts } from '../plan-data';
 import { usePlanPreferences } from '../plan-selection';
@@ -81,6 +82,7 @@ export function PlanRevisionPage() {
 }
 
 function RevisionView({ planId, revisionId }: { planId: string; revisionId: string }) {
+  const today = useLocalToday();
   const client = useQueryClient();
   const navigate = useNavigate();
   const preferences = usePlanPreferences();
@@ -323,7 +325,7 @@ function RevisionView({ planId, revisionId }: { planId: string; revisionId: stri
               endDate={revision.endDate}
               coverage={brief.data.coverage}
               units={units}
-              today={localToday()}
+              today={today}
             />
           ) : null}
         </>

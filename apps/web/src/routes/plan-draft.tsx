@@ -5,13 +5,15 @@ import { api } from '../api';
 import { CoverageSummary } from '../components/PlanningReview';
 import { Schedule } from '../components/Schedule';
 import { Card, ErrorState, LoadingState, Pill } from '../components/ui';
-import { formatRange, localToday } from '../lib/format';
+import { formatRange } from '../lib/format';
+import { useLocalToday } from '../lib/use-local-today';
 import { result } from '../lib/result';
 import { useBriefState, useWorkouts } from '../plan-data';
 import { useUnits } from '../settings';
 
 /** Read-only inspection of saved draft content, including the raw aggregate for debugging. */
 export function PlanDraftPage() {
+  const today = useLocalToday();
   const { planId = '' } = useParams();
   const draft = useQuery({
     queryKey: ['plans', planId, 'draft-content'],
@@ -95,7 +97,7 @@ export function PlanDraftPage() {
           endDate={version.endDate}
           coverage={brief.data.coverage}
           units={units}
-          today={localToday()}
+          today={today}
         />
       ) : null}
     </div>

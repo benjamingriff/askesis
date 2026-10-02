@@ -1,7 +1,8 @@
 import { ClipboardList, Flag, Lock, PencilLine, Power, Sparkles } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
 import { Link } from 'react-router';
-import { daysBetween, formatRange, localToday, startOfWeek } from '../lib/format';
+import { daysBetween, formatRange, startOfWeek } from '../lib/format';
+import { useLocalToday } from '../lib/use-local-today';
 import {
   latestCalibration,
   planVersion,
@@ -59,7 +60,7 @@ export function PlanView({
   eyebrow?: ReactNode | undefined;
   switcher?: ReactNode | undefined;
 }) {
-  const today = localToday();
+  const today = useLocalToday();
   const view: View =
     requestedView === 'draft' && plan.draft ? 'draft' : plan.locked ? 'locked' : 'draft';
   const version = planVersion(plan, view);

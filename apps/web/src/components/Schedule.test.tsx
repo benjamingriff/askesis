@@ -69,3 +69,54 @@ it.each(['access', 'write'])(
     expect(screen.getByRole('radio', { name: 'Calendar' })).toHaveAttribute('aria-checked', 'true');
   },
 );
+
+function calendarSchedule(today: string) {
+  return (
+    <AccountQueryProvider>
+      <Schedule
+        workouts={[workout]}
+        startDate="2027-01-11"
+        endDate="2027-02-28"
+        coverage={[{ startDate: '2027-01-11', endDate: '2027-02-28' }]}
+        units="km"
+        today={today}
+      />
+    </AccountQueryProvider>
+  );
+}
+
+it('advances the default week at a week boundary while preserving explicitly browsed weeks', () => {
+  const page = render(calendarSchedule('2027-01-17'));
+  expect(screen.getByRole('heading', { name: /Week 1/ })).toHaveTextContent('This week');
+  page.rerender(calendarSchedule('2027-01-18'));
+  expect(screen.getByRole('heading', { name: /Week 2/ })).toHaveTextContent('This week');
+  fireEvent.click(screen.getByRole('button', { name: 'Previous week' }));
+  page.rerender(calendarSchedule('2027-01-25'));
+  expect(screen.getByRole('heading', { name: /Week 1/ })).not.toHaveTextContent('This week');
+});
+
+it('advances the default calendar date and month, retaining an explicitly selected date', () => {
+  const page = render(calendarSchedule('2027-01-31'));
+  fireEvent.click(screen.getByRole('radio', { name: 'Calendar' }));
+  expect(screen.getByRole('grid', { name: 'January 2027' })).toBeInTheDocument();
+  page.rerender(calendarSchedule('2027-02-01'));
+  expect(screen.getByRole('grid', { name: 'February 2027' })).toBeInTheDocument();
+  expect(screen.getByRole('gridcell', { name: 'Monday 1 February' })).toHaveAttribute(
+    'aria-selected',
+    'true',
+  );
+  fireEvent.click(screen.getByRole('gridcell', { name: 'Wednesday 3 February' }));
+  page.rerender(calendarSchedule('2027-02-02'));
+  expect(screen.getByRole('gridcell', { name: 'Wednesday 3 February' })).toHaveAttribute(
+    'aria-selected',
+    'true',
+  );
+});
+
+it('preserves an explicitly browsed calendar month across rollover', () => {
+  const page = render(calendarSchedule('2027-01-31'));
+  fireEvent.click(screen.getByRole('radio', { name: 'Calendar' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Previous month' }));
+  page.rerender(calendarSchedule('2027-02-01'));
+  expect(screen.getByRole('grid', { name: 'December 2026' })).toBeInTheDocument();
+});

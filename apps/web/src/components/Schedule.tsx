@@ -72,9 +72,9 @@ export function Schedule({
   const [mode, setMode] = useState<Mode>(() =>
     readStorage(MODE_KEY) === 'calendar' ? 'calendar' : 'weeks',
   );
-  const [selectedWeek, setSelectedWeek] = useState(firstUpcoming);
+  const [selectedWeek, setSelectedWeek] = useState<number | null>(null);
   const [open, setOpen] = useState<WorkoutSummary | null>(null);
-  const week = weeks.find((w) => w.number === selectedWeek) ?? weeks[0];
+  const week = weeks.find((w) => w.number === (selectedWeek ?? firstUpcoming)) ?? weeks[0];
   const knownCoverage = coverage && coverage.length > 0 ? coverage : null;
   const dayStatus = (date: string) =>
     (startDate && date < startDate) || (endDate && date > endDate)
@@ -115,7 +115,7 @@ export function Schedule({
               weeks={weeks}
               selected={week.number}
               current={current}
-              onSelect={setSelectedWeek}
+              onSelect={(number) => setSelectedWeek(number === firstUpcoming ? null : number)}
               units={units}
             />
           </Card>
@@ -133,14 +133,18 @@ export function Schedule({
                 label="Previous week"
                 tone="filled"
                 disabled={week.number <= 1}
-                onClick={() => setSelectedWeek(week.number - 1)}
+                onClick={() =>
+                  setSelectedWeek(week.number - 1 === firstUpcoming ? null : week.number - 1)
+                }
               />
               <IconButton
                 icon={ChevronRight}
                 label="Next week"
                 tone="filled"
                 disabled={week.number >= weeks.length}
-                onClick={() => setSelectedWeek(week.number + 1)}
+                onClick={() =>
+                  setSelectedWeek(week.number + 1 === firstUpcoming ? null : week.number + 1)
+                }
               />
             </div>
           </div>
@@ -232,8 +236,10 @@ function CalendarView({
 }) {
   const initial =
     startDate && today < startDate ? startDate : endDate && today > endDate ? endDate : today;
-  const [month, setMonth] = useState(initial);
-  const [selected, setSelected] = useState(initial);
+  const [browsedMonth, setMonth] = useState<string | null>(null);
+  const [selectedDate, setSelected] = useState<string | null>(null);
+  const month = browsedMonth ?? selectedDate ?? initial;
+  const selected = selectedDate ?? initial;
   const grid = useMemo(() => monthGrid(month), [month]);
   const inPlan = (date: string) =>
     (!startDate || date >= startDate) && (!endDate || date <= endDate);
@@ -281,7 +287,7 @@ function CalendarView({
                 date === today && 'today',
                 date === selected && 'selected',
               )}
-              onClick={() => setSelected(date)}
+              onClick={() => setSelected(date === initial ? null : date)}
             >
               <span>{dayNumber(date)}</span>
               <span className="calendar-dots">

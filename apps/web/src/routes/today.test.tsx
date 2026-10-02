@@ -134,6 +134,55 @@ it('distinguishes dates beyond the prescribed coverage from rest days', async ()
   expect(screen.getByRole('button', { name: 'Plan it with your coach' })).toBeInTheDocument();
 });
 
+it('advances the displayed date and followed session after resuming on a new day', async () => {
+  mount();
+  await screen.findByText('Rest day');
+  vi.setSystemTime(new Date('2027-01-13T09:00:00'));
+  fireEvent(window, new Event('focus'));
+  expect(await screen.findByText('Not planned yet')).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Wednesday 13 January' })).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  );
+  expect(screen.getByText('Today’s workout')).toBeInTheDocument();
+  expect(screen.queryByText('Rest day')).not.toBeInTheDocument();
+});
+
+it('preserves an explicitly browsed date and resumes following after selecting today', async () => {
+  mount();
+  await screen.findByText('Rest day');
+  fireEvent.click(screen.getByRole('button', { name: 'Monday 11 January' }));
+  vi.setSystemTime(new Date('2027-01-13T09:00:00'));
+  fireEvent(window, new Event('focus'));
+  expect(screen.getByRole('button', { name: 'Monday 11 January' })).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  );
+  expect(screen.queryByText('Today’s workout')).not.toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: 'Wednesday 13 January' }));
+  vi.setSystemTime(new Date('2027-01-14T09:00:00'));
+  fireEvent(window, new Event('focus'));
+  expect(screen.getByRole('button', { name: 'Thursday 14 January' })).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  );
+  expect(screen.getByText('Today’s workout')).toBeInTheDocument();
+});
+
+it('rolls its week strip forward across Sunday without retaining yesterday as today', async () => {
+  vi.setSystemTime(new Date('2027-01-17T23:59:59'));
+  mount();
+  await screen.findByText('Not planned yet');
+  vi.setSystemTime(new Date('2027-01-18T00:00:00'));
+  fireEvent(window, new Event('focus'));
+  expect(screen.getByRole('button', { name: 'Monday 18 January' })).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  );
+  expect(screen.queryByRole('button', { name: 'Sunday 17 January' })).not.toBeInTheDocument();
+  expect(screen.getByText('Today’s workout')).toBeInTheDocument();
+});
+
 it('does not declare a rest day when coverage could not be loaded', async () => {
   mocks.get.mockImplementation(async (path: string) =>
     path === '/api/v1/plans'

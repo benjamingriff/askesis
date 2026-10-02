@@ -26,7 +26,6 @@ import {
   formatLong,
   formatPace,
   greeting,
-  localToday,
   startOfWeek,
   WEEKDAYS_SHORT,
 } from '../lib/format';
@@ -43,13 +42,14 @@ import {
 import { usePlanPreferences } from '../plan-selection';
 import { useUnits, type Units } from '../settings';
 import { useActivePlans } from './active-plans';
+import { useLocalToday } from '../lib/use-local-today';
 
 export function TodayPage() {
   const preferences = usePlanPreferences();
   const plans = useActivePlans();
   const selection = preferences.read();
   const plan = plans.data?.find((item) => item.id === selection?.planId) ?? plans.data?.[0];
-  const today = localToday();
+  const today = useLocalToday();
   return (
     <div className="page today">
       <header className="page-header">
@@ -94,7 +94,8 @@ function TodayForPlan({ plan, today }: { plan: Plan; today: string }) {
   const brief = useBriefState(plan.id, version);
   const units = useUnits(brief.data?.brief.unit);
   const chat = useOpenPlanChat(plan.id);
-  const [selected, setSelected] = useState(today);
+  const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  const selected = selectedDate ?? today;
   const [open, setOpen] = useState<WorkoutSummary | null>(null);
   const days = useMemo(
     () => Array.from({ length: 7 }, (_, i) => addDays(startOfWeek(today), i)),
@@ -148,7 +149,7 @@ function TodayForPlan({ plan, today }: { plan: Plan; today: string }) {
               aria-pressed={date === selected}
               aria-label={formatLong(date)}
               className={`strip-day${date === selected ? ' selected' : ''}${date === today ? ' today' : ''}`}
-              onClick={() => setSelected(date)}
+              onClick={() => setSelectedDate(date === today ? null : date)}
             >
               <span className="label">{WEEKDAYS_SHORT[index]!.slice(0, 1)}</span>
               <strong>{dayNumber(date)}</strong>
