@@ -106,8 +106,39 @@ export async function writeSchedule(
       .where('plan_version_id', '=', versionId)
       .where('id', '=', id)
       .executeTakeFirst();
-    if (!row) bad('Referenced content does not belong to this draft.');
+    if (!row) return bad('Referenced content does not belong to this draft.');
     return row;
+  }
+  const affected: Range[] = range ? [range] : [];
+  const affect = (startDate: string, endDate = startDate) => affected.push({ startDate, endDate });
+  async function affectExisting(
+    table: 'training_blocks' | 'training_weeks' | 'workouts',
+    id: string,
+    cascading = false,
+  ) {
+    const row = await existing(table, id);
+    if (table === 'workouts') affect(String(row.scheduled_date));
+    else affect(String(row.start_date), String(row.end_date));
+    if (!cascading || table === 'workouts') return;
+    // Capture children before deletion, even if an editable draft has dates
+    // outside its parents. Their prescriptions and rest days lose coverage too.
+    if (table === 'training_blocks') {
+      const weeks = await db
+        .selectFrom('training_weeks')
+        .select(['start_date', 'end_date'])
+        .where('plan_version_id', '=', versionId)
+        .where('block_id', '=', id)
+        .execute();
+      for (const week of weeks) affect(String(week.start_date), String(week.end_date));
+    }
+    const workouts = await db
+      .selectFrom('workouts as w')
+      .innerJoin('training_weeks as tw', 'tw.id', 'w.week_id')
+      .select('w.scheduled_date')
+      .where('w.plan_version_id', '=', versionId)
+      .where(table === 'training_weeks' ? 'tw.id' : 'tw.block_id', '=', id)
+      .execute();
+    for (const workout of workouts) affect(String(workout.scheduled_date));
   }
   if (range) {
     await db
@@ -125,7 +156,7 @@ export async function writeSchedule(
     ['training_blocks', input.deleteBlockIds],
   ] as const) {
     for (const id of ids) {
-      await existing(table, id);
+      await affectExisting(table, id, true);
       await db
         .deleteFrom(table)
         .where('id', '=', id)
@@ -141,7 +172,8 @@ export async function writeSchedule(
       );
     if (range && !inside(b.startDate, b.endDate, range))
       bad('New blocks must fit inside the replacement range.');
-    if (b.id) await existing('training_blocks', b.id);
+    if (b.id) await affectExisting('training_blocks', b.id);
+    affect(b.startDate, b.endDate);
     const id = b.id ?? randomUUID();
     const values = {
       title: b.title,
@@ -165,7 +197,8 @@ export async function writeSchedule(
       bad('Reuse existing week IDs as parent keys; range replacement cannot edit existing weeks.');
     if (range && !inside(w.startDate, w.endDate, range))
       bad('New weeks must fit inside the replacement range.');
-    if (w.id) await existing('training_weeks', w.id);
+    if (w.id) await affectExisting('training_weeks', w.id);
+    affect(w.startDate, w.endDate);
     const parent = blockIds.get(w.blockKey) ?? w.blockKey;
     await existing('training_blocks', parent);
     const id = w.id ?? randomUUID();
@@ -190,7 +223,8 @@ export async function writeSchedule(
   for (const w of input.workouts) {
     if (range && (!inside(w.date, w.date, range) || w.id))
       bad('Range replacement accepts new workouts only, dated within its range.');
-    if (w.id) await existing('workouts', w.id);
+    if (w.id) await affectExisting('workouts', w.id);
+    affect(w.date);
     const week = weekIds.get(w.weekKey) ?? w.weekKey;
     await existing('training_weeks', week);
     const id = w.id ?? randomUUID();
@@ -317,7 +351,17 @@ export async function writeSchedule(
     daily.set(d, (daily.get(d) ?? 0) + 1);
     if (daily.get(d)! > 2) bad('At most two runs can be scheduled per day.');
   }
-  if (range) await removeCoverage(db, versionId, range);
+  // Every mutation invalidates its old and new dates. A later unfinished batch
+  // must not inherit completion from an earlier batch in this same run.
+  // Merge affected ranges to avoid repeatedly splitting the same coverage rows.
+  const invalidated: Range[] = [];
+  for (const part of affected.sort((a, b) => a.startDate.localeCompare(b.startDate))) {
+    const previous = invalidated.at(-1);
+    if (previous && part.startDate <= day(previous.endDate, 1)) {
+      if (part.endDate > previous.endDate) previous.endDate = part.endDate;
+    } else invalidated.push({ ...part });
+  }
+  for (const part of invalidated) await removeCoverage(db, versionId, part);
   if (input.coverage) {
     await removeCoverage(db, versionId, input.coverage);
     await db

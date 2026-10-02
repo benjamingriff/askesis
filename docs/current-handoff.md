@@ -19,6 +19,21 @@ Do not place credentials, Clerk tokens, database URLs, Sentry credentials, or Ra
 
 ## Repository state at handoff
 
+### Phase 5 PR coverage correction — 2026-10-02
+
+PR #2's independent review identified stale coverage after a later unfinished
+schedule batch in the same run. Every schedule mutation now invalidates affected
+old and new dates before adding explicitly asserted coverage. Block and week
+deletions include cascading children, and unrelated coverage is retained.
+Generation progress is recalculated from the remaining coverage, so cancellation
+of a partial revision produces the incomplete-generation warning during lock
+review. Transaction rollback and same-batch coverage reassertion remain atomic.
+
+Nine database regression cases cover additions, edits, moves, cascading deletes,
+cancelled generation, coverage reassertion and invalid-batch rollback. All 62
+database integration tests plus SQL invariants pass. The API contract and
+database schema are unchanged.
+
 ### Phase 5 live acceptance and PR preparation — 2026-10-02
 
 The direct OpenAI Responses/tool smoke and signed-in coaching walkthrough passed

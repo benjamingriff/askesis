@@ -859,6 +859,147 @@ it('invalidates previous coverage inside a regeneration horizon without deleting
   ).toEqual([{ title: 'Revised easy run' }]);
 });
 
+it.each([
+  'delete workout',
+  'delete week',
+  'delete block',
+  'move workout',
+  'add workout',
+  'update workout',
+  'update week',
+  'update block',
+])('invalidates affected coverage after a later unfinished batch: %s', async (change) => {
+  const { claim, p } = await planning();
+  const first = (await tool(claim, 'apply_schedule_changes', {
+    ...batch,
+    generation: { startDate: '2027-01-01', endDate: '2027-01-14' },
+    coverage: { startDate: '2027-01-01', endDate: '2027-01-14' },
+    weeks: [
+      ...batch.weeks,
+      {
+        ...batch.weeks[0]!,
+        key: 'week2',
+        weekNumber: 2,
+        position: 2,
+        startDate: '2027-01-08',
+        endDate: '2027-01-14',
+      },
+    ],
+    workouts: [
+      ...batch.workouts,
+      { ...batch.workouts[0]!, key: 'easy2', weekKey: 'week2', date: '2027-01-09' },
+    ],
+  })) as { result: { ids: Record<string, string> } };
+  const ids = first.result.ids;
+  expect((await getRun(owner, claim.runId)).generation).toMatchObject({ status: 'completed' });
+  const input: z.infer<typeof ScheduleSchema> = {
+    blocks: [],
+    weeks: [],
+    workouts: [],
+    deleteWorkoutIds: [],
+    deleteWeekIds: [],
+    deleteBlockIds: [],
+    generation: null,
+    coverage: null,
+  };
+  let remaining = [
+    ['2027-01-01', '2027-01-01'],
+    ['2027-01-03', '2027-01-14'],
+  ];
+  let prescribedThrough: string | null = '2027-01-01';
+  if (change === 'delete workout') input.deleteWorkoutIds = [ids.easy1!];
+  if (change === 'delete week') {
+    input.deleteWeekIds = [ids.week1!];
+    remaining = [['2027-01-08', '2027-01-14']];
+    prescribedThrough = null;
+  }
+  if (change === 'delete block') {
+    input.deleteBlockIds = [ids.foundation!];
+    remaining = [];
+    prescribedThrough = null;
+  }
+  if (['move workout', 'add workout', 'update workout'].includes(change)) {
+    input.workouts = [
+      {
+        ...batch.workouts[0]!,
+        ...(change === 'add workout' ? {} : { id: ids.easy1! }),
+        weekKey: ids.week1!,
+        date: change === 'update workout' ? '2027-01-02' : '2027-01-04',
+        position: change === 'add workout' ? 2 : 1,
+        title: 'Revised prescription',
+      },
+    ];
+    if (change === 'move workout')
+      remaining = [
+        ['2027-01-01', '2027-01-01'],
+        ['2027-01-03', '2027-01-03'],
+        ['2027-01-05', '2027-01-14'],
+      ];
+    if (change === 'add workout') {
+      remaining = [
+        ['2027-01-01', '2027-01-03'],
+        ['2027-01-05', '2027-01-14'],
+      ];
+      prescribedThrough = '2027-01-03';
+    }
+  }
+  if (change === 'update week') {
+    input.weeks = [
+      { ...batch.weeks[0]!, id: ids.week1!, blockKey: ids.foundation!, title: 'Revised week' },
+    ];
+    remaining = [['2027-01-08', '2027-01-14']];
+    prescribedThrough = null;
+  }
+  if (change === 'update block') {
+    input.blocks = [{ ...batch.blocks[0]!, id: ids.foundation!, title: 'Revised block' }];
+    remaining = [];
+    prescribedThrough = null;
+  }
+  await tool(claim, 'apply_schedule_changes', input);
+  expect((await getBrief(owner, p.id)).coverage).toEqual(
+    remaining.map(([startDate, endDate]) => ({ startDate, endDate, current: true })),
+  );
+  await cancelRun(owner, claim.runId);
+  await finishRun(claim.runId, claim.token, { status: 'cancelled' });
+  expect((await getRun(owner, claim.runId)).generation).toMatchObject({
+    status: 'interrupted',
+    prescribedThrough,
+    endDate: '2027-01-14',
+  });
+  expect((await previewLock(owner, p.id)).findings).toContainEqual(
+    expect.objectContaining({ code: 'brief.generation_incomplete', severity: 'warning' }),
+  );
+});
+
+it('records reasserted coverage after invalidation and rolls back invalid revisions atomically', async () => {
+  const { claim, p } = await planning();
+  const first = (await tool(claim, 'apply_schedule_changes', batch)) as {
+    result: { ids: Record<string, string> };
+  };
+  const input = {
+    ...batch,
+    generation: null,
+    blocks: [],
+    weeks: [],
+    workouts: [
+      { ...batch.workouts[0]!, id: first.result.ids.easy1!, weekKey: first.result.ids.week1! },
+    ],
+  };
+  const before = await getBrief(owner, p.id);
+  await expect(
+    tool(claim, 'apply_schedule_changes', {
+      ...input,
+      coverage: null,
+      workouts: [{ ...input.workouts[0]!, date: '2027-01-15' }],
+    }),
+  ).rejects.toMatchObject({ code: 'SCHEDULE_INVALID' });
+  expect((await getBrief(owner, p.id)).coverage).toEqual(before.coverage);
+  expect((await getRun(owner, claim.runId)).generation).toMatchObject({ status: 'completed' });
+  await tool(claim, 'apply_schedule_changes', input);
+  expect((await getBrief(owner, p.id)).coverage).toEqual(before.coverage);
+  expect((await getRun(owner, claim.runId)).generation).toMatchObject({ status: 'completed' });
+});
+
 it('guards coverage boundaries and the original generation horizon in the database', async () => {
   const { claim, p } = await planning();
   const state = await getBrief(owner, p.id);
