@@ -31,6 +31,7 @@ import {
   type CoverageRange,
 } from '../lib/workouts';
 import type { Units } from '../settings';
+import { readStorage, writeStorage } from '../lib/storage';
 import { Stat, WeekChart } from './PlanWidgets';
 import { DayRow, WorkoutCard, WorkoutDialog } from './Workout';
 import { Button, Card, EmptyState, IconButton, Pill, Segmented, cx } from './ui';
@@ -66,7 +67,7 @@ export function Schedule({
   const firstUpcoming =
     current ?? weeks.find((w) => w.endDate >= today)?.number ?? weeks.at(-1)?.number ?? 1;
   const [mode, setMode] = useState<Mode>(() =>
-    localStorage.getItem(MODE_KEY) === 'calendar' ? 'calendar' : 'weeks',
+    readStorage(MODE_KEY) === 'calendar' ? 'calendar' : 'weeks',
   );
   const [selectedWeek, setSelectedWeek] = useState(firstUpcoming);
   const [open, setOpen] = useState<WorkoutSummary | null>(null);
@@ -95,7 +96,7 @@ export function Schedule({
           value={mode}
           onChange={(next) => {
             setMode(next);
-            localStorage.setItem(MODE_KEY, next);
+            writeStorage(MODE_KEY, next);
           }}
           options={[
             { value: 'weeks', label: 'Weeks', icon: List },

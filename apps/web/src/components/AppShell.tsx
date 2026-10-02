@@ -13,6 +13,7 @@ import {
 import { useState } from 'react';
 import { Link, NavLink, Outlet, useLocation } from 'react-router';
 import { useConversations } from '../chat';
+import { readStorage, writeStorage } from '../lib/storage';
 import { cx } from './ui';
 
 const TABS: { to: string; label: string; icon: LucideIcon }[] = [
@@ -40,7 +41,7 @@ export function initialsFor(name: string) {
 export function AppShell() {
   const chats = useConversations();
   const [collapsed, setCollapsed] = useState(
-    () => localStorage.getItem('askesis-sidebar-collapsed') === 'true',
+    () => readStorage('askesis-sidebar-collapsed') === 'true',
   );
   const { user } = useUser();
   const onChat = useLocation().pathname.startsWith('/chat');
@@ -48,7 +49,7 @@ export function AppShell() {
   const email = user?.primaryEmailAddress?.emailAddress ?? '';
   const toggle = () =>
     setCollapsed((value) => {
-      localStorage.setItem('askesis-sidebar-collapsed', String(!value));
+      writeStorage('askesis-sidebar-collapsed', String(!value));
       return !value;
     });
 

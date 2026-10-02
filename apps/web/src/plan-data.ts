@@ -21,7 +21,14 @@ export function planVersion(plan: Plan, view: PlanView): PlanVersion | null {
 export function useBriefState(planId: string, version: PlanVersion | null) {
   const draft = version?.state === 'draft';
   return useQuery({
-    queryKey: ['plans', planId, 'brief', draft ? undefined : version?.id],
+    queryKey: [
+      'plans',
+      planId,
+      'brief',
+      draft ? undefined : version?.id,
+      // Draft coverage and calibration change with the edit, including edits in other sessions.
+      ...(draft ? [version.id, version.editNumber] : []),
+    ],
     enabled: !!version,
     refetchOnWindowFocus: false,
     queryFn: async () =>
