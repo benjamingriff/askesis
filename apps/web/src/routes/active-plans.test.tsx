@@ -1,6 +1,7 @@
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { createMemoryRouter, RouterProvider } from 'react-router';
+import { focusManager } from '@tanstack/react-query';
 import { AccountQueryProvider } from '../query-provider';
 import { ActivePlansPage } from './active-plans';
 
@@ -87,7 +88,10 @@ beforeEach(() => {
             : brief,
   }));
 });
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  focusManager.setFocused(undefined);
+});
 
 it('requests explicit versions when switching source and plans, and remembers the selection', async () => {
   const page = mount();
@@ -136,4 +140,28 @@ it('shows an empty state without requesting an implicit schedule', async () => {
   mount();
   await screen.findByRole('heading', { name: 'No active plans' });
   expect(mocks.get).toHaveBeenCalledTimes(1);
+});
+
+it('offers retry after an initial load failure and displays the recovered plan', async () => {
+  mocks.get.mockResolvedValueOnce({ error: { error: { message: 'Plans unavailable' } } });
+  mount();
+  await screen.findByText('Plans unavailable');
+  expect(screen.queryByRole('heading', { name: 'First plan' })).not.toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+  await screen.findByRole('heading', { name: 'First plan' });
+  expect(screen.queryByText('Plans unavailable')).not.toBeInTheDocument();
+});
+
+it('shows a retryable refresh error alongside a cached empty collection', async () => {
+  mocks.get.mockResolvedValueOnce({ data: { plans: [] } });
+  mount();
+  await screen.findByRole('heading', { name: 'No active plans' });
+  mocks.get.mockResolvedValueOnce({ error: { error: { message: 'Plans unavailable' } } });
+  focusManager.setFocused(false);
+  focusManager.setFocused(true);
+  await screen.findByText('Plans unavailable');
+  expect(screen.getByRole('heading', { name: 'No active plans' })).toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+  await screen.findByRole('heading', { name: 'First plan' });
+  expect(screen.queryByText('Plans unavailable')).not.toBeInTheDocument();
 });

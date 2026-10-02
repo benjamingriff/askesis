@@ -6,6 +6,7 @@ import { AccountQueryProvider } from '../query-provider';
 import { api } from '../api';
 import type { Plan } from '../plan-data';
 import { PlanPage, PlansPage } from './plans';
+import { ActivePlansPage } from './active-plans';
 
 vi.mock('../api', () => ({ api: { GET: vi.fn(), POST: vi.fn(), PATCH: vi.fn() } }));
 const draft = {
@@ -81,6 +82,7 @@ function mount(path = '/plans/plan-1') {
   const router = createMemoryRouter(
     [
       { path: '/plans', element: <PlansPage /> },
+      { path: '/plan', element: <ActivePlansPage /> },
       { path: '/plans/:planId', element: <PlanPage /> },
       { path: '/chat/:conversationId', element: <h1>Plan chat</h1> },
     ],
@@ -96,12 +98,18 @@ function mount(path = '/plans/plan-1') {
 beforeEach(() => {
   vi.resetAllMocks();
   current = structuredClone(plan) as Plan;
-  vi.mocked(api.GET).mockImplementation((async (path: string) => {
+  vi.mocked(api.GET).mockImplementation((async (
+    path: string,
+    options?: { params?: { query?: { collection?: string } } },
+  ) => {
     const data =
       path === '/api/v1/plans/{planId}'
         ? structuredClone(current)
         : path === '/api/v1/plans'
-          ? { plans: [] }
+          ? {
+              plans:
+                options?.params?.query?.collection === 'active' ? [structuredClone(current)] : [],
+            }
           : path === '/api/v1/workouts'
             ? { workouts: [] }
             : path.endsWith('/revisions')
@@ -120,58 +128,77 @@ async function openMenuItem(name: string) {
   fireEvent.click(screen.getByRole('menuitem', { name }));
 }
 
-it('refreshes plan metadata and brief on focus while preserving the details form concurrency baseline', async () => {
-  mount();
-  await screen.findByText('Comfortable 10K');
-  await openMenuItem('Edit details');
-  fireEvent.change(screen.getByLabelText('Description'), { target: { value: 'Unsaved changes' } });
-  current = {
-    ...current,
-    stateVersion: 2,
-    draft: { ...draft, editNumber: 2, description: 'Remote description' },
-  };
-  const original = vi.mocked(api.GET).getMockImplementation()!;
-  vi.mocked(api.GET).mockImplementation((async (path: string, ...args: unknown[]) =>
-    path.endsWith('/brief')
-      ? {
-          data: {
-            ...briefState,
-            editNumber: 2,
-            brief: { ...briefState.brief, goal: 'Refreshed assumptions' },
-          },
-          response: new Response(),
-        }
-      : Reflect.apply(original, api, [path, ...args])) as typeof api.GET);
-  focusManager.setFocused(false);
-  focusManager.setFocused(true);
-  await screen.findByText('Refreshed assumptions');
-  expect(screen.getByLabelText('Description')).toHaveValue('Unsaved changes');
-  vi.mocked(api.PATCH).mockRejectedValueOnce(new Error('Review the remote changes first.'));
-  fireEvent.click(screen.getByRole('button', { name: 'Save changes' }));
-  await screen.findByText('Review the remote changes first.');
-  expect(api.PATCH).toHaveBeenCalledWith(
-    '/api/v1/plans/{planId}/draft',
-    expect.objectContaining({
-      body: expect.objectContaining({ expectedEditNumber: 1, description: 'Unsaved changes' }),
-    }),
-  );
-});
+it.each(['/plans/plan-1', '/plan'])(
+  'refreshes metadata and brief on %s while preserving the details form concurrency baseline',
+  async (path) => {
+    current.active = true;
+    mount(path);
+    await screen.findByText('Comfortable 10K');
+    await openMenuItem('Edit details');
+    fireEvent.change(screen.getByLabelText('Description'), {
+      target: { value: 'Unsaved changes' },
+    });
+    current = {
+      ...current,
+      stateVersion: 2,
+      draft: { ...draft, editNumber: 2, description: 'Remote description' },
+    };
+    const original = vi.mocked(api.GET).getMockImplementation()!;
+    vi.mocked(api.GET).mockImplementation((async (path: string, ...args: unknown[]) =>
+      path.endsWith('/brief')
+        ? {
+            data: {
+              ...briefState,
+              editNumber: 2,
+              brief: { ...briefState.brief, goal: 'Refreshed assumptions' },
+            },
+            response: new Response(),
+          }
+        : Reflect.apply(original, api, [path, ...args])) as typeof api.GET);
+    focusManager.setFocused(false);
+    focusManager.setFocused(true);
+    await screen.findByText('Refreshed assumptions');
+    expect(screen.getByLabelText('Description')).toHaveValue('Unsaved changes');
+    vi.mocked(api.PATCH).mockRejectedValueOnce(new Error('Review the remote changes first.'));
+    fireEvent.click(screen.getByRole('button', { name: 'Save changes' }));
+    await screen.findByText('Review the remote changes first.');
+    expect(api.PATCH).toHaveBeenCalledWith(
+      '/api/v1/plans/{planId}/draft',
+      expect.objectContaining({
+        body: expect.objectContaining({ expectedEditNumber: 1, description: 'Unsaved changes' }),
+      }),
+    );
+  },
+);
 
-it('preserves unsaved details when a background plan refresh fails', async () => {
-  mount();
-  await openMenuItem('Edit details');
-  fireEvent.change(screen.getByLabelText('Description'), { target: { value: 'Unsaved changes' } });
-  const original = vi.mocked(api.GET).getMockImplementation()!;
-  vi.mocked(api.GET).mockImplementation((async (path: string, ...args: unknown[]) => {
-    if (path === '/api/v1/plans/{planId}') throw new Error('Connection lost');
-    return Reflect.apply(original, api, [path, ...args]);
-  }) as typeof api.GET);
-  focusManager.setFocused(false);
-  focusManager.setFocused(true);
-  await screen.findByText('Connection lost');
-  expect(screen.getByRole('dialog')).toBeInTheDocument();
-  expect(screen.getByLabelText('Description')).toHaveValue('Unsaved changes');
-});
+it.each(['/plans/plan-1', '/plan'])(
+  'preserves unsaved details on %s through a failed background refresh and recovery',
+  async (path) => {
+    current.active = true;
+    mount(path);
+    await openMenuItem('Edit details');
+    fireEvent.change(screen.getByLabelText('Description'), {
+      target: { value: 'Unsaved changes' },
+    });
+    const original = vi.mocked(api.GET).getMockImplementation()!;
+    vi.mocked(api.GET).mockImplementation((async (path: string, ...args: unknown[]) => {
+      if (path === '/api/v1/plans/{planId}' || path === '/api/v1/plans')
+        throw new Error('Connection lost');
+      return Reflect.apply(original, api, [path, ...args]);
+    }) as typeof api.GET);
+    focusManager.setFocused(false);
+    focusManager.setFocused(true);
+    await screen.findByText('Connection lost');
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+    expect(screen.getByLabelText('Description')).toHaveValue('Unsaved changes');
+    vi.mocked(api.GET).mockImplementation(original);
+    focusManager.setFocused(false);
+    focusManager.setFocused(true);
+    await waitFor(() => expect(screen.queryByText('Connection lost')).not.toBeInTheDocument());
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+    expect(screen.getByLabelText('Description')).toHaveValue('Unsaved changes');
+  },
+);
 
 it.each(['workout', 'remaining'])(
   'shows failed coach shortcuts and retries with the %s context',

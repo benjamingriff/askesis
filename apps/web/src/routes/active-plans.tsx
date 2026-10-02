@@ -37,7 +37,7 @@ export function ActivePlansPage() {
         <LoadingState>Loading your plan…</LoadingState>
       </div>
     );
-  if (plans.error)
+  if (plans.error && !plans.data)
     return (
       <div className="page">
         <ErrorState message={plans.error.message} onRetry={() => void plans.refetch()} />
@@ -46,6 +46,9 @@ export function ActivePlansPage() {
   if (!plan)
     return (
       <div className="page">
+        {plans.error ? (
+          <ErrorState message={plans.error.message} onRetry={() => void plans.refetch()} />
+        ) : null}
         <header className="page-header">
           <div className="page-heading">
             <h1>Plan</h1>
@@ -72,28 +75,33 @@ export function ActivePlansPage() {
     );
 
   return (
-    <PlanView
-      key={plan.id}
-      plan={plan}
-      view={view}
-      onViewChange={(next) => select({ planId: plan.id, view: next })}
-      switcher={
-        plans.data.length > 1 ? (
-          <label className="plan-switcher">
-            <span className="sr-only">Active plan</span>
-            <select
-              value={plan.id}
-              onChange={(event) => select({ planId: event.target.value, view: 'locked' })}
-            >
-              {plans.data.map((item) => (
-                <option key={item.id} value={item.id}>
-                  {item.displayName}
-                </option>
-              ))}
-            </select>
-          </label>
-        ) : null
-      }
-    />
+    <>
+      {plans.error ? (
+        <ErrorState message={plans.error.message} onRetry={() => void plans.refetch()} />
+      ) : null}
+      <PlanView
+        key={plan.id}
+        plan={plan}
+        view={view}
+        onViewChange={(next) => select({ planId: plan.id, view: next })}
+        switcher={
+          plans.data && plans.data.length > 1 ? (
+            <label className="plan-switcher">
+              <span className="sr-only">Active plan</span>
+              <select
+                value={plan.id}
+                onChange={(event) => select({ planId: event.target.value, view: 'locked' })}
+              >
+                {plans.data.map((item) => (
+                  <option key={item.id} value={item.id}>
+                    {item.displayName}
+                  </option>
+                ))}
+              </select>
+            </label>
+          ) : null
+        }
+      />
+    </>
   );
 }
