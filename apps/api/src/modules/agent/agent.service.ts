@@ -1,5 +1,5 @@
 import { createHash, randomBytes } from 'node:crypto';
-import { sql, type Selectable, type Transaction } from 'kysely';
+import { sql, type Kysely, type Selectable, type Transaction } from 'kysely';
 import type { z } from 'zod';
 import { getDatabase } from '../../database/client.js';
 import { getApiConfig } from '../../config.js';
@@ -34,9 +34,10 @@ export const READY_MS = 60000;
 const json = (value: unknown): Json => JSON.parse(JSON.stringify(value)) as Json;
 export const digest = (token: string) => createHash('sha256').update(token).digest('hex');
 const rejected = () => new ChatError('LEASE_LOST', 'This execution is no longer authorized.', 409);
-export async function workerReady() {
+// Pass the open transaction when called inside one, so the check does not take a second pooled connection.
+export async function workerReady(db: Kysely<DB> | Tx = getDatabase()) {
   if (getApiConfig().CHAT_EXECUTION_MODE !== 'agent') return false;
-  return !!(await getDatabase()
+  return !!(await db
     .selectFrom('agent_workers')
     .select('id')
     .where('ready', '=', true)
@@ -357,49 +358,80 @@ export async function executeTool(
           if (name === 'read_schedule') {
             const input = ToolSchemas.read_schedule.parse(command.input);
             // IDs are required for precise edits; the semantic revision projection deliberately excludes them.
-            const tables = [
-              'training_blocks',
-              'training_weeks',
-              'workouts',
-              'workout_steps',
-              'step_completions',
-              'step_targets',
-              'workout_tags',
-            ] as const;
-            const entries = await Promise.all(
-              tables.map(async (table) => {
-                const rows = await db
-                  .selectFrom(table)
+            // Structure (blocks, weeks) is small and returned whole; prescriptions are filtered in SQL.
+            let workoutQuery = db
+              .selectFrom('workouts')
+              .selectAll()
+              .where('plan_version_id', '=', versionId);
+            if (input.startDate)
+              workoutQuery = workoutQuery.where(
+                'scheduled_date',
+                '>=',
+                sql<Date>`${input.startDate}::date`,
+              );
+            if (input.endDate)
+              workoutQuery = workoutQuery.where(
+                'scheduled_date',
+                '<=',
+                sql<Date>`${input.endDate}::date`,
+              );
+            const [blocks, weeks, workouts] = await Promise.all([
+              db
+                .selectFrom('training_blocks')
+                .selectAll()
+                .where('plan_version_id', '=', versionId)
+                .execute(),
+              db
+                .selectFrom('training_weeks')
+                .selectAll()
+                .where('plan_version_id', '=', versionId)
+                .execute(),
+              workoutQuery.execute(),
+            ]);
+            const workoutIds = workouts.map((w) => w.id);
+            const steps = workoutIds.length
+              ? await db
+                  .selectFrom('workout_steps')
                   .selectAll()
                   .where('plan_version_id', '=', versionId)
-                  .execute();
-                return [table, rows] as const;
-              }),
-            );
-            const schedule = Object.fromEntries(entries);
-            const workouts = schedule.workouts as Selectable<DB['workouts']>[];
-            const selected = workouts.filter(
-              (w) =>
-                (!input.startDate || String(w.scheduled_date) >= input.startDate) &&
-                (!input.endDate || String(w.scheduled_date) <= input.endDate),
-            );
-            const workoutIds = new Set(selected.map((w) => w.id));
-            const steps = schedule.workout_steps as Selectable<DB['workout_steps']>[];
-            const selectedSteps = steps.filter((s) => workoutIds.has(s.workout_id));
-            const stepIds = new Set(selectedSteps.map((s) => s.id));
+                  .where('workout_id', 'in', workoutIds)
+                  .execute()
+              : [];
+            const stepIds = steps.map((s) => s.id);
+            const [tags, completions, targets] = await Promise.all([
+              workoutIds.length
+                ? db
+                    .selectFrom('workout_tags')
+                    .selectAll()
+                    .where('plan_version_id', '=', versionId)
+                    .where('workout_id', 'in', workoutIds)
+                    .execute()
+                : [],
+              stepIds.length
+                ? db
+                    .selectFrom('step_completions')
+                    .selectAll()
+                    .where('plan_version_id', '=', versionId)
+                    .where('step_id', 'in', stepIds)
+                    .execute()
+                : [],
+              stepIds.length
+                ? db
+                    .selectFrom('step_targets')
+                    .selectAll()
+                    .where('plan_version_id', '=', versionId)
+                    .where('step_id', 'in', stepIds)
+                    .execute()
+                : [],
+            ]);
             response = {
-              ...schedule,
-              workouts: selected,
-              workout_steps: selectedSteps,
-              workout_tags: (schedule.workout_tags as Selectable<DB['workout_tags']>[]).filter(
-                (t) => workoutIds.has(t.workout_id),
-              ),
-              step_completions: (
-                schedule.step_completions as Selectable<DB['step_completions']>[]
-              ).filter((s) => stepIds.has(s.step_id)),
-              step_targets: (schedule.step_targets as Selectable<DB['step_targets']>[]).filter(
-                (s) => stepIds.has(s.step_id),
-              ),
+              training_blocks: blocks,
+              training_weeks: weeks,
+              workouts,
+              workout_steps: steps,
+              step_completions: completions,
+              step_targets: targets,
+              workout_tags: tags,
             };
           }
           if (name === 'update_plan_brief') {
@@ -528,6 +560,7 @@ export async function executeTool(
     })
     .catch((error: unknown) => {
       if (
+        (command.name === 'apply_schedule_changes' || command.name === 'replace_schedule_range') &&
         error &&
         typeof error === 'object' &&
         'code' in error &&
@@ -627,4 +660,21 @@ export async function sweepAgentRuns() {
           else await transition(db, run, 'failed', 'failed', 'WORKER_LOST');
         }
       });
+}
+// Each worker process registers a fresh identity; drop long-stale ones that no run references.
+export async function pruneAgentWorkers() {
+  await getDatabase()
+    .deleteFrom('agent_workers')
+    .where('last_seen_at', '<', new Date(Date.now() - 24 * 60 * 60 * 1000))
+    .where((eb) =>
+      eb.not(
+        eb.exists(
+          eb
+            .selectFrom('agent_runs')
+            .select('id')
+            .whereRef('agent_runs.worker_id', '=', 'agent_workers.id'),
+        ),
+      ),
+    )
+    .execute();
 }

@@ -181,3 +181,24 @@ it('keeps runtime config separate from database and human-auth credentials, and 
     parseAgentConfig({ OPENAI_API_KEY: 'secret-only', AGENT_BOOTSTRAP_TOKEN: 'short' }),
   ).toThrow('AGENT_BOOTSTRAP_TOKEN');
 });
+it('returns PLAN_REQUIRED to the model so it can create a draft, and caps the final reply length', async () => {
+  const model = new ScriptedModel([
+    modelResponse({
+      usage: new Usage(),
+      output: [functionCall('read_plan_context', {}, { callId: 'a' })],
+    }),
+    modelResponse({
+      usage: new Usage(),
+      output: [assistantMessage('x'.repeat(40000))],
+    }),
+  ]);
+  const api = new AgentApi('http://localhost');
+  vi.spyOn(api, 'tool').mockRejectedValueOnce(new ApiError('PLAN_REQUIRED', 409));
+  const result = await new SdkRuntime(config, model).execute(
+    context,
+    claim,
+    api,
+    new AbortController().signal,
+  );
+  expect(result.content).toHaveLength(32000);
+});

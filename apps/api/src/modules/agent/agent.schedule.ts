@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { sql, type Transaction } from 'kysely';
 import type { z } from 'zod';
 import type { DB } from '../../database/generated.js';
+import { Id } from '../plans/plan.common.js';
 import { PlanError } from '../plans/plan.service.js';
 import { readBrief, changed } from '../plans/brief.service.js';
 import { readAggregate } from '../plans/plan.aggregate.js';
@@ -52,6 +53,8 @@ export async function writeSchedule(db: Tx, versionId: string, input: Schedule, 
     keys.add(entity.key);
   }
   async function existing(table: 'training_blocks' | 'training_weeks' | 'workouts', id: string) {
+    // Unknown local keys fall through as raw strings; reject them before Postgres sees a bad uuid.
+    if (!Id.safeParse(id).success) bad('Referenced content does not belong to this draft.');
     const row = await db
       .selectFrom(table)
       .selectAll()

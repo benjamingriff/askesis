@@ -17,6 +17,7 @@ import { ApiError, type AgentApi, type Claim, type ExecutionContext } from './ap
 
 // Explicit policy before constructing a provider or making any model request.
 setTracingDisabled(true);
+const MAX_MESSAGE_CHARACTERS = 32000;
 export type RuntimeResult = { content: string; inputTokens: number; outputTokens: number };
 export type CoachingRuntime = {
   execute(
@@ -99,6 +100,7 @@ export class SdkRuntime implements CoachingRuntime {
                   'CONTEXT_TOO_LARGE',
                   'PLAN_ALREADY_BOUND',
                   'DRAFT_REQUIRED',
+                  'PLAN_REQUIRED',
                 ].includes(error.code)
               )
                 return JSON.stringify({
@@ -144,7 +146,8 @@ export class SdkRuntime implements CoachingRuntime {
     if (typeof result.finalOutput !== 'string' || !result.finalOutput.trim())
       throw new Error('Empty coaching response');
     return {
-      content: result.finalOutput,
+      // The API stores messages with a 32000-character limit.
+      content: result.finalOutput.slice(0, MAX_MESSAGE_CHARACTERS),
       inputTokens: result.runContext.usage.inputTokens,
       outputTokens: result.runContext.usage.outputTokens,
     };

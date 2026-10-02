@@ -20,7 +20,7 @@ import {
 const FinishSchema = z
   .object({
     status: z.enum(['completed', 'failed', 'cancelled']),
-    content: z.string().max(50000).optional(),
+    content: z.string().max(32000).optional(),
     failureCode: z
       .enum([
         'PROVIDER_ERROR',

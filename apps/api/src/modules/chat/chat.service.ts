@@ -27,12 +27,12 @@ type Run = Selectable<DB['agent_runs']>;
 const json = (value: unknown): Json => JSON.parse(JSON.stringify(value)) as Json;
 const iso = (value: Date | string | null) => (value instanceof Date ? value.toISOString() : value);
 const notFound = () => new ChatError('NOT_FOUND', 'Conversation or run not found.', 404);
-export async function chatCapabilities() {
+export async function chatCapabilities(db?: Tx) {
   const mode = getApiConfig().CHAT_EXECUTION_MODE;
-  return { executionAvailable: mode === 'test' || (await workerReady()), mode };
+  return { executionAvailable: mode === 'test' || (await workerReady(db)), mode };
 }
-async function available() {
-  if (!(await chatCapabilities()).executionAvailable)
+async function available(db?: Tx) {
+  if (!(await chatCapabilities(db)).executionAvailable)
     throw new ChatError(
       'AGENT_UNAVAILABLE',
       'Coaching is not available yet. Conversation history is still available.',
@@ -253,7 +253,7 @@ export async function appendMessage(
 }
 async function accept(db: Tx, row: Conversation, input: Send) {
   await writable(db, row);
-  await available();
+  await available(db);
   const context = await contextFor(db, row);
   targetMatches(context, input.target);
   if (await activeRun(db, row))
@@ -299,7 +299,7 @@ export async function createConversation(
       if (plan.archived_at)
         throw new ChatError('PLAN_ARCHIVED', 'Unarchive this plan before creating a conversation.');
     }
-    if (input.initialMessage) await available();
+    if (input.initialMessage) await available(db);
     const id = await createConversationRow(db, owner, input.planId ?? null);
     const row = await ownedConversation(db, owner, id, true);
     const accepted = input.initialMessage ? await accept(db, row, input.initialMessage) : null;

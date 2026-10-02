@@ -234,7 +234,7 @@ async function mutate(
               'IDEMPOTENCY_CONFLICT',
               'This request key was used for different input.',
             );
-          return BriefStateSchema.parse(cached.response_body);
+          return BriefStateSchema.parse(upgradeCachedBrief(cached.response_body));
         }
       }
       const { plan, version } = await ownedVersion(db, athleteId, planId, undefined, true);
@@ -262,6 +262,22 @@ async function mutate(
           .execute();
       return result;
     });
+}
+// Responses cached before coverage and calibration provenance existed lack those fields.
+function upgradeCachedBrief(body: unknown): unknown {
+  if (!body || typeof body !== 'object' || Array.isArray(body)) return body;
+  const state = body as Record<string, unknown>;
+  return {
+    coverage: [],
+    ...state,
+    calibrations: Array.isArray(state.calibrations)
+      ? state.calibrations.map((c: unknown) =>
+          c && typeof c === 'object'
+            ? { provenance: 'user_supplied', estimateBasis: null, ...c }
+            : c,
+        )
+      : state.calibrations,
+  };
 }
 export async function changed(db: Database, id: string, clear: boolean, stale: boolean) {
   if (clear)

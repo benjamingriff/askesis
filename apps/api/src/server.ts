@@ -1,10 +1,10 @@
-import { startAgentSweeper } from './modules/agent/agent.sweeper.js';
 import './instrument.js';
 import { serve } from '@hono/node-server';
 import { app } from './app.js';
 import { getApiConfig } from './config.js';
 import { closeDatabase } from './database/client.js';
 import { logger } from './logger.js';
+import { startAgentSweeper } from './modules/agent/agent.sweeper.js';
 import { startTestExecutor } from './modules/chat/chat.executor.js';
 
 const config = getApiConfig();

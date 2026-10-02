@@ -4,6 +4,8 @@ import { type AgentApi, ApiError, type Claim } from './api.js';
 import { PROMPT_VERSION, type AgentConfig } from './config.js';
 import { failureCode, type CoachingRuntime } from './runtime.js';
 
+const MAX_HEARTBEAT_FAILURES = 3;
+
 export class Worker {
   readonly id = randomUUID();
   private stopping = false;
@@ -31,14 +33,25 @@ export class Worker {
     const remaining = Math.max(1, Date.parse(claim.deadlineAt) - Date.now());
     const deadline = setTimeout(() => controller.abort('EXECUTION_TIMEOUT'), remaining);
     let heartbeat: Promise<void> | undefined;
+    // A single failed heartbeat (network blip, or a tool call holding the run lock) must not
+    // discard the run while its lease is still valid; give up only after repeated failures.
+    let failures = 0;
     const interval = setInterval(() => {
       if (heartbeat) return;
       heartbeat = this.api
         .heartbeat(claim)
         .then((state) => {
+          failures = 0;
           if (state.status === 'cancelling') controller.abort('CANCELLED');
         })
-        .catch(() => controller.abort('LEASE_LOST'))
+        .catch((error: unknown) => {
+          failures += 1;
+          if (
+            failures >= MAX_HEARTBEAT_FAILURES ||
+            (error instanceof ApiError && [401, 403, 404, 409].includes(error.status))
+          )
+            controller.abort('LEASE_LOST');
+        })
         .finally(() => {
           heartbeat = undefined;
         });

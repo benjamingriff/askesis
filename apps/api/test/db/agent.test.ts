@@ -417,6 +417,17 @@ it('cancellation rejects new mutations and completion while preserving previousl
       .messages,
   ).toHaveLength(1);
 });
+it('rejects unknown local parent keys as a recoverable schedule error, not a database failure', async () => {
+  const { claim } = await planning();
+  await expect(
+    tool(claim, 'apply_schedule_changes', {
+      ...batch,
+      blocks: [],
+      weeks: [],
+      workouts: [{ ...batch.workouts[0]!, weekKey: 'misspelled-week' }],
+    }),
+  ).rejects.toMatchObject({ code: 'SCHEDULE_INVALID' });
+});
 it('rejects external edits, foreign content references and lifecycle tool names', async () => {
   const { claim, p } = await planning();
   const c = await runContext(claim.runId, claim.token);
