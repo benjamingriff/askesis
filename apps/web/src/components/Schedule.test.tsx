@@ -120,3 +120,20 @@ it('preserves an explicitly browsed calendar month across rollover', () => {
   page.rerender(calendarSchedule('2027-02-01'));
   expect(screen.getByRole('grid', { name: 'December 2026' })).toBeInTheDocument();
 });
+
+it('labels empty days as unplanned when generation stopped before any coverage was recorded', () => {
+  render(
+    <AccountQueryProvider>
+      <Schedule
+        workouts={[workout]}
+        startDate="2027-01-11"
+        endDate="2027-01-24"
+        coverage={[]}
+        units="km"
+        today="2027-01-12"
+      />
+    </AccountQueryProvider>,
+  );
+  expect(screen.queryByText('Rest day')).not.toBeInTheDocument();
+  expect(screen.getAllByText('Not planned yet')).toHaveLength(6);
+});

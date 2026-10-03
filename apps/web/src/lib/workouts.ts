@@ -137,8 +137,9 @@ export function isCovered(date: string, coverage: CoverageRange[] | null | undef
 }
 
 /**
- * Calendar weeks (Monday start) spanning the plan dates. When coverage is unknown (legacy plans)
- * every week with a workout counts as planned.
+ * Calendar weeks (Monday start) spanning the plan dates, extended to include any saved workouts
+ * outside them so those stay visible. `coverage` is null when unknown (legacy plans); then every
+ * week with a workout counts as planned.
  */
 export function summarizeWeeks(
   workouts: WorkoutSummary[],
@@ -147,20 +148,28 @@ export function summarizeWeeks(
   coverage: CoverageRange[] | null,
 ): WeekSummary[] {
   const dates = workouts.map((w) => w.scheduledDate).sort();
-  const first = startDate ?? dates[0];
-  const last = endDate ?? dates.at(-1);
+  const bounds = [startDate, endDate, dates[0], dates.at(-1)].filter(
+    (date): date is string => !!date,
+  );
+  const first = bounds.reduce<string | undefined>(
+    (min, d) => (!min || d < min ? d : min),
+    undefined,
+  );
+  const last = bounds.reduce<string | undefined>(
+    (max, d) => (!max || d > max ? d : max),
+    undefined,
+  );
   if (!first || !last) return [];
   const start = startOfWeek(first);
   const count = Math.max(1, Math.floor(daysBetween(start, last) / 7) + 1);
-  const knownCoverage = coverage && coverage.length > 0 ? coverage : null;
   return Array.from({ length: count }, (_, index) => {
     const weekStart = addDays(start, index * 7);
     const weekEnd = addDays(weekStart, 6);
     const inWeek = workouts.filter(
       (w) => w.scheduledDate >= weekStart && w.scheduledDate <= weekEnd,
     );
-    const planned = knownCoverage
-      ? knownCoverage.some((range) => range.startDate <= weekEnd && range.endDate >= weekStart)
+    const planned = coverage
+      ? coverage.some((range) => range.startDate <= weekEnd && range.endDate >= weekStart)
       : inWeek.length > 0 || weekEnd < (dates[0] ?? weekStart);
     return {
       number: index + 1,

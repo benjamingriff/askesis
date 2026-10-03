@@ -49,6 +49,27 @@ describe('summarizeWeeks', () => {
   });
 });
 
+describe('summarizeWeeks with out-of-range workouts', () => {
+  it('extends the weeks to keep workouts outside edited plan dates visible', () => {
+    const weeks = summarizeWeeks(
+      [workout('2027-01-05', 6000), workout('2027-01-20', 8000)],
+      '2027-01-04',
+      '2027-01-10',
+      null,
+    );
+    expect(weeks.map((w) => [w.startDate, w.metres])).toEqual([
+      ['2027-01-04', 6000],
+      ['2027-01-11', 0],
+      ['2027-01-18', 8000],
+    ]);
+  });
+
+  it('treats known empty coverage as nothing prescribed rather than unknown', () => {
+    const weeks = summarizeWeeks([workout('2027-01-05', 6000)], '2027-01-04', '2027-01-17', []);
+    expect(weeks.map((w) => w.planned)).toEqual([true, false]);
+  });
+});
+
 describe('intensitySegments', () => {
   it.each([
     ['zone', 'metres', 1000],

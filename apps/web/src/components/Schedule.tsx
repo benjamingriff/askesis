@@ -58,6 +58,7 @@ export function Schedule({
   version?: Pick<PlanVersion, 'id' | 'editNumber'> | null | undefined;
   startDate: string | null;
   endDate: string | null;
+  /** Recorded coverage, or null when unknown (see `knownCoverage`). */
   coverage: CoverageRange[] | null;
   units: Units;
   today: string;
@@ -77,11 +78,10 @@ export function Schedule({
   const [selectedWeek, setSelectedWeek] = useFollowingState(firstUpcoming);
   const dialog = useWorkoutSelection(workouts, version?.id);
   const week = weeks.find((w) => w.number === selectedWeek) ?? weeks[0];
-  const knownCoverage = coverage && coverage.length > 0 ? coverage : null;
   const dayStatus = (date: string) =>
     (startDate && date < startDate) || (endDate && date > endDate)
       ? ('outside' as const)
-      : knownCoverage && !isCovered(date, knownCoverage)
+      : coverage && !isCovered(date, coverage)
         ? ('unplanned' as const)
         : ('planned' as const);
 

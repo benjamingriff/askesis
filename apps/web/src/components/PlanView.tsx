@@ -4,6 +4,7 @@ import { Link } from 'react-router';
 import { daysBetween, formatRange, startOfWeek } from '../lib/format';
 import { useLocalToday } from '../lib/use-local-today';
 import {
+  knownCoverage,
   latestCalibration,
   planVersion,
   useBriefState,
@@ -190,7 +191,7 @@ export function PlanView({
               version={version}
               startDate={version.startDate}
               endDate={version.endDate}
-              coverage={brief.data.coverage}
+              coverage={knownCoverage(brief.data)}
               units={units}
               today={today}
               onAskCoach={

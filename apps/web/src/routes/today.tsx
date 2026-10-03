@@ -31,6 +31,7 @@ import {
 } from '../lib/format';
 import { inferKind, isCovered, KIND_META, workoutsOn } from '../lib/workouts';
 import {
+  knownCoverage,
   latestCalibration,
   planVersion,
   useBriefState,
@@ -123,8 +124,8 @@ function TodayForPlan({ plan, today }: { plan: Plan; today: string }) {
     (!!version?.startDate && selected < version.startDate) ||
     (!!version?.endDate && selected > version.endDate);
   // Legacy plans have no recorded coverage; only flag gaps when coverage is known.
-  const coverage = brief.data?.coverage ?? [];
-  const unplanned = !outsidePlan && coverage.length > 0 && !isCovered(selected, coverage);
+  const coverage = brief.data ? knownCoverage(brief.data) : null;
+  const unplanned = !outsidePlan && !!coverage && !isCovered(selected, coverage);
 
   return (
     <>

@@ -77,6 +77,16 @@ export function useWorkoutDetail(
   });
 }
 
+/**
+ * Recorded schedule coverage, or `null` when it is unknown (legacy plans). Once generation has been
+ * attempted, an empty list is known coverage: nothing is fully prescribed yet.
+ */
+export function knownCoverage(
+  state: Pick<BriefState, 'coverage' | 'generations'>,
+): BriefState['coverage'] | null {
+  return state.coverage.length || state.generations?.length ? state.coverage : null;
+}
+
 export function latestCalibration(state: BriefState | undefined): Calibration | undefined {
   return state?.calibrations.at(-1);
 }

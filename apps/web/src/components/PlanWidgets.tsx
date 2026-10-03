@@ -2,7 +2,13 @@ import type { CSSProperties } from 'react';
 import { Archive, CheckCircle2, Clock3, Lock, PencilLine, TriangleAlert } from 'lucide-react';
 import { addDays, formatDistance, formatPace, formatShort, formatShortYear } from '../lib/format';
 import type { WeekSummary } from '../lib/workouts';
-import { isEstimate, type BriefState, type Calibration, type Plan } from '../plan-data';
+import {
+  isEstimate,
+  knownCoverage,
+  type BriefState,
+  type Calibration,
+  type Plan,
+} from '../plan-data';
 import type { Units } from '../settings';
 import { ZONE_COLORS } from '../theme/palette';
 import { Pill, cx } from './ui';
@@ -35,7 +41,7 @@ export function StatusPill({ plan, view }: { plan: Plan; view?: 'locked' | 'draf
 
 export function coverageGaps(state: Pick<BriefState, 'startDate' | 'endDate' | 'coverage'>) {
   const gaps: { start: string; end: string }[] = [];
-  if (state.startDate && state.endDate && state.coverage.length) {
+  if (state.startDate && state.endDate && knownCoverage(state)) {
     let next = state.startDate;
     for (const range of state.coverage) {
       if (range.startDate > next) gaps.push({ start: next, end: addDays(range.startDate, -1) });
@@ -53,7 +59,7 @@ export function CoverageNote({ state }: { state: BriefState }) {
   const generating = state.generations?.find((g) => g.status === 'in_progress');
   const stale = state.coverage.some((range) => !range.current);
   const through = state.coverage.at(-1)?.endDate;
-  if (!state.coverage.length)
+  if (!knownCoverage(state))
     return (
       <div className="coverage-note">
         <Clock3 size={18} aria-hidden="true" />
@@ -74,9 +80,11 @@ export function CoverageNote({ state }: { state: BriefState }) {
       )}
       <div>
         <strong>
-          {gaps.length
-            ? `Prescribed through ${through ? formatShort(through) : '—'}`
-            : 'Planned through the end date'}
+          {!gaps.length
+            ? 'Planned through the end date'
+            : through
+              ? `Prescribed through ${formatShort(through)}`
+              : 'Nothing fully prescribed yet'}
         </strong>
         {gaps.length ? (
           <small>

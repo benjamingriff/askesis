@@ -8,7 +8,7 @@ import { Card, ErrorState, LoadingState, Pill } from '../components/ui';
 import { formatRange } from '../lib/format';
 import { useLocalToday } from '../lib/use-local-today';
 import { result } from '../lib/result';
-import { useBriefState, useWorkouts } from '../plan-data';
+import { knownCoverage, useBriefState, useWorkouts } from '../plan-data';
 import { useUnits } from '../settings';
 
 /** Read-only inspection of saved draft content, including the raw aggregate for debugging. */
@@ -95,7 +95,7 @@ export function PlanDraftPage() {
           version={version}
           startDate={version.startDate}
           endDate={version.endDate}
-          coverage={brief.data.coverage}
+          coverage={knownCoverage(brief.data)}
           units={units}
           today={today}
         />

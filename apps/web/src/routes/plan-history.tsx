@@ -18,7 +18,7 @@ import {
 import { formatDateTime, formatRange, formatShort } from '../lib/format';
 import { useLocalToday } from '../lib/use-local-today';
 import { result } from '../lib/result';
-import { useBriefState, useWorkouts } from '../plan-data';
+import { knownCoverage, useBriefState, useWorkouts } from '../plan-data';
 import { usePlanPreferences } from '../plan-selection';
 import { useUnits } from '../settings';
 
@@ -323,7 +323,7 @@ function RevisionView({ planId, revisionId }: { planId: string; revisionId: stri
               version={revision}
               startDate={revision.startDate}
               endDate={revision.endDate}
-              coverage={brief.data.coverage}
+              coverage={knownCoverage(brief.data)}
               units={units}
               today={today}
             />
