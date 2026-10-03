@@ -19,6 +19,7 @@ import {
   type ThemeColors,
   type ThemeId,
 } from './theme/palette';
+import { readStorage, writeStorage } from './lib/storage';
 
 export type ThemeMode = 'system' | 'dark' | 'light';
 /** `plan` follows the unit chosen in each plan's brief. */
@@ -77,7 +78,7 @@ export function buildTheme(settings: Settings, systemScheme: 'light' | 'dark'): 
 
 function readSettings(): Settings {
   try {
-    const raw: unknown = JSON.parse(localStorage.getItem(STORAGE_KEY) ?? 'null');
+    const raw: unknown = JSON.parse(readStorage(STORAGE_KEY) ?? 'null');
     if (!raw || typeof raw !== 'object') return DEFAULT_SETTINGS;
     const value = raw as Partial<Settings>;
     return {
@@ -172,25 +173,13 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const theme = useMemo(() => buildTheme(settings, scheme), [settings, scheme]);
   useEffect(() => applyTheme(theme), [theme]);
 
-  const update = useCallback((patch: Partial<Settings>) => {
-    setSettings((current) => {
-      const next = { ...current, ...patch };
-      try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-      } catch {
-        /* Preferences are optional when storage is unavailable. */
-      }
-      return next;
-    });
-  }, []);
-  const reset = useCallback(() => {
-    try {
-      localStorage.removeItem(STORAGE_KEY);
-    } catch {
-      /* Optional preference. */
-    }
-    setSettings(DEFAULT_SETTINGS);
-  }, []);
+  useEffect(() => writeStorage(STORAGE_KEY, JSON.stringify(settings)), [settings]);
+
+  const update = useCallback(
+    (patch: Partial<Settings>) => setSettings((current) => ({ ...current, ...patch })),
+    [],
+  );
+  const reset = useCallback(() => setSettings(DEFAULT_SETTINGS), []);
 
   const value = useMemo(
     () => ({ settings, theme, update, reset }),

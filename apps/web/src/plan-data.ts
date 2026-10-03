@@ -17,19 +17,21 @@ export function planVersion(plan: Plan, view: PlanView): PlanVersion | null {
   return view === 'draft' ? (plan.draft ?? plan.locked) : (plan.locked ?? plan.draft);
 }
 
+/**
+ * Query-key segment for one saved state of a version. Draft edits advance `editNumber`, so any
+ * query keyed by it refetches after coach, human or other-session edits.
+ */
+export function versionKey(version: Pick<PlanVersion, 'id' | 'editNumber'> | null | undefined) {
+  return [version?.id, version?.editNumber] as const;
+}
+
 /** The brief, calibrations and prescribed coverage for one version of a plan. */
 export function useBriefState(planId: string, version: PlanVersion | null) {
   const draft = version?.state === 'draft';
   return useQuery({
-    queryKey: [
-      'plans',
-      planId,
-      'brief',
-      draft ? undefined : version?.id,
-      // Draft coverage and calibration change with the edit, including edits in other sessions.
-      ...(draft ? [version.id, version.editNumber] : []),
-    ],
+    queryKey: ['plans', planId, 'brief', ...versionKey(version)],
     enabled: !!version,
+    // Locked versions never change, and draft changes advance editNumber (part of the key).
     refetchOnWindowFocus: false,
     queryFn: async () =>
       draft
@@ -46,7 +48,7 @@ export function useBriefState(planId: string, version: PlanVersion | null) {
 
 export function useWorkouts(version: Pick<PlanVersion, 'id' | 'editNumber'> | null | undefined) {
   return useQuery({
-    queryKey: ['plan-workouts', version?.id, version?.editNumber],
+    queryKey: ['plan-workouts', ...versionKey(version)],
     enabled: !!version,
     queryFn: async () =>
       result(
@@ -61,7 +63,7 @@ export function useWorkoutDetail(
 ) {
   return useQuery<WorkoutDetail>({
     // Under 'plan-workouts' so coach edits and calibration updates invalidate resolved paces.
-    queryKey: ['plan-workouts', 'detail', workoutId, version?.id, version?.editNumber],
+    queryKey: ['plan-workouts', 'detail', workoutId, ...versionKey(version)],
     enabled: !!workoutId,
     staleTime: 60_000,
     queryFn: async () =>

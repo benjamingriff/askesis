@@ -2,8 +2,6 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Archive,
   ArchiveRestore,
-  CheckCircle2,
-  CircleAlert,
   ClipboardList,
   FileSearch,
   History,
@@ -15,17 +13,16 @@ import {
   Power,
   PowerOff,
   Trash2,
-  TriangleAlert,
 } from 'lucide-react';
-import { useCallback, useRef, useState } from 'react';
-import { useBeforeUnload, useBlocker, useNavigate } from 'react-router';
+import { useRef, useState } from 'react';
+import { useNavigate } from 'react-router';
 import { api } from '../api';
-import { formatShort } from '../lib/format';
 import { result } from '../lib/result';
-import type { Plan, Preview } from '../plan-data';
 import { usePlanPreferences } from '../plan-selection';
-import { PlanningReview } from './PlanningReview';
-import { Button, CheckRow, Dialog, Menu, Notice, Pill } from './ui';
+import type { Plan, Preview } from '../plan-data';
+import { Button, Dialog, Menu, Notice } from './ui';
+import { EditDetailsDialog } from './EditDetailsDialog';
+import { LockReviewDialog } from './LockReviewDialog';
 
 export function useRequestKey() {
   const keys = useRef(new Map<string, string>());
@@ -91,12 +88,10 @@ export function PlanToolbar({
   plan,
   onChanged,
   onShowHistory,
-  onDetailsOpenChange,
 }: {
   plan: Plan;
   onChanged?: ((plan: Plan, action: Action | 'details') => void) | undefined;
   onShowHistory?: (() => void) | undefined;
-  onDetailsOpenChange?: ((plan: Plan | null) => void) | undefined;
 }) {
   const client = useQueryClient();
   const navigate = useNavigate();
@@ -203,7 +198,6 @@ export function PlanToolbar({
   });
 
   const open = (next: Confirm) => {
-    onDetailsOpenChange?.(next === 'details' ? plan : null);
     mutation.reset();
     setLocked(null);
     setConfirm(next);
@@ -211,7 +205,6 @@ export function PlanToolbar({
   };
   const close = () => {
     if (mutation.isPending) return;
-    if (confirm === 'details') onDetailsOpenChange?.(null);
     setConfirm(null);
     setPreview(null);
     setLocked(null);
@@ -364,7 +357,6 @@ export function PlanToolbar({
           plan={plan}
           onClose={close}
           onSaved={(updated) => {
-            onDetailsOpenChange?.(null);
             setConfirm(null);
             void settle(updated, 'details');
           }}
@@ -459,498 +451,6 @@ function ConfirmDialog({
           {error}
         </Notice>
       ) : null}
-    </Dialog>
-  );
-}
-
-const CHANGE_LABEL: Record<string, string> = {
-  added: 'New',
-  new: 'New',
-  changed: 'Edited',
-  updated: 'Edited',
-  moved: 'Moved',
-  removed: 'Removed',
-  deleted: 'Removed',
-};
-
-function LockReviewDialog({
-  open,
-  plan,
-  preview,
-  validating,
-  validateError,
-  briefConfirmed,
-  acknowledged,
-  onBriefConfirmed,
-  onAcknowledged,
-  busy,
-  error,
-  lockedVersion,
-  onRetry,
-  onLock,
-  onClose,
-}: {
-  open: boolean;
-  plan: Plan;
-  preview: Preview | null;
-  validating: boolean;
-  validateError?: string | undefined;
-  briefConfirmed: boolean;
-  acknowledged: boolean;
-  onBriefConfirmed: (value: boolean) => void;
-  onAcknowledged: (value: boolean) => void;
-  busy: boolean;
-  error?: string | undefined;
-  lockedVersion: number | null;
-  onRetry: () => void;
-  onLock: () => void;
-  onClose: () => void;
-}) {
-  if (!open) return null;
-  const nextVersion = (plan.locked?.versionNumber ?? 0) + 1;
-  if (lockedVersion !== null)
-    return (
-      <Dialog
-        open
-        size="sm"
-        onClose={onClose}
-        title={`Plan v${lockedVersion} locked`}
-        footer={
-          <Button variant="primary" onClick={onClose}>
-            Done
-          </Button>
-        }
-      >
-        <div className="lock-success">
-          <span>
-            <Lock size={40} aria-hidden="true" />
-          </span>
-          <p>
-            Your brief, pace guides and workouts are frozen together as version {lockedVersion}.
-          </p>
-        </div>
-      </Dialog>
-    );
-  const errors = preview?.findings.filter((f) => f.severity === 'error') ?? [];
-  const warnings = preview?.findings.filter((f) => f.severity === 'warning') ?? [];
-  const blocking = errors.some(
-    (f) => !(f.code === 'brief.confirmation_required' && briefConfirmed),
-  );
-  const needsBrief = !!preview?.briefReview && !preview.briefReview.confirmed;
-  const ready =
-    !!preview && preview.hasChanges && !blocking && (!warnings.length || acknowledged) && !busy;
-  const workouts = preview?.summary.affectedWorkouts ?? [];
-  const entities = Object.entries(preview?.summary.entities ?? {}).filter(
-    ([, counts]) => counts.added || counts.changed || counts.removed,
-  );
-  return (
-    <Dialog
-      open
-      size="lg"
-      busy={busy}
-      onClose={onClose}
-      title={`Lock plan v${nextVersion}`}
-      description="Locking makes this version immutable. Confirming and locking are human decisions — your coach can’t do them for you."
-      footer={
-        <>
-          <Button variant="ghost" disabled={busy} onClick={onClose}>
-            Keep editing
-          </Button>
-          <Button
-            variant="primary"
-            icon={Lock}
-            busy={busy}
-            disabled={!ready}
-            aria-label="Confirm and lock version"
-            onClick={onLock}
-          >
-            Lock plan v{nextVersion}
-          </Button>
-        </>
-      }
-    >
-      <div className="lock-review" aria-label="Lock review">
-        {validating ? <p role="status">Checking the draft…</p> : null}
-        {validateError ? (
-          <Notice
-            tone="danger"
-            role="alert"
-            action={
-              <Button size="sm" variant="ghost" onClick={onRetry}>
-                Retry
-              </Button>
-            }
-          >
-            {validateError}
-          </Notice>
-        ) : null}
-        {error ? (
-          <Notice
-            tone="danger"
-            role="alert"
-            action={
-              <Button size="sm" variant="ghost" onClick={onRetry}>
-                Review again
-              </Button>
-            }
-          >
-            {error}
-          </Notice>
-        ) : null}
-        {preview ? (
-          <>
-            {plan.draft?.basedOnVersionId &&
-            plan.locked &&
-            plan.draft.basedOnVersionId !== plan.locked.id ? (
-              <Notice tone="warning" icon={TriangleAlert}>
-                This draft was restored from an older version. Locking it replaces the current
-                schedule with the restored content while preserving all previous versions.
-              </Notice>
-            ) : null}
-            {!preview.hasChanges ? (
-              <Notice tone="neutral" icon={CircleAlert}>
-                No content changes since the locked version. Edit the draft or discard it; no new
-                version will be created.
-              </Notice>
-            ) : null}
-            {preview.briefReview ? (
-              <div className="review-card">
-                <PlanningReview state={preview.briefReview} />
-                {needsBrief ? (
-                  <CheckRow
-                    checked={briefConfirmed}
-                    onChange={onBriefConfirmed}
-                    label="I confirm the planning assumptions and pace guides shown above."
-                    hint="Your coach can update assumptions, but only you can confirm them."
-                  />
-                ) : (
-                  <p className="confirmed">
-                    <CheckCircle2 size={16} aria-hidden="true" /> Assumptions already confirmed
-                  </p>
-                )}
-              </div>
-            ) : null}
-            <div className="review-card">
-              <h3>What’s changing{plan.locked ? ` from v${plan.locked.versionNumber}` : ''}</h3>
-              {preview.summary.headerChanges.length ? (
-                <p className="muted">Changed fields: {preview.summary.headerChanges.join(', ')}.</p>
-              ) : null}
-              {workouts.length ? (
-                <ul className="change-list">
-                  {workouts.slice(0, 12).map((workout, index) => (
-                    <li key={index}>
-                      <Pill tone="accent">{CHANGE_LABEL[workout.change] ?? workout.change}</Pill>
-                      <span>
-                        {formatShort(workout.date)} · {workout.title}
-                        {workout.previousDate && workout.previousDate !== workout.date
-                          ? ` (was ${formatShort(workout.previousDate)})`
-                          : ''}
-                      </span>
-                    </li>
-                  ))}
-                  {workouts.length > 12 ? (
-                    <li className="muted">+ {workouts.length - 12} more</li>
-                  ) : null}
-                </ul>
-              ) : null}
-              {entities.length ? (
-                <ul className="plain-list">
-                  {entities.map(([entity, counts]) => (
-                    <li key={entity}>
-                      {entity.replaceAll('_', ' ')}: {counts.added} added, {counts.changed} changed,{' '}
-                      {counts.removed} removed.
-                    </li>
-                  ))}
-                </ul>
-              ) : null}
-              {!workouts.length && !entities.length && !preview.summary.headerChanges.length ? (
-                <p className="muted">No workout changes.</p>
-              ) : null}
-            </div>
-            <div className="review-card">
-              <h3>Things to know</h3>
-              {preview.findings.length === 0 ? (
-                <p className="confirmed">
-                  <CheckCircle2 size={16} aria-hidden="true" /> No validation issues.
-                </p>
-              ) : (
-                <ul className="finding-list">
-                  {preview.findings.map((finding, index) => (
-                    <li key={`${finding.code}:${index}`} className={finding.severity}>
-                      {finding.severity === 'error' ? (
-                        <CircleAlert size={18} aria-hidden="true" />
-                      ) : (
-                        <TriangleAlert size={18} aria-hidden="true" />
-                      )}
-                      <span>
-                        <strong>{finding.severity === 'error' ? 'Error' : 'Warning'}:</strong>{' '}
-                        {finding.message}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-              )}
-              {warnings.length ? (
-                <CheckRow
-                  checked={acknowledged}
-                  onChange={onAcknowledged}
-                  label="I have reviewed and accept all warnings listed above."
-                />
-              ) : null}
-            </div>
-          </>
-        ) : null}
-      </div>
-    </Dialog>
-  );
-}
-
-function EditDetailsDialog({
-  plan,
-  onClose,
-  onSaved,
-}: {
-  plan: Plan;
-  onClose: () => void;
-  onSaved: (plan: Plan) => void;
-}) {
-  const client = useQueryClient();
-  // Focus refreshes may advance the surrounding plan. Save against the form's baseline
-  // until the athlete explicitly refreshes and reviews it, or this dialog saves content.
-  const [baseline, setBaseline] = useState(plan);
-  const saved = useRef<Plan>(plan);
-  const version = baseline.draft ?? baseline.locked;
-  const [name, setName] = useState(plan.displayName);
-  const [description, setDescription] = useState(version?.description ?? '');
-  const [startDate, setStartDate] = useState(version?.startDate ?? '');
-  const [endDate, setEndDate] = useState(version?.endDate ?? '');
-  const contentDirty =
-    description !== (version?.description ?? '') ||
-    startDate !== (version?.startDate ?? '') ||
-    endDate !== (version?.endDate ?? '');
-  const nameDirty = name.trim() !== baseline.displayName;
-  // The plan as last saved by this dialog, so a retry after a partial failure (content saved,
-  // rename failed) continues from the new edit number instead of repeating a stale save.
-  const save = useMutation({
-    mutationFn: async () => {
-      let latest = saved.current;
-      if (plan.archived || latest.archived)
-        throw new Error('This plan is archived. Keep a copy of your edits before closing.');
-      const current = latest.draft;
-      if (!current && contentDirty)
-        throw new Error('These description or date changes need an editable draft.');
-      const pending =
-        !!current &&
-        (description !== (current.description ?? '') ||
-          startDate !== (current.startDate ?? '') ||
-          endDate !== (current.endDate ?? ''));
-      if (pending && current) {
-        latest = result(
-          await api.PATCH('/api/v1/plans/{planId}/draft', {
-            params: { path: { planId: plan.id } },
-            body: {
-              expectedDraftId: current.id,
-              expectedEditNumber: current.editNumber,
-              description: description || null,
-              startDate: startDate || null,
-              endDate: endDate || null,
-            },
-          }),
-        );
-        saved.current = latest;
-        setBaseline(latest);
-        client.setQueryData(['plans', plan.id], latest);
-      }
-      if (nameDirty && name.trim() !== latest.displayName)
-        latest = result(
-          await api.PATCH('/api/v1/plans/{planId}', {
-            params: { path: { planId: plan.id } },
-            body: { displayName: name.trim(), expectedStateVersion: latest.stateVersion },
-          }),
-        );
-      return latest;
-    },
-    onSuccess: onSaved,
-  });
-  const refresh = useMutation({
-    mutationFn: async () =>
-      result(await api.GET('/api/v1/plans/{planId}', { params: { path: { planId: plan.id } } })),
-    onSuccess: (latest) => {
-      // Keep the form values, but replace even a partially saved baseline with the latest
-      // concurrency metadata. The athlete can review the saved details before retrying.
-      saved.current = latest;
-      setBaseline(latest);
-      client.setQueryData(['plans', plan.id], latest);
-      save.reset();
-    },
-  });
-  const refreshedVersion = refresh.data?.draft ?? refresh.data?.locked;
-  const busy = save.isPending || refresh.isPending;
-  const editableContent = !!plan.draft;
-  const contentUnavailable = !editableContent && contentDirty;
-  // Unsaved details survive accidental navigation, as the earlier inline editor did.
-  const dirty = (nameDirty || contentDirty) && !save.isSuccess;
-  const blocker = useBlocker(dirty);
-  useBeforeUnload(
-    useCallback(
-      (event: BeforeUnloadEvent) => {
-        if (dirty) {
-          event.preventDefault();
-          event.returnValue = '';
-        }
-      },
-      [dirty],
-    ),
-  );
-  return (
-    <Dialog
-      open
-      busy={busy}
-      onClose={onClose}
-      title="Plan details"
-      description="The name is not versioned. Dates and description belong to the draft."
-      footer={
-        <>
-          <Button variant="ghost" disabled={busy} onClick={onClose}>
-            Cancel
-          </Button>
-          <Button
-            variant="primary"
-            type="submit"
-            form="plan-details-form"
-            busy={save.isPending}
-            disabled={
-              busy ||
-              plan.archived ||
-              contentUnavailable ||
-              !name.trim() ||
-              (!nameDirty && !contentDirty)
-            }
-          >
-            Save changes
-          </Button>
-        </>
-      }
-    >
-      <form
-        id="plan-details-form"
-        className="form-stack"
-        onSubmit={(event) => {
-          event.preventDefault();
-          if (!busy && !plan.archived) save.mutate();
-        }}
-      >
-        <label className="field">
-          <span>Plan name</span>
-          <input
-            required
-            disabled={busy}
-            maxLength={200}
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-          />
-        </label>
-        <fieldset disabled={!editableContent || busy} className="form-stack">
-          <label className="field">
-            <span>Description</span>
-            <textarea
-              maxLength={20000}
-              rows={4}
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-            />
-          </label>
-          <div className="field-row">
-            <label className="field">
-              <span>Start date</span>
-              <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
-            </label>
-            <label className="field">
-              <span>End date</span>
-              <input
-                type="date"
-                min={startDate || undefined}
-                value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
-              />
-            </label>
-          </div>
-        </fieldset>
-        {!editableContent ? (
-          <p className="muted">Unlock the plan to change its dates or description.</p>
-        ) : null}
-        {plan.archived ? (
-          <Notice tone="warning" role="alert">
-            <strong>This plan is archived. Your unsaved details are preserved here.</strong>
-            <span>
-              Keep a copy of your edits, then cancel and unarchive the plan before saving changes.
-            </span>
-          </Notice>
-        ) : contentUnavailable ? (
-          <Notice tone="warning" role="alert">
-            <strong>
-              The draft is no longer available. Your unsaved details are preserved here.
-            </strong>
-            <span>
-              Keep a copy of your edits, then cancel and unlock the plan to edit its details again.
-            </span>
-          </Notice>
-        ) : null}
-        {blocker.state === 'blocked' ? (
-          <Notice
-            tone="warning"
-            role="alert"
-            action={
-              <div className="button-row">
-                <Button size="sm" variant="ghost" onClick={() => blocker.reset()}>
-                  Keep editing
-                </Button>
-                <Button size="sm" variant="danger" onClick={() => blocker.proceed()}>
-                  Leave without saving
-                </Button>
-              </div>
-            }
-          >
-            <strong>Leave without saving?</strong>
-            <span>Your unsaved plan details will be lost.</span>
-          </Notice>
-        ) : null}
-        {save.error ? (
-          <Notice
-            tone="danger"
-            role="alert"
-            action={
-              <Button
-                size="sm"
-                busy={refresh.isPending}
-                disabled={busy}
-                onClick={() => refresh.mutate()}
-              >
-                Refresh latest plan
-              </Button>
-            }
-          >
-            {save.error.message}
-          </Notice>
-        ) : null}
-        {refresh.error ? (
-          <Notice tone="danger" role="alert">
-            Couldn’t refresh the plan: {refresh.error.message}
-          </Notice>
-        ) : null}
-        {refresh.data ? (
-          <Notice tone="warning">
-            <strong>Latest plan loaded. Your edits are preserved.</strong>
-            <span>Review your edits against these saved details before saving again.</span>
-            <ul className="plain-list">
-              <li>Saved name: {refresh.data.displayName}</li>
-              <li>Saved description: {refreshedVersion?.description || 'None'}</li>
-              <li>Saved start date: {refreshedVersion?.startDate ?? 'None'}</li>
-              <li>Saved end date: {refreshedVersion?.endDate ?? 'None'}</li>
-            </ul>
-          </Notice>
-        ) : null}
-      </form>
     </Dialog>
   );
 }

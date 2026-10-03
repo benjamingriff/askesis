@@ -41,3 +41,10 @@ Type scale: title 30/800, heading 20/700, subheading 16/600, body 15, caption 13
 - Schedule weeks are Monday-start calendar weeks. They can differ from the API's training `weekNumber` when a plan starts mid-week.
 - Run activity is derived from polled run events. Live streaming of activity and replies is Phase 6 synchronization work.
 - Per-workout draft badges (new or edited) and a chat-side plan panel, as in the mobile prototype, need a draft-diff read. Today the lock review lists the changes.
+- If another session deactivates or archives the plan shown on the Plan tab while its details dialog is open, the next refresh moves the tab to another plan and the dialog closes, so unsaved details are lost. This is deferred as a low-impact edge case (the coach cannot change activation). The plan detail page (`/plans/:id`) keeps the plan mounted and preserves edits.
+
+## Data freshness conventions
+
+- Version-scoped reads (brief, workouts, workout detail) are keyed with `versionKey(version)` (`id` plus `editNumber`), so any draft edit refetches them.
+- Plan metadata refetches on focus. Forms that edit it, such as the details dialog, save against the baseline they loaded and only adopt newer data when the user chooses Refresh latest plan, so a background refresh never silently overwrites another session's change.
+- Selections that default to "now" (Today's date, the current week, the calendar date) use `useFollowingState`, so they keep following the clock until the user picks something else.

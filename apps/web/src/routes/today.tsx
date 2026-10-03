@@ -1,6 +1,6 @@
 import type { WorkoutSummary } from '@askesis/api-client';
 import { ArrowRight, CalendarDays, Library, MessageSquare, Moon, Sparkles } from 'lucide-react';
-import { useMemo, useState, type CSSProperties } from 'react';
+import { useMemo, type CSSProperties } from 'react';
 import { Link, useNavigate } from 'react-router';
 import { IntensityChart } from '../components/IntensityChart';
 import { useOpenPlanChat, PlanChatError } from '../components/PlanLifecycle';
@@ -42,6 +42,7 @@ import {
 import { usePlanPreferences } from '../plan-selection';
 import { useUnits, type Units } from '../settings';
 import { useActivePlans } from './active-plans';
+import { useFollowingState } from '../lib/use-following-state';
 import { useLocalToday } from '../lib/use-local-today';
 import { useWorkoutSelection } from '../lib/use-workout-selection';
 
@@ -95,8 +96,7 @@ function TodayForPlan({ plan, today }: { plan: Plan; today: string }) {
   const brief = useBriefState(plan.id, version);
   const units = useUnits(brief.data?.brief.unit);
   const chat = useOpenPlanChat(plan.id);
-  const [selectedDate, setSelectedDate] = useState<string | null>(null);
-  const selected = selectedDate ?? today;
+  const [selected, setSelected] = useFollowingState(today);
   const days = useMemo(
     () => Array.from({ length: 7 }, (_, i) => addDays(startOfWeek(today), i)),
     [today],
@@ -150,7 +150,7 @@ function TodayForPlan({ plan, today }: { plan: Plan; today: string }) {
               aria-pressed={date === selected}
               aria-label={formatLong(date)}
               className={`strip-day${date === selected ? ' selected' : ''}${date === today ? ' today' : ''}`}
-              onClick={() => setSelectedDate(date === today ? null : date)}
+              onClick={() => setSelected(date)}
             >
               <span className="label">{WEEKDAYS_SHORT[index]!.slice(0, 1)}</span>
               <strong>{dayNumber(date)}</strong>
