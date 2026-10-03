@@ -45,6 +45,6 @@ Type scale: title 30/800, heading 20/700, subheading 16/600, body 15, caption 13
 
 ## Data freshness conventions
 
-- Version-scoped reads (brief, workouts, workout detail) are keyed with `versionKey(version)` (`id` plus `editNumber`), so any draft edit refetches them.
+- Version-scoped reads (brief, workouts, workout detail) are keyed with `versionKey(version)` (`id` plus `editNumber`), so any draft edit refetches them. The brief key also includes the version state, because locking keeps the same `id` and `editNumber` but reads from a different endpoint.
 - Plan metadata refetches on focus. Forms that edit it, such as the details dialog, save against the baseline they loaded and only adopt newer data when the user chooses Refresh latest plan, so a background refresh never silently overwrites another session's change.
 - Selections that default to "now" (Today's date, the current week, the calendar date) use `useFollowingState`, so they keep following the clock until the user picks something else.

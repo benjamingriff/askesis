@@ -29,7 +29,9 @@ export function versionKey(version: Pick<PlanVersion, 'id' | 'editNumber'> | nul
 export function useBriefState(planId: string, version: PlanVersion | null) {
   const draft = version?.state === 'draft';
   return useQuery({
-    queryKey: ['plans', planId, 'brief', ...versionKey(version)],
+    // A draft is locked in place (same id and editNumber) but read from a different endpoint,
+    // so the state is part of the key.
+    queryKey: ['plans', planId, 'brief', version?.state, ...versionKey(version)],
     enabled: !!version,
     // Locked versions never change, and draft changes advance editNumber (part of the key).
     refetchOnWindowFocus: false,

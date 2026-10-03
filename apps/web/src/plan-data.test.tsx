@@ -70,6 +70,28 @@ it.each([
   },
 );
 
+it('reads the revision brief once a draft is locked in place with the same id and edit', async () => {
+  mocks.get.mockResolvedValue({
+    data: { brief: { goal: 'Assumptions' }, coverage: [], calibrations: [] },
+  });
+  const page = render(
+    <AccountQueryProvider>
+      <Brief version={version} />
+    </AccountQueryProvider>,
+  );
+  await screen.findByText(/Assumptions/);
+  page.rerender(
+    <AccountQueryProvider>
+      <Brief version={{ ...version, state: 'locked', versionNumber: 1 }} />
+    </AccountQueryProvider>,
+  );
+  await vi.waitFor(() => expect(mocks.get).toHaveBeenCalledTimes(2));
+  expect(mocks.get.mock.calls.map(([path]) => path)).toEqual([
+    '/api/v1/plans/{planId}/draft/brief',
+    '/api/v1/plans/{planId}/revisions/{revisionId}/brief',
+  ]);
+});
+
 it('reloads a recently viewed workout when the draft edit advances', async () => {
   mocks.get
     .mockResolvedValueOnce({ data: { workout: { title: 'Earlier prescription' } } })
