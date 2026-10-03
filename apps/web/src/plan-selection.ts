@@ -1,4 +1,5 @@
 import { createContext, useContext } from 'react';
+import { readStorage, writeStorage } from './lib/storage';
 
 export const PlanPreferenceScope = createContext('anonymous');
 export type PlanSelection = { planId: string; view: 'locked' | 'draft' };
@@ -8,7 +9,7 @@ export function usePlanPreferences() {
   return {
     read(): PlanSelection | null {
       try {
-        const value: unknown = JSON.parse(localStorage.getItem(key) ?? 'null');
+        const value: unknown = JSON.parse(readStorage(key) ?? 'null');
         if (
           value &&
           typeof value === 'object' &&
@@ -19,16 +20,12 @@ export function usePlanPreferences() {
         )
           return { planId: value.planId, view: value.view };
       } catch {
-        /* Preferences are optional, including when storage is unavailable. */
+        /* A malformed stored preference is ignored. */
       }
       return null;
     },
     write(value: PlanSelection) {
-      try {
-        localStorage.setItem(key, JSON.stringify(value));
-      } catch {
-        /* Optional preference. */
-      }
+      writeStorage(key, JSON.stringify(value));
     },
   };
 }

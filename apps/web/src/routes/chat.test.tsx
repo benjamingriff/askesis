@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { createMemoryRouter, RouterProvider } from 'react-router';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { AccountQueryProvider } from '../query-provider';
@@ -62,6 +62,61 @@ beforeEach(() => {
   }) as typeof api.GET);
 });
 afterEach(cleanup);
+
+it('keeps rename failures visible in the dialog and retries with refreshed conversation metadata', async () => {
+  vi.mocked(api.PATCH)
+    .mockImplementationOnce((async () => {
+      detail = { ...conversation, title: 'Changed elsewhere', stateVersion: 2 };
+      return {
+        error: {
+          error: { code: 'STALE_CONVERSATION', message: 'The conversation changed elsewhere.' },
+        },
+        response: new Response(null, { status: 409 }),
+      };
+    }) as typeof api.PATCH)
+    .mockImplementationOnce((async () => {
+      detail = { ...detail, title: 'My title', stateVersion: 3 };
+      return response(detail);
+    }) as typeof api.PATCH);
+  mount('/chat/c1');
+  await screen.findByText('Saved message');
+  fireEvent.click(screen.getByRole('button', { name: 'Conversation options' }));
+  fireEvent.click(screen.getByRole('menuitem', { name: 'Rename conversation' }));
+  const dialog = screen.getByRole('dialog', { name: 'Rename conversation' });
+  fireEvent.change(within(dialog).getByLabelText('Conversation title'), {
+    target: { value: 'My title' },
+  });
+  fireEvent.click(within(dialog).getByRole('button', { name: 'Save' }));
+  expect(await within(dialog).findByRole('alert')).toHaveTextContent(
+    'The conversation changed elsewhere.',
+  );
+  expect(screen.getAllByRole('alert')).toHaveLength(1);
+  expect(within(dialog).getByLabelText('Conversation title')).toHaveValue('My title');
+  await screen.findByRole('heading', { name: 'Changed elsewhere' });
+  fireEvent.click(within(dialog).getByRole('button', { name: 'Save' }));
+  await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+  expect(api.PATCH).toHaveBeenLastCalledWith(
+    '/api/v1/conversations/{conversationId}',
+    expect.objectContaining({ body: { title: 'My title', expectedStateVersion: 2 } }),
+  );
+  expect(screen.getByRole('heading', { name: 'My title' })).toBeInTheDocument();
+});
+
+it('clears an old rename error when opening a fresh rename dialog', async () => {
+  vi.mocked(api.PATCH).mockRejectedValueOnce(new Error('Connection lost'));
+  mount('/chat/c1');
+  await screen.findByText('Saved message');
+  fireEvent.click(screen.getByRole('button', { name: 'Conversation options' }));
+  fireEvent.click(screen.getByRole('menuitem', { name: 'Rename conversation' }));
+  fireEvent.change(screen.getByLabelText('Conversation title'), { target: { value: 'Unsaved' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+  await within(screen.getByRole('dialog')).findByText('Connection lost');
+  fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Conversation options' }));
+  fireEvent.click(screen.getByRole('menuitem', { name: 'Rename conversation' }));
+  expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  expect(screen.getByLabelText('Conversation title')).toHaveValue(conversation.title);
+});
 it('allows a lost-response retry even after the accepted run becomes active', async () => {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
@@ -153,6 +208,10 @@ it('retries an uncertain first send with the same key and navigates to the durab
   fireEvent.click(screen.getByRole('button', { name: 'Send message' }));
   await screen.findByText(/Network interrupted/);
   expect(screen.getByLabelText('Message')).toHaveValue('Hello');
+  const suggestion = screen.getByRole('button', { name: 'How should I pace my long run?' });
+  expect(suggestion).toBeDisabled();
+  fireEvent.click(suggestion);
+  expect(screen.getByLabelText('Message')).toHaveValue('Hello');
   fireEvent.click(screen.getByRole('button', { name: 'Retry send' }));
   await waitFor(() => expect(router.state.location.pathname).toBe('/chat/c1'));
   const calls = vi.mocked(api.POST).mock.calls;
@@ -192,4 +251,28 @@ it('formats assistant Markdown while preserving the literal user message', async
   mount('/chat/c1');
   expect(await screen.findByText('**My question**')).toBeInTheDocument();
   expect(await screen.findByText('Easy running', { selector: 'strong' })).toBeInTheDocument();
+});
+
+it('shows a plan-wide run from another chat in an empty conversation', async () => {
+  const original = vi.mocked(api.GET).getMockImplementation()!;
+  vi.mocked(api.GET).mockImplementation(((path: string, ...args: unknown[]) =>
+    path.endsWith('/messages')
+      ? Promise.resolve(response({ messages: [], nextBeforeSequence: null }))
+      : Reflect.apply(original, api, [path, ...args])) as typeof api.GET);
+  detail = {
+    ...conversation,
+    planId: 'plan-1',
+    activeRun: {
+      id: 'run-9',
+      conversationId: 'other',
+      status: 'running',
+      failureCode: null,
+    },
+  } as never;
+  mount('/chat/c1');
+  expect(await screen.findByText('Working')).toBeInTheDocument();
+  expect(screen.getByRole('link', { name: 'another chat for this plan' })).toHaveAttribute(
+    'href',
+    '/chat/other',
+  );
 });

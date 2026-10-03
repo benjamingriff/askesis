@@ -34,6 +34,12 @@ const preview = {
   sourceHash: 'a'.repeat(64),
   summary,
 };
+const emptyBrief = {
+  coverage: [],
+  calibrations: [],
+  findings: [],
+  brief: { unit: 'kilometres' },
+};
 function mount(history = false) {
   const router = createMemoryRouter(
     [
@@ -66,7 +72,9 @@ beforeEach(() => {
           ? { revisions: [revision] }
           : path === '/api/v1/workouts'
             ? { workouts: [] }
-            : { revision, content: { description: revision.description } },
+            : path.endsWith('/brief')
+              ? emptyBrief
+              : { revision, content: { description: revision.description } },
   }));
   mocks.post.mockImplementation(async (path: string) => ({
     data: path.endsWith('restore-preview') ? preview : { ...current, draft: { id: 'new-draft' } },
@@ -145,10 +153,94 @@ it.each([
         ? plan
         : path === '/api/v1/workouts'
           ? { workouts: [] }
-          : { revision, content: {} },
+          : path.endsWith('/brief')
+            ? emptyBrief
+            : { revision, content: {} },
   }));
   mount();
   expect(await screen.findByRole('button', { name: 'Review restore as draft' })).toBeDisabled();
   expect(screen.getByText(message)).toBeInTheDocument();
   expect(screen.getByText('Original training')).toBeInTheDocument();
 });
+
+it.each(['loaded', 'failed'])(
+  'renders historical rest days only with loaded coverage (%s request)',
+  async (status) => {
+    const brief = {
+      versionId: 'v1',
+      editNumber: 1,
+      startDate: '2027-01-11',
+      endDate: '2027-01-24',
+      readOnly: true,
+      confirmed: true,
+      hash: 'h',
+      scheduleReviewRequired: false,
+      coverage: [{ startDate: '2027-01-11', endDate: '2027-01-12', current: true }],
+      calibrations: [],
+      findings: [],
+      brief: { unit: 'kilometres' },
+    };
+    const historical = { ...revision, startDate: '2027-01-11', endDate: '2027-01-24' };
+    mocks.get.mockImplementation(async (path: string) => ({
+      data:
+        path === '/api/v1/plans/{planId}'
+          ? current
+          : path === '/api/v1/plans/{planId}/revisions'
+            ? { revisions: [historical] }
+            : path === '/api/v1/plans/{planId}/revisions/{revisionId}/brief'
+              ? brief
+              : path === '/api/v1/workouts'
+                ? {
+                    workouts: [
+                      {
+                        id: 'w1',
+                        planId: 'plan',
+                        planVersionId: 'v1',
+                        planTitle: 'Training',
+                        weekNumber: 1,
+                        scheduledDate: '2027-01-12',
+                        title: '6 km easy run',
+                        description: null,
+                        purpose: null,
+                        discipline: 'running',
+                        priority: 'medium',
+                        estimatedDurationSeconds: 2400,
+                        estimatedDistanceMetres: 6000,
+                      },
+                    ],
+                  }
+                : { revision: historical, content: {} },
+    }));
+    if (status === 'failed') {
+      const loaded = mocks.get.getMockImplementation()!;
+      let rejectBrief!: (error: Error) => void;
+      const pendingBrief = new Promise((_, reject) => {
+        rejectBrief = reject;
+      });
+      mocks.get.mockImplementation((path: string) =>
+        path.endsWith('/brief') ? pendingBrief : loaded(path),
+      );
+      mount();
+      await screen.findByText('Loading historical schedule…');
+      await waitFor(() =>
+        expect(mocks.get).toHaveBeenCalledWith('/api/v1/workouts', expect.anything()),
+      );
+      expect(screen.queryByRole('button', { name: /6 km easy run/ })).not.toBeInTheDocument();
+      expect(screen.queryByText('Rest day')).not.toBeInTheDocument();
+      rejectBrief(new Error('Connection lost'));
+      expect(await screen.findByRole('alert')).toHaveTextContent(
+        'Couldn’t load this version’s coverage: Connection lost',
+      );
+      expect(screen.queryByRole('button', { name: /6 km easy run/ })).not.toBeInTheDocument();
+      expect(screen.queryByText('Rest day')).not.toBeInTheDocument();
+      mocks.get.mockImplementation(loaded);
+      fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+      await waitFor(() => expect(screen.queryByRole('alert')).not.toBeInTheDocument());
+    } else {
+      mount();
+    }
+    await screen.findByRole('button', { name: /6 km easy run/ });
+    await waitFor(() => expect(screen.getAllByText('Not planned yet')).toHaveLength(5));
+    expect(screen.getAllByText('Rest day')).toHaveLength(1);
+  },
+);

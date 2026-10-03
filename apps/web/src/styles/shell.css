@@ -1,0 +1,284 @@
+.app-shell {
+  min-height: 100dvh;
+  padding-left: var(--sidebar-width);
+}
+.workspace {
+  min-width: 0;
+  min-height: 100dvh;
+}
+
+/* Sidebar (desktop) — compact, T3 Code-like */
+.sidebar {
+  position: fixed;
+  inset: 0 auto 0 0;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: var(--sidebar-width);
+  padding: 14px 12px 12px;
+  border-right: 1px solid var(--border);
+  background: var(--surface);
+}
+.sidebar-brand {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 2px 8px 6px;
+}
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+.brand strong {
+  font-size: 17px;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+}
+.brand-mark {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 30px;
+  height: 30px;
+  border-radius: 10px;
+  background: var(--accent);
+  color: var(--on-accent);
+  font-weight: 900;
+  font-size: 15px;
+}
+.sidebar-new-chat {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 40px;
+  padding: 0 12px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+.sidebar-new-chat:hover {
+  background: var(--surface-raised);
+}
+.sidebar-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.sidebar-nav a,
+.sidebar-chats a {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  min-height: 38px;
+  padding: 0 12px;
+  border-radius: 11px;
+  color: var(--text-dim);
+  font-size: 14px;
+  font-weight: 600;
+}
+.sidebar-nav a:hover,
+.sidebar-chats a:hover {
+  background: var(--surface-raised);
+  color: var(--text);
+}
+.sidebar-nav a.active {
+  background: var(--surface-raised);
+  color: var(--text);
+}
+.sidebar-nav a.active svg {
+  color: var(--accent-text);
+}
+.sidebar-section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1;
+  min-height: 0;
+  margin-top: 14px;
+}
+.sidebar-section > .label {
+  padding: 0 12px;
+}
+.sidebar-chats {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  overflow-y: auto;
+  min-height: 0;
+}
+.sidebar-chats a {
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 0;
+  min-height: 34px;
+  padding: 6px 12px;
+  font-weight: 500;
+  font-size: 13px;
+}
+.sidebar-chats a span,
+.sidebar-chats a small {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sidebar-chats a small {
+  color: var(--text-muted);
+  font-size: 11.5px;
+}
+.sidebar-chats a.active {
+  background: var(--surface-raised);
+  color: var(--text);
+}
+.sidebar-chats > .muted {
+  padding: 0 12px;
+  font-size: 13px;
+}
+.sidebar-account {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px;
+  border-radius: 14px;
+}
+.sidebar-account:hover,
+.sidebar-account.active {
+  background: var(--surface-raised);
+}
+.avatar {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  object-fit: cover;
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  font-size: 12px;
+  font-weight: 800;
+}
+.account-copy {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.account-copy strong,
+.account-copy small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.account-copy strong {
+  font-size: 13px;
+}
+.account-copy small {
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.sidebar-collapsed {
+  --sidebar-width: 72px;
+}
+/* The Coach screen has its own conversation list. */
+.on-chat .sidebar-section {
+  visibility: hidden;
+}
+.sidebar-collapsed .brand strong,
+.sidebar-collapsed .sidebar-nav span,
+.sidebar-collapsed .sidebar-new-chat span,
+.sidebar-collapsed .sidebar-section,
+.sidebar-collapsed .account-copy {
+  display: none;
+}
+.sidebar-collapsed .sidebar-brand {
+  flex-direction: column;
+  gap: 10px;
+  padding: 0 0 8px;
+}
+.sidebar-collapsed .sidebar-nav a,
+.sidebar-collapsed .sidebar-new-chat {
+  justify-content: center;
+  padding: 0;
+}
+.sidebar-collapsed .sidebar-account {
+  justify-content: center;
+  margin-top: auto;
+}
+
+/* Floating tab bar (narrow screens) — mirrors the mobile app */
+.tab-bar {
+  display: none;
+}
+
+@media (max-width: 900px) {
+  .app-shell {
+    padding-left: 0;
+    padding-bottom: calc(var(--tab-bar-height) + 28px + env(safe-area-inset-bottom));
+  }
+  .workspace {
+    min-height: 0;
+  }
+  .sidebar {
+    display: none;
+  }
+  .tab-bar {
+    position: fixed;
+    left: 16px;
+    right: 16px;
+    bottom: max(12px, env(safe-area-inset-bottom));
+    z-index: 30;
+    display: flex;
+    gap: 2px;
+    max-width: 480px;
+    height: var(--tab-bar-height);
+    margin: 0 auto;
+    padding: 5px;
+    border-radius: calc(var(--tab-bar-height) / 2);
+    border: 1px solid var(--border);
+    background: color-mix(in srgb, var(--surface) 94%, transparent);
+    backdrop-filter: blur(16px);
+    box-shadow: var(--shadow);
+  }
+  .tab-bar::before {
+    content: '';
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: -1;
+    height: calc(var(--tab-bar-height) + 40px);
+    background: linear-gradient(to bottom, transparent, var(--bg) 70%);
+    pointer-events: none;
+  }
+  .tab {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    border-radius: 27px;
+    color: var(--text-muted);
+    font-size: 11px;
+    font-weight: 700;
+    transition: background 0.18s ease;
+  }
+  .tab.active {
+    background: var(--surface-raised);
+    color: var(--accent-text);
+  }
+  .page {
+    padding: 20px 16px 32px;
+  }
+  h1 {
+    font-size: 28px;
+  }
+}

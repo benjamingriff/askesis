@@ -25,6 +25,7 @@ This directory records the proposed direction for Askesis beyond the original fi
 - [Phase 4 implementation plan](./phase-4-implementation-plan.md) — delivery stages, Phase 3 integration seams, and acceptance checks for persistent chat.
 - [Phase 5 design](./phase-5-design.md) — refined coaching behavior, OpenAI Agents SDK worker, authorized domain tools, and partial planning horizons.
 - [Phase 5 implementation plan](./phase-5-implementation-plan.md) — delivery stages, worker reliability, and acceptance checks.
+- [Web design system](./web-design-system.md) — shared mobile/web theme tokens, component kit, navigation and lifecycle UI patterns.
 - [Example queries](./example-queries.md) — inspect plans, workout trees, weekly totals, and calibrations.
 - [Implementation roadmap](./implementation-roadmap.md) — the earlier data-model implementation sequence and deferred concerns.
 

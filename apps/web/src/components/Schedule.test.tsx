@@ -1,0 +1,139 @@
+import type { WorkoutSummary } from '@askesis/api-client';
+import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { afterEach, beforeEach, expect, it, vi } from 'vitest';
+import { AccountQueryProvider } from '../query-provider';
+import { Schedule } from './Schedule';
+
+const workout: WorkoutSummary = {
+  id: 'w1',
+  planId: 'p',
+  planVersionId: 'v',
+  planTitle: 'Plan',
+  weekNumber: 1,
+  scheduledDate: '2027-01-12',
+  title: '6 km easy run',
+  description: null,
+  purpose: null,
+  discipline: 'running',
+  priority: 'medium',
+  estimatedDurationSeconds: 2400,
+  estimatedDistanceMetres: 6000,
+};
+beforeEach(() => localStorage.clear());
+afterEach(() => {
+  cleanup();
+  vi.restoreAllMocks();
+});
+
+it('labels days beyond the prescribed coverage as unplanned rather than rest', () => {
+  render(
+    <AccountQueryProvider>
+      <Schedule
+        workouts={[workout]}
+        startDate="2027-01-11"
+        endDate="2027-01-24"
+        coverage={[{ startDate: '2027-01-11', endDate: '2027-01-12' }]}
+        units="km"
+        today="2027-01-12"
+      />
+    </AccountQueryProvider>,
+  );
+  expect(screen.getByRole('button', { name: /6 km easy run/ })).toBeInTheDocument();
+  // Monday 11 is covered and empty → rest; Wednesday 13 to Sunday 17 are not prescribed.
+  expect(screen.getAllByText('Rest day')).toHaveLength(1);
+  expect(screen.getAllByText('Not planned yet')).toHaveLength(5);
+});
+
+it.each(['access', 'write'])(
+  'keeps the schedule and view switching usable when storage %s fails',
+  (failure) => {
+    const deny = () => {
+      throw new DOMException('Storage denied', 'SecurityError');
+    };
+    if (failure === 'access') vi.spyOn(window, 'localStorage', 'get').mockImplementation(deny);
+    else vi.spyOn(Storage.prototype, 'setItem').mockImplementation(deny);
+    render(
+      <AccountQueryProvider>
+        <Schedule
+          workouts={[workout]}
+          startDate="2027-01-11"
+          endDate="2027-01-24"
+          coverage={[{ startDate: '2027-01-11', endDate: '2027-01-12' }]}
+          units="km"
+          today="2027-01-12"
+        />
+      </AccountQueryProvider>,
+    );
+    expect(screen.getByRole('button', { name: /6 km easy run/ })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('radio', { name: 'Calendar' }));
+    expect(screen.getByRole('radio', { name: 'Calendar' })).toHaveAttribute('aria-checked', 'true');
+  },
+);
+
+function calendarSchedule(today: string) {
+  return (
+    <AccountQueryProvider>
+      <Schedule
+        workouts={[workout]}
+        startDate="2027-01-11"
+        endDate="2027-02-28"
+        coverage={[{ startDate: '2027-01-11', endDate: '2027-02-28' }]}
+        units="km"
+        today={today}
+      />
+    </AccountQueryProvider>
+  );
+}
+
+it('advances the default week at a week boundary while preserving explicitly browsed weeks', () => {
+  const page = render(calendarSchedule('2027-01-17'));
+  expect(screen.getByRole('heading', { name: /Week 1/ })).toHaveTextContent('This week');
+  page.rerender(calendarSchedule('2027-01-18'));
+  expect(screen.getByRole('heading', { name: /Week 2/ })).toHaveTextContent('This week');
+  fireEvent.click(screen.getByRole('button', { name: 'Previous week' }));
+  page.rerender(calendarSchedule('2027-01-25'));
+  expect(screen.getByRole('heading', { name: /Week 1/ })).not.toHaveTextContent('This week');
+});
+
+it('advances the default calendar date and month, retaining an explicitly selected date', () => {
+  const page = render(calendarSchedule('2027-01-31'));
+  fireEvent.click(screen.getByRole('radio', { name: 'Calendar' }));
+  expect(screen.getByRole('grid', { name: 'January 2027' })).toBeInTheDocument();
+  page.rerender(calendarSchedule('2027-02-01'));
+  expect(screen.getByRole('grid', { name: 'February 2027' })).toBeInTheDocument();
+  expect(screen.getByRole('gridcell', { name: 'Monday 1 February' })).toHaveAttribute(
+    'aria-selected',
+    'true',
+  );
+  fireEvent.click(screen.getByRole('gridcell', { name: 'Wednesday 3 February' }));
+  page.rerender(calendarSchedule('2027-02-02'));
+  expect(screen.getByRole('gridcell', { name: 'Wednesday 3 February' })).toHaveAttribute(
+    'aria-selected',
+    'true',
+  );
+});
+
+it('preserves an explicitly browsed calendar month across rollover', () => {
+  const page = render(calendarSchedule('2027-01-31'));
+  fireEvent.click(screen.getByRole('radio', { name: 'Calendar' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Previous month' }));
+  page.rerender(calendarSchedule('2027-02-01'));
+  expect(screen.getByRole('grid', { name: 'December 2026' })).toBeInTheDocument();
+});
+
+it('labels empty days as unplanned when generation stopped before any coverage was recorded', () => {
+  render(
+    <AccountQueryProvider>
+      <Schedule
+        workouts={[workout]}
+        startDate="2027-01-11"
+        endDate="2027-01-24"
+        coverage={[]}
+        units="km"
+        today="2027-01-12"
+      />
+    </AccountQueryProvider>,
+  );
+  expect(screen.queryByText('Rest day')).not.toBeInTheDocument();
+  expect(screen.getAllByText('Not planned yet')).toHaveLength(6);
+});

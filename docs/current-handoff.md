@@ -1,7 +1,7 @@
 # Current agent handoff
 
 **Updated:** 2026-10-02
-**Current phase:** Phase 4 deployed to Railway; Phase 5 is complete locally, including real-provider acceptance, and is ready for pull-request review. Phase 6 live synchronization is next. Phase 5 has not been deployed to Railway.
+**Current phase:** Phase 5 merged to `main` (PR #2). Phase 6 begins with the web design-system alignment; live synchronization follows.
 **Completed phase:** Phase 1 — engineering foundation and Railway deployment validation
 
 ## Purpose
@@ -18,6 +18,22 @@ Before making changes, read:
 Do not place credentials, Clerk tokens, database URLs, Sentry credentials, or Railway secrets in chat, logs, commits, or this file.
 
 ## Repository state at handoff
+
+### Phase 6 web design-system alignment — 2026-10-02
+
+The web app now follows the Expo mobile prototype, which draws on T3 Code and Runna. See the [web design system](./web-design-system.md). Changes:
+
+- Shared theme tokens (dark Midnight/Volt by default; six themes, eight accents, light/dark/system, km/mi) applied as CSS custom properties.
+- A component kit and per-area stylesheets.
+- A new Today screen.
+- A Runna-style plan view: weekly volume, week and calendar views, workout detail with effort profile.
+- A status pill kept separate from the human-only lock and unlock actions, with every lifecycle confirmation in a dialog. The combined brief-confirmation and lock review now follows the mobile layout.
+- T3 Code-style run activity with generation progress in chat.
+- A restyled brief editor, version history and You settings.
+
+Raw JSON and validator details are behind "Technical details". There are no API, schema or worker changes.
+
+Verification: full `pnpm check` passes. That includes 45 web tests, rewritten for the dialogs and controls with the same lifecycle, idempotency and concurrency assertions. Desktop, narrow-screen and light-theme screenshots were reviewed in a local harness with Clerk stubbed and captured API responses. The signed-in local stack served the new UI through the Vite proxy. Known gaps — inferred workout kinds, calendar-week numbering and the Phase 6 streaming follow-ups — are listed in the design doc.
 
 ### Phase 5 PR coverage correction — 2026-10-02
 
