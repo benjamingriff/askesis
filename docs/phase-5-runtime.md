@@ -36,11 +36,11 @@ SDK trace export is disabled, responses use `store: false`, and worker logs cont
 
 ## Private Railway service
 
-Deploy a separate service from `apps/agent/Dockerfile`. Give it no public domain. Set `AGENT_API_URL=http://<api-private-hostname>:3000`, the shared bootstrap token, `OPENAI_API_KEY`, and optional model/reasoning settings. Do not assign `DATABASE_URL` or `CLERK_SECRET_KEY` to this service.
+Deployed to production on 2026-10-04 as the private `agent` service. It is built from `apps/agent/Dockerfile`, has no public domain and runs one replica next to the API. `AGENT_API_URL` and `AGENT_BOOTSTRAP_TOKEN` are Railway reference variables that resolve from the API service; `OPENAI_API_KEY` and the model/reasoning settings are set on the agent only. Do not assign `DATABASE_URL` or `CLERK_SECRET_KEY` to this service. The full settings are in the [Railway deployment plan](./railway-deployment-plan.md#agent-worker-deployment).
 
 Apply migrations through `20261002090000` before enabling agent execution. Deploy the API with `CHAT_EXECUTION_MODE=agent` and its bootstrap token, then start the worker. Human authentication stays on `/api/v1/*`; `/internal/agent/*` uses machine credentials. The web nginx proxy explicitly returns 404 for `/internal/*`. The existing Railway API exposure still requires machine authentication on these routes; network exposure alone never grants worker authority.
 
-Worker readiness is registered in PostgreSQL through the API, not through a public health port. Check signed-in `/api/v1/chat-capabilities` and sanitized worker logs. Allow at least 40 seconds for graceful worker shutdown; expiry cleanup handles abrupt termination. Do not deploy or push `main` as part of local validation: Railway automatically deploys that branch.
+The idle worker polls `/internal/agent/claim` every `AGENT_POLL_MS` (default one second) and re-registers every 15 seconds. The API logs successful polls and registrations at debug level, like health probes; failures and all per-run calls stay at info. Worker readiness is registered in PostgreSQL through the API, not through a public health port. Check signed-in `/api/v1/chat-capabilities` and sanitized worker logs. Allow at least 40 seconds for graceful worker shutdown; expiry cleanup handles abrupt termination. Do not deploy or push `main` as part of local validation: Railway automatically deploys that branch.
 
 ## Verification
 

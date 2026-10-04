@@ -2,7 +2,7 @@
 
 ## Status
 
-**Deployed and validated.** The Phase 1 production environment runs on Railway with a public web service, private API, and private PostgreSQL. Local Docker Compose remains the development environment.
+**Deployed and validated.** The Phase 1 production environment runs on Railway with a public web service, private API, and private PostgreSQL. The private Phase 5 coaching worker was added on 2026-10-04. Local Docker Compose remains the development environment.
 
 This plan describes the first hosted Askesis prototype for a small invited group. It deliberately favours ease of operation over provider-independent infrastructure or production-scale complexity.
 
@@ -39,8 +39,7 @@ Hono + Kysely + Clerk verification
    ▼
 Railway PostgreSQL (private)
 
-Future:
-Agent worker (private) ── generated OpenAPI client ──► API service
+Agent worker (private) ── /internal/agent/* over private networking ──► API service
 ```
 
 ### Web service
@@ -57,7 +56,7 @@ The web service is the only public application service. It:
 The API service:
 
 - Exposes Hono on Railway's assigned `PORT`.
-- Is reachable from the web and future agent through private networking.
+- Is reachable from the web and agent through private networking.
 - Verifies Clerk session tokens.
 - Lazily maps Clerk users to Askesis athletes.
 - Is the only application service with `DATABASE_URL`.
@@ -95,7 +94,7 @@ Web, API, and agent are independently deployable even though they share a Railwa
 
 - nginx and the API have different runtime requirements.
 - The API can deploy without rebuilding the public shell when appropriate.
-- The future agent will perform long-running, failure-prone LLM work.
+- The agent performs long-running, failure-prone LLM work.
 - Agent resource usage and deployments should not interrupt normal API requests.
 - The agent must not receive database credentials.
 
@@ -169,15 +168,20 @@ Secrets belong in Railway service variables and must never be committed.
 
 `CLERK_AUTHORIZED_PARTIES` should contain only the deployed Railway domain and eventual custom domain. Do not retain localhost entries in the Railway value.
 
-### Future agent worker
+The API also receives `CHAT_EXECUTION_MODE=agent` and `AGENT_BOOTSTRAP_TOKEN` (secret) to accept the coaching worker. Without them chat execution defaults to `unavailable`.
 
-| Variable                      | Purpose                           | Secret |
-| ----------------------------- | --------------------------------- | ------ |
-| `ASKESIS_API_URL`             | Private API origin                | No     |
-| `ASKESIS_AGENT_SERVICE_TOKEN` | Machine authentication to the API | Yes    |
-| LLM provider keys             | Model access                      | Yes    |
+### Agent worker
 
-The agent must not receive `DATABASE_URL` or `CLERK_SECRET_KEY`.
+| Variable                | Railway value                                          | Secret |
+| ----------------------- | ------------------------------------------------------ | ------ |
+| `AGENT_API_URL`         | `http://${{api.RAILWAY_PRIVATE_DOMAIN}}:${{api.PORT}}` | No     |
+| `AGENT_BOOTSTRAP_TOKEN` | `${{api.AGENT_BOOTSTRAP_TOKEN}}`                       | Yes    |
+| `OPENAI_API_KEY`        | OpenAI project key, set directly on this service       | Yes    |
+| `AGENT_PROVIDER`        | `openai`                                               | No     |
+| `AGENT_MODEL`           | `gpt-6.1-sol`                                          | No     |
+| `AGENT_REASONING`       | `medium`                                               | No     |
+
+The reference variables keep the API origin and shared token defined once, on the API service. The agent must not receive `DATABASE_URL` or `CLERK_SECRET_KEY`.
 
 ## Clerk environments
 
@@ -285,6 +289,16 @@ pnpm-workspace.yaml
 tsconfig.base.json
 ```
 
+Agent paths (configured):
+
+```text
+apps/agent/**
+package.json
+pnpm-lock.yaml
+pnpm-workspace.yaml
+tsconfig.base.json
+```
+
 A generated OpenAPI client change can affect both services and should be reviewed accordingly.
 
 ## Security checklist
@@ -329,17 +343,31 @@ Application rollback and database rollback are separate:
 
 The previously deployed API should remain compatible with newly added nullable tables or columns whenever practical.
 
-## Future agent deployment
+## Agent worker deployment
 
-The future `apps/agent` service will be another private Railway service, not a process inside the API container. It will:
+The `apps/agent` service is a separate private Railway service, not a process inside the API container. It:
 
-1. Claim an agent run through authenticated internal API endpoints.
-2. Read plan context through the generated OpenAPI client.
-3. Propose explicit domain operations.
-4. Let the API validate and persist those operations.
-5. Report progress and completion through the API.
+1. Claims agent runs through authenticated internal API endpoints.
+2. Reads plan context through the API.
+3. Proposes explicit domain operations as tool calls.
+4. Lets the API validate and persist those operations.
+5. Reports progress and completion through the API.
 
-A browser Clerk token should not be stored as the worker's long-lived credential. Use a dedicated machine credential, and let the API associate each run with the initiating athlete and permitted plan.
+The worker uses a dedicated machine credential rather than a browser Clerk token, and the API associates each run with the initiating athlete and permitted plan. Runtime behaviour, limits and recovery are described in [worker operations](./phase-5-runtime.md).
+
+Railway settings:
+
+```text
+Build context:  repository root
+Dockerfile:     apps/agent/Dockerfile
+Region:         us-west2 (same as the API)
+Replicas:       1
+Draining:       45 seconds
+Visibility:     private, no public domain
+Wait for CI:    enabled
+```
+
+Redeploys, restarts and region moves interrupt an in-progress coaching run. Saved tool changes remain; the run fails or expires and the athlete resends. Change agent settings when no run is active.
 
 ## Deferred decisions
 
