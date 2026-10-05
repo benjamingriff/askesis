@@ -782,3 +782,71 @@ it('shows recovered terminal text rather than an older streamed snapshot', async
   expect(screen.getByText('Stopped · incomplete')).toBeInTheDocument();
   client.clear();
 });
+
+it('drops an older streamed copy of the answer once the durable reply loads', async () => {
+  const running = {
+    id: 'r1',
+    userMessageId: 'm1',
+    conversationId: 'c1',
+    status: 'running',
+    failureCode: null,
+  };
+  detail = { ...conversation, activeRun: running } as never;
+  let finished = false;
+  const original = vi.mocked(api.GET).getMockImplementation()!;
+  vi.mocked(api.GET).mockImplementation((async (path: string, ...args: unknown[]) => {
+    if (path.endsWith('/output'))
+      return finished
+        ? {
+            error: { error: { code: 'UNAVAILABLE', message: 'Unavailable.' } },
+            response: new Response(null, { status: 503 }),
+          }
+        : response({
+            runId: 'r1',
+            status: 'running',
+            finalMessageId: null,
+            items: [
+              {
+                itemId: 'answer',
+                position: 0,
+                content: 'Hello',
+                revision: 1,
+                isFinal: false,
+                truncated: false,
+              },
+            ],
+            timings: {},
+          });
+    if (path.endsWith('/messages') && finished)
+      return response({
+        messages: [
+          { id: 'm1', sequence: 1, role: 'user', content: 'Saved message', context: null },
+          {
+            id: 'reply',
+            sequence: 2,
+            role: 'assistant',
+            content: 'Hello there',
+            producingRunId: 'r1',
+            context: null,
+          },
+        ],
+        nextBeforeSequence: null,
+      });
+    return Reflect.apply(original, api, [path, ...args]);
+  }) as typeof api.GET);
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  mount('/chat/c1', client);
+  expect(await screen.findByText('Hello')).toBeInTheDocument();
+  finished = true;
+  detail = {
+    ...conversation,
+    activeRun: null,
+    latestRun: { ...running, status: 'completed' },
+  } as never;
+  await act(async () => {
+    await client.invalidateQueries({ queryKey: ['chat'] });
+  });
+  expect(await screen.findByText('Hello there')).toBeInTheDocument();
+  expect(screen.queryByText('Hello')).not.toBeInTheDocument();
+  client.clear();
+});

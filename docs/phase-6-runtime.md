@@ -60,11 +60,11 @@ changed prescription and changed date are separate. Removed workouts remain in t
 summary. Assumption and calibration changes are reported separately.
 
 Each successful mutating tool receipt stores an immutable before/after summary in
-its transaction, listing every changed workout (titles shortened) with complete
-counts. An operation of more than 400 workout changes keeps its complete counts and
-records how many entries it omitted, so storage never rejects a valid schedule
-write. Responses list the first 50 workouts with complete counts; the current draft
-comparison retains all highlights.
+its transaction, with the identity and change of every affected workout and a
+shortened title, so a run's operations combine exactly at any size. If a summary
+would approach its 4 MiB column bound, titles are dropped before any identity;
+storage never rejects a valid schedule write. Responses list the first 50 workouts
+with complete counts; the current draft comparison retains all highlights.
 
 `GET /api/v1/conversations/:conversationId/runs` returns turns: each run with its
 tool activity, one net saved-change summary and any visible text that is not the

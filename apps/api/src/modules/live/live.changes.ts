@@ -7,8 +7,8 @@ const byDate = (a: WorkoutChange, b: WorkoutChange) =>
   a.date.localeCompare(b.date) || a.title.localeCompare(b.title);
 /** Workouts listed in a presented summary; counts always cover every change. */
 const LISTED_WORKOUTS = 50;
-/** A stored operation summary keeps every workout unless it would exceed its column bound. */
-const STORED_WORKOUTS = 400;
+/** Stored summaries stay well inside their column bound (4 MiB) by shedding titles first. */
+const STORED_BYTES = 3_500_000;
 const counted = () => ({ added: 0, changed: 0, moved: 0, removed: 0 });
 function countChanges(workouts: WorkoutChange[]) {
   const counts = counted();
@@ -81,17 +81,17 @@ export async function compareVersions(db: Database, before: Aggregate | null, ve
 }
 
 /**
- * The summary stored with a tool receipt: every changed workout with a short title, so a run's
- * operations can later be combined exactly. Storage never rejects a valid schedule write; an
- * operation too large for its column keeps complete counts and records what it omitted.
+ * The summary stored with a tool receipt: the identity and change of every workout, so a run's
+ * operations combine exactly however large they are. Titles are presentation detail; in the
+ * unlikely case the summary would approach its column bound, they are dropped (latest first)
+ * instead of any identity, so storage never rejects a valid schedule write.
  */
 export function storedSummary(summary: ChangeSummary): ChangeSummary {
-  const workouts = summary.workouts.slice(0, STORED_WORKOUTS).map(shortTitle);
-  return {
-    ...summary,
-    omittedWorkouts: summary.workouts.length - workouts.length,
-    workouts,
-  };
+  const workouts = summary.workouts.map(shortTitle);
+  const size = () => Buffer.byteLength(JSON.stringify({ ...summary, workouts }), 'utf8');
+  for (let i = workouts.length - 1; i >= 0 && size() > STORED_BYTES; i -= 100)
+    for (let j = Math.max(0, i - 99); j <= i; j++) workouts[j] = { ...workouts[j]!, title: '' };
+  return { ...summary, workouts };
 }
 
 /** A summary for presentation: complete counts and the first workouts in date order. */
@@ -104,8 +104,7 @@ export function compactSummary(summary: ChangeSummary): ChangeSummary {
 /**
  * The net effect of one run's committed operations, in commit order. A workout added and later
  * removed by the same run disappears; a workout edited twice is one change, keeping its
- * original date as the move origin. Counts for workouts an oversized operation could not list
- * are carried over, so totals stay complete even when the list cannot be.
+ * original date as the move origin. Stored summaries list every workout, so counts are exact.
  */
 export function combineSummaries(summaries: ChangeSummary[]): ChangeSummary | null {
   if (!summaries.length) return null;
@@ -156,16 +155,9 @@ export function combineSummaries(summaries: ChangeSummary[]): ChangeSummary | nu
         prescriptionChanged: edited,
       });
   }
-  const counts = countChanges(workouts);
-  for (const summary of summaries) {
-    if (!summary.omittedWorkouts) continue;
-    const listed = countChanges(summary.workouts);
-    for (const kind of Object.keys(counts) as (keyof typeof counts)[])
-      counts[kind] += Math.max(0, summary.counts[kind] - listed[kind]);
-  }
   return compactSummary({
     workouts: workouts.sort(byDate),
-    counts,
+    counts: countChanges(workouts),
     assumptionsChanged: summaries.some((s) => s.assumptionsChanged),
     paceGuidesChanged: summaries.some((s) => s.paceGuidesChanged),
     datesChanged: summaries.some((s) => s.datesChanged),

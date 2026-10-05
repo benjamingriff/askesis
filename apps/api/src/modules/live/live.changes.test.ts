@@ -90,7 +90,7 @@ it('has no pending highlight after a revert and explains pace changes separately
   expect(compareAggregates(null, after, new Map()).workouts[0]!.change).toBe('added');
 });
 
-it('bounds stored change details without losing full counts or rejecting a large valid batch', () => {
+it('stores every changed workout and presents complete counts with a bounded list', () => {
   const summary = compareAggregates(
     null,
     aggregate(
@@ -105,22 +105,31 @@ it('bounds stored change details without losing full counts or rejecting a large
   // Stored summaries keep every workout so a run's operations combine exactly.
   const stored = storedSummary(summary);
   expect(stored.workouts).toHaveLength(300);
-  expect(stored.omittedWorkouts).toBe(0);
-  expect(Buffer.byteLength(JSON.stringify(stored), 'utf8')).toBeLessThan(262144);
+  expect(stored.workouts.every((workout) => workout.title.length <= 80)).toBe(true);
   const compact = compactSummary(stored);
   expect(compact.workouts).toHaveLength(50);
   expect(compact.counts.added).toBe(300);
   expect(compact.omittedWorkouts).toBe(250);
-  // Even an operation too large to list keeps complete counts through combination.
-  const huge = storedSummary(
+  // Identities are never dropped, so a run's operations cancel out exactly at any size.
+  const batch = (from: number) =>
     compareAggregates(
       null,
-      aggregate(Array.from({ length: 450 }, (_, i) => ({ lineage: `l-${i}`, date: '2027-01-02' }))),
+      aggregate(
+        Array.from({ length: 90 }, (_, i) => ({ lineage: `l-${from + i}`, date: '2027-01-02' })),
+      ),
       new Map(),
-    ),
+    );
+  const added = [0, 90, 180, 270, 360].map((from) => storedSummary(batch(from)));
+  const all = aggregate(
+    Array.from({ length: 450 }, (_, i) => ({ lineage: `l-${i}`, date: '2027-01-02' })),
   );
-  expect(huge).toMatchObject({ omittedWorkouts: 50, counts: { added: 450 } });
-  expect(combineSummaries([huge])).toMatchObject({ counts: { added: 450 }, omittedWorkouts: 400 });
+  const removedAll = storedSummary(compareAggregates(all, aggregate([]), new Map()));
+  expect(removedAll.workouts).toHaveLength(450);
+  expect(combineSummaries([...added, removedAll])).toMatchObject({
+    workouts: [],
+    counts: { added: 0, changed: 0, moved: 0, removed: 0 },
+    omittedWorkouts: 0,
+  });
 });
 
 const summary = (workouts: Partial<ChangeSummary['workouts'][number]>[], flags = {}) =>
@@ -162,12 +171,7 @@ it('combines a run’s operations into its net changes', () => {
         },
         { lineageId: 'gone', change: 'removed', workoutId: null, title: 'Long run' },
       ],
-      // This operation also added two workouts it could not list.
-      {
-        paceGuidesChanged: true,
-        omittedWorkouts: 2,
-        counts: { added: 2, changed: 2, moved: 1, removed: 2 },
-      },
+      { paceGuidesChanged: true },
     ),
   ])!;
   expect(combined.workouts).toEqual([
@@ -184,8 +188,30 @@ it('combines a run’s operations into its net changes', () => {
   expect(combined).toMatchObject({
     paceGuidesChanged: true,
     assumptionsChanged: false,
-    omittedWorkouts: 2,
-    counts: { added: 3, changed: 0, moved: 1, removed: 1 },
+    omittedWorkouts: 0,
+    counts: { added: 1, changed: 0, moved: 1, removed: 1 },
   });
   expect(combineSummaries([])).toBeNull();
+});
+
+it('stores every identity, shedding titles before exceeding the summary column bound', () => {
+  const workouts = Array.from({ length: 12000 }, (_, i) => ({
+    lineageId: `00000000-0000-4000-8000-${String(i).padStart(12, '0')}`,
+    workoutId: null,
+    title: '😀'.repeat(200),
+    date: '2027-01-02',
+    previousDate: '2027-01-02',
+    change: 'removed' as const,
+    prescriptionChanged: false,
+  }));
+  const stored = storedSummary({
+    workouts,
+    counts: { added: 0, changed: 0, moved: 0, removed: 12000 },
+    assumptionsChanged: false,
+    paceGuidesChanged: false,
+    datesChanged: false,
+  });
+  expect(stored.workouts).toHaveLength(12000);
+  expect(stored.workouts[0]!.title).not.toBe('');
+  expect(Buffer.byteLength(JSON.stringify(stored), 'utf8')).toBeLessThan(4194304);
 });

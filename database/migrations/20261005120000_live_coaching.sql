@@ -24,7 +24,7 @@ CREATE TABLE agent_run_measurements (
 CREATE TABLE agent_tool_changes (
  run_id uuid NOT NULL,
  operation_id text NOT NULL,
- summary jsonb NOT NULL CHECK (octet_length(summary::text) <= 262144),
+ summary jsonb NOT NULL CHECK (octet_length(summary::text) <= 4194304),
  PRIMARY KEY(run_id, operation_id),
  FOREIGN KEY(run_id, operation_id) REFERENCES agent_tool_receipts(run_id,operation_id)
 );

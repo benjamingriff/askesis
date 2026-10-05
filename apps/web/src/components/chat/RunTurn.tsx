@@ -95,10 +95,10 @@ export function RunTurn({
     output: live.data.output,
     replyTruncated: live.data.replyTruncated,
   };
-  // Streamed items still include the final segment, dropped once the durable reply loads.
-  const source = latestOutput(view.output, output.data?.items ?? []);
-  const segments = source.filter(
-    (item) => !(reply && (item.isFinal || item.content === reply.content)),
+  // Once the durable reply has loaded it presents the final segment. Text only grows, so any
+  // streamed copy of that segment, however old, is a prefix of the reply and is dropped.
+  const segments = latestOutput(view.output, output.data?.items ?? []).filter(
+    (item) => !(reply && (item.isFinal || reply.content.startsWith(item.content))),
   );
   const incomplete = !reply && segments.length > 0;
   return (
