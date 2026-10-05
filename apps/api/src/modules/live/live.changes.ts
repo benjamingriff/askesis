@@ -80,18 +80,28 @@ export async function compareVersions(db: Database, before: Aggregate | null, ve
   return compareAggregates(before, after, new Map(rows.map((r) => [r.lineage_id, r.id])));
 }
 
+const bytes = (value: unknown) => Buffer.byteLength(JSON.stringify(value), 'utf8');
 /**
  * The summary stored with a tool receipt: the identity and change of every workout, so a run's
- * operations combine exactly however large they are. Titles are presentation detail; in the
- * unlikely case the summary would approach its column bound, they are dropped (latest first)
- * instead of any identity, so storage never rejects a valid schedule write.
+ * operations combine exactly. Storage never rejects a valid schedule write: near the column
+ * bound, titles are dropped first (latest first); only an operation affecting many thousands
+ * of workouts then keeps as many identities as fit, with complete counts and an omitted count.
  */
 export function storedSummary(summary: ChangeSummary): ChangeSummary {
   const workouts = summary.workouts.map(shortTitle);
-  const size = () => Buffer.byteLength(JSON.stringify({ ...summary, workouts }), 'utf8');
-  for (let i = workouts.length - 1; i >= 0 && size() > STORED_BYTES; i -= 100)
-    for (let j = Math.max(0, i - 99); j <= i; j++) workouts[j] = { ...workouts[j]!, title: '' };
-  return { ...summary, workouts };
+  const sizes = workouts.map((workout) => bytes(workout) + 1);
+  let total = bytes({ ...summary, workouts: [] }) + sizes.reduce((sum, size) => sum + size, 0);
+  for (let i = workouts.length - 1; i >= 0 && total > STORED_BYTES; i--) {
+    const untitled = { ...workouts[i]!, title: '' };
+    total -= sizes[i]! - (bytes(untitled) + 1);
+    sizes[i] = bytes(untitled) + 1;
+    workouts[i] = untitled;
+  }
+  let kept = workouts.length;
+  while (kept > 0 && total > STORED_BYTES) total -= sizes[--kept]!;
+  return kept === workouts.length
+    ? { ...summary, workouts }
+    : { ...summary, workouts: workouts.slice(0, kept), omittedWorkouts: workouts.length - kept };
 }
 
 /** A summary for presentation: complete counts and the first workouts in date order. */
@@ -104,7 +114,8 @@ export function compactSummary(summary: ChangeSummary): ChangeSummary {
 /**
  * The net effect of one run's committed operations, in commit order. A workout added and later
  * removed by the same run disappears; a workout edited twice is one change, keeping its
- * original date as the move origin. Stored summaries list every workout, so counts are exact.
+ * original date as the move origin. Stored summaries list every workout except in pathological
+ * operations, so combination is exact for every realistic run.
  */
 export function combineSummaries(summaries: ChangeSummary[]): ChangeSummary | null {
   if (!summaries.length) return null;
@@ -155,9 +166,17 @@ export function combineSummaries(summaries: ChangeSummary[]): ChangeSummary | nu
         prescriptionChanged: edited,
       });
   }
+  // An operation too large to store every identity still contributes its complete counts.
+  const counts = countChanges(workouts);
+  for (const summary of summaries) {
+    if (!summary.omittedWorkouts) continue;
+    const listed = countChanges(summary.workouts);
+    for (const kind of Object.keys(counts) as (keyof typeof counts)[])
+      counts[kind] += Math.max(0, summary.counts[kind] - listed[kind]);
+  }
   return compactSummary({
     workouts: workouts.sort(byDate),
-    counts: countChanges(workouts),
+    counts,
     assumptionsChanged: summaries.some((s) => s.assumptionsChanged),
     paceGuidesChanged: summaries.some((s) => s.paceGuidesChanged),
     datesChanged: summaries.some((s) => s.datesChanged),

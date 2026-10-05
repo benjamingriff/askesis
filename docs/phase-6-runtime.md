@@ -63,7 +63,8 @@ Each successful mutating tool receipt stores an immutable before/after summary i
 its transaction, with the identity and change of every affected workout and a
 shortened title, so a run's operations combine exactly at any size. If a summary
 would approach its 4 MiB column bound, titles are dropped before any identity;
-storage never rejects a valid schedule write. Responses list the first 50 workouts
+only an operation affecting many thousands of workouts then keeps as many identities
+as fit, with complete counts. Storage never rejects a valid schedule write. Responses list the first 50 workouts
 with complete counts; the current draft comparison retains all highlights.
 
 `GET /api/v1/conversations/:conversationId/runs` returns turns: each run with its

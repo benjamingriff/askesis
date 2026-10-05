@@ -215,3 +215,25 @@ it('stores every identity, shedding titles before exceeding the summary column b
   expect(stored.workouts[0]!.title).not.toBe('');
   expect(Buffer.byteLength(JSON.stringify(stored), 'utf8')).toBeLessThan(4194304);
 });
+
+it('never rejects a pathologically large operation, keeping complete counts', () => {
+  const removed = Array.from({ length: 30000 }, (_, i) => ({
+    lineageId: `00000000-0000-4000-8000-${String(i).padStart(12, '0')}`,
+    workoutId: null,
+    title: 'Easy run',
+    date: '2027-01-02',
+    previousDate: '2027-01-02',
+    change: 'removed' as const,
+    prescriptionChanged: false,
+  }));
+  const stored = storedSummary({
+    workouts: removed,
+    counts: { added: 0, changed: 0, moved: 0, removed: 30000 },
+    assumptionsChanged: false,
+    paceGuidesChanged: false,
+    datesChanged: false,
+  });
+  expect(Buffer.byteLength(JSON.stringify(stored), 'utf8')).toBeLessThan(4194304);
+  expect(stored.workouts.length + (stored.omittedWorkouts ?? 0)).toBe(30000);
+  expect(combineSummaries([stored])?.counts.removed).toBe(30000);
+});
