@@ -37,4 +37,4 @@ Preserve finding IDs. Record revisions made and evidence for any disagreement. L
 
 List exact unresolved decisions, or explicitly state that none remain. Agent review acceptance does not substitute for a required owner decision.
 
-<!-- askesis-proposal:v1 attempt=ATTEMPT-ID revision=REVISION base=SHA -->
+<!-- agent-proposal:v1 attempt=ATTEMPT-ID revision=REVISION base=SHA -->

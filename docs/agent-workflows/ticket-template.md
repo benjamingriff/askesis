@@ -36,6 +36,6 @@ State the intended boundary and related work excluded from this ticket.
 - Inspected scope and limitations:
 - Existing related or rejected work, and how this differs:
 
-<!-- askesis-discovery:v1 key=STABLE-PROBLEM-KEY -->
+<!-- agent-discovery:v1 key=STABLE-PROBLEM-KEY -->
 
 Use a stable problem key within this repository so publication can be recovered after a timeout. Keep proposal revisions, claim records, reviews, and outcomes in subsequent issue comments.

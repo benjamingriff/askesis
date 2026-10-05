@@ -29,4 +29,4 @@ Assess whether the change is proportionate, preserves the required contract, and
 
 Explain the next action. Overall `accepted` requires no unresolved blocking findings or owner decisions. A technically accepted proposal under human approval policy has overall verdict `needs-human` until the owner accepts that revision. Advisory findings can remain when their impact is explicit. A material unknown requires revision or a decision, not conditional acceptance.
 
-<!-- askesis-proposal-review:v1 attempt=ATTEMPT-ID revision=REVISION round=ROUND -->
+<!-- agent-proposal-review:v1 attempt=ATTEMPT-ID revision=REVISION round=ROUND -->
