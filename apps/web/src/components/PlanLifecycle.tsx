@@ -14,28 +14,16 @@ import {
   PowerOff,
   Trash2,
 } from 'lucide-react';
-import { useRef, useState } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router';
 import { api } from '../api';
 import { result } from '../lib/result';
+import { useRequestKey } from '../lib/use-request-key';
 import { usePlanPreferences } from '../plan-selection';
 import type { Plan, Preview } from '../plan-data';
 import { Button, Dialog, Menu, Notice } from './ui';
 import { EditDetailsDialog } from './EditDetailsDialog';
 import { LockReviewDialog } from './LockReviewDialog';
-
-export function useRequestKey() {
-  const keys = useRef(new Map<string, string>());
-  return (input: unknown) => {
-    const signature = JSON.stringify(input);
-    let key = keys.current.get(signature);
-    if (key === undefined) {
-      key = crypto.randomUUID();
-      keys.current.set(signature, key);
-    }
-    return key;
-  };
-}
 
 type Action = 'unlock' | 'discard' | 'archive' | 'unarchive' | 'activate' | 'deactivate' | 'lock';
 type Confirm = 'unlock' | 'discard' | 'archive' | 'unarchive' | 'review' | 'details' | null;

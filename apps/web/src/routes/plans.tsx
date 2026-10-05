@@ -3,7 +3,7 @@ import { ArrowLeft, CalendarDays, ChevronRight, Plus, Power } from 'lucide-react
 import { useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router';
 import { api } from '../api';
-import { useRequestKey } from '../components/PlanLifecycle';
+import { useRequestKey } from '../lib/use-request-key';
 import { StatusPill } from '../components/PlanWidgets';
 import { PlanView } from '../components/PlanView';
 import {
