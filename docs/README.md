@@ -4,6 +4,7 @@ This directory records the proposed direction for Askesis beyond the original fi
 
 ## Current decisions
 
+- [Agent discovery and ticket delivery](./agent-workflows.md) — specialised discovery, a shared backlog, proposal review, generic ticket delivery, and the manual-to-scheduled rollout.
 - [ADR 0001: Initial application stack](./adr/0001-application-stack.md) — React, Vite, React Router, Hono, OpenAPI, Kysely, and Atlas.
 - [ADR 0002: Package management](./adr/0002-package-management.md) — pnpm workspaces, version pinning, and frozen-lockfile builds.
 - [Data model](./data-model.md) — plan hierarchy, workout prescription tree, targets, and calibration.
