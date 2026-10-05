@@ -31,14 +31,13 @@ export const ChangeSummarySchema = z.object({
   assumptionsChanged: z.boolean(),
   paceGuidesChanged: z.boolean(),
   datesChanged: z.boolean(),
-  counts: z
-    .object({
-      added: z.number().int(),
-      changed: z.number().int(),
-      moved: z.number().int(),
-      removed: z.number().int(),
-    })
-    .optional(),
+  /** Every change, including workouts the list omits. */
+  counts: z.object({
+    added: z.number().int(),
+    changed: z.number().int(),
+    moved: z.number().int(),
+    removed: z.number().int(),
+  }),
   omittedWorkouts: z.number().int().nonnegative().optional(),
 });
 export const DraftChangesSchema = ChangeSummarySchema.extend({

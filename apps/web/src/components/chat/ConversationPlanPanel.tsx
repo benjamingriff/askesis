@@ -41,15 +41,7 @@ export function ConversationPlanPanel({
           onClick={onClose}
         />
       </div>
-      {plan.data ? (
-        <PlanView
-          plan={plan.data}
-          view={view}
-          onViewChange={setView}
-          embedded
-          onAskCoach={onAskCoach}
-        />
-      ) : plan.error ? (
+      {plan.error ? (
         <Notice
           tone="danger"
           role="alert"
@@ -59,9 +51,18 @@ export function ConversationPlanPanel({
             </Button>
           }
         >
-          {plan.error.message}
+          {plan.data ? `Showing the last loaded plan. ${plan.error.message}` : plan.error.message}
         </Notice>
-      ) : (
+      ) : null}
+      {plan.data ? (
+        <PlanView
+          plan={plan.data}
+          view={view}
+          onViewChange={setView}
+          embedded
+          onAskCoach={onAskCoach}
+        />
+      ) : plan.error ? null : (
         <LoadingState>Loading plan…</LoadingState>
       )}
     </aside>

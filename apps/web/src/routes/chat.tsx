@@ -464,6 +464,9 @@ function ConversationPanel({ conversationId }: { conversationId: string | undefi
             turns={turns}
             otherRun={run && run.conversationId !== conversationId ? run : undefined}
             history={history}
+            turnsError={
+              runs.error ? { message: runs.error.message, retry: () => void runs.refetch() } : null
+            }
             hidden={showPlan}
             followingRef={following}
             testMode={testMode}

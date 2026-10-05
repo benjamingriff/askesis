@@ -34,6 +34,7 @@ export function Transcript({
   turns,
   otherRun,
   history,
+  turnsError,
   hidden,
   followingRef,
   testMode,
@@ -49,6 +50,8 @@ export function Transcript({
   /** A plan-wide run working from another chat, so Stop is never anonymous. */
   otherRun: Run | undefined;
   history: History;
+  /** The turn projection failed; replies still show, but activity and saved changes may not. */
+  turnsError: { message: string; retry: () => void } | null;
   hidden: boolean;
   followingRef: RefObject<boolean>;
   testMode: boolean;
@@ -64,10 +67,13 @@ export function Transcript({
       m.role === 'assistant' && m.producingRunId ? [[m.producingRunId, m]] : [],
     ),
   );
+  // A reply moves into its turn only when that turn renders, i.e. its user message is loaded;
+  // a page boundary between question and reply must not hide the reply.
+  const loaded = new Set(messages.map((m) => m.id));
   const shownInTurn = new Set(
     [...turns.values()].flatMap((turn) => {
       const reply = replies.get(turn.id);
-      return reply ? [reply.id] : [];
+      return reply && loaded.has(turn.userMessageId) ? [reply.id] : [];
     }),
   );
   const latestMessageId = messages.at(-1)?.id;
@@ -146,6 +152,19 @@ export function Transcript({
           }
         >
           {history.error.message}
+        </Notice>
+      ) : null}
+      {turnsError ? (
+        <Notice
+          tone="warning"
+          role="alert"
+          action={
+            <Button size="sm" variant="ghost" onClick={turnsError.retry}>
+              Retry
+            </Button>
+          }
+        >
+          Could not load coaching activity and saved changes. {turnsError.message}
         </Notice>
       ) : null}
       {!messages.length && !otherRun ? (

@@ -108,6 +108,8 @@ export function invalidateNotification(client: QueryClient, event: string, raw: 
       invalidate('plans', planId);
       invalidate('plans', 'collection');
       plansConversations(planId);
+      // Conversation rows show the plan's name and follow its archive state.
+      invalidate('chat', 'list');
       return;
   }
 }

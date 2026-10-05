@@ -15,7 +15,7 @@ import {
   transition,
 } from '../chat/chat.service.js';
 import { ContextSchema } from '../chat/chat.schemas.js';
-import { compareVersions, compactSummary } from '../live/live.changes.js';
+import { compareVersions, storedSummary } from '../live/live.changes.js';
 import { readAggregate } from '../plans/plan.aggregate.js';
 import { contentHash, type SemanticValue } from '../plans/plan.canonical.js';
 import { addCalibrationRows, changed, readBrief, saveBriefRows } from '../plans/brief.service.js';
@@ -574,7 +574,7 @@ export async function executeTool(
           .values({
             run_id: id,
             operation_id: command.operationId,
-            summary: json(compactSummary(summary)),
+            summary: json(storedSummary(summary)),
           })
           .execute();
       }
@@ -625,22 +625,35 @@ export async function finishRun(
       const hash = contentHash(json(input) as SemanticValue);
       const hint = await db
         .selectFrom('agent_runs')
-        .selectAll()
+        .select('credential_digest')
         .where('id', '=', id)
-        .forUpdate()
         .executeTakeFirst();
       if (!hint || hint.credential_digest !== digest(token)) throw rejected();
-      const receipt = await db
-        .selectFrom('agent_run_finishes')
-        .selectAll()
-        .where('run_id', '=', id)
-        .executeTakeFirst();
-      if (receipt) {
-        if (receipt.input_hash !== hash)
+      // A repeated delivery returns the recorded outcome, even after the run became terminal.
+      const replay = async () => {
+        const receipt = await db
+          .selectFrom('agent_run_finishes')
+          .selectAll()
+          .where('run_id', '=', id)
+          .executeTakeFirst();
+        if (receipt && receipt.input_hash !== hash)
           throw new ChatError('IDEMPOTENCY_CONFLICT', 'Finish identity changed.');
-        return { status: receipt.status };
+        return receipt ? { status: receipt.status } : null;
+      };
+      const earlier = await replay();
+      if (earlier) return earlier;
+      // Take conversation and run locks in the order every other run command uses; a concurrent
+      // finish that committed while this one waited is then visible as a receipt.
+      let run: Run;
+      try {
+        run = await authorized(db, id, token, true);
+      } catch (error) {
+        const concurrent = await replay();
+        if (concurrent) return concurrent;
+        throw error;
       }
-      const run = await authorized(db, id, token, true);
+      const concurrent = await replay();
+      if (concurrent) return concurrent;
       const status = run.status === 'cancelling' ? 'cancelled' : input.status;
       await db
         .insertInto('agent_run_finishes')

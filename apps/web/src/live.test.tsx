@@ -30,6 +30,7 @@ it('refreshes only the affected reads for text, activity, run and plan events', 
   invalidateNotification(client, 'plan.changed', { planId: 'p1' });
   expect(invalidate).toHaveBeenCalledWith({ queryKey: ['plans', 'p1'] });
   expect(invalidate).toHaveBeenCalledWith({ queryKey: ['plans', 'collection'] });
+  expect(invalidate).toHaveBeenCalledWith({ queryKey: ['chat', 'list'] });
   expect(invalidate).not.toHaveBeenCalledWith({ queryKey: ['plans'] });
   expect(invalidate).not.toHaveBeenCalledWith({ queryKey: ['plan-workouts'] });
   invalidate.mockClear();

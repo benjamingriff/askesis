@@ -121,6 +121,21 @@ it('persists ordered prefixes, retries uncertain delivery, and atomically dedupl
       .execute(),
   ).rejects.toThrow();
 });
+it('serializes finish with concurrent cancellation and heartbeats without deadlocking', async () => {
+  for (let attempt = 0; attempt < 5; attempt++) {
+    const { claim } = await accepted();
+    const results = await Promise.allSettled([
+      finishRun(claim.runId, claim.token, { status: 'completed', content: 'Done' }),
+      cancelRun(owner, claim.runId),
+      heartbeatRun(claim.runId, claim.token),
+      finishRun(claim.runId, claim.token, { status: 'completed', content: 'Done' }),
+    ]);
+    for (const result of results)
+      if (result.status === 'rejected') expect(String(result.reason)).not.toMatch(/deadlock/i);
+    expect(results[0]).toEqual(results[3]);
+    expect(['completed', 'cancelled']).toContain((await getOutput(owner, claim.runId)).status);
+  }
+});
 it.each(['cancelled', 'failed'] as const)(
   'retains incomplete text for older %s turns without creating assistant history',
   async (status) => {

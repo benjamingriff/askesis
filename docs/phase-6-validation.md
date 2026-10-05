@@ -45,8 +45,8 @@ the header, compact embedded plan). The checks were re-run on the revised branch
 
 | Command                  | Result                                                                                       |
 | ------------------------ | -------------------------------------------------------------------------------------------- |
-| `pnpm check`             | Passed: 177 unit/UI/worker tests (agent 20, API 37, web 120), builds, contracts and checksum |
-| `pnpm test:db`           | 72 PostgreSQL cases passed (test port 55442; another local stack held 55432)                 |
+| `pnpm check`             | Passed: 180 unit/UI/worker tests (agent 20, API 37, web 123), builds, contracts and checksum |
+| `pnpm test:db`           | 73 PostgreSQL cases passed (test port 55442; another local stack held 55432)                 |
 | `pnpm test:live:upgrade` | Populated Phase 5 data survived the revised migration unchanged                              |
 | `pnpm smoke`             | Disposable API/web/worker stream smoke passed                                                |
 

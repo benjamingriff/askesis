@@ -649,3 +649,136 @@ it('fills this chat’s composer from coach shortcuts in the plan panel', async 
   expect(screen.getByLabelText('Message')).toHaveValue('Plan the remaining weeks');
   expect(api.POST).not.toHaveBeenCalled();
 });
+
+it('keeps a reply visible when its question is on an older, unloaded page', async () => {
+  const original = vi.mocked(api.GET).getMockImplementation()!;
+  vi.mocked(api.GET).mockImplementation((async (path: string, ...args: unknown[]) => {
+    if (path.endsWith('/messages'))
+      return response({
+        messages: [
+          {
+            id: 'reply',
+            sequence: 51,
+            role: 'assistant',
+            content: 'Answer to an older question',
+            producingRunId: 'old-run',
+            context: null,
+          },
+        ],
+        nextBeforeSequence: 51,
+      });
+    if (path.endsWith('/runs'))
+      return response({
+        runs: [
+          {
+            id: 'old-run',
+            status: 'completed',
+            userMessageId: 'question-on-older-page',
+            conversationId: 'c1',
+            planId: null,
+            context: null,
+            failureCode: null,
+            createdAt: '2026-10-05T10:00:00Z',
+            startedAt: null,
+            finishedAt: null,
+            ...turnFields,
+            output: [],
+          },
+        ],
+        nextBeforeSequence: null,
+      });
+    return Reflect.apply(original, api, [path, ...args]);
+  }) as typeof api.GET);
+  mount('/chat/c1');
+  expect(await screen.findByText('Answer to an older question')).toBeInTheDocument();
+});
+
+it('shows a retryable notice when coaching turns cannot load, keeping the messages', async () => {
+  let fail = true;
+  const original = vi.mocked(api.GET).getMockImplementation()!;
+  vi.mocked(api.GET).mockImplementation((async (path: string, ...args: unknown[]) => {
+    if (path.endsWith('/runs') && fail)
+      return {
+        error: { error: { code: 'UNAVAILABLE', message: 'Service unavailable.' } },
+        response: new Response(null, { status: 503 }),
+      };
+    return Reflect.apply(original, api, [path, ...args]);
+  }) as typeof api.GET);
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  mount('/chat/c1', client);
+  expect(await screen.findByText('Saved message')).toBeInTheDocument();
+  expect(await screen.findByText(/Could not load coaching activity/)).toBeInTheDocument();
+  fail = false;
+  fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+  await waitFor(() =>
+    expect(screen.queryByText(/Could not load coaching activity/)).not.toBeInTheDocument(),
+  );
+  client.clear();
+});
+
+it('shows recovered terminal text rather than an older streamed snapshot', async () => {
+  const running = {
+    id: 'r1',
+    userMessageId: 'm1',
+    conversationId: 'c1',
+    status: 'running',
+    failureCode: null,
+  };
+  detail = { ...conversation, activeRun: running } as never;
+  let stopped = false;
+  const item = (content: string, revision: number) => ({
+    itemId: 'answer',
+    position: 0,
+    content,
+    revision,
+    isFinal: false,
+    truncated: false,
+  });
+  const original = vi.mocked(api.GET).getMockImplementation()!;
+  vi.mocked(api.GET).mockImplementation((async (path: string, ...args: unknown[]) => {
+    if (path.endsWith('/output'))
+      return stopped
+        ? {
+            error: { error: { code: 'UNAVAILABLE', message: 'Unavailable.' } },
+            response: new Response(null, { status: 503 }),
+          }
+        : response({
+            runId: 'r1',
+            status: 'running',
+            finalMessageId: null,
+            items: [item('Partial', 1)],
+            timings: {},
+          });
+    const recovered = {
+      ...running,
+      status: 'cancelled',
+      planId: null,
+      context: null,
+      createdAt: '2026-10-05T10:00:00Z',
+      startedAt: null,
+      finishedAt: null,
+      ...turnFields,
+      output: [item('Partial reply, then stopped', 2)],
+    };
+    if (path.endsWith('/runs') && stopped)
+      return response({ runs: [recovered], nextBeforeSequence: null });
+    if (path.endsWith('/turn') && stopped) return response(recovered);
+    return Reflect.apply(original, api, [path, ...args]);
+  }) as typeof api.GET);
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  mount('/chat/c1', client);
+  expect(await screen.findByText('Partial')).toBeInTheDocument();
+  stopped = true;
+  detail = {
+    ...conversation,
+    activeRun: null,
+    latestRun: { ...running, status: 'cancelled' },
+  } as never;
+  await act(async () => {
+    await client.invalidateQueries({ queryKey: ['chat'] });
+  });
+  expect(await screen.findByText('Partial reply, then stopped')).toBeInTheDocument();
+  expect(screen.queryByText('Partial')).not.toBeInTheDocument();
+  expect(screen.getByText('Stopped · incomplete')).toBeInTheDocument();
+  client.clear();
+});

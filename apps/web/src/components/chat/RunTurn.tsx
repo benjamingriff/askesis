@@ -35,6 +35,19 @@ export const emptyTurn = (run: Run): Turn => ({
   replyTruncated: false,
 });
 
+/**
+ * Merge the live text read with the turn projection, keeping each item's highest revision.
+ * Text only grows, so neither an older cached stream nor a stale projection can win.
+ */
+function latestOutput(...sources: Turn['output'][]) {
+  const items = new Map<string, Turn['output'][number]>();
+  for (const item of sources.flat()) {
+    const known = items.get(item.itemId);
+    if (!known || item.revision > known.revision) items.set(item.itemId, item);
+  }
+  return [...items.values()].sort((a, b) => a.position - b.position);
+}
+
 const turnQuery = (runId: string) => ({
   queryKey: ['chat', 'turn', runId],
   queryFn: async () =>
@@ -82,7 +95,8 @@ export function RunTurn({
     output: live.data.output,
     replyTruncated: live.data.replyTruncated,
   };
-  const source = reply || !output.data ? view.output : output.data.items;
+  // Streamed items still include the final segment, dropped once the durable reply loads.
+  const source = latestOutput(view.output, output.data?.items ?? []);
   const segments = source.filter(
     (item) => !(reply && (item.isFinal || item.content === reply.content)),
   );
@@ -117,16 +131,23 @@ export function RunTurn({
       {reply && view.replyTruncated ? (
         <p className="run-note">Reply shortened at its visible length limit.</p>
       ) : null}
-      {output.error ? (
+      {output.error || live.error ? (
         <Notice
           tone="warning"
           action={
-            <Button size="sm" variant="ghost" onClick={() => void output.refetch()}>
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => {
+                if (output.error) void output.refetch();
+                if (live.error) void live.refetch();
+              }}
+            >
               Retry
             </Button>
           }
         >
-          Could not load the reply in progress.
+          Could not refresh this reply and its activity.
         </Notice>
       ) : null}
       {view.changes && hasChanges(view.changes) ? (
@@ -142,7 +163,21 @@ export function RunTurn({
 export function OtherChatRun({ run, conversation }: { run: Run; conversation: Conversation }) {
   const turn = useQuery({ ...turnQuery(run.id), enabled: isActive(run) });
   return (
-    <RunActivity run={{ ...(turn.data ?? emptyTurn(run)), ...run }} conversation={conversation} />
+    <>
+      <RunActivity run={{ ...(turn.data ?? emptyTurn(run)), ...run }} conversation={conversation} />
+      {turn.error ? (
+        <Notice
+          tone="warning"
+          action={
+            <Button size="sm" variant="ghost" onClick={() => void turn.refetch()}>
+              Retry
+            </Button>
+          }
+        >
+          Could not refresh the coach’s activity.
+        </Notice>
+      ) : null}
+    </>
   );
 }
 

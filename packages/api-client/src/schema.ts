@@ -151,7 +151,7 @@ export interface paths {
                                     assumptionsChanged: boolean;
                                     paceGuidesChanged: boolean;
                                     datesChanged: boolean;
-                                    counts?: {
+                                    counts: {
                                         added: number;
                                         changed: number;
                                         moved: number;
@@ -378,7 +378,7 @@ export interface paths {
                                 assumptionsChanged: boolean;
                                 paceGuidesChanged: boolean;
                                 datesChanged: boolean;
-                                counts?: {
+                                counts: {
                                     added: number;
                                     changed: number;
                                     moved: number;
@@ -483,7 +483,7 @@ export interface paths {
                             assumptionsChanged: boolean;
                             paceGuidesChanged: boolean;
                             datesChanged: boolean;
-                            counts?: {
+                            counts: {
                                 added: number;
                                 changed: number;
                                 moved: number;

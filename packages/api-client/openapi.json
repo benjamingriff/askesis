@@ -757,7 +757,8 @@
                               "workouts",
                               "assumptionsChanged",
                               "paceGuidesChanged",
-                              "datesChanged"
+                              "datesChanged",
+                              "counts"
                             ]
                           },
                           "legacyChanges": {
@@ -1261,7 +1262,8 @@
                         "workouts",
                         "assumptionsChanged",
                         "paceGuidesChanged",
-                        "datesChanged"
+                        "datesChanged",
+                        "counts"
                       ]
                     },
                     "legacyChanges": {
@@ -1495,6 +1497,7 @@
                     "assumptionsChanged",
                     "paceGuidesChanged",
                     "datesChanged",
+                    "counts",
                     "versionId",
                     "editNumber",
                     "baselineId"

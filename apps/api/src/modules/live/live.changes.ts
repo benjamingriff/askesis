@@ -5,7 +5,23 @@ import type { ChangeSummary } from './live.schemas.js';
 type WorkoutChange = ChangeSummary['workouts'][number];
 const byDate = (a: WorkoutChange, b: WorkoutChange) =>
   a.date.localeCompare(b.date) || a.title.localeCompare(b.title);
+/** Workouts listed in a presented summary; counts always cover every change. */
 const LISTED_WORKOUTS = 50;
+/** A stored operation summary keeps every workout unless it would exceed its column bound. */
+const STORED_WORKOUTS = 400;
+const counted = () => ({ added: 0, changed: 0, moved: 0, removed: 0 });
+function countChanges(workouts: WorkoutChange[]) {
+  const counts = counted();
+  for (const workout of workouts) counts[workout.change]++;
+  return counts;
+}
+const shortTitle = (workout: WorkoutChange) => ({
+  ...workout,
+  title:
+    workout.title.length > 80
+      ? workout.title.slice(0, 79).replace(/[\uD800-\uDBFF]$/, '') + '…'
+      : workout.title,
+});
 export function compareAggregates(
   before: Aggregate | null,
   after: Aggregate,
@@ -48,6 +64,7 @@ export function compareAggregates(
     keys.some((k) => canonicalJson(previous[k] ?? null) !== canonicalJson(next[k] ?? null));
   return {
     workouts: workouts.sort(byDate),
+    counts: countChanges(workouts),
     assumptionsChanged: changed(['brief', 'weekdays', 'description']),
     paceGuidesChanged: changed(['calibrations']),
     datesChanged: changed(['startDate', 'endDate']),
@@ -63,30 +80,32 @@ export async function compareVersions(db: Database, before: Aggregate | null, ve
   return compareAggregates(before, after, new Map(rows.map((r) => [r.lineage_id, r.id])));
 }
 
-/** Presentation storage must never reject a valid large schedule mutation. */
-export function compactSummary(summary: ChangeSummary): ChangeSummary {
-  const counts = { added: 0, changed: 0, moved: 0, removed: 0 };
-  for (const workout of summary.workouts) counts[workout.change]++;
+/**
+ * The summary stored with a tool receipt: every changed workout with a short title, so a run's
+ * operations can later be combined exactly. Storage never rejects a valid schedule write; an
+ * operation too large for its column keeps complete counts and records what it omitted.
+ */
+export function storedSummary(summary: ChangeSummary): ChangeSummary {
+  const workouts = summary.workouts.slice(0, STORED_WORKOUTS).map(shortTitle);
   return {
     ...summary,
-    counts,
-    omittedWorkouts:
-      (summary.omittedWorkouts ?? 0) + Math.max(0, summary.workouts.length - LISTED_WORKOUTS),
-    workouts: summary.workouts.slice(0, LISTED_WORKOUTS).map((workout) => ({
-      ...workout,
-      title:
-        workout.title.length > 80
-          ? workout.title.slice(0, 79).replace(/[\uD800-\uDBFF]$/, '') + '…'
-          : workout.title,
-    })),
+    omittedWorkouts: summary.workouts.length - workouts.length,
+    workouts,
   };
+}
+
+/** A summary for presentation: complete counts and the first workouts in date order. */
+export function compactSummary(summary: ChangeSummary): ChangeSummary {
+  const total = Object.values(summary.counts).reduce((sum, count) => sum + count, 0);
+  const workouts = summary.workouts.slice(0, LISTED_WORKOUTS).map(shortTitle);
+  return { ...summary, workouts, omittedWorkouts: Math.max(0, total - workouts.length) };
 }
 
 /**
  * The net effect of one run's committed operations, in commit order. A workout added and later
  * removed by the same run disappears; a workout edited twice is one change, keeping its
- * original date as the move origin. Operations that already omitted entries stay counted as
- * omitted, so the result never claims a complete list it does not have.
+ * original date as the move origin. Counts for workouts an oversized operation could not list
+ * are carried over, so totals stay complete even when the list cannot be.
  */
 export function combineSummaries(summaries: ChangeSummary[]): ChangeSummary | null {
   if (!summaries.length) return null;
@@ -137,11 +156,18 @@ export function combineSummaries(summaries: ChangeSummary[]): ChangeSummary | nu
         prescriptionChanged: edited,
       });
   }
+  const counts = countChanges(workouts);
+  for (const summary of summaries) {
+    if (!summary.omittedWorkouts) continue;
+    const listed = countChanges(summary.workouts);
+    for (const kind of Object.keys(counts) as (keyof typeof counts)[])
+      counts[kind] += Math.max(0, summary.counts[kind] - listed[kind]);
+  }
   return compactSummary({
     workouts: workouts.sort(byDate),
+    counts,
     assumptionsChanged: summaries.some((s) => s.assumptionsChanged),
     paceGuidesChanged: summaries.some((s) => s.paceGuidesChanged),
     datesChanged: summaries.some((s) => s.datesChanged),
-    omittedWorkouts: summaries.reduce((total, s) => total + (s.omittedWorkouts ?? 0), 0),
   });
 }

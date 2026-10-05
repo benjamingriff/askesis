@@ -1,5 +1,10 @@
 import { expect, it } from 'vitest';
-import { combineSummaries, compareAggregates, compactSummary } from './live.changes.js';
+import {
+  combineSummaries,
+  compareAggregates,
+  compactSummary,
+  storedSummary,
+} from './live.changes.js';
 import type { ChangeSummary } from './live.schemas.js';
 import type { SemanticValue } from '../plans/plan.canonical.js';
 import type { Aggregate } from '../plans/plan.aggregate.js';
@@ -97,12 +102,25 @@ it('bounds stored change details without losing full counts or rejecting a large
     ),
     new Map(),
   );
-  const compact = compactSummary(summary);
+  // Stored summaries keep every workout so a run's operations combine exactly.
+  const stored = storedSummary(summary);
+  expect(stored.workouts).toHaveLength(300);
+  expect(stored.omittedWorkouts).toBe(0);
+  expect(Buffer.byteLength(JSON.stringify(stored), 'utf8')).toBeLessThan(262144);
+  const compact = compactSummary(stored);
   expect(compact.workouts).toHaveLength(50);
-  expect(compact.counts?.added).toBe(300);
+  expect(compact.counts.added).toBe(300);
   expect(compact.omittedWorkouts).toBe(250);
-  expect(Buffer.byteLength(JSON.stringify(compact), 'utf8')).toBeLessThan(65536);
-  expect(summary.workouts).toHaveLength(300);
+  // Even an operation too large to list keeps complete counts through combination.
+  const huge = storedSummary(
+    compareAggregates(
+      null,
+      aggregate(Array.from({ length: 450 }, (_, i) => ({ lineage: `l-${i}`, date: '2027-01-02' }))),
+      new Map(),
+    ),
+  );
+  expect(huge).toMatchObject({ omittedWorkouts: 50, counts: { added: 450 } });
+  expect(combineSummaries([huge])).toMatchObject({ counts: { added: 450 }, omittedWorkouts: 400 });
 });
 
 const summary = (workouts: Partial<ChangeSummary['workouts'][number]>[], flags = {}) =>
@@ -117,6 +135,7 @@ const summary = (workouts: Partial<ChangeSummary['workouts'][number]>[], flags =
       prescriptionChanged: true,
       ...w,
     })),
+    counts: { added: 0, changed: 0, moved: 0, removed: 0 },
     assumptionsChanged: false,
     paceGuidesChanged: false,
     datesChanged: false,
@@ -143,7 +162,12 @@ it('combines a run’s operations into its net changes', () => {
         },
         { lineageId: 'gone', change: 'removed', workoutId: null, title: 'Long run' },
       ],
-      { paceGuidesChanged: true, omittedWorkouts: 2 },
+      // This operation also added two workouts it could not list.
+      {
+        paceGuidesChanged: true,
+        omittedWorkouts: 2,
+        counts: { added: 2, changed: 2, moved: 1, removed: 2 },
+      },
     ),
   ])!;
   expect(combined.workouts).toEqual([
@@ -161,7 +185,7 @@ it('combines a run’s operations into its net changes', () => {
     paceGuidesChanged: true,
     assumptionsChanged: false,
     omittedWorkouts: 2,
-    counts: { added: 1, changed: 0, moved: 1, removed: 1 },
+    counts: { added: 3, changed: 0, moved: 1, removed: 1 },
   });
   expect(combineSummaries([])).toBeNull();
 });
