@@ -751,6 +751,9 @@
                               "omittedWorkouts": {
                                 "type": "integer",
                                 "minimum": 0
+                              },
+                              "approximate": {
+                                "type": "boolean"
                               }
                             },
                             "required": [
@@ -1256,6 +1259,9 @@
                         "omittedWorkouts": {
                           "type": "integer",
                           "minimum": 0
+                        },
+                        "approximate": {
+                          "type": "boolean"
                         }
                       },
                       "required": [
@@ -1478,6 +1484,9 @@
                     "omittedWorkouts": {
                       "type": "integer",
                       "minimum": 0
+                    },
+                    "approximate": {
+                      "type": "boolean"
                     },
                     "versionId": {
                       "type": "string",

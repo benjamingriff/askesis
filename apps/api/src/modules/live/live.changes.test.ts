@@ -236,4 +236,16 @@ it('never rejects a pathologically large operation, keeping complete counts', ()
   expect(Buffer.byteLength(JSON.stringify(stored), 'utf8')).toBeLessThan(4194304);
   expect(stored.workouts.length + (stored.omittedWorkouts ?? 0)).toBe(30000);
   expect(combineSummaries([stored])?.counts.removed).toBe(30000);
+  // An earlier edit to a workout the oversized deletion could not list cannot be reconciled,
+  // so the run's totals say they are approximate.
+  const last = removed.at(-1)!;
+  const edit = {
+    workouts: [{ ...last, workoutId: 'w', change: 'changed' as const, prescriptionChanged: true }],
+    counts: { added: 0, changed: 1, moved: 0, removed: 0 },
+    assumptionsChanged: false,
+    paceGuidesChanged: false,
+    datesChanged: false,
+  };
+  expect(combineSummaries([storedSummary(edit), stored])).toMatchObject({ approximate: true });
+  expect(combineSummaries([storedSummary(edit)])?.approximate).toBeUndefined();
 });

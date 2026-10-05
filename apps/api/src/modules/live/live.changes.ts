@@ -115,7 +115,7 @@ export function compactSummary(summary: ChangeSummary): ChangeSummary {
  * The net effect of one run's committed operations, in commit order. A workout added and later
  * removed by the same run disappears; a workout edited twice is one change, keeping its
  * original date as the move origin. Stored summaries list every workout except in pathological
- * operations, so combination is exact for every realistic run.
+ * operations, so combination is exact for every realistic run and marked approximate otherwise.
  */
 export function combineSummaries(summaries: ChangeSummary[]): ChangeSummary | null {
   if (!summaries.length) return null;
@@ -166,8 +166,11 @@ export function combineSummaries(summaries: ChangeSummary[]): ChangeSummary | nu
         prescriptionChanged: edited,
       });
   }
-  // An operation too large to store every identity still contributes its complete counts.
+  // An operation too large to store every identity still contributes its complete counts, but
+  // its unlisted workouts cannot be reconciled with other operations, so totals are marked
+  // approximate rather than presented as exact.
   const counts = countChanges(workouts);
+  const approximate = summaries.some((summary) => !!summary.omittedWorkouts);
   for (const summary of summaries) {
     if (!summary.omittedWorkouts) continue;
     const listed = countChanges(summary.workouts);
@@ -180,5 +183,6 @@ export function combineSummaries(summaries: ChangeSummary[]): ChangeSummary | nu
     assumptionsChanged: summaries.some((s) => s.assumptionsChanged),
     paceGuidesChanged: summaries.some((s) => s.paceGuidesChanged),
     datesChanged: summaries.some((s) => s.datesChanged),
+    ...(approximate ? { approximate } : {}),
   });
 }

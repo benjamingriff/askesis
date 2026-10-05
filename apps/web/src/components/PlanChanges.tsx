@@ -52,7 +52,8 @@ export function describeChanges(summary: ChangeSummary) {
     ...(summary.datesChanged ? ['plan dates updated'] : []),
   ]
     .join(' · ')
-    .replace(/^./, (first) => first.toUpperCase());
+    .replace(/^./, (first) => first.toUpperCase())
+    .concat(summary.approximate ? ' (approximate)' : '');
 }
 
 /**

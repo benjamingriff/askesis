@@ -39,6 +39,8 @@ export const ChangeSummarySchema = z.object({
     removed: z.number().int(),
   }),
   omittedWorkouts: z.number().int().nonnegative().optional(),
+  /** Includes an operation too large to store every workout, so overlaps may be counted twice. */
+  approximate: z.boolean().optional(),
 });
 export const DraftChangesSchema = ChangeSummarySchema.extend({
   versionId: Id,

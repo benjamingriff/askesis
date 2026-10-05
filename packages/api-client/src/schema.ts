@@ -158,6 +158,7 @@ export interface paths {
                                         removed: number;
                                     };
                                     omittedWorkouts?: number;
+                                    approximate?: boolean;
                                 } | null;
                                 legacyChanges: boolean;
                                 output: {
@@ -385,6 +386,7 @@ export interface paths {
                                     removed: number;
                                 };
                                 omittedWorkouts?: number;
+                                approximate?: boolean;
                             } | null;
                             legacyChanges: boolean;
                             output: {
@@ -490,6 +492,7 @@ export interface paths {
                                 removed: number;
                             };
                             omittedWorkouts?: number;
+                            approximate?: boolean;
                             versionId: string;
                             editNumber: number;
                             baselineId: string | null;
