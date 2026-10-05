@@ -33,18 +33,39 @@ const runner = new Runner({
   tracingDisabled: true,
   traceIncludeSensitiveData: false,
 });
-const result = await runner.run(agent, 'How many runs per week are in this test context?', {
-  maxTurns: 3,
-  signal: AbortSignal.timeout(60000),
-});
-if (calls !== 1 || typeof result.finalOutput !== 'string' || !result.finalOutput.includes('3'))
-  throw new Error('The selected model did not complete the expected tool round trip.');
-console.log(
-  JSON.stringify({
-    passed: true,
-    model: agent.model,
-    toolCalls: calls,
-    inputTokens: result.runContext.usage.inputTokens,
-    outputTokens: result.runContext.usage.outputTokens,
-  }),
-);
+try {
+  const result = await runner.run(agent, 'How many runs per week are in this test context?', {
+    maxTurns: 3,
+    stream: true,
+    signal: AbortSignal.timeout(60000),
+  });
+  let visibleCharacters = 0;
+  for await (const event of result)
+    if (event.type === 'raw_model_stream_event' && event.data.type === 'output_text_delta')
+      visibleCharacters += event.data.delta.length;
+  await result.completed;
+  if (result.error) throw new Error('Streamed compatibility check failed.');
+  if (!visibleCharacters) throw new Error('No streamed visible text.');
+  if (calls !== 1 || typeof result.finalOutput !== 'string' || !result.finalOutput.includes('3'))
+    throw new Error('The selected model did not complete the expected tool round trip.');
+  console.log(
+    JSON.stringify({
+      passed: true,
+      model: agent.model,
+      toolCalls: calls,
+      streamedVisibleCharacters: visibleCharacters,
+      inputTokens: result.runContext.usage.inputTokens,
+      outputTokens: result.runContext.usage.outputTokens,
+    }),
+  );
+} catch (error) {
+  const status = error && typeof error === 'object' && 'status' in error ? error.status : undefined;
+  console.error(
+    JSON.stringify({
+      passed: false,
+      code: 'PROVIDER_CHECK_FAILED',
+      ...(typeof status === 'number' ? { status } : {}),
+    }),
+  );
+  process.exitCode = 1;
+}

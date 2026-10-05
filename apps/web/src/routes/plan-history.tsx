@@ -18,7 +18,7 @@ import {
 import { formatDateTime, formatRange, formatShort } from '../lib/format';
 import { useLocalToday } from '../lib/use-local-today';
 import { result } from '../lib/result';
-import { knownCoverage, useBriefState, useWorkouts } from '../plan-data';
+import { knownCoverage, useBriefState, usePlan, useWorkouts } from '../plan-data';
 import { usePlanPreferences } from '../plan-selection';
 import { useUnits } from '../settings';
 
@@ -87,11 +87,7 @@ function RevisionView({ planId, revisionId }: { planId: string; revisionId: stri
   const navigate = useNavigate();
   const preferences = usePlanPreferences();
   const params = { path: { planId, revisionId } };
-  const plan = useQuery({
-    queryKey: ['plans', planId],
-    queryFn: async () =>
-      result(await api.GET('/api/v1/plans/{planId}', { params: { path: { planId } } })),
-  });
+  const plan = usePlan(planId);
   const detail = useQuery({
     queryKey: ['plans', planId, 'revision', revisionId],
     queryFn: async () =>

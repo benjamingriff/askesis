@@ -25,6 +25,36 @@ export function versionKey(version: Pick<PlanVersion, 'id' | 'editNumber'> | nul
   return [version?.id, version?.editNumber] as const;
 }
 
+export type DraftChanges =
+  paths['/api/v1/plans/{planId}/draft/changes']['get']['responses'][200]['content']['application/json'];
+
+/** One plan's metadata and current draft/locked identities. Live updates refresh this key. */
+export function usePlan(planId: string | null) {
+  return useQuery({
+    queryKey: ['plans', planId],
+    enabled: !!planId,
+    queryFn: async () =>
+      result(await api.GET('/api/v1/plans/{planId}', { params: { path: { planId: planId! } } })),
+  });
+}
+
+/**
+ * Net differences between the current draft and the locked version. Keyed by the draft's edit,
+ * so a response for an older edit is never shown against a newer schedule.
+ */
+export function useDraftChanges(planId: string, draft: PlanVersion | null) {
+  const changes = useQuery({
+    queryKey: ['plans', planId, 'draft-changes', ...versionKey(draft)],
+    enabled: !!draft,
+    queryFn: async () =>
+      result(
+        await api.GET('/api/v1/plans/{planId}/draft/changes', { params: { path: { planId } } }),
+      ),
+  });
+  const current = changes.data && changes.data.editNumber === draft?.editNumber;
+  return { ...changes, data: current ? changes.data : undefined };
+}
+
 /** The brief, calibrations and prescribed coverage for one version of a plan. */
 export function useBriefState(planId: string, version: PlanVersion | null) {
   const draft = version?.state === 'draft';
@@ -33,6 +63,8 @@ export function useBriefState(planId: string, version: PlanVersion | null) {
     // so the state is part of the key.
     queryKey: ['plans', planId, 'brief', version?.state, ...versionKey(version)],
     enabled: !!version,
+    placeholderData: (previous, query) =>
+      query?.queryKey.at(-2) === version?.id ? previous : undefined,
     // Locked versions never change, and draft changes advance editNumber (part of the key).
     refetchOnWindowFocus: false,
     queryFn: async () =>
@@ -52,6 +84,8 @@ export function useWorkouts(version: Pick<PlanVersion, 'id' | 'editNumber'> | nu
   return useQuery({
     queryKey: ['plan-workouts', ...versionKey(version)],
     enabled: !!version,
+    placeholderData: (previous, query) =>
+      query?.queryKey.at(-2) === version?.id ? previous : undefined,
     queryFn: async () =>
       result(
         await api.GET('/api/v1/workouts', { params: { query: { planVersionId: version!.id } } }),

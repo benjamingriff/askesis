@@ -1,3 +1,4 @@
+import { draftChanges, getTurn } from '../../src/modules/live/live.service.js';
 import { startAgentSweeper } from '../../src/modules/agent/agent.sweeper.js';
 import { randomUUID } from 'node:crypto';
 import { sql } from 'kysely';
@@ -216,7 +217,14 @@ it('claims once across workers, allows discussion without generating, and persis
   expect((await listMessages(owner, c.conversation.id, undefined, 50)).messages).toHaveLength(2);
   await expect(
     finishRun(claim.runId, claim.token, { status: 'completed', content: 'Duplicate' }),
-  ).rejects.toMatchObject({ code: 'LEASE_LOST' });
+  ).rejects.toMatchObject({ code: 'IDEMPOTENCY_CONFLICT' });
+  expect(
+    await finishRun(claim.runId, claim.token, {
+      status: 'completed',
+      content: 'What would you like to achieve?',
+    }),
+  ).toEqual({ status: 'completed' });
+  expect((await listMessages(owner, c.conversation.id, undefined, 50)).messages).toHaveLength(2);
 });
 it('binds standalone creation atomically and replays a lost-response receipt without rewriting original context', async () => {
   const { claim, created } = await accepted();
@@ -1044,4 +1052,84 @@ it('requires the current prompt contract before a worker contributes readiness o
     ready: true,
   });
   expect((await chatCapabilities()).executionAvailable).toBe(true);
+});
+
+it('keeps current lineage highlights separate from immutable per-run changes across moves, reversions and locking', async () => {
+  const initial = await planning();
+  await tool(initial.claim, 'apply_schedule_changes', batch);
+  const firstDiff = await draftChanges(owner, initial.p.id);
+  expect(firstDiff.baselineId).toBeNull();
+  expect(firstDiff.workouts[0]!.change).toBe('added');
+  await finishRun(initial.claim.runId, initial.claim.token, {
+    status: 'completed',
+    content: 'First schedule',
+  });
+  const locked = await lockReviewedPartial(initial.p.id);
+  await unlockPlan(owner, initial.p.id, locked.stateVersion);
+  expect((await draftChanges(owner, initial.p.id)).workouts).toEqual([]);
+  const next = await accepted(initial.p.id);
+  const current = await getPlan(owner, initial.p.id);
+  const workout = await db
+    .selectFrom('workouts')
+    .selectAll()
+    .where('plan_version_id', '=', current.draft!.id)
+    .executeTakeFirstOrThrow();
+  const input = {
+    ...batch,
+    generation: { startDate: '2027-01-01', endDate: '2027-01-07' },
+    blocks: [],
+    weeks: [],
+    workouts: [
+      {
+        ...batch.workouts[0]!,
+        id: workout.id,
+        weekKey: workout.week_id,
+        date: '2027-01-03',
+        title: 'Changed and moved',
+      },
+    ],
+  };
+  await tool(next.claim, 'apply_schedule_changes', input);
+  expect((await draftChanges(owner, initial.p.id)).workouts[0]).toMatchObject({
+    workoutId: workout.id,
+    change: 'moved',
+    prescriptionChanged: true,
+    previousDate: '2027-01-02',
+  });
+  expect((await getTurn(owner, next.claim.runId)).changes?.workouts[0]).toMatchObject({
+    change: 'moved',
+    previousDate: '2027-01-02',
+  });
+  await tool(next.claim, 'apply_schedule_changes', {
+    ...input,
+    generation: null,
+    workouts: [{ ...input.workouts[0]!, date: '2027-01-02', title: 'Easy run' }],
+  });
+  expect((await draftChanges(owner, initial.p.id)).workouts).toEqual([]);
+  // The draft has no net difference, but this run did edit the workout.
+  expect((await getTurn(owner, next.claim.runId)).changes?.workouts[0]).toMatchObject({
+    change: 'changed',
+    prescriptionChanged: true,
+  });
+  await tool(next.claim, 'apply_schedule_changes', {
+    ...input,
+    generation: null,
+    workouts: [],
+    deleteWorkoutIds: [workout.id],
+  });
+  expect((await draftChanges(owner, initial.p.id)).workouts[0]).toMatchObject({
+    change: 'removed',
+    workoutId: null,
+    title: 'Easy run',
+  });
+  await cancelRun(owner, next.claim.runId);
+  await finishRun(next.claim.runId, next.claim.token, { status: 'cancelled' });
+  const after = await lockReviewedPartial(initial.p.id);
+  expect(after.draft).toBeNull();
+  const turn = await getTurn(owner, next.claim.runId);
+  expect(turn.changes?.workouts).toEqual([
+    expect.objectContaining({ change: 'removed', title: 'Easy run', date: '2027-01-02' }),
+  ]);
+  expect(turn.activity.map((a) => a.state)).toEqual(['completed', 'completed', 'completed']);
+  expect(turn.legacyChanges).toBe(false);
 });

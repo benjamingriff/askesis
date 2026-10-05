@@ -4,6 +4,620 @@
  */
 
 export interface paths {
+    "/api/v1/live/bootstrap": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Success. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            cursor: string;
+                        };
+                    };
+                };
+                /** @description Rejected. */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Rejected. */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Rejected. */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Rejected. */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/conversations/{conversationId}/runs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: {
+                    beforeSequence?: number;
+                    limit?: number;
+                };
+                header?: never;
+                path: {
+                    conversationId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Success. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            runs: {
+                                id: string;
+                                conversationId: string;
+                                planId: string | null;
+                                userMessageId: string;
+                                /** @enum {string} */
+                                status: "queued" | "running" | "cancelling" | "completed" | "failed" | "cancelled";
+                                context: {
+                                    versionId: string;
+                                    /** @enum {string} */
+                                    state: "draft" | "locked";
+                                    versionNumber: number | null;
+                                    editNumber: number;
+                                } | null;
+                                failureCode: string | null;
+                                generation?: {
+                                    runId: string;
+                                    startDate: string;
+                                    endDate: string;
+                                    prescribedThrough: string | null;
+                                    /** @enum {string} */
+                                    status: "in_progress" | "completed" | "interrupted";
+                                } | null;
+                                createdAt: string;
+                                startedAt: string | null;
+                                finishedAt: string | null;
+                                activity: {
+                                    operationId: string;
+                                    name: string;
+                                    /** @enum {string} */
+                                    state: "started" | "completed" | "failed";
+                                }[];
+                                changes: {
+                                    workouts: {
+                                        lineageId: string;
+                                        workoutId: string | null;
+                                        title: string;
+                                        date: string;
+                                        previousDate: string | null;
+                                        /** @enum {string} */
+                                        change: "added" | "changed" | "moved" | "removed";
+                                        prescriptionChanged: boolean;
+                                    }[];
+                                    assumptionsChanged: boolean;
+                                    paceGuidesChanged: boolean;
+                                    datesChanged: boolean;
+                                    counts: {
+                                        added: number;
+                                        changed: number;
+                                        moved: number;
+                                        removed: number;
+                                    };
+                                    omittedWorkouts?: number;
+                                    approximate?: boolean;
+                                } | null;
+                                legacyChanges: boolean;
+                                output: {
+                                    itemId: string;
+                                    position: number;
+                                    content: string;
+                                    revision: number;
+                                    isFinal: boolean;
+                                    truncated: boolean;
+                                }[];
+                                replyTruncated: boolean;
+                            }[];
+                            nextBeforeSequence: number | null;
+                        };
+                    };
+                };
+                /** @description Rejected. */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Rejected. */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Rejected. */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Rejected. */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/agent-runs/{runId}/output": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    runId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Success. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            runId: string;
+                            status: string;
+                            finalMessageId: string | null;
+                            items: {
+                                itemId: string;
+                                position: number;
+                                content: string;
+                                revision: number;
+                                isFinal: boolean;
+                                truncated: boolean;
+                            }[];
+                            timings: {
+                                [key: string]: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Rejected. */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Rejected. */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Rejected. */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Rejected. */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/agent-runs/{runId}/turn": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    runId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Success. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            id: string;
+                            conversationId: string;
+                            planId: string | null;
+                            userMessageId: string;
+                            /** @enum {string} */
+                            status: "queued" | "running" | "cancelling" | "completed" | "failed" | "cancelled";
+                            context: {
+                                versionId: string;
+                                /** @enum {string} */
+                                state: "draft" | "locked";
+                                versionNumber: number | null;
+                                editNumber: number;
+                            } | null;
+                            failureCode: string | null;
+                            generation?: {
+                                runId: string;
+                                startDate: string;
+                                endDate: string;
+                                prescribedThrough: string | null;
+                                /** @enum {string} */
+                                status: "in_progress" | "completed" | "interrupted";
+                            } | null;
+                            createdAt: string;
+                            startedAt: string | null;
+                            finishedAt: string | null;
+                            activity: {
+                                operationId: string;
+                                name: string;
+                                /** @enum {string} */
+                                state: "started" | "completed" | "failed";
+                            }[];
+                            changes: {
+                                workouts: {
+                                    lineageId: string;
+                                    workoutId: string | null;
+                                    title: string;
+                                    date: string;
+                                    previousDate: string | null;
+                                    /** @enum {string} */
+                                    change: "added" | "changed" | "moved" | "removed";
+                                    prescriptionChanged: boolean;
+                                }[];
+                                assumptionsChanged: boolean;
+                                paceGuidesChanged: boolean;
+                                datesChanged: boolean;
+                                counts: {
+                                    added: number;
+                                    changed: number;
+                                    moved: number;
+                                    removed: number;
+                                };
+                                omittedWorkouts?: number;
+                                approximate?: boolean;
+                            } | null;
+                            legacyChanges: boolean;
+                            output: {
+                                itemId: string;
+                                position: number;
+                                content: string;
+                                revision: number;
+                                isFinal: boolean;
+                                truncated: boolean;
+                            }[];
+                            replyTruncated: boolean;
+                        };
+                    };
+                };
+                /** @description Rejected. */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Rejected. */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Rejected. */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Rejected. */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/plans/{planId}/draft/changes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    planId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Success. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            workouts: {
+                                lineageId: string;
+                                workoutId: string | null;
+                                title: string;
+                                date: string;
+                                previousDate: string | null;
+                                /** @enum {string} */
+                                change: "added" | "changed" | "moved" | "removed";
+                                prescriptionChanged: boolean;
+                            }[];
+                            assumptionsChanged: boolean;
+                            paceGuidesChanged: boolean;
+                            datesChanged: boolean;
+                            counts: {
+                                added: number;
+                                changed: number;
+                                moved: number;
+                                removed: number;
+                            };
+                            omittedWorkouts?: number;
+                            approximate?: boolean;
+                            versionId: string;
+                            editNumber: number;
+                            baselineId: string | null;
+                        };
+                    };
+                };
+                /** @description Rejected. */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Rejected. */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Rejected. */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Rejected. */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/live/events": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: {
+                    cursor?: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Owner-scoped SSE notifications. Reconnect with a fresh bearer token. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/event-stream": string;
+                    };
+                };
+                /** @description Rejected. */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Rejected. */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Rejected. */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Rejected. */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/workouts": {
         parameters: {
             query?: never;
@@ -5325,6 +5939,13 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        Error: {
+            error: {
+                code: string;
+                message: string;
+                requestId: string;
+            };
+        };
         WorkoutList: {
             workouts: components["schemas"]["WorkoutSummary"][];
         };
@@ -5349,13 +5970,6 @@ export interface components {
         };
         /** @enum {string} */
         WorkoutPriority: "low" | "medium" | "high";
-        Error: {
-            error: {
-                code: string;
-                message: string;
-                requestId: string;
-            };
-        };
         WorkoutDetail: {
             workout: components["schemas"]["WorkoutSummary"];
             tags: string[];

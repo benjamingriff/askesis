@@ -13,6 +13,7 @@ import {
 import { inferKind, KIND_META } from '../lib/workouts';
 import { useWorkoutDetail, type PlanVersion } from '../plan-data';
 import type { Units } from '../settings';
+import { WorkoutChangeBadge } from './PlanChanges';
 import { IntensityChart } from './IntensityChart';
 import { Stat } from './PlanWidgets';
 import { Button, Dialog, ErrorState, KindIcon, LoadingState, cx } from './ui';
@@ -98,6 +99,7 @@ export function WorkoutCard({
         <span className="workout-card-kind">
           {kind.label}
           {workout.priority === 'high' ? <em>Key session</em> : null}
+          <WorkoutChangeBadge id={workout.id} />
         </span>
         <strong>{workout.title}</strong>
         <small>{workoutMeta(workout, units)}</small>

@@ -3,11 +3,13 @@ import { useState, type ReactNode } from 'react';
 import { Link } from 'react-router';
 import { daysBetween, formatRange, startOfWeek } from '../lib/format';
 import { useLocalToday } from '../lib/use-local-today';
+import { useWorkoutSelection } from '../lib/use-workout-selection';
 import {
   knownCoverage,
   latestCalibration,
   planVersion,
   useBriefState,
+  useDraftChanges,
   useWorkouts,
   type Plan,
   type PlanView as View,
@@ -15,10 +17,12 @@ import {
 import { PlanHistory } from '../routes/plan-history';
 import { useUnits } from '../settings';
 import { useOpenPlanChat, PlanChatError, PlanToolbar } from './PlanLifecycle';
+import { PlanChanges, WorkoutChangesContext } from './PlanChanges';
 import { CalibrationSource, CoverageNote, PaceGuides, StatusPill } from './PlanWidgets';
 import { Schedule } from './Schedule';
 import {
   Card,
+  cx,
   ErrorState,
   LoadingState,
   Notice,
@@ -47,19 +51,27 @@ export function planProgress(start: string | null, end: string | null, today: st
   return { value: elapsed / total, text: `Week ${week} of ${weeks}`, weeks, week };
 }
 
-/** One plan, end to end: state, actions, schedule, paces and history. */
+/**
+ * One plan, end to end: state, actions, schedule, paces and history. Embedded beside a chat it
+ * uses a compact header, keeps lifecycle actions in a footer and asks that chat's coach.
+ */
 export function PlanView({
   plan,
   view: requestedView,
   onViewChange,
   eyebrow,
   switcher,
+  embedded = false,
+  onAskCoach,
 }: {
   plan: Plan;
   view: View;
   onViewChange: (view: View) => void;
   eyebrow?: ReactNode | undefined;
   switcher?: ReactNode | undefined;
+  embedded?: boolean | undefined;
+  /** Replaces opening the plan's chat, for example to prefill the chat already beside it. */
+  onAskCoach?: ((prompt: string) => void) | undefined;
 }) {
   const today = useLocalToday();
   const view: View =
@@ -67,54 +79,64 @@ export function PlanView({
   const version = planVersion(plan, view);
   const brief = useBriefState(plan.id, version);
   const workouts = useWorkouts(version);
+  const changes = useDraftChanges(plan.id, view === 'draft' ? plan.draft : null);
+  const selection = useWorkoutSelection(workouts.data ?? [], version?.id);
   const units = useUnits(brief.data?.brief.unit);
   const chat = useOpenPlanChat(plan.id);
+  const askCoach = onAskCoach ?? ((prompt: string) => chat.mutate(prompt));
   const [historyOpen, setHistoryOpen] = useState(false);
   const progress = planProgress(version?.startDate ?? null, version?.endDate ?? null, today);
   const calibration = latestCalibration(brief.data);
   const goal = brief.data?.brief.goal;
 
+  const toolbar = (
+    <PlanToolbar
+      plan={plan}
+      showCoach={!embedded}
+      onChanged={(updated, action) => {
+        if (action === 'unlock') onViewChange('draft');
+        if (action === 'lock' || action === 'discard') onViewChange('locked');
+        void updated;
+      }}
+      onShowHistory={() => {
+        setHistoryOpen(true);
+        window.setTimeout(
+          () =>
+            document
+              .getElementById('version-history')
+              ?.scrollIntoView?.({ behavior: 'smooth', block: 'start' }),
+          30,
+        );
+      }}
+    />
+  );
+
   return (
-    <div className="page plan-view">
-      <header className="page-header plan-header">
-        <div className="page-heading">
-          {eyebrow}
-          <span className="label">Training plan</span>
-          <h1>{plan.displayName}</h1>
-          <div className="plan-meta">
-            <StatusPill plan={plan} view={view} />
-            {plan.active ? (
-              <Pill tone="neutral" icon={Power}>
-                Active
-              </Pill>
-            ) : null}
-            <span className="muted">
-              {formatRange(version?.startDate ?? null, version?.endDate ?? null)}
-            </span>
+    <div className={cx('page plan-view', embedded && 'embedded-plan')}>
+      {embedded ? null : (
+        <header className="page-header plan-header">
+          <div className="page-heading">
+            {eyebrow}
+            <span className="label">Training plan</span>
+            <h1>{plan.displayName}</h1>
+            <div className="plan-meta">
+              <StatusPill plan={plan} view={view} />
+              {plan.active ? (
+                <Pill tone="neutral" icon={Power}>
+                  Active
+                </Pill>
+              ) : null}
+              <span className="muted">
+                {formatRange(version?.startDate ?? null, version?.endDate ?? null)}
+              </span>
+            </div>
           </div>
-        </div>
-        <div className="plan-header-actions">
-          {switcher}
-          <PlanToolbar
-            plan={plan}
-            onChanged={(updated, action) => {
-              if (action === 'unlock') onViewChange('draft');
-              if (action === 'lock' || action === 'discard') onViewChange('locked');
-              void updated;
-            }}
-            onShowHistory={() => {
-              setHistoryOpen(true);
-              window.setTimeout(
-                () =>
-                  document
-                    .getElementById('version-history')
-                    ?.scrollIntoView?.({ behavior: 'smooth', block: 'start' }),
-                30,
-              );
-            }}
-          />
-        </div>
-      </header>
+          <div className="plan-header-actions">
+            {switcher}
+            {toolbar}
+          </div>
+        </header>
+      )}
 
       {plan.draft && plan.locked ? (
         <Segmented<View>
@@ -132,6 +154,18 @@ export function PlanView({
       <div className="plan-layout">
         <div className="plan-main">
           <Card className="plan-hero">
+            {embedded ? (
+              <div className="embedded-plan-heading">
+                <div>
+                  <span className="label">Plan</span>
+                  <h2>{plan.displayName}</h2>
+                  <span className="muted">
+                    {formatRange(version?.startDate ?? null, version?.endDate ?? null)}
+                  </span>
+                </div>
+                <StatusPill plan={plan} view={view} />
+              </div>
+            ) : null}
             {goal ? (
               <p className="plan-goal">
                 <Flag size={14} aria-hidden="true" /> {goal}
@@ -152,7 +186,7 @@ export function PlanView({
             ) : null}
           </Card>
 
-          {view === 'draft' ? (
+          {view === 'draft' && embedded ? null : view === 'draft' ? (
             <Notice tone="accent" icon={Sparkles} className="draft-banner">
               <strong>
                 {plan.locked ? 'Unpublished draft' : 'Initial draft'} · your coach can edit this
@@ -177,7 +211,28 @@ export function PlanView({
             </Notice>
           ) : null}
 
-          <PlanChatError chat={chat} />
+          {changes.data ? (
+            <PlanChanges
+              summary={changes.data}
+              firstDraft={!changes.data.baselineId}
+              onOpen={(id) => {
+                const workout = workouts.data?.find((workout) => workout.id === id);
+                if (workout) selection.open(workout);
+              }}
+            />
+          ) : null}
+          {changes.error ? (
+            <ErrorState
+              message="Could not load saved changes."
+              onRetry={() => void changes.refetch()}
+            />
+          ) : null}
+          {workouts.isPlaceholderData || brief.isPlaceholderData ? (
+            <p className="muted" role="status">
+              Refreshing saved schedule…
+            </p>
+          ) : null}
+          {onAskCoach ? null : <PlanChatError chat={chat} />}
           {(workouts.isPending || brief.isPending) && version ? (
             <LoadingState>Loading schedule…</LoadingState>
           ) : null}
@@ -185,23 +240,26 @@ export function PlanView({
             <ErrorState message={workouts.error.message} onRetry={() => void workouts.refetch()} />
           ) : null}
           {workouts.data && version && brief.data && !brief.error ? (
-            <Schedule
-              key={version.id}
-              workouts={workouts.data}
-              version={version}
-              startDate={version.startDate}
-              endDate={version.endDate}
-              coverage={knownCoverage(brief.data)}
-              units={units}
-              today={today}
-              onAskCoach={
-                plan.archived
-                  ? undefined
-                  : (workout) =>
-                      chat.mutate(`About “${workout.title}” on ${workout.scheduledDate}: `)
-              }
-              onPlanRest={plan.archived ? undefined : () => chat.mutate('Plan the remaining weeks')}
-            />
+            <WorkoutChangesContext.Provider value={changes.data?.workouts ?? []}>
+              <Schedule
+                key={version.id}
+                workouts={workouts.data}
+                version={version}
+                startDate={version.startDate}
+                endDate={version.endDate}
+                coverage={knownCoverage(brief.data)}
+                units={units}
+                today={today}
+                selection={selection}
+                onAskCoach={
+                  plan.archived
+                    ? undefined
+                    : (workout) =>
+                        askCoach(`About “${workout.title}” on ${workout.scheduledDate}: `)
+                }
+                onPlanRest={plan.archived ? undefined : () => askCoach('Plan the remaining weeks')}
+              />
+            </WorkoutChangesContext.Provider>
           ) : null}
         </div>
 
@@ -285,6 +343,7 @@ export function PlanView({
           </details>
         </aside>
       </div>
+      {embedded ? <footer className="embedded-plan-actions">{toolbar}</footer> : null}
     </div>
   );
 }

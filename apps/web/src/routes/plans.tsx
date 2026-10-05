@@ -18,7 +18,7 @@ import {
 } from '../components/ui';
 import { formatRange } from '../lib/format';
 import { result } from '../lib/result';
-import type { PlanView as View } from '../plan-data';
+import { usePlan, type PlanView as View } from '../plan-data';
 
 export function PlansPage({ archived = false }: { archived?: boolean }) {
   const navigate = useNavigate();
@@ -206,11 +206,7 @@ function NewPlanDialog({ open, onClose }: { open: boolean; onClose: () => void }
 export function PlanPage() {
   const { planId = '' } = useParams();
   const [view, setView] = useState<View>('draft');
-  const query = useQuery({
-    queryKey: ['plans', planId],
-    queryFn: async () =>
-      result(await api.GET('/api/v1/plans/{planId}', { params: { path: { planId } } })),
-  });
+  const query = usePlan(planId);
   const back = (
     <Link to="/plans" className="back-link">
       <ArrowLeft size={15} aria-hidden="true" /> All plans

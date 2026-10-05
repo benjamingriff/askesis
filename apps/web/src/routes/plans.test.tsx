@@ -102,8 +102,17 @@ beforeEach(() => {
     path: string,
     options?: { params?: { query?: { collection?: string } } },
   ) => {
-    const data =
-      path === '/api/v1/plans/{planId}'
+    const data = path.endsWith('/draft/changes')
+      ? {
+          versionId: current.draft?.id,
+          editNumber: current.draft?.editNumber,
+          baselineId: current.locked?.id ?? null,
+          workouts: [],
+          assumptionsChanged: false,
+          paceGuidesChanged: false,
+          datesChanged: false,
+        }
+      : path === '/api/v1/plans/{planId}'
         ? structuredClone(current)
         : path === '/api/v1/plans'
           ? {

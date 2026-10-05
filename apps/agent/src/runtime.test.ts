@@ -10,13 +10,17 @@ import {
 import { SdkRuntime } from './runtime.js';
 import { AgentApi, ApiError, type ExecutionContext } from './api.js';
 import { parseAgentConfig } from './config.js';
-beforeEach(() =>
+beforeEach(() => {
+  vi.spyOn(AgentApi.prototype, 'progress').mockResolvedValue({ status: 'running' });
   vi.stubGlobal(
     'fetch',
     vi.fn(() => Promise.reject(new Error('Network is forbidden in deterministic runtime tests.'))),
-  ),
-);
-afterEach(() => vi.unstubAllGlobals());
+  );
+});
+afterEach(() => {
+  vi.unstubAllGlobals();
+  vi.restoreAllMocks();
+});
 const config = parseAgentConfig({
   OPENAI_API_KEY: 'test-key',
   AGENT_BOOTSTRAP_TOKEN: 'test-bootstrap-token-32-characters',
@@ -201,4 +205,113 @@ it('returns PLAN_REQUIRED to the model so it can create a draft, and caps the fi
     new AbortController().signal,
   );
   expect(result.content).toHaveLength(32000);
+});
+
+it('persists text before tools and a separate final segment, with bounded timing measurements', async () => {
+  const model = new ScriptedModel([
+    modelResponse({
+      usage: new Usage(),
+      output: [
+        assistantMessage('Let me check.', { id: 'commentary' }),
+        functionCall('read_plan_context', {}, { callId: 'read' }),
+      ],
+    }),
+    modelResponse({
+      usage: new Usage(),
+      output: [assistantMessage('Here is the answer.', { id: 'answer' })],
+    }),
+  ]);
+  const api = new AgentApi('http://localhost');
+  const deliveries: unknown[] = [];
+  vi.spyOn(api, 'progress').mockImplementation(async (_claim, input) => {
+    deliveries.push(structuredClone(input));
+    return { status: 'running' };
+  });
+  vi.spyOn(api, 'tool').mockImplementation(async () => {
+    expect(JSON.stringify(deliveries)).toContain('Let me check.');
+    return { result: {}, versionId: null, editNumber: null, planId: null };
+  });
+  const result = await new SdkRuntime(config, model).execute(
+    context,
+    claim,
+    api,
+    new AbortController().signal,
+  );
+  expect(model.calls.every((call) => call.streamed)).toBe(true);
+  expect(result.finalOutputItemId).toBeTruthy();
+  expect(JSON.stringify(deliveries)).toContain('Here is the answer.');
+  expect(deliveries.at(-1)).toMatchObject({
+    timings: {
+      modelMs: [expect.any(Number), expect.any(Number)],
+      toolMs: [expect.any(Number)],
+      firstVisibleMs: expect.any(Number),
+      firstDurableOutputMs: expect.any(Number),
+      totalMs: expect.any(Number),
+    },
+  });
+});
+it.each(['provider failure', 'cancellation'] as const)(
+  'flushes an accepted visible prefix after %s without a completed answer',
+  async (kind) => {
+    const { modelStreamResponder } = await import('@openai/agents/testing');
+    const controller = new AbortController();
+    const model = new ScriptedModel([
+      modelStreamResponder(() =>
+        (async function* () {
+          yield { type: 'response_started' as const };
+          yield {
+            type: 'output_text_delta' as const,
+            itemId: 'partial',
+            delta: 'Visible before interruption',
+          };
+          // Allow the Runner to deliver the text event before failing the provider.
+          await new Promise((resolve) => setTimeout(resolve, 10));
+          if (kind === 'cancellation') controller.abort('CANCELLED');
+          throw new Error('private provider error');
+        })(),
+      ),
+    ]);
+    const api = new AgentApi('http://localhost');
+    const progress = vi.spyOn(api, 'progress').mockResolvedValue({ status: 'running' });
+    await expect(
+      new SdkRuntime(config, model).execute(context, claim, api, controller.signal),
+    ).rejects.toThrow();
+    expect(JSON.stringify(progress.mock.calls)).toContain('Visible before interruption');
+    expect(JSON.stringify(progress.mock.calls)).not.toContain('private provider error');
+  },
+);
+it('retries progress and finish transport delivery with stable payloads', async () => {
+  const requests: unknown[] = [];
+  let fail = true;
+  const api = new AgentApi('http://localhost', async (_url, init) => {
+    requests.push(init?.body);
+    if (fail) {
+      fail = false;
+      throw new TypeError('Acknowledgement lost');
+    }
+    return new Response(JSON.stringify({ status: 'running' }));
+  });
+  // Restore the class method mocked by this suite's deterministic runtime setup.
+  vi.mocked(AgentApi.prototype.progress).mockRestore();
+  await api.progress(claim, { sequence: 1, items: [] });
+  expect(requests[0]).toEqual(requests[1]);
+  requests.length = 0;
+  fail = true;
+  await api.finish(claim, { status: 'failed', failureCode: 'PROVIDER_ERROR' });
+  expect(requests[0]).toEqual(requests[1]);
+});
+it('caps streamed Unicode replies without corrupting the durable final segment', async () => {
+  const content = 'x' + '😀'.repeat(20000);
+  const model = new ScriptedModel([
+    modelResponse({ usage: new Usage(), output: [assistantMessage(content)] }),
+  ]);
+  const api = new AgentApi('http://localhost');
+  const result = await new SdkRuntime(config, model).execute(
+    context,
+    claim,
+    api,
+    new AbortController().signal,
+  );
+  expect(result.content).toBe('x' + '😀'.repeat(15999));
+  expect(result.finalOutputItemId).toBeTruthy();
 });

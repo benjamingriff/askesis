@@ -1,3 +1,5 @@
+import { saveProgress } from '../live/live.service.js';
+import { ProgressSchema } from '../live/live.schemas.js';
 import { timingSafeEqual } from 'node:crypto';
 import type { OpenAPIHono } from '@hono/zod-openapi';
 import { bodyLimit } from 'hono/body-limit';
@@ -21,11 +23,13 @@ const FinishSchema = z
   .object({
     status: z.enum(['completed', 'failed', 'cancelled']),
     content: z.string().max(32000).optional(),
+    finalOutputItemId: z.string().min(1).max(200).optional(),
     failureCode: z
       .enum([
         'PROVIDER_ERROR',
         'TURN_LIMIT',
         'TOOL_LIMIT',
+        'OUTPUT_LIMIT',
         'EXECUTION_TIMEOUT',
         'WORKER_SHUTDOWN',
         'STALE_CONTEXT',
@@ -105,6 +109,15 @@ export function registerAgentRoutes(app: OpenAPIHono<AppEnvironment>) {
         token(c.req.header('authorization')),
         await parse(ToolRequestSchema, c.req.json()),
       )) as unknown,
+    ),
+  );
+  app.post('/internal/agent/runs/:runId/progress', async (c) =>
+    c.json(
+      await saveProgress(
+        runId(c.req.param('runId')),
+        token(c.req.header('authorization')),
+        await parse(ProgressSchema, c.req.json()),
+      ),
     ),
   );
   app.post('/internal/agent/runs/:runId/finish', async (c) =>

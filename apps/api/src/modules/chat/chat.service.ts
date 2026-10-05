@@ -162,7 +162,7 @@ async function writable(db: Tx, row: Conversation) {
   if (view.archived)
     throw new ChatError('CONVERSATION_ARCHIVED', 'Unarchive this conversation before changing it.');
 }
-function runView(row: Run) {
+export function runView(row: Run) {
   return RunSchema.parse({
     id: row.id,
     conversationId: row.conversation_id,

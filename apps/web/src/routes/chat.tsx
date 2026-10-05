@@ -3,59 +3,33 @@ import {
   Archive,
   ArchiveRestore,
   ArrowLeft,
-  ArrowRight,
-  ArrowUp,
   CalendarDays,
-  Check,
-  ChevronDown,
-  ChevronUp,
-  Loader2,
   Lock,
   MessageSquarePlus,
+  MessagesSquare,
   MoreHorizontal,
   PencilLine,
-  Sparkles,
-  Square,
   TriangleAlert,
 } from 'lucide-react';
 import { Link, useLocation, useNavigate, useParams } from 'react-router';
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '../api';
-import { ChatMarkdown } from '../components/ChatMarkdown';
-import {
-  Button,
-  Dialog,
-  IconButton,
-  Menu,
-  Notice,
-  ProgressBar,
-  Segmented,
-  cx,
-} from '../components/ui';
-import {
-  ChatRequestError,
-  chatResult,
-  isActive,
-  useConversations,
-  type Conversation,
-  type Run,
-  type Target,
-} from '../chat';
-import { daysBetween, formatShort, relativeTime } from '../lib/format';
-import { useSettings } from '../settings';
+import { ChatRequestError, chatResult, isActive, type Target } from '../chat';
+import { Composer, resize } from '../components/chat/Composer';
+import { ConversationList } from '../components/chat/ConversationList';
+import { ConversationPlanPanel } from '../components/chat/ConversationPlanPanel';
+import { emptyTurn, type Turn } from '../components/chat/RunTurn';
+import { Transcript } from '../components/chat/Transcript';
+import { Button, Dialog, Menu, Notice, Tabs, cx } from '../components/ui';
+import { readStorage, writeStorage } from '../lib/storage';
+import { useLiveState } from '../live';
+import { useDraftChanges, usePlan } from '../plan-data';
 
-function findLastIndex<T>(items: T[], predicate: (item: T) => boolean) {
-  for (let index = items.length - 1; index >= 0; index -= 1)
-    if (predicate(items[index]!)) return index;
-  return -1;
-}
-
-const SUGGESTIONS = [
-  'Help me build a plan for my next race',
-  'How should I pace my long run?',
-  'I missed a session this week — what now?',
-  'Explain my pace guides',
-];
+const PLAN_COLLAPSED_KEY = 'askesis-chat-plan-collapsed';
+/** Chat and plan sit side by side from this width; below it they are tabs, as on mobile. */
+const SPLIT_QUERY = '(min-width: 1450px)';
+const PLAN_PANEL_ID = 'conversation-plan';
+const CHAT_PANEL_ID = 'conversation-chat';
 
 export function ChatPage({
   archived = false,
@@ -105,104 +79,13 @@ function ChatWorkspace({
   );
 }
 
-/** The Coach list: open and archived conversations, newest activity first. */
-function ConversationList({
-  archived,
-  activeId,
-}: {
-  archived: boolean;
-  activeId: string | undefined;
-}) {
-  const navigate = useNavigate();
-  const list = useConversations(archived);
-  const rows = [
-    ...new Map(
-      list.data?.pages.flatMap((page) => page.conversations).map((row) => [row.id, row]),
-    ).values(),
-  ];
-  return (
-    <aside className="conversation-list-panel" aria-label="Conversations">
-      <div className="conversation-list-header">
-        <h1>Coach</h1>
-        <IconButton
-          icon={MessageSquarePlus}
-          label="New chat"
-          tone="accent"
-          onClick={() => void navigate('/chat/new')}
-        />
-      </div>
-      <Segmented<'open' | 'archived'>
-        label="Conversation collection"
-        value={archived ? 'archived' : 'open'}
-        onChange={(next) => void navigate(next === 'archived' ? '/chat/archive' : '/chat')}
-        options={[
-          { value: 'open', label: 'Open' },
-          { value: 'archived', label: 'Archived' },
-        ]}
-      />
-      {list.isPending ? (
-        <p className="muted" role="status">
-          Loading conversations…
-        </p>
-      ) : null}
-      {list.error ? (
-        <Notice
-          tone="danger"
-          role="alert"
-          action={
-            <Button size="sm" variant="ghost" onClick={() => void list.refetch()}>
-              Retry
-            </Button>
-          }
-        >
-          {list.error.message}
-        </Notice>
-      ) : null}
-      {!list.isPending && !rows.length ? (
-        <p className="muted conversation-empty">
-          {archived ? 'Nothing archived.' : 'No conversations yet. Start one below.'}
-        </p>
-      ) : null}
-      <nav className="conversation-list">
-        {rows.map((row) => (
-          <Link
-            key={row.id}
-            to={`/chat/${row.id}`}
-            className={cx('conversation-row', row.id === activeId && 'active')}
-            aria-current={row.id === activeId ? 'page' : undefined}
-          >
-            <span className="conversation-row-top">
-              <strong>{row.title}</strong>
-              <small>{relativeTime(row.activityAt)}</small>
-            </span>
-            <span className="conversation-row-meta">
-              {row.planName ? (
-                <>
-                  <CalendarDays size={12} aria-hidden="true" /> {row.planName}
-                </>
-              ) : (
-                'Standalone chat'
-              )}
-            </span>
-          </Link>
-        ))}
-      </nav>
-      {list.hasNextPage ? (
-        <Button
-          size="sm"
-          variant="ghost"
-          disabled={list.isFetchingNextPage}
-          busy={list.isFetchingNextPage}
-          onClick={() => void list.fetchNextPage()}
-        >
-          More conversations
-        </Button>
-      ) : null}
-    </aside>
-  );
-}
-
 function ConversationPanel({ conversationId }: { conversationId: string | undefined }) {
+  const live = useLiveState();
+  const [workspaceView, setWorkspaceView] = useState<'chat' | 'plan'>('chat');
+  const [planCollapsed, setPlanCollapsed] = useState(
+    () => readStorage(PLAN_COLLAPSED_KEY) === 'true',
+  );
+  const following = useRef(true);
   const client = useQueryClient();
   const navigate = useNavigate();
   const location = useLocation();
@@ -215,7 +98,6 @@ function ConversationPanel({ conversationId }: { conversationId: string | undefi
   const [title, setTitle] = useState('');
   const [renaming, setRenaming] = useState(false);
   const [actionKey] = useState(() => crypto.randomUUID());
-  const scroller = useRef<HTMLDivElement>(null);
   const input = useRef<HTMLTextAreaElement>(null);
   const capabilities = useQuery({
     queryKey: ['chat', 'capabilities'],
@@ -231,9 +113,11 @@ function ConversationPanel({ conversationId }: { conversationId: string | undefi
           params: { path: { conversationId: conversationId! } },
         }),
       ),
-    refetchInterval: 2000,
   });
   const conversation = detail.data;
+  const planId = conversation?.planId ?? null;
+  const plan = usePlan(planId);
+  const draftChanges = useDraftChanges(planId ?? '', (planId && plan.data?.draft) || null);
   const run = conversation?.activeRun ?? conversation?.latestRun;
   const history = useInfiniteQuery({
     queryKey: ['chat', 'messages', conversationId],
@@ -250,42 +134,90 @@ function ConversationPanel({ conversationId }: { conversationId: string | undefi
       ),
     getNextPageParam: (page) => page.nextBeforeSequence ?? undefined,
   });
-  useEffect(() => {
-    if (conversationId)
-      void client.invalidateQueries({ queryKey: ['chat', 'messages', conversationId] });
-    void client.invalidateQueries({ queryKey: ['chat', 'list'] });
-    void client.invalidateQueries({ queryKey: ['plans'] });
-    void client.invalidateQueries({ queryKey: ['plan-workouts'] });
-  }, [client, conversationId, run?.id, run?.status, conversation?.context?.editNumber]);
   const messages = [
     ...new Map(
       history.data?.pages.flatMap((page) => page.messages).map((message) => [message.id, message]),
     ).values(),
   ].sort((a, b) => a.sequence - b.sequence);
-  const latestMessageId = messages.at(-1)?.id;
+  const earliestMessage = messages[0]?.sequence;
+  const runs = useQuery({
+    queryKey: ['chat', 'runs', conversationId, earliestMessage],
+    enabled: !!conversationId,
+    queryFn: async () => {
+      const rows: Turn[] = [];
+      let beforeSequence: number | undefined;
+      do {
+        const page = chatResult(
+          await api.GET('/api/v1/conversations/{conversationId}/runs', {
+            params: {
+              path: { conversationId: conversationId! },
+              query: { limit: 100, ...(beforeSequence ? { beforeSequence } : {}) },
+            },
+          }),
+        );
+        rows.push(...page.runs);
+        beforeSequence = page.nextBeforeSequence ?? undefined;
+      } while (beforeSequence && earliestMessage !== undefined && beforeSequence > earliestMessage);
+      // Seed each turn's own cache; only working turns refetch it individually.
+      for (const turn of rows) client.setQueryData(['chat', 'turn', turn.id], turn);
+      return rows;
+    },
+  });
+  const turns = new Map((runs.data ?? []).map((turn) => [turn.userMessageId, turn]));
+  if (run && run.conversationId === conversationId)
+    turns.set(run.userMessageId, { ...(turns.get(run.userMessageId) ?? emptyTurn(run)), ...run });
+
+  // A coach shortcut that navigates here again (same conversation) fills the composer too.
+  const [prefillKey, setPrefillKey] = useState(location.key);
+  if (prefill && prefillKey !== location.key) {
+    setPrefillKey(location.key);
+    setText(prefill);
+  }
   useEffect(() => {
-    // Scroll only the transcript, never the page around it.
-    const node = scroller.current;
-    node?.scrollTo?.({ top: node.scrollHeight, behavior: 'smooth' });
-  }, [latestMessageId, run?.status]);
+    if (input.current) resize(input.current);
+  }, [text]);
+
+  const splitScreen = () => window.matchMedia?.(SPLIT_QUERY).matches ?? false;
+  function openPlan() {
+    // Side by side, the panel's visibility is a remembered preference; otherwise it is a tab.
+    if (!splitScreen()) setWorkspaceView('plan');
+    else if (planCollapsed) {
+      setPlanCollapsed(false);
+      writeStorage(PLAN_COLLAPSED_KEY, 'false');
+    }
+  }
+  function closePlan() {
+    setWorkspaceView('chat');
+    setPlanCollapsed(true);
+    writeStorage(PLAN_COLLAPSED_KEY, 'true');
+  }
+  function askCoach(prompt: string) {
+    setText(prompt);
+    setWorkspaceView('chat');
+    requestAnimationFrame(() => {
+      const node = input.current;
+      node?.focus();
+      node?.setSelectionRange(prompt.length, prompt.length);
+    });
+  }
   const refresh = async () => {
     await client.invalidateQueries({ queryKey: ['chat'] });
   };
   const send = useMutation({
-    mutationFn: async (input: { key: string; content: string; target: Target }) => {
+    mutationFn: async (request: { key: string; content: string; target: Target }) => {
       if (conversationId) {
         chatResult(
           await api.POST('/api/v1/conversations/{conversationId}/messages', {
-            params: { path: { conversationId }, header: { 'idempotency-key': input.key } },
-            body: { content: input.content, target: input.target },
+            params: { path: { conversationId }, header: { 'idempotency-key': request.key } },
+            body: { content: request.content, target: request.target },
           }),
         );
         return conversationId;
       }
       return chatResult(
         await api.POST('/api/v1/conversations', {
-          params: { header: { 'idempotency-key': input.key } },
-          body: { initialMessage: { content: input.content, target: null } },
+          params: { header: { 'idempotency-key': request.key } },
+          body: { initialMessage: { content: request.content, target: null } },
         }),
       ).conversation.id;
     },
@@ -293,8 +225,8 @@ function ConversationPanel({ conversationId }: { conversationId: string | undefi
       setAttempt(null);
       setText('');
       setTarget(undefined);
-      if (input.current) input.current.style.height = 'auto';
       void refresh();
+      following.current = true;
       if (!conversationId) void navigate(`/chat/${id}`);
     },
     onError: (error) => {
@@ -351,16 +283,17 @@ function ConversationPanel({ conversationId }: { conversationId: string | undefi
     },
     onSuccess: refresh,
   });
+  const running = isActive(run);
   // An uncertain send must remain retryable even when its accepted run is now active.
-  const disabled =
-    send.isPending ||
-    (!attempt &&
-      (!capabilities.data?.executionAvailable ||
-        !!conversation?.archived ||
-        (!!conversationId && !conversation) ||
-        isActive(run)));
+  const canSend =
+    !send.isPending &&
+    (!!attempt ||
+      (!!capabilities.data?.executionAvailable &&
+        !conversation?.archived &&
+        !(conversationId && !conversation) &&
+        !running));
   function submit() {
-    if (disabled || !text.trim()) return;
+    if (!canSend || !text.trim()) return;
     const next = attempt ?? {
       key: crypto.randomUUID(),
       content: text.trim(),
@@ -369,21 +302,29 @@ function ConversationPanel({ conversationId }: { conversationId: string | undefi
     setAttempt(next);
     send.mutate(next);
   }
-  const running = isActive(run);
   const testMode = capabilities.data?.mode === 'test';
+  const locked = conversation?.context?.state === 'locked';
   const subtitle = running
     ? 'Coach is working…'
-    : conversation?.planId
-      ? conversation.context?.state === 'draft'
-        ? 'Draft · coach can edit'
-        : `Locked v${conversation.context?.versionNumber ?? ''} · unlock to edit`
+    : planId
+      ? locked
+        ? `Locked v${conversation?.context?.versionNumber ?? ''} · unlock to edit`
+        : 'Draft · coach can edit'
       : 'Standalone chat';
-  const lastRunMessage = run
-    ? findLastIndex(messages, (m) => m.producingRunId === run.id || m.id === run.userMessageId)
-    : -1;
+  const pendingChanges = draftChanges.data
+    ? draftChanges.data.workouts.length + (draftChanges.data.omittedWorkouts ?? 0)
+    : 0;
+  const showPlan = !!planId && workspaceView === 'plan';
 
   return (
-    <section className="chat-main">
+    <div
+      className={cx(
+        'conversation-workspace',
+        planId && 'with-plan',
+        planCollapsed && 'plan-collapsed',
+        showPlan && 'show-plan',
+      )}
+    >
       <header className="chat-topbar">
         <Link to="/chat" className="chat-back" aria-label="All conversations">
           <ArrowLeft size={18} aria-hidden="true" />
@@ -392,32 +333,27 @@ function ConversationPanel({ conversationId }: { conversationId: string | undefi
           <h1>{conversation?.title ?? 'New conversation'}</h1>
           {conversationId ? (
             <span className="chat-subtitle">
-              <i
-                className={cx(
-                  'status-dot',
-                  running ? 'running' : conversation?.context?.state === 'locked' && 'locked',
-                )}
-              />
+              <i className={cx('status-dot', running ? 'running' : locked && 'locked')} />
               {subtitle}
             </span>
           ) : null}
         </div>
-        {conversation?.planId ? (
-          <Link
-            to={`/plans/${conversation.planId}`}
+        {planId && conversation ? (
+          <button
+            type="button"
+            onClick={openPlan}
             className="plan-chip"
-            title="Open the plan this conversation edits"
+            title="Review the plan this conversation edits"
+            aria-label={`Review ${conversation.planName ?? 'plan'} beside the chat`}
           >
-            {conversation.context?.state === 'locked' ? (
+            {locked ? (
               <Lock size={13} aria-hidden="true" />
             ) : (
               <PencilLine size={13} aria-hidden="true" />
             )}
             <span>{conversation.planName}</span>
-            <span className="plan-chip-state">
-              {conversation.context?.state === 'draft' ? 'Draft' : 'Locked'}
-            </span>
-          </Link>
+            <span className="plan-chip-state">{locked ? 'Locked' : 'Draft'}</span>
+          </button>
         ) : null}
         {conversation ? (
           <Menu
@@ -451,6 +387,196 @@ function ConversationPanel({ conversationId }: { conversationId: string | undefi
           />
         ) : null}
       </header>
+      {planId ? (
+        <div className="conversation-view-tabs">
+          <Tabs<'chat' | 'plan'>
+            label="Conversation view"
+            value={workspaceView}
+            onChange={(next) => (next === 'plan' ? openPlan() : setWorkspaceView('chat'))}
+            tabs={[
+              { value: 'chat', label: 'Chat', icon: MessagesSquare, controls: CHAT_PANEL_ID },
+              {
+                value: 'plan',
+                label: 'Plan',
+                icon: CalendarDays,
+                controls: PLAN_PANEL_ID,
+                badge: pendingChanges,
+              },
+            ]}
+          />
+        </div>
+      ) : null}
+      <div className="conversation-body">
+        <section className="chat-main" id={CHAT_PANEL_ID} aria-label="Chat">
+          <div className="chat-notices">
+            {live === 'reconnecting' && conversationId ? (
+              <p className="live-connection muted" role="status">
+                Reconnecting live updates…
+                {running ? ' Your coach keeps working and saved changes are kept.' : ''}
+              </p>
+            ) : null}
+            {(!renaming && change.error) || cancel.error ? (
+              <Notice tone="danger" role="alert">
+                {(!renaming && change.error?.message) || cancel.error?.message}
+              </Notice>
+            ) : null}
+            {conversationId && detail.isPending ? (
+              <p className="muted" role="status">
+                Loading conversation…
+              </p>
+            ) : null}
+            {detail.error ? (
+              <Notice
+                tone="danger"
+                role="alert"
+                action={
+                  <Button size="sm" variant="ghost" onClick={() => void detail.refetch()}>
+                    Retry
+                  </Button>
+                }
+              >
+                {detail.error.message}
+              </Notice>
+            ) : null}
+            {conversation?.archived ? (
+              <Notice
+                icon={Archive}
+                action={
+                  conversation.planArchived ? (
+                    <Link className="text-link" to={`/plans/${conversation.planId}`}>
+                      Restore its plan to continue.
+                    </Link>
+                  ) : (
+                    <Button size="sm" variant="ghost" onClick={() => change.mutate('unarchive')}>
+                      Restore conversation
+                    </Button>
+                  )
+                }
+              >
+                This conversation is archived and read-only.
+              </Notice>
+            ) : null}
+          </div>
+          <Transcript
+            conversationId={conversationId}
+            conversation={conversation}
+            messages={messages}
+            turns={turns}
+            otherRun={run && run.conversationId !== conversationId ? run : undefined}
+            history={history}
+            turnsError={
+              runs.error ? { message: runs.error.message, retry: () => void runs.refetch() } : null
+            }
+            hidden={showPlan}
+            followingRef={following}
+            testMode={testMode}
+            suggestionsDisabled={send.isPending || !!attempt}
+            onSuggestion={(suggestion) => {
+              setText(suggestion);
+              input.current?.focus();
+            }}
+            onReview={planId ? openPlan : undefined}
+          />
+          <Composer
+            input={input}
+            text={text}
+            onTextChange={(next) => {
+              if (!text) setTarget(running ? undefined : (conversation?.context ?? null));
+              setText(next);
+            }}
+            onSubmit={submit}
+            placeholder={
+              conversation?.context?.state === 'draft'
+                ? 'Ask for a change, or just talk it through…'
+                : 'Ask your coach anything…'
+            }
+            locked={!!attempt || send.isPending || !!conversation?.archived}
+            canSend={canSend}
+            sending={send.isPending}
+            retrying={!!attempt}
+            onStop={running && !attempt ? () => cancel.mutate() : undefined}
+            stopping={cancel.isPending || run?.status === 'cancelling'}
+            notices={
+              <>
+                {capabilities.data && !capabilities.data.executionAvailable ? (
+                  <Notice tone="warning" icon={TriangleAlert}>
+                    Coaching is not available yet. Your conversation history is still available.
+                  </Notice>
+                ) : null}
+                {capabilities.error ? (
+                  <Notice
+                    tone="danger"
+                    role="alert"
+                    action={
+                      <Button size="sm" variant="ghost" onClick={() => void capabilities.refetch()}>
+                        Reconnect
+                      </Button>
+                    }
+                  >
+                    Could not connect to chat.
+                  </Notice>
+                ) : null}
+                {capabilities.isPending ? (
+                  <p className="muted" role="status">
+                    Connecting to chat…
+                  </p>
+                ) : null}
+              </>
+            }
+            footnote={
+              <>
+                {send.error ? (
+                  <Notice
+                    tone="danger"
+                    role="alert"
+                    action={
+                      conversation?.planId && !attempt ? (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => {
+                            void detail.refetch().then((result) => {
+                              setTarget(result.data?.context ?? null);
+                              send.reset();
+                            });
+                          }}
+                        >
+                          Refresh context
+                        </Button>
+                      ) : undefined
+                    }
+                  >
+                    {send.error.message}
+                    {attempt ? ' Retry sends the same request safely.' : ''}
+                  </Notice>
+                ) : null}
+                {testMode ? (
+                  <details className="chat-footnote">
+                    <summary>Test mode · replies are simulated</summary>
+                    <p>
+                      No coaching or plan changes yet. Try <code>/test slow</code> to test Stop,{' '}
+                      <code>/test fail</code> for failure, or <code>/test timeout</code> for
+                      timeout.
+                    </p>
+                  </details>
+                ) : (
+                  <p className="chat-footnote">
+                    Your coach can edit drafts. Only you can confirm assumptions and lock a version.
+                  </p>
+                )}
+              </>
+            }
+          />
+        </section>
+        {planId ? (
+          <ConversationPlanPanel
+            id={PLAN_PANEL_ID}
+            planId={planId}
+            onClose={closePlan}
+            onAskCoach={askCoach}
+          />
+        ) : null}
+      </div>
       <Dialog
         open={renaming}
         size="sm"
@@ -497,430 +623,6 @@ function ConversationPanel({ conversationId }: { conversationId: string | undefi
           ) : null}
         </form>
       </Dialog>
-      <div className="chat-notices">
-        {(!renaming && change.error) || cancel.error ? (
-          <Notice tone="danger" role="alert">
-            {(!renaming && change.error?.message) || cancel.error?.message}
-          </Notice>
-        ) : null}
-        {conversationId && detail.isPending ? (
-          <p className="muted" role="status">
-            Loading conversation…
-          </p>
-        ) : null}
-        {detail.error ? (
-          <Notice
-            tone="danger"
-            role="alert"
-            action={
-              <Button size="sm" variant="ghost" onClick={() => void detail.refetch()}>
-                Retry
-              </Button>
-            }
-          >
-            {detail.error.message}
-          </Notice>
-        ) : null}
-        {conversation?.archived ? (
-          <Notice
-            icon={Archive}
-            action={
-              conversation.planArchived ? (
-                <Link className="text-link" to={`/plans/${conversation.planId}`}>
-                  Restore its plan to continue.
-                </Link>
-              ) : (
-                <Button size="sm" variant="ghost" onClick={() => change.mutate('unarchive')}>
-                  Restore conversation
-                </Button>
-              )
-            }
-          >
-            This conversation is archived and read-only.
-          </Notice>
-        ) : null}
-      </div>
-      <div ref={scroller} className={cx('message-scroll', messages.length === 0 && 'empty')}>
-        {history.hasNextPage ? (
-          <Button
-            size="sm"
-            variant="ghost"
-            className="load-older"
-            disabled={history.isFetchingNextPage}
-            onClick={() => void history.fetchNextPage()}
-          >
-            Load older messages
-          </Button>
-        ) : null}
-        {history.error ? (
-          <Notice
-            tone="danger"
-            role="alert"
-            action={
-              <Button size="sm" variant="ghost" onClick={() => void history.refetch()}>
-                Retry history
-              </Button>
-            }
-          >
-            {history.error.message}
-          </Notice>
-        ) : null}
-        {!messages.length ? (
-          <div className="chat-empty">
-            <span className="coach-avatar large" aria-hidden="true">
-              <Sparkles size={22} />
-            </span>
-            <h2>How can I help with your training?</h2>
-            <p className="muted">
-              {testMode
-                ? 'Try a conversation. Your messages are saved, with simulated replies for now.'
-                : 'Talk through your goals, your plan, your workouts and your week.'}
-            </p>
-            {!conversationId ? (
-              <div className="suggestions">
-                {SUGGESTIONS.map((suggestion) => (
-                  <button
-                    key={suggestion}
-                    type="button"
-                    className="suggestion"
-                    disabled={send.isPending || !!attempt}
-                    onClick={() => {
-                      setText(suggestion);
-                      input.current?.focus();
-                    }}
-                  >
-                    {suggestion}
-                  </button>
-                ))}
-              </div>
-            ) : null}
-          </div>
-        ) : null}
-        {messages.length > 0 ? (
-          <div className="messages">
-            {messages.map((message, index) => (
-              <div key={message.id} className="message-group">
-                <article className={`message ${message.role}`}>
-                  {message.role === 'assistant' ? (
-                    <span className="message-author">
-                      <span className="coach-avatar" aria-hidden="true">
-                        <Sparkles size={12} />
-                      </span>
-                      Askesis
-                      {testMode ? <small> · test reply</small> : null}
-                    </span>
-                  ) : (
-                    <span className="sr-only">You</span>
-                  )}
-                  {message.role === 'assistant' ? (
-                    <ChatMarkdown content={message.content} />
-                  ) : (
-                    <p className="chat-text">{message.content}</p>
-                  )}
-                </article>
-                {run && index === lastRunMessage ? (
-                  <RunActivity run={run} conversation={conversation} />
-                ) : null}
-              </div>
-            ))}
-            {run && lastRunMessage === -1 ? (
-              <RunActivity run={run} conversation={conversation} />
-            ) : null}
-          </div>
-        ) : run ? (
-          // A plan-wide run can belong to another chat; show it so Stop is never anonymous.
-          <div className="messages">
-            <RunActivity run={run} conversation={conversation} />
-          </div>
-        ) : null}
-      </div>
-      <div className="composer-wrap">
-        {capabilities.data && !capabilities.data.executionAvailable ? (
-          <Notice tone="warning" icon={TriangleAlert}>
-            Coaching is not available yet. Your conversation history is still available.
-          </Notice>
-        ) : null}
-        {capabilities.error ? (
-          <Notice
-            tone="danger"
-            role="alert"
-            action={
-              <Button size="sm" variant="ghost" onClick={() => void capabilities.refetch()}>
-                Reconnect
-              </Button>
-            }
-          >
-            Could not connect to chat.
-          </Notice>
-        ) : null}
-        {capabilities.isPending ? (
-          <p className="muted" role="status">
-            Connecting to chat…
-          </p>
-        ) : null}
-        <form
-          className="chat-composer"
-          onSubmit={(e) => {
-            e.preventDefault();
-            submit();
-          }}
-        >
-          <textarea
-            ref={input}
-            aria-label="Message"
-            rows={1}
-            maxLength={32000}
-            value={text}
-            disabled={!!attempt || send.isPending || !!conversation?.archived}
-            onChange={(e) => {
-              if (!text) setTarget(conversation?.context ?? null);
-              setText(e.target.value);
-              e.target.style.height = 'auto';
-              e.target.style.height = Math.min(e.target.scrollHeight, 160) + 'px';
-            }}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
-                e.preventDefault();
-                submit();
-              }
-            }}
-            placeholder={
-              conversation?.context?.state === 'draft'
-                ? 'Ask for a change, or just talk it through…'
-                : 'Ask your coach anything…'
-            }
-          />
-          {running && !attempt ? (
-            <button
-              type="button"
-              className="composer-button stop"
-              aria-label="Stop"
-              title="Stop the coach. Changes already saved stay in the draft."
-              disabled={cancel.isPending || run?.status === 'cancelling'}
-              onClick={() => cancel.mutate()}
-            >
-              <Square size={13} fill="currentColor" aria-hidden="true" />
-            </button>
-          ) : (
-            <button
-              className="composer-button send"
-              aria-label={
-                send.isPending ? 'Sending message' : attempt ? 'Retry send' : 'Send message'
-              }
-              title={send.isPending ? 'Sending…' : attempt ? 'Retry send' : 'Send message · Enter'}
-              disabled={disabled || !text.trim()}
-              type="submit"
-            >
-              {send.isPending ? (
-                <Loader2 className="spin" size={18} aria-hidden="true" />
-              ) : (
-                <ArrowUp size={19} aria-hidden="true" />
-              )}
-            </button>
-          )}
-        </form>
-        {send.error ? (
-          <Notice
-            tone="danger"
-            role="alert"
-            action={
-              conversation?.planId && !attempt ? (
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  onClick={() => {
-                    void detail.refetch().then((result) => {
-                      setTarget(result.data?.context ?? null);
-                      send.reset();
-                    });
-                  }}
-                >
-                  Refresh context
-                </Button>
-              ) : undefined
-            }
-          >
-            {send.error.message}
-            {attempt ? ' Retry sends the same request safely.' : ''}
-          </Notice>
-        ) : null}
-        {testMode ? (
-          <details className="chat-footnote">
-            <summary>Test mode · replies are simulated</summary>
-            <p>
-              No coaching or plan changes yet. Try <code>/test slow</code> to test Stop,{' '}
-              <code>/test fail</code> for failure, or <code>/test timeout</code> for timeout.
-            </p>
-          </details>
-        ) : (
-          <p className="chat-footnote">
-            Your coach can edit drafts. Only you can confirm assumptions and lock a version.
-          </p>
-        )}
-      </div>
-    </section>
-  );
-}
-
-const TOOL_LABELS: Record<string, { running: string; done: string; edits?: boolean }> = {
-  read_plan_context: { running: 'Reading your plan', done: 'Read your plan' },
-  read_schedule: { running: 'Reading the schedule', done: 'Read the schedule' },
-  create_plan_draft: {
-    running: 'Creating a plan draft',
-    done: 'Created a plan draft',
-    edits: true,
-  },
-  update_plan_brief: {
-    running: 'Updating planning assumptions',
-    done: 'Updated planning assumptions',
-    edits: true,
-  },
-  set_fitness_calibration: { running: 'Setting pace guides', done: 'Set pace guides', edits: true },
-  apply_schedule_changes: { running: 'Updating workouts', done: 'Updated workouts', edits: true },
-  replace_schedule_range: {
-    running: 'Writing the schedule',
-    done: 'Wrote the schedule',
-    edits: true,
-  },
-  validate_plan: { running: 'Checking the plan', done: 'Checked the plan' },
-};
-
-const RUN_LABELS: Record<Run['status'], string> = {
-  queued: 'Queued',
-  running: 'Working',
-  cancelling: 'Stopping…',
-  completed: 'Completed',
-  failed: 'Failed',
-  cancelled: 'Cancelled',
-};
-
-/**
- * T3-style activity card for the latest run: what the coach is doing, what it changed, and any
- * schedule generation progress. Committed changes always stay saved, even after Stop.
- */
-function RunActivity({ run, conversation }: { run: Run; conversation: Conversation | undefined }) {
-  const { settings } = useSettings();
-  const active = isActive(run);
-  const [open, setOpen] = useState(false);
-  const events = useQuery({
-    queryKey: ['chat', 'events', run.id, run.status],
-    refetchInterval: active ? 2000 : false,
-    queryFn: async () =>
-      chatResult(
-        await api.GET('/api/v1/agent-runs/{runId}/events', { params: { path: { runId: run.id } } }),
-      ),
-  });
-  const tools = (events.data?.events ?? [])
-    .filter((event) => event.type === 'tool_completed')
-    .map((event) => String(event.metadata.name ?? 'tool'));
-  const edited = tools.some((name) => TOOL_LABELS[name]?.edits);
-  const seconds =
-    run.startedAt && run.finishedAt
-      ? Math.max(1, Math.round((Date.parse(run.finishedAt) - Date.parse(run.startedAt)) / 1000))
-      : null;
-  const generation = run.generation;
-  const generationProgress =
-    generation && generation.prescribedThrough
-      ? Math.min(
-          1,
-          (daysBetween(generation.startDate, generation.prescribedThrough) + 1) /
-            (daysBetween(generation.startDate, generation.endDate) + 1),
-        )
-      : 0;
-  const latestTool = tools.at(-1);
-  const summary = active
-    ? run.status === 'running'
-      ? latestTool
-        ? `${RUN_LABELS.running} · ${TOOL_LABELS[latestTool]?.done ?? latestTool.replaceAll('_', ' ')}`
-        : RUN_LABELS.running
-      : RUN_LABELS[run.status]
-    : `${RUN_LABELS[run.status]}${seconds ? ` · ${seconds}s` : ''}${tools.length ? ` · ${tools.length} ${tools.length === 1 ? 'action' : 'actions'}` : ''}`;
-  const failure =
-    run.failureCode === 'STALE_CONTEXT'
-      ? 'The plan changed; refresh context before sending again.'
-      : run.failureCode === 'EXECUTION_TIMEOUT'
-        ? 'Execution timed out. You can send another message.'
-        : run.failureCode
-          ? 'Execution stopped. You can send another message.'
-          : null;
-  return (
-    <div className={cx('run-activity', run.status)} role="status">
-      <button
-        type="button"
-        className="run-summary"
-        aria-expanded={open}
-        disabled={!settings.showActivity || !tools.length}
-        onClick={() => setOpen((value) => !value)}
-      >
-        {active ? (
-          <Loader2 className="spin" size={15} aria-hidden="true" />
-        ) : run.status === 'completed' ? (
-          <Check size={15} aria-hidden="true" className="ok" />
-        ) : (
-          <TriangleAlert size={15} aria-hidden="true" className="warn" />
-        )}
-        <span>{summary}</span>
-        {settings.showActivity && tools.length ? (
-          open ? (
-            <ChevronUp size={14} aria-hidden="true" />
-          ) : (
-            <ChevronDown size={14} aria-hidden="true" />
-          )
-        ) : null}
-      </button>
-      {open && settings.showActivity ? (
-        <ol className="run-steps">
-          {tools.map((name, index) => (
-            <li key={index}>
-              <Check size={13} aria-hidden="true" />
-              {TOOL_LABELS[name]?.done ?? name.replaceAll('_', ' ')}
-            </li>
-          ))}
-        </ol>
-      ) : null}
-      {generation ? (
-        <div className="generation">
-          <div className="generation-copy">
-            <CalendarDays size={14} aria-hidden="true" />
-            <span>
-              {generation.status === 'completed'
-                ? 'Schedule generation completed.'
-                : generation.status === 'interrupted'
-                  ? 'Schedule generation remains unfinished.'
-                  : 'Schedule generation in progress.'}{' '}
-              Intended horizon {formatShort(generation.startDate)} –{' '}
-              {formatShort(generation.endDate)}
-              {generation.prescribedThrough
-                ? ` · fully prescribed through ${formatShort(generation.prescribedThrough)}`
-                : ''}
-            </span>
-          </div>
-          <ProgressBar value={generationProgress} label="Schedule generation progress" />
-        </div>
-      ) : null}
-      {failure ? <p className="run-note">{failure}</p> : null}
-      {run.status === 'failed' || run.status === 'cancelled' ? (
-        <p className="run-note">
-          Completed plan changes remain saved; review your draft before continuing.
-        </p>
-      ) : null}
-      {edited && !active && conversation?.planId && conversation.context?.state === 'draft' ? (
-        <Link className="plan-update" to={`/plans/${conversation.planId}`}>
-          <span className="callout-icon">
-            <CalendarDays size={16} aria-hidden="true" />
-          </span>
-          <span>
-            <strong>Plan draft updated</strong>
-            <small>Review the changes, then lock when you’re happy.</small>
-          </span>
-          <ArrowRight size={16} aria-hidden="true" />
-        </Link>
-      ) : null}
-      {conversation && run.conversationId !== conversation.id ? (
-        <p className="run-note">
-          Running in <Link to={`/chat/${run.conversationId}`}>another chat for this plan</Link>
-        </p>
-      ) : null}
     </div>
   );
 }

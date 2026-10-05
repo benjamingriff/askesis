@@ -45,10 +45,13 @@ beforeEach(() => {
       context: '',
     },
   };
-  vi.mocked(api.GET).mockImplementation(async () => ({
-    data: structuredClone(state),
-    response: new Response(),
-  }));
+  vi.mocked(api.GET).mockImplementation(
+    async () =>
+      ({
+        data: structuredClone(state),
+        response: new Response(),
+      }) as Awaited<ReturnType<typeof api.GET>>,
+  );
 });
 afterEach(cleanup);
 it('distinguishes the intended month from completed coverage after generation stops', () => {

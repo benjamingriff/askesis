@@ -333,6 +333,70 @@ export function Segmented<T extends string>({
   );
 }
 
+/**
+ * Page tabs in the segmented style, like the prototype's Chat/Plan switcher. Arrow keys move
+ * between tabs; each tab labels the panel it controls.
+ */
+export function Tabs<T extends string>({
+  tabs,
+  value,
+  onChange,
+  label,
+  className,
+}: {
+  tabs: { value: T; label: string; icon?: LucideIcon; controls: string; badge?: number }[];
+  value: T;
+  onChange: (value: T) => void;
+  label: string;
+  className?: string | undefined;
+}) {
+  const refs = useRef<(HTMLButtonElement | null)[]>([]);
+  return (
+    <div className={cx('segmented tabs', className)} role="tablist" aria-label={label}>
+      {tabs.map((tab, index) => {
+        const Icon = tab.icon;
+        const active = tab.value === value;
+        return (
+          <button
+            key={tab.value}
+            ref={(node) => {
+              refs.current[index] = node;
+            }}
+            type="button"
+            role="tab"
+            id={`${tab.controls}-tab`}
+            aria-selected={active}
+            aria-controls={tab.controls}
+            tabIndex={active ? 0 : -1}
+            className={cx(active && 'active')}
+            onClick={() => onChange(tab.value)}
+            onKeyDown={(event) => {
+              const step =
+                event.key === 'ArrowRight' ? 1 : event.key === 'ArrowLeft' ? -1 : undefined;
+              if (step === undefined) return;
+              event.preventDefault();
+              const next = (index + step + tabs.length) % tabs.length;
+              onChange(tabs[next]!.value);
+              refs.current[next]?.focus();
+            }}
+          >
+            {Icon ? <Icon size={14} aria-hidden="true" /> : null}
+            {tab.label}
+            {tab.badge ? (
+              <>
+                <span className="tab-badge" aria-hidden="true">
+                  {tab.badge}
+                </span>
+                <span className="sr-only">, {tab.badge} pending changes</span>
+              </>
+            ) : null}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
 /** A large checkbox row used for human confirmations. */
 export function CheckRow({
   checked,

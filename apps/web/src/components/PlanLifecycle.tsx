@@ -88,10 +88,13 @@ export function PlanToolbar({
   plan,
   onChanged,
   onShowHistory,
+  showCoach = true,
 }: {
   plan: Plan;
   onChanged?: ((plan: Plan, action: Action | 'details') => void) | undefined;
   onShowHistory?: (() => void) | undefined;
+  /** Hidden beside a chat, where opening the plan's chat would leave the current one. */
+  showCoach?: boolean | undefined;
 }) {
   const client = useQueryClient();
   const navigate = useNavigate();
@@ -216,17 +219,19 @@ export function PlanToolbar({
   return (
     <>
       <div className="plan-toolbar" role="toolbar" aria-label="Plan actions">
-        <Button
-          className="collapsible"
-          icon={MessageSquare}
-          aria-label="Chat about this plan"
-          title="Chat about this plan"
-          disabled={archived || chat.isPending}
-          busy={chat.isPending}
-          onClick={() => chat.mutate(undefined)}
-        >
-          <span className="btn-text">Coach</span>
-        </Button>
+        {showCoach ? (
+          <Button
+            className="collapsible"
+            icon={MessageSquare}
+            aria-label="Chat about this plan"
+            title="Chat about this plan"
+            disabled={archived || chat.isPending}
+            busy={chat.isPending}
+            onClick={() => chat.mutate(undefined)}
+          >
+            <span className="btn-text">Coach</span>
+          </Button>
+        ) : null}
         {archived ? (
           <Button icon={ArchiveRestore} disabled={busy} onClick={() => open('unarchive')}>
             Unarchive plan…
