@@ -1,5 +1,6 @@
 import { expect, it } from 'vitest';
-import { compareAggregates, compactSummary } from './live.changes.js';
+import { combineSummaries, compareAggregates, compactSummary } from './live.changes.js';
+import type { ChangeSummary } from './live.schemas.js';
 import type { SemanticValue } from '../plans/plan.canonical.js';
 import type { Aggregate } from '../plans/plan.aggregate.js';
 const aggregate = (
@@ -102,4 +103,65 @@ it('bounds stored change details without losing full counts or rejecting a large
   expect(compact.omittedWorkouts).toBe(250);
   expect(Buffer.byteLength(JSON.stringify(compact), 'utf8')).toBeLessThan(65536);
   expect(summary.workouts).toHaveLength(300);
+});
+
+const summary = (workouts: Partial<ChangeSummary['workouts'][number]>[], flags = {}) =>
+  ({
+    workouts: workouts.map((w) => ({
+      lineageId: 'a',
+      workoutId: 'w-a',
+      title: 'Easy run',
+      date: '2027-01-02',
+      previousDate: '2027-01-02',
+      change: 'changed',
+      prescriptionChanged: true,
+      ...w,
+    })),
+    assumptionsChanged: false,
+    paceGuidesChanged: false,
+    datesChanged: false,
+    ...flags,
+  }) as ChangeSummary;
+it('combines a run’s operations into its net changes', () => {
+  const combined = combineSummaries([
+    summary([
+      { lineageId: 'moved', change: 'moved', date: '2027-01-04', prescriptionChanged: false },
+      { lineageId: 'temporary', change: 'added', previousDate: null, workoutId: 'w-t' },
+      { lineageId: 'added', change: 'added', previousDate: null, title: 'Draft title' },
+      { lineageId: 'back', change: 'moved', date: '2027-01-05', prescriptionChanged: false },
+    ]),
+    summary(
+      [
+        { lineageId: 'moved', change: 'changed', date: '2027-01-04', previousDate: '2027-01-04' },
+        { lineageId: 'temporary', change: 'removed', workoutId: null, previousDate: '2027-01-02' },
+        { lineageId: 'added', change: 'changed', previousDate: '2027-01-02', title: 'Final' },
+        {
+          lineageId: 'back',
+          change: 'moved',
+          previousDate: '2027-01-05',
+          prescriptionChanged: false,
+        },
+        { lineageId: 'gone', change: 'removed', workoutId: null, title: 'Long run' },
+      ],
+      { paceGuidesChanged: true, omittedWorkouts: 2 },
+    ),
+  ])!;
+  expect(combined.workouts).toEqual([
+    expect.objectContaining({ lineageId: 'added', change: 'added', title: 'Final' }),
+    expect.objectContaining({ lineageId: 'gone', change: 'removed', title: 'Long run' }),
+    expect.objectContaining({
+      lineageId: 'moved',
+      change: 'moved',
+      previousDate: '2027-01-02',
+      date: '2027-01-04',
+      prescriptionChanged: true,
+    }),
+  ]);
+  expect(combined).toMatchObject({
+    paceGuidesChanged: true,
+    assumptionsChanged: false,
+    omittedWorkouts: 2,
+    counts: { added: 1, changed: 0, moved: 1, removed: 1 },
+  });
+  expect(combineSummaries([])).toBeNull();
 });

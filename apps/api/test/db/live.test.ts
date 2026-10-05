@@ -22,7 +22,7 @@ import {
   getOutput,
   liveEvents,
   saveProgress,
-  runChanges,
+  getTurn,
   draftChanges,
 } from '../../src/modules/live/live.service.js';
 import { ProgressSchema } from '../../src/modules/live/live.schemas.js';
@@ -100,6 +100,8 @@ it('persists ordered prefixes, retries uncertain delivery, and atomically dedupl
   const output = await getOutput(owner, claim.runId);
   expect(output).toMatchObject({ status: 'completed', finalMessageId: expect.any(String) });
   expect(output.items[0]!.isFinal).toBe(true);
+  // The durable message presents the final segment; the turn does not repeat it.
+  expect((await getTurn(owner, claim.runId)).output).toEqual([]);
   expect(
     (await listMessages(owner, conversationId, undefined, 50)).messages.filter(
       (m) => m.producingRunId === claim.runId,
@@ -147,9 +149,9 @@ it.each(['cancelled', 'failed'] as const)(
     expect(output.items[0]!.content).toContain('A visible partial reply');
     expect(output.finalMessageId).toBeNull();
     expect((await listMessages(owner, conversationId, undefined, 50)).messages).toHaveLength(1);
-    expect((await conversationRuns(owner, conversationId, undefined, 50)).runs[0]!.id).toBe(
-      claim.runId,
-    );
+    const [turn] = (await conversationRuns(owner, conversationId, undefined, 50)).runs;
+    expect(turn).toMatchObject({ id: claim.runId, status, changes: null, legacyChanges: false });
+    expect(turn!.output[0]!.content).toContain('A visible partial reply');
   },
 );
 it('fences expired leases and recovers the last accepted output after worker loss', async () => {
@@ -176,7 +178,7 @@ it('authorizes output, activity, comparisons and replay by owner and keeps priva
   const plan = await createPlan(owner, 'Protected diff', randomUUID());
   for (const read of [
     () => getOutput(other, claim.runId),
-    () => runChanges(other, claim.runId),
+    () => getTurn(other, claim.runId),
     () => conversationRuns(other, conversationId, undefined, 50),
     () => draftChanges(other, plan.id),
   ])
@@ -228,6 +230,24 @@ it('does not emit output on rollback or liveness-only heartbeats and resets expi
     .where('sequence', '<=', before.cursor)
     .execute();
   expect(await liveEvents(owner, '0')).toMatchObject({ reset: true });
+});
+it('notifies tool activity separately from run state, so plan reads are not refreshed', async () => {
+  const { claim } = await accepted();
+  const before = await bootstrap(owner);
+  await saveProgress(
+    claim.runId,
+    claim.token,
+    ProgressSchema.parse({
+      sequence: 1,
+      activity: { operationId: 'op-1', name: 'read_plan_context', state: 'started' },
+    }),
+  );
+  expect((await liveEvents(owner, before.cursor)).events.map((e) => e.type)).toEqual([
+    'activity.changed',
+  ]);
+  expect((await getTurn(owner, claim.runId)).activity).toEqual([
+    { operationId: 'op-1', name: 'read_plan_context', state: 'started' },
+  ]);
 });
 it('allocates replay cursors in commit order when an earlier transaction commits later', async () => {
   const first = await createPlan(owner, 'Slow commit', randomUUID());

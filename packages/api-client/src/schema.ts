@@ -131,6 +131,44 @@ export interface paths {
                                 createdAt: string;
                                 startedAt: string | null;
                                 finishedAt: string | null;
+                                activity: {
+                                    operationId: string;
+                                    name: string;
+                                    /** @enum {string} */
+                                    state: "started" | "completed" | "failed";
+                                }[];
+                                changes: {
+                                    workouts: {
+                                        lineageId: string;
+                                        workoutId: string | null;
+                                        title: string;
+                                        date: string;
+                                        previousDate: string | null;
+                                        /** @enum {string} */
+                                        change: "added" | "changed" | "moved" | "removed";
+                                        prescriptionChanged: boolean;
+                                    }[];
+                                    assumptionsChanged: boolean;
+                                    paceGuidesChanged: boolean;
+                                    datesChanged: boolean;
+                                    counts?: {
+                                        added: number;
+                                        changed: number;
+                                        moved: number;
+                                        removed: number;
+                                    };
+                                    omittedWorkouts?: number;
+                                } | null;
+                                legacyChanges: boolean;
+                                output: {
+                                    itemId: string;
+                                    position: number;
+                                    content: string;
+                                    revision: number;
+                                    isFinal: boolean;
+                                    truncated: boolean;
+                                }[];
+                                replyTruncated: boolean;
                             }[];
                             nextBeforeSequence: number | null;
                         };
@@ -270,7 +308,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/agent-runs/{runId}/changes": {
+    "/api/v1/agent-runs/{runId}/turn": {
         parameters: {
             query?: never;
             header?: never;
@@ -295,7 +333,38 @@ export interface paths {
                     };
                     content: {
                         "application/json": {
-                            summaries: {
+                            id: string;
+                            conversationId: string;
+                            planId: string | null;
+                            userMessageId: string;
+                            /** @enum {string} */
+                            status: "queued" | "running" | "cancelling" | "completed" | "failed" | "cancelled";
+                            context: {
+                                versionId: string;
+                                /** @enum {string} */
+                                state: "draft" | "locked";
+                                versionNumber: number | null;
+                                editNumber: number;
+                            } | null;
+                            failureCode: string | null;
+                            generation?: {
+                                runId: string;
+                                startDate: string;
+                                endDate: string;
+                                prescribedThrough: string | null;
+                                /** @enum {string} */
+                                status: "in_progress" | "completed" | "interrupted";
+                            } | null;
+                            createdAt: string;
+                            startedAt: string | null;
+                            finishedAt: string | null;
+                            activity: {
+                                operationId: string;
+                                name: string;
+                                /** @enum {string} */
+                                state: "started" | "completed" | "failed";
+                            }[];
+                            changes: {
                                 workouts: {
                                     lineageId: string;
                                     workoutId: string | null;
@@ -316,8 +385,17 @@ export interface paths {
                                     removed: number;
                                 };
                                 omittedWorkouts?: number;
+                            } | null;
+                            legacyChanges: boolean;
+                            output: {
+                                itemId: string;
+                                position: number;
+                                content: string;
+                                revision: number;
+                                isFinal: boolean;
+                                truncated: boolean;
                             }[];
-                            legacy: boolean;
+                            replyTruncated: boolean;
                         };
                     };
                 };

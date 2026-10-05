@@ -99,9 +99,9 @@ export function WorkoutCard({
         <span className="workout-card-kind">
           {kind.label}
           {workout.priority === 'high' ? <em>Key session</em> : null}
+          <WorkoutChangeBadge id={workout.id} />
         </span>
         <strong>{workout.title}</strong>
-        <WorkoutChangeBadge id={workout.id} />
         <small>{workoutMeta(workout, units)}</small>
       </span>
       <ChevronRight size={18} aria-hidden="true" className="chevron" />

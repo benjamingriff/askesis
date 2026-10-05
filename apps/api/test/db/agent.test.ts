@@ -1,5 +1,4 @@
-import { draftChanges, runChanges } from '../../src/modules/live/live.service.js';
-import { RunChangesSchema } from '../../src/modules/live/live.schemas.js';
+import { draftChanges, getTurn } from '../../src/modules/live/live.service.js';
 import { startAgentSweeper } from '../../src/modules/agent/agent.sweeper.js';
 import { randomUUID } from 'node:crypto';
 import { sql } from 'kysely';
@@ -1097,17 +1096,21 @@ it('keeps current lineage highlights separate from immutable per-run changes acr
     prescriptionChanged: true,
     previousDate: '2027-01-02',
   });
-  const saved = RunChangesSchema.parse(await runChanges(owner, next.claim.runId));
-  expect(saved.summaries[0]!.workouts[0]!.change).toBe('moved');
+  expect((await getTurn(owner, next.claim.runId)).changes?.workouts[0]).toMatchObject({
+    change: 'moved',
+    previousDate: '2027-01-02',
+  });
   await tool(next.claim, 'apply_schedule_changes', {
     ...input,
     generation: null,
     workouts: [{ ...input.workouts[0]!, date: '2027-01-02', title: 'Easy run' }],
   });
   expect((await draftChanges(owner, initial.p.id)).workouts).toEqual([]);
-  expect(RunChangesSchema.parse(await runChanges(owner, next.claim.runId)).summaries[0]).toEqual(
-    saved.summaries[0],
-  );
+  // The draft has no net difference, but this run did edit the workout.
+  expect((await getTurn(owner, next.claim.runId)).changes?.workouts[0]).toMatchObject({
+    change: 'changed',
+    prescriptionChanged: true,
+  });
   await tool(next.claim, 'apply_schedule_changes', {
     ...input,
     generation: null,
@@ -1123,7 +1126,10 @@ it('keeps current lineage highlights separate from immutable per-run changes acr
   await finishRun(next.claim.runId, next.claim.token, { status: 'cancelled' });
   const after = await lockReviewedPartial(initial.p.id);
   expect(after.draft).toBeNull();
-  expect(RunChangesSchema.parse(await runChanges(owner, next.claim.runId)).summaries).toHaveLength(
-    3,
-  );
+  const turn = await getTurn(owner, next.claim.runId);
+  expect(turn.changes?.workouts).toEqual([
+    expect.objectContaining({ change: 'removed', title: 'Easy run', date: '2027-01-02' }),
+  ]);
+  expect(turn.activity.map((a) => a.state)).toEqual(['completed', 'completed', 'completed']);
+  expect(turn.legacyChanges).toBe(false);
 });

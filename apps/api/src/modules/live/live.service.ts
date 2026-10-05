@@ -1,15 +1,22 @@
-import { sql } from 'kysely';
+import { sql, type Selectable } from 'kysely';
 import { getDatabase } from '../../database/client.js';
-import type { Json } from '../../database/generated.js';
-import { authorized } from '../agent/agent.service.js';
+import type { AgentRuns, Json } from '../../database/generated.js';
+import { authorized, MUTATING_TOOLS } from '../agent/agent.service.js';
 import { ToolSchemas } from '../agent/agent.schemas.js';
 import { ChatError } from '../chat/chat.core.js';
 import { appendEvent, ownedRun, ownedConversation, runView } from '../chat/chat.service.js';
-import { compareVersions } from './live.changes.js';
+import type { Database } from '../plans/plan.aggregate.js';
 import { readAggregate } from '../plans/plan.aggregate.js';
 import { contentHash, type SemanticValue } from '../plans/plan.canonical.js';
 import { detail, PlanError } from '../plans/plan.service.js';
-import { ProgressSchema, type Progress } from './live.schemas.js';
+import { combineSummaries, compareVersions } from './live.changes.js';
+import {
+  DraftChangesSchema,
+  ProgressSchema,
+  TurnSchema,
+  type ChangeSummary,
+  type Progress,
+} from './live.schemas.js';
 
 const json = (value: unknown) => JSON.parse(JSON.stringify(value)) as Json;
 export async function saveProgress(id: string, token: string, raw: Progress) {
@@ -179,6 +186,7 @@ export async function conversationRuns(
 ) {
   return getDatabase()
     .transaction()
+    .setIsolationLevel('repeatable read')
     .execute(async (db) => {
       await ownedConversation(db, owner, id);
       let query = db
@@ -195,10 +203,102 @@ export async function conversationRuns(
         .execute();
       const page = rows.slice(0, limit);
       return {
-        runs: page.map(runView),
+        runs: await turnViews(db, page),
         nextBeforeSequence: rows.length > limit ? page.at(-1)!.message_sequence : null,
       };
     });
+}
+export async function getTurn(owner: string, id: string) {
+  return getDatabase()
+    .transaction()
+    .setIsolationLevel('repeatable read')
+    .execute(async (db) => (await turnViews(db, [await ownedRun(db, owner, id)]))[0]!);
+}
+/** Batched turn projection: a fixed number of reads however many runs are on the page. */
+async function turnViews(db: Database, runs: Selectable<AgentRuns>[]) {
+  const ids = runs.map((run) => run.id);
+  if (!ids.length) return [];
+  const [events, changes, receipts, outputs, truncatedReplies] = await Promise.all([
+    db
+      .selectFrom('agent_run_events')
+      .select(['run_id', 'sequence', 'type', 'metadata'])
+      .where('run_id', 'in', ids)
+      .where('type', 'in', ['tool_started', 'tool_completed', 'tool_failed'])
+      .orderBy('run_id')
+      .orderBy('sequence')
+      .execute(),
+    db
+      .selectFrom('agent_tool_changes as c')
+      .innerJoin('agent_run_events as e', 'e.run_id', 'c.run_id')
+      .select(['c.run_id', 'c.summary'])
+      .where('c.run_id', 'in', ids)
+      .where('e.type', '=', 'tool_completed')
+      .where(sql<boolean>`e.metadata->>'operationId' = c.operation_id`)
+      .orderBy('c.run_id')
+      .orderBy('e.sequence')
+      .execute(),
+    db
+      .selectFrom('agent_tool_receipts')
+      .select('run_id')
+      .distinct()
+      .where('run_id', 'in', ids)
+      .where('tool_name', 'in', MUTATING_TOOLS)
+      .execute(),
+    // The final segment is shown as the durable assistant message, not repeated here.
+    db
+      .selectFrom('agent_run_outputs')
+      .selectAll()
+      .where('run_id', 'in', ids)
+      .where('is_final', '=', false)
+      .orderBy('run_id')
+      .orderBy('position')
+      .execute(),
+    db
+      .selectFrom('agent_run_outputs')
+      .select('run_id')
+      .where('run_id', 'in', ids)
+      .where('is_final', '=', true)
+      .where('truncated', '=', true)
+      .execute(),
+  ]);
+  const group = <T extends { run_id: string }>(rows: T[]) => {
+    const map = new Map<string, T[]>();
+    for (const row of rows) map.set(row.run_id, [...(map.get(row.run_id) ?? []), row]);
+    return map;
+  };
+  const eventsByRun = group(events),
+    changesByRun = group(changes),
+    outputsByRun = group(outputs),
+    edited = new Set(receipts.map((r) => r.run_id)),
+    truncated = new Set(truncatedReplies.map((r) => r.run_id));
+  return runs.map((run) => {
+    const operations = new Map<string, { operationId: string; name: string; state: string }>();
+    for (const event of eventsByRun.get(run.id) ?? []) {
+      const metadata = event.metadata as { operationId?: unknown; name?: unknown };
+      const operationId = String(metadata.operationId ?? `event-${event.sequence}`);
+      operations.set(operationId, {
+        operationId,
+        name: String(metadata.name ?? 'tool'),
+        state: event.type.replace('tool_', ''),
+      });
+    }
+    const summaries = (changesByRun.get(run.id) ?? []).map((r) => r.summary as ChangeSummary);
+    return TurnSchema.parse({
+      ...runView(run),
+      activity: [...operations.values()],
+      changes: combineSummaries(summaries),
+      legacyChanges: !summaries.length && edited.has(run.id),
+      replyTruncated: truncated.has(run.id),
+      output: (outputsByRun.get(run.id) ?? []).map((item) => ({
+        itemId: item.item_id,
+        position: item.position,
+        content: item.content,
+        revision: item.revision,
+        isFinal: item.is_final,
+        truncated: item.truncated,
+      })),
+    });
+  });
 }
 export async function draftChanges(owner: string, id: string) {
   return getDatabase()
@@ -208,41 +308,12 @@ export async function draftChanges(owner: string, id: string) {
       const plan = await detail(db, owner, id);
       if (!plan.draft) throw new PlanError('DRAFT_REQUIRED', 'There is no draft to compare.');
       const before = plan.locked ? await readAggregate(db, plan.locked.id) : null;
-      return {
+      return DraftChangesSchema.parse({
         versionId: plan.draft.id,
         editNumber: plan.draft.editNumber,
         baselineId: plan.locked?.id ?? null,
         ...(await compareVersions(db, before, plan.draft.id)),
-      };
-    });
-}
-export async function runChanges(owner: string, id: string) {
-  return getDatabase()
-    .transaction()
-    .execute(async (db) => {
-      await ownedRun(db, owner, id);
-      const rows = await db
-        .selectFrom('agent_tool_changes as c')
-        .innerJoin('agent_run_events as e', 'e.run_id', 'c.run_id')
-        .select('c.summary')
-        .where('c.run_id', '=', id)
-        .where('e.type', '=', 'tool_completed')
-        .where(sql<boolean>`e.metadata->>'operationId' = c.operation_id`)
-        .orderBy('e.sequence')
-        .execute();
-      const receipt = await db
-        .selectFrom('agent_tool_receipts')
-        .select('operation_id')
-        .where('run_id', '=', id)
-        .where('tool_name', 'in', [
-          'create_plan_draft',
-          'update_plan_brief',
-          'set_fitness_calibration',
-          'apply_schedule_changes',
-          'replace_schedule_range',
-        ])
-        .executeTakeFirst();
-      return { summaries: rows.map((r) => r.summary), legacy: rows.length === 0 && !!receipt };
+      });
     });
 }
 export async function bootstrap(owner: string) {
@@ -253,6 +324,10 @@ export async function bootstrap(owner: string) {
     .executeTakeFirst();
   return { cursor: String(row?.sequence ?? 0) };
 }
+/**
+ * Each owner's cursors are contiguous: commit-time allocation never skips a number, and only
+ * pruning removes events. A gap after the cursor therefore means replay is incomplete.
+ */
 export async function liveEvents(owner: string, cursor: string) {
   return getDatabase()
     .transaction()
@@ -263,18 +338,10 @@ export async function liveEvents(owner: string, cursor: string) {
         .select('sequence')
         .where('owner_id', '=', owner)
         .executeTakeFirst();
-      const latest = String(head?.sequence ?? 0);
-      const oldest = await db
-        .selectFrom('live_events')
-        .select('sequence')
-        .where('owner_id', '=', owner)
-        .orderBy('sequence')
-        .executeTakeFirst();
-      if (
-        BigInt(cursor) > BigInt(latest) ||
-        (oldest && BigInt(cursor) < BigInt(String(oldest.sequence)) - 1n)
-      )
-        return { cursor: latest, reset: true, events: [] };
+      const latest = BigInt(String(head?.sequence ?? 0));
+      const reset = { cursor: String(latest), reset: true, events: [] };
+      if (BigInt(cursor) > latest) return reset;
+      if (BigInt(cursor) === latest) return { cursor, reset: false, events: [] };
       const rows = await db
         .selectFrom('live_events')
         .selectAll()
@@ -283,8 +350,9 @@ export async function liveEvents(owner: string, cursor: string) {
         .orderBy('sequence')
         .limit(100)
         .execute();
+      if (BigInt(String(rows[0]?.sequence ?? -1)) !== BigInt(cursor) + 1n) return reset;
       return {
-        cursor: rows.length ? String(rows.at(-1)!.sequence) : cursor,
+        cursor: String(rows.at(-1)!.sequence),
         reset: false,
         events: rows.map((r) => ({ id: String(r.sequence), type: r.type, metadata: r.metadata })),
       };

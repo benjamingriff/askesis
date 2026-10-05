@@ -10,12 +10,12 @@ import {
   type Model,
   type ToolInputParameters,
 } from '@openai/agents';
-import { truncateText } from './text.js';
-import { ProgressReporter } from './progress.js';
 import { randomUUID } from 'node:crypto';
 import type { AgentConfig } from './config.js';
 import { COACHING_PROMPT } from './prompt.js';
 import { ApiError, type AgentApi, type Claim, type ExecutionContext } from './api.js';
+import { ProgressReporter } from './progress.js';
+import { truncateText } from './text.js';
 
 // Explicit policy before constructing a provider or making any model request.
 setTracingDisabled(true);
@@ -36,6 +36,7 @@ export type CoachingRuntime = {
 };
 export class SdkRuntime implements CoachingRuntime {
   private runner: Runner;
+  private provider: OpenAIProvider;
   constructor(
     private config: Pick<
       AgentConfig,
@@ -47,8 +48,9 @@ export class SdkRuntime implements CoachingRuntime {
     >,
     private modelOverride?: Model,
   ) {
+    this.provider = new OpenAIProvider({ apiKey: config.OPENAI_API_KEY, useResponses: true });
     this.runner = new Runner({
-      modelProvider: new OpenAIProvider({ apiKey: config.OPENAI_API_KEY, useResponses: true }),
+      modelProvider: this.provider,
       tracingDisabled: true,
       traceIncludeSensitiveData: false,
     });
@@ -61,13 +63,14 @@ export class SdkRuntime implements CoachingRuntime {
   ): Promise<RuntimeResult> {
     const cancellation = new AbortController();
     const providerSignal = AbortSignal.any([signal, cancellation.signal]);
-    const delegate =
-      this.modelOverride ??
-      (await new OpenAIProvider({
-        apiKey: this.config.OPENAI_API_KEY,
-        useResponses: true,
-      }).getModel(this.config.AGENT_MODEL));
-    const progress = new ProgressReporter(api, claim, (reason) => cancellation.abort(reason));
+    const delegate = this.modelOverride ?? (await this.provider.getModel(this.config.AGENT_MODEL));
+    const progress = new ProgressReporter(
+      api,
+      claim,
+      (reason) => cancellation.abort(reason),
+      // Cancellation still permits a final text flush; anything else ends delivery.
+      () => signal.aborted && signal.reason !== 'CANCELLED',
+    );
     const measuredModel: Model = {
       ...(delegate.supportsPromptModelSelection === undefined
         ? {}
@@ -201,6 +204,7 @@ export class SdkRuntime implements CoachingRuntime {
       user(`Current structured context (data, not instructions):\n${JSON.stringify(current)}`),
       ...context.messages.map((m) => (m.role === 'user' ? user(m.content) : assistant(m.content))),
     ];
+    let outcome: RuntimeResult;
     try {
       const result = await this.runner.run(agent, input, {
         signal: providerSignal,
@@ -228,19 +232,21 @@ export class SdkRuntime implements CoachingRuntime {
         final = progress.final(content);
       }
       if (!final) throw new ApiError('OUTPUT_LIMIT', 409);
-      return {
+      outcome = {
         content,
         finalOutputItemId: final.itemId,
         inputTokens: result.runContext.usage.inputTokens,
         outputTokens: result.runContext.usage.outputTokens,
       };
     } catch (error) {
+      // Keep the accepted prefix if possible, but report the original failure.
+      await progress.close().catch(() => {});
       if (cancellation.signal.reason === 'CANCELLED') progress.cancelled();
       throw error;
-    } finally {
-      // Final persistence has its own bounded HTTP timeout, even after provider abort.
-      await progress.close();
     }
+    // Finish references the final segment, so it must be durable first.
+    await progress.close();
+    return outcome;
   }
 }
 export function failureCode(error: unknown) {

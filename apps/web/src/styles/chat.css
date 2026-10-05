@@ -459,9 +459,6 @@
   color: var(--accent-text);
   text-decoration: underline;
 }
-.run-activity .plan-update {
-  border-radius: 13px;
-}
 
 /* Composer */
 .composer-wrap {
@@ -500,6 +497,11 @@
 }
 .chat-composer textarea:focus {
   box-shadow: none;
+}
+.chat-composer textarea::placeholder {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .composer-button {
   display: grid;
@@ -581,164 +583,283 @@
   }
 }
 
+/* Conversation workspace: header, Chat/Plan tabs below the split width, then chat and plan */
 .conversation-workspace {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
+  display: flex;
+  flex-direction: column;
   min-width: 0;
   min-height: 0;
-  height: 100%;
+  height: 100dvh;
 }
-.conversation-workspace.with-plan:not(.plan-collapsed) {
-  grid-template-columns: minmax(300px, 1fr) minmax(380px, 1.1fr);
+.conversation-body {
+  flex: 1;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  min-height: 0;
+}
+.conversation-workspace .chat-main {
+  height: auto;
+  min-height: 0;
 }
 .conversation-view-tabs {
   display: none;
 }
+.tabs button {
+  flex: 1;
+}
+.tab-badge {
+  display: inline-grid;
+  place-items: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 9px;
+  background: var(--accent);
+  color: var(--on-accent);
+  font-size: 10px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
 .conversation-plan {
+  display: none;
   min-width: 0;
+  min-height: 0;
   overflow-y: auto;
-  border-left: 1px solid var(--border);
   background: var(--bg);
 }
-.plan-collapsed .conversation-plan {
-  display: none;
-}
+/* Desktop only: below the split width the Chat/Plan tabs replace these controls. */
 .plan-panel-header {
   position: sticky;
   top: 0;
   z-index: 5;
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 12px 16px;
-  background: var(--surface);
-  border-bottom: 1px solid var(--border);
+  justify-content: flex-end;
+  gap: 4px;
+  padding: 8px 10px 0;
+  background: var(--bg);
 }
-.plan-panel-header strong {
-  flex: 1;
+@media (min-width: 1450px) {
+  .with-plan:not(.plan-collapsed) .conversation-body {
+    grid-template-columns: minmax(380px, 1.15fr) minmax(360px, 1fr);
+  }
+  .with-plan:not(.plan-collapsed) .conversation-plan {
+    display: block;
+    border-left: 1px solid var(--border);
+  }
+  .with-plan:not(.plan-collapsed) .plan-chip {
+    display: none;
+  }
 }
+@media (max-width: 1449px) {
+  .with-plan .chat-topbar {
+    border-bottom: 0;
+  }
+  .with-plan .plan-chip,
+  .plan-panel-header {
+    display: none;
+  }
+  .with-plan .conversation-view-tabs {
+    display: flex;
+    padding: 0 20px 10px;
+    border-bottom: 1px solid var(--border);
+  }
+  .conversation-view-tabs .tabs {
+    flex: 1;
+    max-width: 520px;
+    margin: 0 auto;
+  }
+  .show-plan .chat-main {
+    display: none;
+  }
+  .show-plan .conversation-plan {
+    display: block;
+  }
+}
+
+/* The plan beside a chat: compact heading, one column, lifecycle actions in a footer */
 .embedded-plan {
-  padding: 20px 16px;
+  max-width: none;
+  padding: 16px 16px 0;
+  gap: 16px;
+  animation: none;
 }
 .embedded-plan .plan-layout {
   grid-template-columns: minmax(0, 1fr);
 }
-.embedded-plan .plan-header {
-  flex-wrap: wrap;
-}
-.embedded-plan .plan-header h1 {
-  font-size: 24px;
-}
-.embedded-plan .plan-header-actions {
-  flex-wrap: wrap;
-}
 .embedded-plan .plan-side {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
+  position: static;
 }
 .embedded-plan .week-chart {
   min-width: 0;
 }
-.jump-latest {
-  position: absolute;
-  bottom: 155px;
-  align-self: center;
+.embedded-plan-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+.embedded-plan-heading h2 {
+  margin-top: 2px;
+  font-size: 20px;
+  font-weight: 700;
+}
+.embedded-plan-heading .muted {
+  font-size: 13px;
+}
+.embedded-plan-actions {
+  position: sticky;
+  bottom: 0;
   z-index: 4;
-  box-shadow: var(--shadow);
+  margin: 0 -16px;
+  padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
+  border-top: 1px solid var(--border);
+  background: var(--bg);
+}
+.embedded-plan-actions .plan-toolbar {
+  flex-wrap: nowrap;
+}
+.embedded-plan-actions .plan-toolbar > .btn {
+  flex: 1;
+}
+.embedded-plan-actions .plan-toolbar .btn.collapsible {
+  width: auto;
+  padding: 0 18px;
+  border-radius: var(--radius-sm);
+}
+.embedded-plan-actions .plan-toolbar .btn.collapsible .btn-text {
+  display: inline;
+}
+
+/* Turns, live text and saved changes */
+.turn {
+  gap: 12px;
+}
+.turn .run-activity {
+  align-self: stretch;
 }
 .live-connection {
   font-size: 12px;
 }
-.streamed-reply .message-author small {
-  margin-left: 6px;
+.jump-latest {
+  position: sticky;
+  bottom: 4px;
+  z-index: 4;
+  display: flex;
+  margin: 12px auto 0;
+  box-shadow: var(--shadow);
 }
-.plan-changes {
-  padding: 14px 16px;
+.plan-update-card {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 12px;
+  max-width: 560px;
 }
-.plan-changes > p {
-  font-size: 13px;
-  margin: 4px 0 8px;
-}
-.plan-changes summary {
+button.plan-update-card {
   cursor: pointer;
-  font-size: 13px;
 }
+.plan-update-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.plan-update-head > span:nth-child(2) {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+.plan-update-head > svg {
+  color: var(--accent-text);
+}
+.plan-update-changes,
 .workout-changes {
   display: flex;
   flex-direction: column;
   gap: 8px;
+  margin: 0;
+  padding: 0;
   list-style: none;
-  padding: 12px 0 0;
 }
+.plan-update-changes li,
 .workout-changes li {
   display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: 6px 10px;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
   font-size: 13px;
 }
-.workout-changes small {
-  color: var(--text-muted);
+.plan-update-changes li > span:nth-child(2) {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
-.workout-change {
-  display: inline-flex;
-  margin-top: 4px;
+.plan-update-changes small,
+.workout-changes small,
+.plan-update-more {
+  color: var(--text-dim);
+  font-size: 12px;
 }
-.workout-card:has(.workout-change) {
-  border-color: var(--accent-border);
+.plan-update-cta {
+  color: var(--accent-text);
+  font-size: 13px;
+  font-weight: 800;
+}
+.change-badge {
+  flex: none;
+  padding: 1px 7px;
+  border-radius: 10px;
+  border: 1px solid var(--accent-border);
   background: var(--accent-soft);
+  color: var(--accent-text);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
 }
-@media (min-width: 901px) and (max-width: 1450px) {
-  .chat-layout {
-    grid-template-columns: 220px minmax(0, 1fr);
-  }
+.plan-changes {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px 16px;
 }
-@media (max-width: 1200px) {
-  .conversation-workspace.with-plan:not(.plan-collapsed) {
-    grid-template-columns: minmax(0, 1fr);
-    grid-template-rows: auto minmax(0, 1fr);
-  }
-  .conversation-workspace.with-plan {
-    grid-template-rows: auto minmax(0, 1fr);
-  }
-  .conversation-workspace.with-plan .chat-main {
-    height: 100%;
-  }
-  .conversation-view-tabs {
-    display: flex;
-    padding: 8px 12px;
-    border-bottom: 1px solid var(--border);
-  }
-  .conversation-view-tabs .segmented {
-    width: 100%;
-  }
-  .conversation-view-tabs .segmented button {
-    flex: 1;
-  }
-  .conversation-workspace:not(.show-plan) .conversation-plan {
-    display: none;
-  }
-  .conversation-workspace.show-plan .chat-main {
-    display: none;
-  }
-  .conversation-workspace.show-plan .conversation-plan {
-    display: block;
-    border-left: 0;
-  }
-  .conversation-workspace.with-plan .chat-main {
-    min-height: 0;
-  }
+.plan-changes-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+.plan-changes-header small,
+.plan-changes > p {
+  color: var(--text-dim);
+  font-size: 13px;
+}
+.plan-changes summary {
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+}
+.plan-changes details[open] summary {
+  margin-bottom: 10px;
+}
+.calendar-dots i.changed {
+  box-shadow: 0 0 0 2px var(--accent);
 }
 @media (max-width: 900px) {
   .chat-layout:not(.has-conversation) .conversation-workspace {
     display: none;
   }
-  .plan-panel-header {
-    gap: 6px;
-    padding: 10px 12px;
-    font-size: 13px;
+  .conversation-workspace {
+    height: 100%;
+  }
+  .with-plan .conversation-view-tabs {
+    padding: 0 12px 8px;
   }
   .embedded-plan {
-    padding: 16px 12px;
+    padding: 12px 12px 0;
+  }
+  .embedded-plan-actions {
+    margin: 0 -12px;
   }
 }

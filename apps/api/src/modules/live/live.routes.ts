@@ -3,16 +3,15 @@ import { streamSSE } from 'hono/streaming';
 import type { AppEnvironment } from '../../auth/types.js';
 import { ChatError } from '../chat/chat.core.js';
 import { Id } from '../plans/plan.schemas.js';
-import { RunSchema } from '../chat/chat.schemas.js';
 import { ErrorSchema } from '../workouts/workout.schemas.js';
-import { DraftChangesSchema, OutputSchema, RunChangesSchema } from './live.schemas.js';
+import { DraftChangesSchema, OutputSchema, TurnSchema } from './live.schemas.js';
 import {
   bootstrap,
   conversationRuns,
   draftChanges,
   getOutput,
+  getTurn,
   liveEvents,
-  runChanges,
 } from './live.service.js';
 const errors = Object.fromEntries(
   [400, 401, 404, 409].map((code) => [
@@ -24,6 +23,10 @@ const response = <T extends z.ZodType>(schema: T) => ({
   description: 'Success.',
   content: { 'application/json': { schema } },
 });
+/** Connections end before a bearer token expires; the client reconnects with a fresh one. */
+const CONNECTION_MS = 45000;
+const POLL_MS = 750;
+const HEARTBEAT_MS = 15000;
 const cursor = z
   .string()
   .regex(/^\d{1,18}$/)
@@ -53,7 +56,7 @@ export function registerLiveRoutes(app: OpenAPIHono<AppEnvironment>) {
       responses: {
         ...errors,
         200: response(
-          z.object({ runs: z.array(RunSchema), nextBeforeSequence: z.number().nullable() }),
+          z.object({ runs: z.array(TurnSchema), nextBeforeSequence: z.number().nullable() }),
         ),
       },
     }),
@@ -87,16 +90,12 @@ export function registerLiveRoutes(app: OpenAPIHono<AppEnvironment>) {
   app.openapi(
     createRoute({
       method: 'get',
-      path: '/api/v1/agent-runs/{runId}/changes',
+      path: '/api/v1/agent-runs/{runId}/turn',
       tags: ['Chat'],
       request: { params: z.object({ runId: Id }) },
-      responses: { ...errors, 200: response(RunChangesSchema) },
+      responses: { ...errors, 200: response(TurnSchema) },
     }),
-    async (c) =>
-      c.json(
-        RunChangesSchema.parse(await runChanges(c.get('athlete').id, c.req.valid('param').runId)),
-        200,
-      ),
+    async (c) => c.json(await getTurn(c.get('athlete').id, c.req.valid('param').runId), 200),
   );
   app.openapi(
     createRoute({
@@ -133,9 +132,11 @@ export function registerLiveRoutes(app: OpenAPIHono<AppEnvironment>) {
         c,
         async (stream) => {
           let current = value;
-          const end = Date.now() + 45000;
+          const end = Date.now() + CONNECTION_MS;
+          let quietSince = Date.now();
           while (!stream.aborted && Date.now() < end) {
             const page = await liveEvents(owner, current);
+            if (page.reset || page.events.length) quietSince = Date.now();
             if (page.reset)
               await stream.writeSSE({
                 event: 'reset',
@@ -149,10 +150,13 @@ export function registerLiveRoutes(app: OpenAPIHono<AppEnvironment>) {
                 data: JSON.stringify(event.metadata),
               });
             current = page.cursor;
-            if (!page.events.length) {
+            if (page.events.length) continue;
+            // Proxies close idle streams; a periodic heartbeat keeps this one open.
+            if (Date.now() - quietSince >= HEARTBEAT_MS) {
               await stream.writeSSE({ event: 'heartbeat', data: '{}' });
-              await stream.sleep(750);
+              quietSince = Date.now();
             }
+            await stream.sleep(POLL_MS);
           }
         },
         async () => {},

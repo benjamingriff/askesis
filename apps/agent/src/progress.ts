@@ -1,5 +1,11 @@
-import { truncateText } from './text.js';
+import { setTimeout as pause } from 'node:timers/promises';
 import { ApiError, type AgentApi, type Claim } from './api.js';
+import { truncateText } from './text.js';
+
+/** How long one batch keeps retrying a transient outage before the turn gives up. */
+const DELIVERY_BUDGET_MS = 30000;
+const transient = (error: unknown) =>
+  !(error instanceof ApiError) || error.status >= 500 || error.status === 429;
 
 type Item = {
   itemId: string;
@@ -25,6 +31,9 @@ export class ProgressReporter {
     private api: AgentApi,
     private claim: Claim,
     private interrupt: (reason: unknown) => void,
+    /** Lease loss, timeout or shutdown: retrying a batch can no longer succeed. */
+    private stopped: () => boolean = () => false,
+    private retryDelayMs = 250,
   ) {
     this.timer = setInterval(() => {
       if (this.timerBusy) return;
@@ -57,10 +66,13 @@ export class ProgressReporter {
       text,
       Math.max(0, Math.min(32000 - item.content.length, 64000 - this.characters)),
     );
+    const truncated = item.truncated || added.length < text.length;
+    // Text past the limit only needs one revision that records the truncation.
+    if (!added && truncated === item.truncated && item.revision > 0) return;
     item.content += added;
     this.characters += added.length;
     item.revision++;
-    item.truncated ||= added.length < text.length;
+    item.truncated = truncated;
     this.dirty.add(id);
     if (performance.now() - this.lastFlush >= 350 || added.length >= 4096) await this.flush();
   }
@@ -73,17 +85,14 @@ export class ProgressReporter {
   final(content: string) {
     return [...this.items.values()].reverse().find((item) => item.content === content);
   }
-  async flush(
-    activity?: { name: string; operationId: string; state: 'started' | 'failed' },
-    measure = false,
-  ) {
+  async flush(activity?: { name: string; operationId: string; state: 'started' | 'failed' }) {
     if (this.error) throw this.error;
     await this.tail;
     if (this.error) throw this.error;
     const snapshots = [...this.dirty].map((id) => ({ ...this.items.get(id)! }));
     this.dirty.clear();
     this.lastFlush = performance.now();
-    if (!snapshots.length && !activity && !measure) return this.tail;
+    if (!snapshots.length && !activity) return this.tail;
     const groups = snapshots.length
       ? Array.from({ length: Math.ceil(snapshots.length / 8) }, (_, i) =>
           snapshots.slice(i * 8, i * 8 + 8),
@@ -94,11 +103,10 @@ export class ProgressReporter {
         sequence: ++this.sequence,
         items,
         ...(index === groups.length - 1 && activity ? { activity } : {}),
-        ...(index === groups.length - 1 && measure ? { timings: { ...this.timings } } : {}),
       };
       this.tail = this.tail.then(async () => {
         const start = performance.now();
-        const result = await this.api.progress(this.claim, body);
+        const result = await this.deliver(body);
         const duration = performance.now() - start;
         this.timings.progressWriteMsTotal =
           Number(this.timings.progressWriteMsTotal ?? 0) + duration;
@@ -118,12 +126,38 @@ export class ProgressReporter {
     });
     return this.tail;
   }
+  /**
+   * Batches are idempotent by sequence, so a transient API outage retries the same batch with
+   * backoff instead of failing the turn. Rejections and lost leases fail immediately.
+   */
+  private async deliver(body: unknown) {
+    const started = performance.now();
+    for (let attempt = 0; ; attempt++) {
+      try {
+        return await this.api.progress(this.claim, body);
+      } catch (error) {
+        const delay = Math.min(4000, this.retryDelayMs * 2 ** attempt);
+        if (
+          !transient(error) ||
+          this.stopped() ||
+          performance.now() - started + delay > DELIVERY_BUDGET_MS
+        )
+          throw error;
+        await pause(delay * (0.8 + Math.random() * 0.4));
+      }
+    }
+  }
+  /** Persist remaining text (required), then a best-effort timing summary. */
   async close() {
     clearInterval(this.timer);
     await this.flush();
     this.timings.totalMs = this.elapsed();
     this.timings.progressBatches = this.sequence + 1;
-    await this.flush(undefined, true);
+    try {
+      await this.deliver({ sequence: ++this.sequence, items: [], timings: { ...this.timings } });
+    } catch {
+      // Measurements must never turn a delivered reply into a failed run.
+    }
   }
   throwIfFailed() {
     if (this.error) throw this.error;

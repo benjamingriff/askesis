@@ -79,7 +79,9 @@ BEGIN
   ELSE resource := NEW.run_id; END IF;
   SELECT owner_id,jsonb_build_object('runId',id,'conversationId',conversation_id,'planId',COALESCE(execution_plan_id,plan_id))
    INTO owner,event_meta FROM agent_runs WHERE id=resource;
-  event_type := CASE WHEN TG_TABLE_NAME='agent_run_outputs' THEN 'output.changed' ELSE 'run.changed' END;
+  -- Tool activity and visible text never change plan content; plan writes notify separately.
+  event_type := CASE TG_TABLE_NAME WHEN 'agent_run_outputs' THEN 'output.changed'
+   WHEN 'agent_run_events' THEN 'activity.changed' ELSE 'run.changed' END;
  END IF;
  IF owner IS NULL THEN RETURN NULL; END IF;
  IF EXISTS(SELECT 1 FROM live_events WHERE owner_id=owner AND transaction_id=txid_current() AND type=event_type AND resource_id=resource) THEN

@@ -73,3 +73,37 @@ it('reconnects reads with fresh credentials and resets the cursor on account cha
   await new Promise((resolve) => setTimeout(resolve, 20));
   expect(calls).toHaveLength(count);
 });
+it('resumes from its cursor when the tab returns instead of refetching every read', async () => {
+  const urls: string[] = [];
+  configureAuthTokenProvider(async () => 'token');
+  vi.stubGlobal(
+    'fetch',
+    vi.fn(async (url: string, options: RequestInit) => {
+      urls.push(url);
+      if (url.endsWith('/bootstrap')) return new Response(JSON.stringify({ cursor: '9' }));
+      const signal = options.signal as AbortSignal;
+      const body = new ReadableStream<Uint8Array>({
+        start(controller) {
+          signal.addEventListener(
+            'abort',
+            () => controller.error(new DOMException('Stopped', 'AbortError')),
+            { once: true },
+          );
+        },
+      });
+      return new Response(body, { headers: { 'content-type': 'text/event-stream' } });
+    }),
+  );
+  render(
+    <AccountQueryProvider key="A" accountId="A">
+      <Probe />
+    </AccountQueryProvider>,
+  );
+  await screen.findByText('live');
+  await waitFor(() => expect(urls.filter((url) => url.includes('/events'))).toHaveLength(1));
+  document.dispatchEvent(new Event('visibilitychange'));
+  await waitFor(() => expect(urls.filter((url) => url.includes('/events'))).toHaveLength(2));
+  expect(urls.at(-1)).toContain('cursor=9');
+  expect(urls.filter((url) => url.endsWith('/bootstrap'))).toHaveLength(1);
+  expect(screen.getByText('live')).toBeInTheDocument();
+});

@@ -8,7 +8,7 @@ import {
   Sparkles,
   Trophy,
 } from 'lucide-react';
-import { useMemo, useState, type CSSProperties } from 'react';
+import { useContext, useMemo, useState, type CSSProperties } from 'react';
 import {
   addDays,
   dayNumber,
@@ -34,7 +34,8 @@ import type { Units } from '../settings';
 import { readStorage, writeStorage } from '../lib/storage';
 import type { PlanVersion } from '../plan-data';
 import { useFollowingState } from '../lib/use-following-state';
-import { useWorkoutSelection } from '../lib/use-workout-selection';
+import { useWorkoutSelection, type WorkoutSelection } from '../lib/use-workout-selection';
+import { WorkoutChangesContext } from './PlanChanges';
 import { Stat, WeekChart } from './PlanWidgets';
 import { DayRow, WorkoutCard, WorkoutDialog } from './Workout';
 import { Button, Card, EmptyState, IconButton, Pill, Segmented, Notice, cx } from './ui';
@@ -53,6 +54,7 @@ export function Schedule({
   today,
   onAskCoach,
   onPlanRest,
+  selection,
 }: {
   workouts: WorkoutSummary[];
   version?: Pick<PlanVersion, 'id' | 'editNumber'> | null | undefined;
@@ -64,6 +66,8 @@ export function Schedule({
   today: string;
   onAskCoach?: ((workout: WorkoutSummary) => void) | undefined;
   onPlanRest?: (() => void) | undefined;
+  /** A parent that also opens workouts (for example from a change summary) owns selection. */
+  selection?: WorkoutSelection | undefined;
 }) {
   const weeks = useMemo(
     () => summarizeWeeks(workouts, startDate, endDate, coverage),
@@ -76,7 +80,8 @@ export function Schedule({
     readStorage(MODE_KEY) === 'calendar' ? 'calendar' : 'weeks',
   );
   const [selectedWeek, setSelectedWeek] = useFollowingState(firstUpcoming);
-  const dialog = useWorkoutSelection(workouts, version?.id);
+  const ownSelection = useWorkoutSelection(workouts, version?.id);
+  const dialog = selection ?? ownSelection;
   const week = weeks.find((w) => w.number === selectedWeek) ?? weeks[0];
   const dayStatus = (date: string) =>
     (startDate && date < startDate) || (endDate && date > endDate)
@@ -200,11 +205,14 @@ export function Schedule({
         />
       )}
       {dialog.missing ? (
-        <Notice>
-          The selected workout was removed from this draft.{' '}
-          <button className="link-button" type="button" onClick={dialog.close}>
-            Dismiss
-          </button>
+        <Notice
+          action={
+            <Button size="sm" variant="ghost" onClick={dialog.close}>
+              Back to schedule
+            </Button>
+          }
+        >
+          The workout you had open was removed from this draft.
         </Notice>
       ) : null}
       <WorkoutDialog
@@ -249,6 +257,9 @@ function CalendarView({
   const inPlan = (date: string) =>
     (!startDate || date >= startDate) && (!endDate || date <= endDate);
   const selectedWorkouts = workoutsOn(workouts, selected);
+  const changes = useContext(WorkoutChangesContext);
+  const changed = (workout: WorkoutSummary) =>
+    changes.some((change) => change.workoutId === workout.id);
   return (
     <Card className="calendar">
       <div className="calendar-header">
@@ -284,7 +295,7 @@ function CalendarView({
               key={date}
               role="gridcell"
               aria-selected={date === selected}
-              aria-label={`${formatLong(date)}${items.length ? `, ${items.map((w) => w.title).join(', ')}` : ''}`}
+              aria-label={`${formatLong(date)}${items.length ? `, ${items.map((w) => (changed(w) ? `${w.title} (changed in draft)` : w.title)).join(', ')}` : ''}`}
               className={cx(
                 'calendar-day',
                 outside && 'outside',
@@ -300,6 +311,7 @@ function CalendarView({
                 {items.map((workout) => (
                   <i
                     key={workout.id}
+                    className={changed(workout) ? 'changed' : undefined}
                     style={{ '--kind': KIND_META[inferKind(workout)].color } as CSSProperties}
                   />
                 ))}

@@ -1,4 +1,5 @@
 import { z } from '@hono/zod-openapi';
+import { RunSchema } from '../chat/chat.schemas.js';
 import { Id } from '../plans/plan.schemas.js';
 
 export const OutputItemSchema = z.object({
@@ -45,9 +46,23 @@ export const DraftChangesSchema = ChangeSummarySchema.extend({
   editNumber: z.number().int(),
   baselineId: Id.nullable(),
 });
-export const RunChangesSchema = z.object({
-  summaries: z.array(ChangeSummarySchema),
-  legacy: z.boolean(),
+export const ActivitySchema = z.object({
+  operationId: z.string(),
+  name: z.string(),
+  state: z.enum(['started', 'completed', 'failed']),
+});
+/**
+ * One coaching turn as the chat presents it: the run, its tool actions, the net plan changes it
+ * committed and any visible text that is not already the durable final reply.
+ */
+export const TurnSchema = RunSchema.extend({
+  activity: z.array(ActivitySchema),
+  changes: ChangeSummarySchema.nullable(),
+  /** Saved plan edits from before per-run summaries were recorded. */
+  legacyChanges: z.boolean(),
+  output: z.array(OutputItemSchema),
+  /** The durable reply was cut at the visible length limit. */
+  replyTruncated: z.boolean(),
 });
 export const ProgressSchema = z
   .object({

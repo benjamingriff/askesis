@@ -636,6 +636,169 @@
                           "finishedAt": {
                             "type": "string",
                             "nullable": true
+                          },
+                          "activity": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "operationId": {
+                                  "type": "string"
+                                },
+                                "name": {
+                                  "type": "string"
+                                },
+                                "state": {
+                                  "type": "string",
+                                  "enum": [
+                                    "started",
+                                    "completed",
+                                    "failed"
+                                  ]
+                                }
+                              },
+                              "required": [
+                                "operationId",
+                                "name",
+                                "state"
+                              ]
+                            }
+                          },
+                          "changes": {
+                            "type": "object",
+                            "nullable": true,
+                            "properties": {
+                              "workouts": {
+                                "type": "array",
+                                "items": {
+                                  "type": "object",
+                                  "properties": {
+                                    "lineageId": {
+                                      "type": "string",
+                                      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+                                    },
+                                    "workoutId": {
+                                      "type": "string",
+                                      "nullable": true,
+                                      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+                                    },
+                                    "title": {
+                                      "type": "string"
+                                    },
+                                    "date": {
+                                      "type": "string"
+                                    },
+                                    "previousDate": {
+                                      "type": "string",
+                                      "nullable": true
+                                    },
+                                    "change": {
+                                      "type": "string",
+                                      "enum": [
+                                        "added",
+                                        "changed",
+                                        "moved",
+                                        "removed"
+                                      ]
+                                    },
+                                    "prescriptionChanged": {
+                                      "type": "boolean"
+                                    }
+                                  },
+                                  "required": [
+                                    "lineageId",
+                                    "workoutId",
+                                    "title",
+                                    "date",
+                                    "previousDate",
+                                    "change",
+                                    "prescriptionChanged"
+                                  ]
+                                }
+                              },
+                              "assumptionsChanged": {
+                                "type": "boolean"
+                              },
+                              "paceGuidesChanged": {
+                                "type": "boolean"
+                              },
+                              "datesChanged": {
+                                "type": "boolean"
+                              },
+                              "counts": {
+                                "type": "object",
+                                "properties": {
+                                  "added": {
+                                    "type": "integer"
+                                  },
+                                  "changed": {
+                                    "type": "integer"
+                                  },
+                                  "moved": {
+                                    "type": "integer"
+                                  },
+                                  "removed": {
+                                    "type": "integer"
+                                  }
+                                },
+                                "required": [
+                                  "added",
+                                  "changed",
+                                  "moved",
+                                  "removed"
+                                ]
+                              },
+                              "omittedWorkouts": {
+                                "type": "integer",
+                                "minimum": 0
+                              }
+                            },
+                            "required": [
+                              "workouts",
+                              "assumptionsChanged",
+                              "paceGuidesChanged",
+                              "datesChanged"
+                            ]
+                          },
+                          "legacyChanges": {
+                            "type": "boolean"
+                          },
+                          "output": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "itemId": {
+                                  "type": "string"
+                                },
+                                "position": {
+                                  "type": "integer"
+                                },
+                                "content": {
+                                  "type": "string"
+                                },
+                                "revision": {
+                                  "type": "integer"
+                                },
+                                "isFinal": {
+                                  "type": "boolean"
+                                },
+                                "truncated": {
+                                  "type": "boolean"
+                                }
+                              },
+                              "required": [
+                                "itemId",
+                                "position",
+                                "content",
+                                "revision",
+                                "isFinal",
+                                "truncated"
+                              ]
+                            }
+                          },
+                          "replyTruncated": {
+                            "type": "boolean"
                           }
                         },
                         "required": [
@@ -648,7 +811,12 @@
                           "failureCode",
                           "createdAt",
                           "startedAt",
-                          "finishedAt"
+                          "finishedAt",
+                          "activity",
+                          "changes",
+                          "legacyChanges",
+                          "output",
+                          "replyTruncated"
                         ]
                       }
                     },
@@ -839,7 +1007,7 @@
         }
       }
     },
-    "/api/v1/agent-runs/{runId}/changes": {
+    "/api/v1/agent-runs/{runId}/turn": {
       "get": {
         "tags": [
           "Chat"
@@ -863,111 +1031,296 @@
                 "schema": {
                   "type": "object",
                   "properties": {
-                    "summaries": {
+                    "id": {
+                      "type": "string",
+                      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+                    },
+                    "conversationId": {
+                      "type": "string",
+                      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+                    },
+                    "planId": {
+                      "type": "string",
+                      "nullable": true,
+                      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+                    },
+                    "userMessageId": {
+                      "type": "string",
+                      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "queued",
+                        "running",
+                        "cancelling",
+                        "completed",
+                        "failed",
+                        "cancelled"
+                      ]
+                    },
+                    "context": {
+                      "type": "object",
+                      "nullable": true,
+                      "properties": {
+                        "versionId": {
+                          "type": "string",
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+                        },
+                        "state": {
+                          "type": "string",
+                          "enum": [
+                            "draft",
+                            "locked"
+                          ]
+                        },
+                        "versionNumber": {
+                          "type": "integer",
+                          "nullable": true
+                        },
+                        "editNumber": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "exclusiveMinimum": true
+                        }
+                      },
+                      "required": [
+                        "versionId",
+                        "state",
+                        "versionNumber",
+                        "editNumber"
+                      ]
+                    },
+                    "failureCode": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "generation": {
+                      "type": "object",
+                      "nullable": true,
+                      "properties": {
+                        "runId": {
+                          "type": "string",
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+                        },
+                        "startDate": {
+                          "type": "string"
+                        },
+                        "endDate": {
+                          "type": "string"
+                        },
+                        "prescribedThrough": {
+                          "type": "string",
+                          "nullable": true
+                        },
+                        "status": {
+                          "type": "string",
+                          "enum": [
+                            "in_progress",
+                            "completed",
+                            "interrupted"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "runId",
+                        "startDate",
+                        "endDate",
+                        "prescribedThrough",
+                        "status"
+                      ]
+                    },
+                    "createdAt": {
+                      "type": "string"
+                    },
+                    "startedAt": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "finishedAt": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "activity": {
                       "type": "array",
                       "items": {
                         "type": "object",
                         "properties": {
-                          "workouts": {
-                            "type": "array",
-                            "items": {
-                              "type": "object",
-                              "properties": {
-                                "lineageId": {
-                                  "type": "string",
-                                  "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
-                                },
-                                "workoutId": {
-                                  "type": "string",
-                                  "nullable": true,
-                                  "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
-                                },
-                                "title": {
-                                  "type": "string"
-                                },
-                                "date": {
-                                  "type": "string"
-                                },
-                                "previousDate": {
-                                  "type": "string",
-                                  "nullable": true
-                                },
-                                "change": {
-                                  "type": "string",
-                                  "enum": [
-                                    "added",
-                                    "changed",
-                                    "moved",
-                                    "removed"
-                                  ]
-                                },
-                                "prescriptionChanged": {
-                                  "type": "boolean"
-                                }
-                              },
-                              "required": [
-                                "lineageId",
-                                "workoutId",
-                                "title",
-                                "date",
-                                "previousDate",
-                                "change",
-                                "prescriptionChanged"
-                              ]
-                            }
+                          "operationId": {
+                            "type": "string"
                           },
-                          "assumptionsChanged": {
-                            "type": "boolean"
+                          "name": {
+                            "type": "string"
                           },
-                          "paceGuidesChanged": {
-                            "type": "boolean"
-                          },
-                          "datesChanged": {
-                            "type": "boolean"
-                          },
-                          "counts": {
-                            "type": "object",
-                            "properties": {
-                              "added": {
-                                "type": "integer"
-                              },
-                              "changed": {
-                                "type": "integer"
-                              },
-                              "moved": {
-                                "type": "integer"
-                              },
-                              "removed": {
-                                "type": "integer"
-                              }
-                            },
-                            "required": [
-                              "added",
-                              "changed",
-                              "moved",
-                              "removed"
+                          "state": {
+                            "type": "string",
+                            "enum": [
+                              "started",
+                              "completed",
+                              "failed"
                             ]
-                          },
-                          "omittedWorkouts": {
-                            "type": "integer",
-                            "minimum": 0
                           }
                         },
                         "required": [
-                          "workouts",
-                          "assumptionsChanged",
-                          "paceGuidesChanged",
-                          "datesChanged"
+                          "operationId",
+                          "name",
+                          "state"
                         ]
                       }
                     },
-                    "legacy": {
+                    "changes": {
+                      "type": "object",
+                      "nullable": true,
+                      "properties": {
+                        "workouts": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "lineageId": {
+                                "type": "string",
+                                "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+                              },
+                              "workoutId": {
+                                "type": "string",
+                                "nullable": true,
+                                "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+                              },
+                              "title": {
+                                "type": "string"
+                              },
+                              "date": {
+                                "type": "string"
+                              },
+                              "previousDate": {
+                                "type": "string",
+                                "nullable": true
+                              },
+                              "change": {
+                                "type": "string",
+                                "enum": [
+                                  "added",
+                                  "changed",
+                                  "moved",
+                                  "removed"
+                                ]
+                              },
+                              "prescriptionChanged": {
+                                "type": "boolean"
+                              }
+                            },
+                            "required": [
+                              "lineageId",
+                              "workoutId",
+                              "title",
+                              "date",
+                              "previousDate",
+                              "change",
+                              "prescriptionChanged"
+                            ]
+                          }
+                        },
+                        "assumptionsChanged": {
+                          "type": "boolean"
+                        },
+                        "paceGuidesChanged": {
+                          "type": "boolean"
+                        },
+                        "datesChanged": {
+                          "type": "boolean"
+                        },
+                        "counts": {
+                          "type": "object",
+                          "properties": {
+                            "added": {
+                              "type": "integer"
+                            },
+                            "changed": {
+                              "type": "integer"
+                            },
+                            "moved": {
+                              "type": "integer"
+                            },
+                            "removed": {
+                              "type": "integer"
+                            }
+                          },
+                          "required": [
+                            "added",
+                            "changed",
+                            "moved",
+                            "removed"
+                          ]
+                        },
+                        "omittedWorkouts": {
+                          "type": "integer",
+                          "minimum": 0
+                        }
+                      },
+                      "required": [
+                        "workouts",
+                        "assumptionsChanged",
+                        "paceGuidesChanged",
+                        "datesChanged"
+                      ]
+                    },
+                    "legacyChanges": {
+                      "type": "boolean"
+                    },
+                    "output": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "itemId": {
+                            "type": "string"
+                          },
+                          "position": {
+                            "type": "integer"
+                          },
+                          "content": {
+                            "type": "string"
+                          },
+                          "revision": {
+                            "type": "integer"
+                          },
+                          "isFinal": {
+                            "type": "boolean"
+                          },
+                          "truncated": {
+                            "type": "boolean"
+                          }
+                        },
+                        "required": [
+                          "itemId",
+                          "position",
+                          "content",
+                          "revision",
+                          "isFinal",
+                          "truncated"
+                        ]
+                      }
+                    },
+                    "replyTruncated": {
                       "type": "boolean"
                     }
                   },
                   "required": [
-                    "summaries",
-                    "legacy"
+                    "id",
+                    "conversationId",
+                    "planId",
+                    "userMessageId",
+                    "status",
+                    "context",
+                    "failureCode",
+                    "createdAt",
+                    "startedAt",
+                    "finishedAt",
+                    "activity",
+                    "changes",
+                    "legacyChanges",
+                    "output",
+                    "replyTruncated"
                   ]
                 }
               }

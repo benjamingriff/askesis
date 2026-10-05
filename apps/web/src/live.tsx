@@ -55,41 +55,64 @@ export async function readNotifications(
     reader.releaseLock();
   }
 }
+type Resources = { runId?: string; conversationId?: string; planId?: string };
+/**
+ * Map one notification to the reads it can change. Text and tool activity only touch their
+ * turn; plan content refreshes only when a plan or version row was written, and a changed plan
+ * never refreshes another plan.
+ */
 export function invalidateNotification(client: QueryClient, event: string, raw: unknown) {
-  const value = raw as { runId?: string; conversationId?: string; planId?: string };
-  if (event === 'reset') {
-    void client.invalidateQueries();
-    return;
-  }
-  if (event === 'output.changed' && value.runId) {
-    void client.invalidateQueries({ queryKey: ['chat', 'output', value.runId] });
-    return;
-  }
-  if (value.conversationId) {
-    void client.invalidateQueries({ queryKey: ['chat', 'detail', value.conversationId] });
-    if (event === 'message.changed' || event === 'run.changed') {
-      void client.invalidateQueries({ queryKey: ['chat', 'messages', value.conversationId] });
-      void client.invalidateQueries({ queryKey: ['chat', 'runs', value.conversationId] });
-    }
-  }
-  if (event === 'conversation.changed' || event === 'message.changed')
-    void client.invalidateQueries({ queryKey: ['chat', 'list'] });
-  if (value.runId) {
-    void client.invalidateQueries({ queryKey: ['chat', 'events', value.runId] });
-    void client.invalidateQueries({ queryKey: ['chat', 'output', value.runId] });
-    void client.invalidateQueries({ queryKey: ['chat', 'changes', value.runId] });
-  }
-  if (value.planId) {
-    void client.invalidateQueries({ queryKey: ['plans', value.planId] });
-    void client.invalidateQueries({ queryKey: ['plans', 'collection'] });
-    void client.invalidateQueries({ queryKey: ['draft-changes', value.planId] });
+  const { runId, conversationId, planId } = raw as Resources;
+  const invalidate = (...queryKey: unknown[]) => void client.invalidateQueries({ queryKey });
+  const plansConversations = (id: string) =>
     void client.invalidateQueries({
       queryKey: ['chat', 'detail'],
-      predicate: (query) =>
-        (query.state.data as { planId?: string } | undefined)?.planId === value.planId,
+      predicate: (query) => (query.state.data as { planId?: string } | undefined)?.planId === id,
     });
+  switch (event) {
+    case 'reset':
+      void client.invalidateQueries();
+      return;
+    case 'output.changed':
+      if (runId) invalidate('chat', 'output', runId);
+      return;
+    case 'activity.changed':
+      if (runId) invalidate('chat', 'turn', runId);
+      return;
+    case 'run.changed':
+      if (runId) invalidate('chat', 'turn', runId);
+      if (conversationId) {
+        invalidate('chat', 'detail', conversationId);
+        invalidate('chat', 'runs', conversationId);
+      }
+      // A plan-wide run is visible from every chat for its plan, and generation coverage is
+      // part of the brief state.
+      if (planId) {
+        plansConversations(planId);
+        invalidate('plans', planId, 'brief');
+      }
+      return;
+    case 'message.changed':
+      if (conversationId) {
+        invalidate('chat', 'detail', conversationId);
+        invalidate('chat', 'messages', conversationId);
+      }
+      invalidate('chat', 'list');
+      return;
+    case 'conversation.changed':
+      if (conversationId) invalidate('chat', 'detail', conversationId);
+      invalidate('chat', 'list');
+      return;
+    case 'plan.changed':
+      if (!planId) return;
+      invalidate('plans', planId);
+      invalidate('plans', 'collection');
+      plansConversations(planId);
+      return;
   }
 }
+/** While the stream is down, active chat and plan reads refresh on this interval instead. */
+export const FALLBACK_REFRESH_MS = 3000;
 export function LiveProvider({ enabled, children }: { enabled: boolean; children: ReactNode }) {
   const client = useQueryClient();
   const [state, setState] = useState<LiveState>('connecting');
@@ -97,9 +120,12 @@ export function LiveProvider({ enabled, children }: { enabled: boolean; children
     if (!enabled) return;
     const stop = new AbortController();
     let cursor: string | undefined,
-      failures = 0;
+      failures = 0,
+      // Ends the current connection or backoff wait so the next attempt starts now.
+      retry = new AbortController();
     const reconnect = async () => {
       while (!stop.signal.aborted) {
+        retry = new AbortController();
         try {
           if (cursor === undefined) {
             const bootstrap = await authenticatedFetch('/api/v1/live/bootstrap', {
@@ -108,10 +134,15 @@ export function LiveProvider({ enabled, children }: { enabled: boolean; children
             if (!bootstrap.ok) throw new Error('Live bootstrap failed');
             const value = (await bootstrap.json()) as { cursor: string };
             cursor = value.cursor;
-            // Queries may have loaded before bootstrap captured its cursor.
+            // Reads that started before the cursor was captured could miss a change committed
+            // in between, so they are refreshed once; later changes all replay from the cursor.
             await client.invalidateQueries();
           }
-          const connection = AbortSignal.any([stop.signal, AbortSignal.timeout(60000)]);
+          const connection = AbortSignal.any([
+            stop.signal,
+            retry.signal,
+            AbortSignal.timeout(60000),
+          ]);
           const response = await authenticatedFetch(
             `/api/v1/live/events?cursor=${encodeURIComponent(cursor)}`,
             { signal: connection },
@@ -135,8 +166,10 @@ export function LiveProvider({ enabled, children }: { enabled: boolean; children
           });
         } catch {
           if (stop.signal.aborted) break;
+          if (retry.signal.aborted) continue;
           setState('reconnecting');
           failures++;
+          const wait = AbortSignal.any([stop.signal, retry.signal]);
           await new Promise<void>((resolve) => {
             const timer = window.setTimeout(
               done,
@@ -144,33 +177,34 @@ export function LiveProvider({ enabled, children }: { enabled: boolean; children
             );
             function done() {
               window.clearTimeout(timer);
-              stop.signal.removeEventListener('abort', done);
+              wait.removeEventListener('abort', done);
               resolve();
             }
-            stop.signal.addEventListener('abort', done, { once: true });
+            wait.addEventListener('abort', done, { once: true });
           });
         }
       }
     };
-    const reconcile = () => {
-      if (document.visibilityState !== 'hidden')
-        void client.invalidateQueries({ refetchType: 'active' });
+    // A backgrounded tab or a network change can leave a silently dead stream. Reconnecting
+    // replays everything after the cursor, so no blanket refetch is needed.
+    const resume = () => {
+      if (document.visibilityState !== 'hidden') retry.abort();
     };
-    window.addEventListener('online', reconcile);
-    document.addEventListener('visibilitychange', reconcile);
+    window.addEventListener('online', resume);
+    document.addEventListener('visibilitychange', resume);
     void reconnect();
     return () => {
       stop.abort();
-      window.removeEventListener('online', reconcile);
-      document.removeEventListener('visibilitychange', reconcile);
+      window.removeEventListener('online', resume);
+      document.removeEventListener('visibilitychange', resume);
     };
   }, [enabled, client]);
   useEffect(() => {
     if (!enabled || state === 'live') return;
     const timer = window.setInterval(() => {
-      for (const key of ['chat', 'plans', 'plan-workouts', 'draft-changes'])
+      for (const key of ['chat', 'plans', 'plan-workouts'])
         void client.invalidateQueries({ queryKey: [key], refetchType: 'active' });
-    }, 5000);
+    }, FALLBACK_REFRESH_MS);
     return () => window.clearInterval(timer);
   }, [enabled, state, client]);
   return (

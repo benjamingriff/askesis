@@ -19,6 +19,15 @@ Do not place credentials, Clerk tokens, database URLs, Sentry credentials, or Ra
 
 ## Repository state at handoff
 
+### Phase 6 review revisions — 2026-10-05
+
+Owner review feedback on PR #5 was implemented on the same branch: per-run net
+change summaries and a batched turn projection replace per-turn reads, tool
+activity no longer refreshes plan reads, worker progress survives transient API
+failures, and the chat route was split into `components/chat/`. The chat/plan UI now
+follows the Expo prototype more closely; coach shortcuts in the plan panel fill the
+current chat. See the [validation report](./phase-6-validation.md#review-follow-up).
+
 ### Phase 6 live web implementation — 2026-10-05
 
 The implementation adds durable streamed output, owner-scoped replay and

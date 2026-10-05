@@ -6,6 +6,7 @@ import { api } from '../api';
 import { ChatPage } from './chat';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 vi.mock('../api', () => ({ api: { GET: vi.fn(), POST: vi.fn(), PATCH: vi.fn() } }));
+const turnFields = { activity: [], changes: null, legacyChanges: false, replyTruncated: false };
 const conversation = {
   id: 'c1',
   title: 'Test conversation',
@@ -15,7 +16,7 @@ const conversation = {
   planArchived: false,
   stateVersion: 1,
   context: null,
-  activeRun: null,
+  activeRun: null as Record<string, unknown> | null,
   latestRun: null,
 };
 const response = (data: unknown) => ({ data, response: new Response() });
@@ -59,8 +60,15 @@ beforeEach(() => {
         items: [],
         timings: {},
       });
-    if (path.endsWith('/changes')) return response({ summaries: [], legacy: false });
-    if (path.endsWith('/events')) return response({ events: [], nextAfterSequence: null });
+    if (path.endsWith('/turn'))
+      return response({
+        ...detail.activeRun!,
+        activity: [],
+        changes: null,
+        legacyChanges: false,
+        output: [],
+        replyTruncated: false,
+      });
     if (path.endsWith('/messages'))
       return response({
         messages: [
@@ -309,6 +317,21 @@ it('recovers older interrupted turns and renders the durable final message once'
     createdAt: '2026-10-05T10:00:00Z',
     startedAt: '2026-10-05T10:00:00Z',
     finishedAt: '2026-10-05T10:00:01Z',
+    ...turnFields,
+    // The final segment of a completed run is the durable message, so it is not repeated.
+    output:
+      status === 'completed'
+        ? []
+        : [
+            {
+              itemId: 'text',
+              position: 0,
+              content: `${id} visible prefix`,
+              revision: 1,
+              isFinal: false,
+              truncated: false,
+            },
+          ],
   });
   const runs = [
     run('stopped', 'cancelled', 'm1'),
@@ -342,25 +365,6 @@ it('recovers older interrupted turns and renders the durable final message once'
         ],
         nextBeforeSequence: null,
       });
-    if (path.endsWith('/output')) {
-      const id = options?.params?.path?.runId;
-      return response({
-        runId: id,
-        status: runs.find((run) => run.id === id)?.status,
-        finalMessageId: id === 'finished' ? 'final' : null,
-        items: [
-          {
-            itemId: 'text',
-            position: 0,
-            content: id === 'finished' ? 'Completed answer' : `${id} visible prefix`,
-            revision: 1,
-            isFinal: id === 'finished',
-            truncated: false,
-          },
-        ],
-        timings: {},
-      });
-    }
     return Reflect.apply(original, api, [path, options]);
   }) as typeof api.GET);
   mount('/chat/c1');
@@ -369,6 +373,14 @@ it('recovers older interrupted turns and renders the durable final message once'
   expect(screen.getByText('Stopped · incomplete')).toBeInTheDocument();
   expect(screen.getByText('Failed · incomplete')).toBeInTheDocument();
   await waitFor(() => expect(screen.getAllByText('Completed answer')).toHaveLength(1));
+  // The reply stays inside its turn, after that turn's activity.
+  const turn = screen.getByText('Completed answer').closest('.turn') as HTMLElement;
+  expect(within(turn).getByText('Completed · 1s')).toBeInTheDocument();
+  expect(
+    within(turn)
+      .getByText('Completed · 1s')
+      .compareDocumentPosition(within(turn).getByText('Completed answer')),
+  ).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
   expect(api.POST).not.toHaveBeenCalled();
 });
 it('lets the next question be typed while busy, disables Send, and preserves it through plan tab and panel changes', async () => {
@@ -397,12 +409,15 @@ it('lets the next question be typed while busy, disables Send, and preserves it 
   fireEvent.change(input, { target: { value: 'My next question' } });
   expect(screen.getByRole('button', { name: 'Send message' })).toBeDisabled();
   expect(screen.getByRole('button', { name: 'Stop' })).toBeEnabled();
-  fireEvent.click(screen.getByRole('radio', { name: 'Plan' }));
-  fireEvent.click(screen.getByRole('radio', { name: 'Chat' }));
+  fireEvent.click(screen.getByRole('tab', { name: 'Plan' }));
+  expect(screen.getByRole('tab', { name: 'Plan' })).toHaveAttribute('aria-selected', 'true');
+  // Keyboard users move between the views with the arrow keys.
+  fireEvent.keyDown(screen.getByRole('tab', { name: 'Plan' }), { key: 'ArrowLeft' });
+  expect(screen.getByRole('tab', { name: 'Chat' })).toHaveAttribute('aria-selected', 'true');
   expect(screen.getByLabelText('Message')).toBe(input);
   expect(input).toHaveValue('My next question');
-  fireEvent.click(screen.getByRole('button', { name: 'Close plan' }));
-  fireEvent.click(screen.getByRole('button', { name: 'Open plan panel' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Hide plan' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Review Live plan beside the chat' }));
   expect(input).toHaveValue('My next question');
   fireEvent.keyDown(input, { key: 'Enter' });
   expect(api.POST).not.toHaveBeenCalled();
@@ -437,6 +452,9 @@ it('holds the reading position during streamed growth and offers Jump to latest'
   let height = 1000;
   Object.defineProperty(node, 'scrollHeight', { get: () => height });
   Object.defineProperty(node, 'clientHeight', { value: 300 });
+  // The reader starts at the latest text, then scrolls up to read.
+  node.scrollTop = 700;
+  fireEvent.scroll(node);
   node.scrollTop = 300;
   const scroll = vi.fn((options?: ScrollToOptions | number, y?: number) => {
     node.scrollTop = typeof options === 'number' ? (y ?? 0) : Number(options?.top);
@@ -471,4 +489,163 @@ it('holds the reading position during streamed growth and offers Jump to latest'
   act(() => resize?.([], {} as ResizeObserver));
   expect(scroll).toHaveBeenLastCalledWith({ top: 1300, behavior: 'auto' });
   client.clear();
+});
+
+it('keeps a turn’s reply in place when streamed text becomes the durable message', async () => {
+  const running = {
+    id: 'r1',
+    userMessageId: 'm1',
+    conversationId: 'c1',
+    status: 'running',
+    failureCode: null,
+  };
+  detail = { ...conversation, activeRun: running } as never;
+  let finished = false;
+  const original = vi.mocked(api.GET).getMockImplementation()!;
+  vi.mocked(api.GET).mockImplementation((async (path: string, ...args: unknown[]) => {
+    if (path.endsWith('/output'))
+      return response({
+        runId: 'r1',
+        status: finished ? 'completed' : 'running',
+        finalMessageId: finished ? 'reply' : null,
+        items: [
+          {
+            itemId: 'answer',
+            position: 0,
+            content: 'Streamed answer',
+            revision: 1,
+            isFinal: finished,
+            truncated: false,
+          },
+        ],
+        timings: {},
+      });
+    if (path.endsWith('/messages') && finished)
+      return response({
+        messages: [
+          { id: 'm1', sequence: 1, role: 'user', content: 'Saved message', context: null },
+          {
+            id: 'reply',
+            sequence: 2,
+            role: 'assistant',
+            content: 'Streamed answer',
+            producingRunId: 'r1',
+            context: null,
+          },
+        ],
+        nextBeforeSequence: null,
+      });
+    return Reflect.apply(original, api, [path, ...args]);
+  }) as typeof api.GET);
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  mount('/chat/c1', client);
+  const streamed = await screen.findByText('Streamed answer');
+  const turn = streamed.closest('.turn');
+  expect(screen.getByText('Writing…')).toBeInTheDocument();
+  finished = true;
+  detail = {
+    ...conversation,
+    activeRun: null,
+    latestRun: { ...running, status: 'completed' },
+  } as never;
+  await act(async () => {
+    await client.invalidateQueries({ queryKey: ['chat', 'messages'] });
+    await client.invalidateQueries({ queryKey: ['chat', 'detail'] });
+  });
+  await waitFor(() => expect(screen.queryByText('Writing…')).not.toBeInTheDocument());
+  expect(screen.getAllByText('Streamed answer')).toHaveLength(1);
+  expect(screen.getByText('Streamed answer').closest('.turn')).toBe(turn);
+  client.clear();
+});
+
+it('fills this chat’s composer from coach shortcuts in the plan panel', async () => {
+  const draft = {
+    id: 'draft-1',
+    state: 'draft',
+    versionNumber: null,
+    editNumber: 1,
+    description: 'My plan',
+    startDate: '2026-09-01',
+    endDate: '2026-10-01',
+    basedOnVersionId: null,
+    supersedesVersionId: null,
+    lockedAt: null,
+  };
+  detail = {
+    ...conversation,
+    planId: 'plan-1',
+    planName: 'Autumn running',
+    context: { versionId: 'draft-1', state: 'draft', versionNumber: null, editNumber: 1 },
+  } as never;
+  const original = vi.mocked(api.GET).getMockImplementation()!;
+  vi.mocked(api.GET).mockImplementation((async (path: string, ...args: unknown[]) => {
+    if (path === '/api/v1/plans/{planId}')
+      return response({
+        id: 'plan-1',
+        displayName: 'Autumn running',
+        stateVersion: 1,
+        active: false,
+        archived: false,
+        draft,
+        locked: null,
+      });
+    if (path === '/api/v1/workouts') return response({ workouts: [] });
+    if (path.endsWith('/draft/changes'))
+      return response({
+        versionId: 'draft-1',
+        editNumber: 1,
+        baselineId: null,
+        workouts: [
+          {
+            lineageId: 'l1',
+            workoutId: 'w1',
+            title: 'Easy run',
+            date: '2026-09-02',
+            previousDate: null,
+            change: 'added',
+            prescriptionChanged: false,
+          },
+        ],
+        assumptionsChanged: false,
+        paceGuidesChanged: false,
+        datesChanged: false,
+        counts: { added: 1, changed: 0, moved: 0, removed: 0 },
+      });
+    if (path.endsWith('/draft/brief'))
+      return response({
+        versionId: 'draft-1',
+        editNumber: 1,
+        startDate: draft.startDate,
+        endDate: draft.endDate,
+        readOnly: false,
+        confirmed: false,
+        hash: 'c'.repeat(64),
+        scheduleReviewRequired: false,
+        coverage: [{ startDate: '2026-09-01', endDate: '2026-09-07', current: true }],
+        calibrations: [],
+        findings: [],
+        brief: {
+          goal: 'Comfortable 10K',
+          unit: 'kilometres',
+          timezone: 'Europe/London',
+          weeklyDistance: { status: 'known', value: 20000 },
+          currentRuns: { status: 'known', value: 3 },
+          longestRun: { status: 'known', value: 8000 },
+          desiredRuns: 3,
+          weekdays: Array(7).fill('available'),
+          context: '',
+        },
+      });
+    return Reflect.apply(original, api, [path, ...args]);
+  }) as typeof api.GET);
+  mount('/chat/c1');
+  fireEvent.click(await screen.findByRole('tab', { name: 'Plan, 1 pending changes' }));
+  const panel = screen.getByRole('complementary', { name: 'Plan' });
+  expect(await within(panel).findByText('New plan draft')).toBeInTheDocument();
+  // Opening the plan's chat from here would leave this conversation.
+  expect(within(panel).queryByRole('button', { name: 'Chat about this plan' })).toBeNull();
+  fireEvent.click(await within(panel).findByRole('button', { name: 'Plan it with your coach' }));
+  expect(screen.getByRole('tab', { name: 'Chat' })).toHaveAttribute('aria-selected', 'true');
+  expect(screen.getByLabelText('Message')).toHaveValue('Plan the remaining weeks');
+  expect(api.POST).not.toHaveBeenCalled();
 });

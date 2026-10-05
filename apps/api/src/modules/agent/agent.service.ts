@@ -1,5 +1,3 @@
-import { compareVersions, compactSummary } from '../live/live.changes.js';
-import { readAggregate } from '../plans/plan.aggregate.js';
 import { createHash, randomBytes } from 'node:crypto';
 import { sql, type Kysely, type Selectable, type Transaction } from 'kysely';
 import type { z } from 'zod';
@@ -17,6 +15,8 @@ import {
   transition,
 } from '../chat/chat.service.js';
 import { ContextSchema } from '../chat/chat.schemas.js';
+import { compareVersions, compactSummary } from '../live/live.changes.js';
+import { readAggregate } from '../plans/plan.aggregate.js';
 import { contentHash, type SemanticValue } from '../plans/plan.canonical.js';
 import { addCalibrationRows, changed, readBrief, saveBriefRows } from '../plans/brief.service.js';
 import { createPlanRows, detail, PlanError, preview } from '../plans/plan.service.js';
@@ -33,6 +33,14 @@ import { writeSchedule } from './agent.schedule.js';
 type Tx = Transaction<DB>;
 type Run = Selectable<DB['agent_runs']>;
 export const LEASE_MS = 90000;
+/** Tools that commit plan content; reads and validation never count as saved changes. */
+export const MUTATING_TOOLS: ToolName[] = [
+  'create_plan_draft',
+  'update_plan_brief',
+  'set_fitness_calibration',
+  'apply_schedule_changes',
+  'replace_schedule_range',
+];
 export const READY_MS = 60000;
 const json = (value: unknown): Json => JSON.parse(JSON.stringify(value)) as Json;
 export const digest = (token: string) => createHash('sha256').update(token).digest('hex');
@@ -298,13 +306,7 @@ export async function executeTool(
       const parsed = schema.safeParse(command.input);
       if (!parsed.success)
         throw new ChatError('INVALID_TOOL_INPUT', 'The tool input does not match its schema.', 400);
-      const mutating = [
-        'create_plan_draft',
-        'update_plan_brief',
-        'set_fitness_calibration',
-        'apply_schedule_changes',
-        'replace_schedule_range',
-      ].includes(name);
+      const mutating = MUTATING_TOOLS.includes(name);
       // Stabilize the before snapshot and expected edit identity against human writers.
       if (run.execution_version_id)
         await db
@@ -349,12 +351,7 @@ export async function executeTool(
         });
         response = { plan: await detail(db, run.owner_id, created.planId) };
       } else {
-        const writing = [
-          'update_plan_brief',
-          'set_fitness_calibration',
-          'apply_schedule_changes',
-          'replace_schedule_range',
-        ].includes(name);
+        const writing = mutating;
         const current = await target(db, run, writing);
         if (!current) response = { plan: null };
         else {

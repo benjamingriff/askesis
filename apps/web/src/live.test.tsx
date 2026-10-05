@@ -21,7 +21,7 @@ it('parses split UTF-8, CRLF, multiline data, heartbeat and reset frames', async
     { event: 'reset', id: '12', data: '{"cursor":"12"}' },
   ]);
 });
-it('refreshes only output on text events and only associated plan data and collections on saved edits', () => {
+it('refreshes only the affected reads for text, activity, run and plan events', () => {
   const client = new QueryClient();
   const invalidate = vi.spyOn(client, 'invalidateQueries').mockResolvedValue();
   invalidateNotification(client, 'output.changed', { runId: 'r1', planId: 'p1' });
@@ -32,6 +32,22 @@ it('refreshes only output on text events and only associated plan data and colle
   expect(invalidate).toHaveBeenCalledWith({ queryKey: ['plans', 'collection'] });
   expect(invalidate).not.toHaveBeenCalledWith({ queryKey: ['plans'] });
   expect(invalidate).not.toHaveBeenCalledWith({ queryKey: ['plan-workouts'] });
+  invalidate.mockClear();
+  // Tool activity only refreshes its turn, never the plan the run is editing.
+  invalidateNotification(client, 'activity.changed', { runId: 'r1', planId: 'p1' });
+  expect(invalidate).toHaveBeenCalledExactlyOnceWith({ queryKey: ['chat', 'turn', 'r1'] });
+  invalidate.mockClear();
+  // Run transitions refresh the chat and the plan's generation coverage, not its schedule.
+  invalidateNotification(client, 'run.changed', {
+    runId: 'r1',
+    conversationId: 'c1',
+    planId: 'p1',
+  });
+  expect(invalidate).toHaveBeenCalledWith({ queryKey: ['chat', 'turn', 'r1'] });
+  expect(invalidate).toHaveBeenCalledWith({ queryKey: ['chat', 'runs', 'c1'] });
+  expect(invalidate).toHaveBeenCalledWith({ queryKey: ['plans', 'p1', 'brief'] });
+  expect(invalidate).not.toHaveBeenCalledWith({ queryKey: ['plans', 'p1'] });
+  expect(invalidate).not.toHaveBeenCalledWith({ queryKey: ['plans', 'collection'] });
   invalidate.mockClear();
   invalidateNotification(client, 'reset', {});
   expect(invalidate).toHaveBeenCalledExactlyOnceWith();

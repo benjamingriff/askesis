@@ -35,6 +35,29 @@ CI now runs the database suite, populated upgrade rehearsal and disposable strea
 smoke alongside the existing repository checks. No independent agent review was
 requested, as instructed by the owner.
 
+## Review follow-up
+
+After the owner's code review the branch was revised: one net change summary
+and turn projection per run, separate tool-activity notifications, resilient
+progress delivery, a component split of the chat route, and a chat/plan layout
+aligned with the Expo prototype (per-turn update cards, change badges, tabs under
+the header, compact embedded plan). The checks were re-run on the revised branch:
+
+| Command                  | Result                                                                                       |
+| ------------------------ | -------------------------------------------------------------------------------------------- |
+| `pnpm check`             | Passed: 177 unit/UI/worker tests (agent 20, API 37, web 120), builds, contracts and checksum |
+| `pnpm test:db`           | 72 PostgreSQL cases passed (test port 55442; another local stack held 55432)                 |
+| `pnpm test:live:upgrade` | Populated Phase 5 data survived the revised migration unchanged                              |
+| `pnpm smoke`             | Disposable API/web/worker stream smoke passed                                                |
+
+The edited migration is still unreleased, so it was changed in place and re-hashed.
+A local database that already applied the earlier revision needs to be recreated.
+
+A visual pass used a throwaway harness (Clerk stubbed, API responses from fixtures)
+rendered in headless Chromium at 1600×950, 1280×850 and 390×844: the split view, the
+tabbed view and the phone Plan tab. This checks layout and styling only; it is not
+the signed-in walkthrough below.
+
 ## Measurement evidence
 
 The final disposable smoke recorded a synthetic read-only tool round trip:

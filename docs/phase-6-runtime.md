@@ -10,7 +10,10 @@ The worker consumes the pinned Agents SDK's streamed response. Only visible text
 is stored. Output snapshots have stable item IDs, order and increasing revisions;
 intermediate commentary and the final reply remain separate. Snapshots flush at
 400 ms or after a large chunk, before tools and on completion/interruption. A slow
-write applies backpressure. Transport retries reuse the exact batch identity.
+write applies backpressure. Transport retries reuse the exact batch identity: a
+network error, 5xx or 429 retries the same batch with exponential backoff for up to
+30 seconds, while a rejection, lost lease, timeout or shutdown fails at once. The
+timing summary is written last and best effort; it never fails a delivered reply.
 
 Presentation is bounded to 100 items, 32,000 UTF-16 code units per item and 64,000
 per run, with Unicode-safe truncation. A final reply retains the existing 32,000
@@ -28,18 +31,26 @@ can safely be delivered again; a conflicting payload is rejected.
 The owner-scoped PostgreSQL journal emits resource identifiers, never text or plan
 payloads. Deferred triggers allocate an owner-local cursor after domain work, so
 later-committing transactions cannot be skipped. Notifications coalesce within a
-transaction. Each owner's replay retains at most roughly 10,000 events; every 100
-new events also prunes entries older than seven days. A stale/future cursor resets
-the browser to authoritative reads. Output and saved change cards survive replay
-pruning.
+transaction. Event types are `plan.changed` (plan and version rows),
+`conversation.changed`, `message.changed`, `run.changed` (status, plan binding,
+edit and generation progress), `activity.changed` (tool events) and
+`output.changed`. Tool activity and text therefore never refresh plan reads.
+
+Each owner's replay retains at most roughly 10,000 events; every 100 new events
+also prunes entries older than seven days. Owner cursors are contiguous, so a
+future cursor or a gap after the client's cursor resets the browser to
+authoritative reads. Output and saved change cards survive replay pruning. A
+stream polls the journal every 750 ms and sends a heartbeat after 15 idle seconds.
 
 Each signed-in tab fetches `/api/v1/live/bootstrap`, reconciles its mounted queries,
 then subscribes to `/api/v1/live/events` using an Authorization header. Connections
 last at most 45 seconds and reconnect with a fresh Clerk token. Sign-out/account
 change aborts reads and discards the account's cache/cursor. Network failure uses
-backoff with jitter and bounded fallback refresh. Reconnecting never sends a chat
-message or restarts provider work. Nginx disables buffering/cache and uses a
-75-second read timeout.
+backoff with jitter; while disconnected, active chat and plan reads refresh every
+3 seconds instead. Returning to the tab or regaining the network reconnects at once
+and replays from the cursor rather than refetching every read. Reconnecting never
+sends a chat message or restarts provider work. Nginx disables buffering/cache and
+uses a 75-second read timeout.
 
 ## Saved changes and review
 
@@ -48,23 +59,40 @@ locked version in one repeatable-read snapshot. Lineage identifies cloned workou
 changed prescription and changed date are separate. Removed workouts remain in the
 summary. Assumption and calibration changes are reported separately.
 
-`GET /api/v1/agent-runs/:runId/changes` returns immutable summaries recorded with
-successful mutating tool receipts, ordered by committed tool events. Each stored
-summary retains full change counts and up to 50 workout entries with short titles;
-large operations explicitly report omitted detail. This presentation limit never
-rejects a valid schedule write. The current draft comparison retains all highlights.
-Legacy turns have a truthful generic saved-change indication.
+Each successful mutating tool receipt stores an immutable before/after summary in
+its transaction. Each summary retains full change counts and up to 50 workout
+entries with short titles; large operations explicitly report omitted detail. This
+presentation limit never rejects a valid schedule write. The current draft
+comparison retains all highlights.
 
-Chat history joins runs to their user messages. Failed/cancelled turns recover
-accepted text with an incomplete label. Completed final segments are deduplicated
-against conversation messages. Presentation snippets are not sent to the model as
-completed assistant answers.
+`GET /api/v1/conversations/:conversationId/runs` returns turns: each run with its
+tool activity, one net saved-change summary and any visible text that is not the
+durable reply (intermediate commentary, or interrupted output). The page is read
+with a fixed number of queries, however many runs it holds.
+`GET /api/v1/agent-runs/:runId/turn` returns the same projection for one run, and
+the browser reads it only while that run works. A run's summary combines its
+operations by workout lineage in commit order: a workout added and removed by the
+same run disappears, repeated edits count once, a move keeps its original date,
+and a workout moved away and back without other edits has no net change. Legacy
+turns have a truthful generic saved-change indication.
 
-The existing PlanView, schedule and lifecycle dialogs are reused in the panel.
-Chat/Plan switches hide views without discarding composer or review state. Saved
-edits advance version-aware reads while keeping an open workout selected; removing
-it closes stale detail and explains the removal. Human forms retain their original
-review/concurrency baseline and offer explicit refresh.
+Chat history joins turns to their user messages and replies. Each turn renders as
+one assistant block: activity, intermediate text, the reply and a "Plan draft
+updated" card linking to plan review. Streamed text stays in place when the durable
+message replaces it. Failed/cancelled turns recover accepted text with an incomplete
+label. Presentation snippets are not sent to the model as completed assistant
+answers.
+
+The existing PlanView, schedule and lifecycle dialogs are reused in the panel,
+embedded with a compact heading, the draft change summary first and lifecycle
+actions in a sticky footer. Coach shortcuts in the panel fill the current chat's
+composer instead of opening the plan's most recent chat. From 1,450 px the plan
+sits beside the chat (the chat keeps the larger share) and can be hidden; below it
+Chat/Plan tabs sit under the conversation header, with a pending-change count.
+Switches hide views without discarding composer, reading position or review state.
+Saved edits advance version-aware reads while keeping an open workout selected;
+removing it explains the removal and returns to the schedule. Human forms retain
+their original review/concurrency baseline and offer explicit refresh.
 
 ## Measurements
 
