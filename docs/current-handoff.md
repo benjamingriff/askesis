@@ -1,7 +1,7 @@
 # Current agent handoff
 
-**Updated:** 2026-10-02
-**Current phase:** Phase 5 merged to `main` (PR #2). Phase 6 begins with the web design-system alignment; live synchronization follows.
+**Updated:** 2026-10-04
+**Current phase:** Phase 5 merged and deployed to Railway with the private coaching worker. Phase 6 continues after the web design-system alignment (PR #3); live synchronization follows.
 **Completed phase:** Phase 1 — engineering foundation and Railway deployment validation
 
 ## Purpose
@@ -18,6 +18,16 @@ Before making changes, read:
 Do not place credentials, Clerk tokens, database URLs, Sentry credentials, or Railway secrets in chat, logs, commits, or this file.
 
 ## Repository state at handoff
+
+### Phase 5 production deployment — 2026-10-04
+
+Phase 5 (PR #2) and the Phase 6 design alignment (PR #3) had deployed `web` and `api` automatically, but no worker existed in Railway, and the API still defaulted to `CHAT_EXECUTION_MODE=unavailable`. Changes:
+
+- Added the private `agent` Railway service (`apps/agent/Dockerfile`, `us-west2`, one replica, 45-second draining, agent watch paths, waits for CI). Its API origin and bootstrap token are reference variables to the API service; the OpenAI key is set only on the agent. See the [Railway deployment plan](./railway-deployment-plan.md#agent-worker-deployment).
+- Set a newly generated `AGENT_BOOTSTRAP_TOKEN` and `CHAT_EXECUTION_MODE=agent` on the API. Migrations through `20261002090000` were already applied.
+- The API now logs successful worker polls and registrations at debug level, so the once-a-second idle poll no longer floods production logs.
+
+Verification: the API started in production agent mode; the worker registers every 15 seconds and polls without authentication failures; `/internal/*` returns 404 through the public web proxy; real coaching runs completed against `gpt-6.1-sol` on the hosted app. The region move to `us-west2` interrupted one in-flight run, which recovered through lease expiry. A complete signed-in hosted walkthrough (generation, locking, extension and cancellation) has not been recorded.
 
 ### Phase 6 web design-system alignment — 2026-10-02
 
@@ -74,7 +84,7 @@ progress remain Phase 6 follow-ups. The model and runtime settings are unchanged
 User-configurable prompts, web search and automatic workout ingestion remain
 deferred. Keep the independent worker private; apply migrations through
 `20261002090000` and configure its provider and machine credentials when deploying.
-No Phase 5 production deployment is recorded here.
+See the production deployment checkpoint above.
 
 The older checkpoints below retain their verification status at the time they
 were written; their pending live acceptance gates have now been completed.

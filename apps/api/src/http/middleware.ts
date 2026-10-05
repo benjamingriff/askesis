@@ -4,6 +4,13 @@ import type { AppEnvironment } from '../auth/types.js';
 import { logger } from '../logger.js';
 
 const validRequestId = /^[A-Za-z0-9._:-]{1,128}$/;
+const probePaths = new Set(['/api/health', '/api/ready']);
+// The idle worker registers every 15 seconds and polls for work every second.
+const workerPollPaths = new Set(['/internal/agent/register', '/internal/agent/claim']);
+
+function isRoutine(path: string, status: number) {
+  return probePaths.has(path) || (workerPollPaths.has(path) && status < 400);
+}
 
 export const requestContext: MiddlewareHandler<AppEnvironment> = async (context, next) => {
   const supplied = context.req.header('x-request-id');
@@ -26,7 +33,7 @@ export const requestContext: MiddlewareHandler<AppEnvironment> = async (context,
       durationMs: Math.round((performance.now() - startedAt) * 100) / 100,
       athleteId: athlete?.id,
     };
-    if (context.req.path === '/api/health' || context.req.path === '/api/ready') {
+    if (isRoutine(details.route, details.status)) {
       logger.debug(details);
     } else {
       logger.info(details);
