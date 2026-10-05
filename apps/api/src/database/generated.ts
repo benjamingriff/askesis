@@ -27,12 +27,39 @@ export type Numeric = ColumnType<string, number | string, number | string>;
 
 export type Timestamp = ColumnType<Date, Date | string, Date | string>;
 
+export interface AgentProgressBatches {
+  input_hash: string;
+  run_id: string;
+  sequence: number;
+}
+
 export interface AgentRunEvents {
   created_at: Generated<Timestamp>;
   metadata: Generated<Json>;
   run_id: string;
   sequence: number;
   type: string;
+}
+
+export interface AgentRunFinishes {
+  input_hash: string;
+  run_id: string;
+  status: string;
+}
+
+export interface AgentRunMeasurements {
+  run_id: string;
+  timings: Generated<Json>;
+}
+
+export interface AgentRunOutputs {
+  content: Generated<string>;
+  is_final: Generated<boolean>;
+  item_id: string;
+  position: number;
+  revision: number;
+  run_id: string;
+  truncated: Generated<boolean>;
 }
 
 export interface AgentRuns {
@@ -68,6 +95,12 @@ export interface AgentRuns {
   tool_count: Generated<number>;
   user_message_id: string;
   worker_id: string | null;
+}
+
+export interface AgentToolChanges {
+  operation_id: string;
+  run_id: string;
+  summary: Json;
 }
 
 export interface AgentToolReceipts {
@@ -185,6 +218,21 @@ export interface Conversations {
   plan_id: string | null;
   state_version: Generated<number>;
   title: string;
+}
+
+export interface LiveEventHeads {
+  owner_id: string;
+  sequence: Generated<Int8>;
+}
+
+export interface LiveEvents {
+  created_at: Generated<Timestamp>;
+  metadata: Json;
+  owner_id: string;
+  resource_id: string;
+  sequence: Int8;
+  transaction_id: Int8;
+  type: string;
 }
 
 export interface MovementDefinitions {
@@ -417,8 +465,13 @@ export interface WorkoutTags {
 }
 
 export interface DB {
+  agent_progress_batches: AgentProgressBatches;
   agent_run_events: AgentRunEvents;
+  agent_run_finishes: AgentRunFinishes;
+  agent_run_measurements: AgentRunMeasurements;
+  agent_run_outputs: AgentRunOutputs;
   agent_runs: AgentRuns;
+  agent_tool_changes: AgentToolChanges;
   agent_tool_receipts: AgentToolReceipts;
   agent_workers: AgentWorkers;
   api_idempotency_keys: ApiIdempotencyKeys;
@@ -429,6 +482,8 @@ export interface DB {
   calibration_zones: CalibrationZones;
   conversation_messages: ConversationMessages;
   conversations: Conversations;
+  live_event_heads: LiveEventHeads;
+  live_events: LiveEvents;
   movement_definitions: MovementDefinitions;
   plan_brief_weekdays: PlanBriefWeekdays;
   plan_briefs: PlanBriefs;

@@ -802,7 +802,11 @@ Aggregate spend ceilings are deferred to provider setup at the user's request. T
 
 ## Phase 6: live synchronization and TanStack Query
 
-Introduce TanStack Query and an authenticated server event stream.
+TanStack Query is already in place. Add an authenticated server event stream and
+complete the live coaching/review experience. The [Phase 6 design](./phase-6-design.md)
+records the accepted product refinement; the [implementation plan](./phase-6-implementation-plan.md)
+scopes delivery. The mobile prototype remains unchanged, and this phase measures
+generation latency while deferring dedicated optimization.
 
 ### Event examples
 

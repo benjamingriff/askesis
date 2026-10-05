@@ -4,6 +4,7 @@ import {
   assistantMessage,
   functionCall,
   modelResponse,
+  modelStreamResponder,
 } from '@openai/agents/testing';
 import { AgentApi } from './api.js';
 import { parseAgentConfig } from './config.js';
@@ -21,6 +22,18 @@ const model = new ScriptedModel([
     usage: new Usage(),
     output: [assistantMessage('Smoke worker completed the scoped tool round trip.')],
   }),
+  modelStreamResponder(() =>
+    (async function* () {
+      yield { type: 'response_started' as const };
+      yield {
+        type: 'output_text_delta' as const,
+        itemId: 'partial-smoke',
+        delta: 'Visible text before a simulated provider failure.',
+      };
+      await new Promise((resolve) => setTimeout(resolve, 100));
+      throw new Error('Scripted failure after visible text');
+    })(),
+  ),
 ]);
 const worker = new Worker(
   config,

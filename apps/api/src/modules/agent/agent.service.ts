@@ -1,3 +1,5 @@
+import { compareVersions, compactSummary } from '../live/live.changes.js';
+import { readAggregate } from '../plans/plan.aggregate.js';
 import { createHash, randomBytes } from 'node:crypto';
 import { sql, type Kysely, type Selectable, type Transaction } from 'kysely';
 import type { z } from 'zod';
@@ -160,7 +162,7 @@ export async function claimRun(workerId: string) {
       return { claim: null };
     });
 }
-async function authorized(db: Tx, id: string, token: string, allowCancelling = false) {
+export async function authorized(db: Tx, id: string, token: string, allowCancelling = false) {
   const hint = await db
     .selectFrom('agent_runs')
     .select(['owner_id', 'credential_digest'])
@@ -296,6 +298,25 @@ export async function executeTool(
       const parsed = schema.safeParse(command.input);
       if (!parsed.success)
         throw new ChatError('INVALID_TOOL_INPUT', 'The tool input does not match its schema.', 400);
+      const mutating = [
+        'create_plan_draft',
+        'update_plan_brief',
+        'set_fitness_calibration',
+        'apply_schedule_changes',
+        'replace_schedule_range',
+      ].includes(name);
+      // Stabilize the before snapshot and expected edit identity against human writers.
+      if (run.execution_version_id)
+        await db
+          .selectFrom('plan_versions')
+          .select('id')
+          .where('id', '=', run.execution_version_id)
+          .forUpdate()
+          .executeTakeFirst();
+      const before =
+        mutating && run.execution_version_id
+          ? await readAggregate(db, run.execution_version_id)
+          : null;
       let response: unknown;
       if (name === 'create_plan_draft') {
         await target(db, run);
@@ -549,6 +570,17 @@ export async function executeTool(
           edit_number: updated.execution_edit_number,
         })
         .execute();
+      if (mutating && updated.execution_version_id) {
+        const summary = await compareVersions(db, before, updated.execution_version_id);
+        await db
+          .insertInto('agent_tool_changes')
+          .values({
+            run_id: id,
+            operation_id: command.operationId,
+            summary: json(compactSummary(summary)),
+          })
+          .execute();
+      }
       await db
         .updateTable('agent_runs')
         .set({ tool_count: sql`tool_count + 1` })
@@ -584,6 +616,7 @@ export async function finishRun(
   input: {
     status: 'completed' | 'failed' | 'cancelled';
     content?: string | undefined;
+    finalOutputItemId?: string | undefined;
     failureCode?: string | undefined;
     inputTokens?: number | undefined;
     outputTokens?: number | undefined;
@@ -592,7 +625,30 @@ export async function finishRun(
   return getDatabase()
     .transaction()
     .execute(async (db) => {
+      const hash = contentHash(json(input) as SemanticValue);
+      const hint = await db
+        .selectFrom('agent_runs')
+        .selectAll()
+        .where('id', '=', id)
+        .forUpdate()
+        .executeTakeFirst();
+      if (!hint || hint.credential_digest !== digest(token)) throw rejected();
+      const receipt = await db
+        .selectFrom('agent_run_finishes')
+        .selectAll()
+        .where('run_id', '=', id)
+        .executeTakeFirst();
+      if (receipt) {
+        if (receipt.input_hash !== hash)
+          throw new ChatError('IDEMPOTENCY_CONFLICT', 'Finish identity changed.');
+        return { status: receipt.status };
+      }
       const run = await authorized(db, id, token, true);
+      const status = run.status === 'cancelling' ? 'cancelled' : input.status;
+      await db
+        .insertInto('agent_run_finishes')
+        .values({ run_id: id, input_hash: hash, status })
+        .execute();
       if (run.status === 'cancelling') {
         await transition(db, run, 'cancelled', 'cancelled');
         return { status: 'cancelled' };
@@ -604,6 +660,22 @@ export async function finishRun(
         const conversation = await ownedConversation(db, run.owner_id, run.conversation_id);
         if (!input.content?.trim())
           throw new ChatError('EMPTY_RESPONSE', 'An assistant reply is required.', 400);
+        if (input.finalOutputItemId) {
+          const item = await db
+            .selectFrom('agent_run_outputs')
+            .select('content')
+            .where('run_id', '=', id)
+            .where('item_id', '=', input.finalOutputItemId)
+            .executeTakeFirst();
+          if (!item || item.content !== input.content)
+            throw new ChatError('OUTPUT_CONFLICT', 'Final output does not match saved text.');
+          await db
+            .updateTable('agent_run_outputs')
+            .set({ is_final: true })
+            .where('run_id', '=', id)
+            .where('item_id', '=', input.finalOutputItemId)
+            .execute();
+        }
         await appendMessage(
           db,
           conversation,

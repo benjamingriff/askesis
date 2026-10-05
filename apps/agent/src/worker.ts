@@ -64,7 +64,10 @@ export class Worker {
       this.report(result.status, claim.runId);
     } catch (error) {
       const reason = controller.signal.reason as unknown;
-      const status = reason === 'CANCELLED' ? 'cancelled' : 'failed';
+      const status =
+        reason === 'CANCELLED' || (error instanceof ApiError && error.code === 'CANCELLED')
+          ? 'cancelled'
+          : 'failed';
       const code =
         reason === 'EXECUTION_TIMEOUT'
           ? 'EXECUTION_TIMEOUT'

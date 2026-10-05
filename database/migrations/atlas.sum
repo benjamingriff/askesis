@@ -1,4 +1,4 @@
-h1:cMBfGQKjUEYYmfshnSOi6+feROn3S7j1eAZF+Kyv9mA=
+h1:hNoa/CRaAWI/PZLZnxIyqjmeL2GFNUEIRgLB9ahqes4=
 20260318120000_initial_schema.sql h1:MbXNJ0M+x3PLnNTdaTG8cvpU2rBCnNk0xWUovu3fgUQ=
 20260722153000_auth_identities.sql h1:19sniiRUiZhRCTgVPObJFlC/QWk+jrhMoDVnq6p8riY=
 20260907120000_plan_versions.sql h1:y0idcRC1x5Umd86vNv9EHRqqZkGdkZQmG4js/z68Ty4=
@@ -7,3 +7,4 @@ h1:cMBfGQKjUEYYmfshnSOi6+feROn3S7j1eAZF+Kyv9mA=
 20260910120000_persistent_chat.sql h1:HAygir5XSbj4NfZZcDxNny+zVS0iQ30wEVXc5cQItQA=
 20261001120000_agent_worker.sql h1:HuL8fjNVnEWfuJwRRdMaJ75bFaxQsfCboADsZ9zJYBY=
 20261002090000_schedule_generation.sql h1:fyyLlCUy1C3R2dLXV3Rb7RKeFVCv2mJG/PMr7AsGn6s=
+20261005120000_live_coaching.sql h1:qXlxkdjdIQitYzEcO8npZURTN61Y1p7pb1FW0rKbods=

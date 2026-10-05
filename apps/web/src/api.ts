@@ -23,3 +23,13 @@ export function createAuthenticatedApiClient(baseUrl: string) {
 }
 
 export const api = createAuthenticatedApiClient(import.meta.env.VITE_API_BASE_URL ?? '');
+
+export async function authenticatedFetch(path: string, options: RequestInit = {}) {
+  const token = await tokenProvider?.();
+  const headers = new Headers(options.headers);
+  if (token) headers.set('Authorization', `Bearer ${token}`);
+  return fetch(`${(import.meta.env.VITE_API_BASE_URL ?? '').replace(/\/$/, '')}${path}`, {
+    ...options,
+    headers,
+  });
+}

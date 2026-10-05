@@ -1,5 +1,6 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useEffect, useState, type ReactNode } from 'react';
+import { LiveProvider } from './live';
 import { PlanPreferenceScope } from './plan-selection';
 
 // Remounted by account ID: data from one account never becomes another's cache.
@@ -19,7 +20,11 @@ export function AccountQueryProvider({
   useEffect(() => () => client.clear(), [client]);
   return (
     <PlanPreferenceScope.Provider value={accountId}>
-      <QueryClientProvider client={client}>{children}</QueryClientProvider>
+      <QueryClientProvider client={client}>
+        <LiveProvider enabled={accountId !== 'anonymous' && accountId !== 'signed-out'}>
+          {children}
+        </LiveProvider>
+      </QueryClientProvider>
     </PlanPreferenceScope.Provider>
   );
 }

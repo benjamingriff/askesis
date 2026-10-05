@@ -37,7 +37,7 @@ import { useFollowingState } from '../lib/use-following-state';
 import { useWorkoutSelection } from '../lib/use-workout-selection';
 import { Stat, WeekChart } from './PlanWidgets';
 import { DayRow, WorkoutCard, WorkoutDialog } from './Workout';
-import { Button, Card, EmptyState, IconButton, Pill, Segmented, cx } from './ui';
+import { Button, Card, EmptyState, IconButton, Pill, Segmented, Notice, cx } from './ui';
 
 type Mode = 'weeks' | 'calendar';
 const MODE_KEY = 'askesis-schedule-mode';
@@ -199,6 +199,14 @@ export function Schedule({
           onOpen={dialog.open}
         />
       )}
+      {dialog.missing ? (
+        <Notice>
+          The selected workout was removed from this draft.{' '}
+          <button className="link-button" type="button" onClick={dialog.close}>
+            Dismiss
+          </button>
+        </Notice>
+      ) : null}
       <WorkoutDialog
         workout={dialog.workout}
         version={version}

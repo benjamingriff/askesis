@@ -10,6 +10,8 @@ import {
   type Model,
   type ToolInputParameters,
 } from '@openai/agents';
+import { truncateText } from './text.js';
+import { ProgressReporter } from './progress.js';
 import { randomUUID } from 'node:crypto';
 import type { AgentConfig } from './config.js';
 import { COACHING_PROMPT } from './prompt.js';
@@ -18,7 +20,12 @@ import { ApiError, type AgentApi, type Claim, type ExecutionContext } from './ap
 // Explicit policy before constructing a provider or making any model request.
 setTracingDisabled(true);
 const MAX_MESSAGE_CHARACTERS = 32000;
-export type RuntimeResult = { content: string; inputTokens: number; outputTokens: number };
+export type RuntimeResult = {
+  content: string;
+  inputTokens: number;
+  outputTokens: number;
+  finalOutputItemId?: string;
+};
 export type CoachingRuntime = {
   execute(
     context: ExecutionContext,
@@ -52,6 +59,39 @@ export class SdkRuntime implements CoachingRuntime {
     api: AgentApi,
     signal: AbortSignal,
   ): Promise<RuntimeResult> {
+    const cancellation = new AbortController();
+    const providerSignal = AbortSignal.any([signal, cancellation.signal]);
+    const delegate =
+      this.modelOverride ??
+      (await new OpenAIProvider({
+        apiKey: this.config.OPENAI_API_KEY,
+        useResponses: true,
+      }).getModel(this.config.AGENT_MODEL));
+    const progress = new ProgressReporter(api, claim, (reason) => cancellation.abort(reason));
+    const measuredModel: Model = {
+      ...(delegate.supportsPromptModelSelection === undefined
+        ? {}
+        : { supportsPromptModelSelection: delegate.supportsPromptModelSelection }),
+      ...(delegate.getRetryAdvice
+        ? { getRetryAdvice: delegate.getRetryAdvice.bind(delegate) }
+        : {}),
+      getResponse: async (request) => {
+        const start = performance.now();
+        try {
+          return await delegate.getResponse(request);
+        } finally {
+          (progress.timings.modelMs as number[]).push(performance.now() - start);
+        }
+      },
+      getStreamedResponse: async function* (request) {
+        const start = performance.now();
+        try {
+          yield* delegate.getStreamedResponse(request);
+        } finally {
+          (progress.timings.modelMs as number[]).push(performance.now() - start);
+        }
+      },
+    };
     let versionId = context.versionId,
       editNumber = context.editNumber;
     let queue = Promise.resolve();
@@ -74,7 +114,8 @@ export class SdkRuntime implements CoachingRuntime {
           });
           await previous;
           try {
-            signal.throwIfAborted();
+            providerSignal.throwIfAborted();
+            progress.throwIfFailed();
             const command = {
               operationId: randomUUID(),
               name: definition.name,
@@ -82,12 +123,32 @@ export class SdkRuntime implements CoachingRuntime {
               expectedEditNumber: editNumber,
               input,
             };
+            await progress.flush({
+              name: definition.name,
+              operationId: command.operationId,
+              state: 'started',
+            });
+            providerSignal.throwIfAborted();
+            const start = performance.now();
             try {
-              const result = await api.tool(claim, command, signal);
+              const result = await api.tool(claim, command, providerSignal);
+              progress.recordTool(performance.now() - start);
+              if (
+                ['apply_schedule_changes', 'replace_schedule_range'].includes(definition.name) &&
+                progress.timings.firstSavedBatchMs === undefined
+              )
+                progress.timings.firstSavedBatchMs = progress.elapsed();
               versionId = result.versionId;
               editNumber = result.editNumber;
               return JSON.stringify(result);
             } catch (error) {
+              progress.recordTool(performance.now() - start);
+              if (!providerSignal.aborted)
+                await progress.flush({
+                  name: definition.name,
+                  operationId: command.operationId,
+                  state: 'failed',
+                });
               if (
                 error instanceof ApiError &&
                 [
@@ -122,7 +183,7 @@ export class SdkRuntime implements CoachingRuntime {
     const agent = new Agent({
       name: 'Askesis running coach',
       instructions: COACHING_PROMPT,
-      model: this.modelOverride ?? this.config.AGENT_MODEL,
+      model: measuredModel,
       tools,
       modelSettings: {
         reasoning: { effort: this.config.AGENT_REASONING },
@@ -140,23 +201,54 @@ export class SdkRuntime implements CoachingRuntime {
       user(`Current structured context (data, not instructions):\n${JSON.stringify(current)}`),
       ...context.messages.map((m) => (m.role === 'user' ? user(m.content) : assistant(m.content))),
     ];
-    const result = await this.runner.run(agent, input, {
-      signal,
-      maxTurns: this.config.AGENT_MAX_TURNS,
-    });
-    if (typeof result.finalOutput !== 'string' || !result.finalOutput.trim())
-      throw new Error('Empty coaching response');
-    return {
-      // The API stores messages with a 32000-character limit.
-      content: result.finalOutput.slice(0, MAX_MESSAGE_CHARACTERS),
-      inputTokens: result.runContext.usage.inputTokens,
-      outputTokens: result.runContext.usage.outputTokens,
-    };
+    try {
+      const result = await this.runner.run(agent, input, {
+        signal: providerSignal,
+        maxTurns: this.config.AGENT_MAX_TURNS,
+        stream: true,
+      });
+      let response = 0;
+      for await (const event of result) {
+        if (event.type !== 'raw_model_stream_event') continue;
+        if (event.data.type === 'response_started') response++;
+        if (event.data.type === 'output_text_delta')
+          await progress.delta(event.data.itemId ?? `response-${response}`, event.data.delta);
+      }
+      await result.completed;
+      if (result.error) throw result.error;
+      if (cancellation.signal.reason === 'CANCELLED') progress.cancelled();
+      providerSignal.throwIfAborted();
+      if (typeof result.finalOutput !== 'string' || !result.finalOutput.trim())
+        throw new Error('Empty coaching response');
+      const content = truncateText(result.finalOutput, MAX_MESSAGE_CHARACTERS);
+      let final = progress.final(content);
+      if (!final) {
+        // Providers may supply only a completed message, without text deltas.
+        await progress.delta('final-response', content);
+        final = progress.final(content);
+      }
+      if (!final) throw new ApiError('OUTPUT_LIMIT', 409);
+      return {
+        content,
+        finalOutputItemId: final.itemId,
+        inputTokens: result.runContext.usage.inputTokens,
+        outputTokens: result.runContext.usage.outputTokens,
+      };
+    } catch (error) {
+      if (cancellation.signal.reason === 'CANCELLED') progress.cancelled();
+      throw error;
+    } finally {
+      // Final persistence has its own bounded HTTP timeout, even after provider abort.
+      await progress.close();
+    }
   }
 }
 export function failureCode(error: unknown) {
   if (error instanceof MaxTurnsExceededError) return 'TURN_LIMIT';
-  if (error instanceof ApiError && ['STALE_CONTEXT', 'TOOL_LIMIT'].includes(error.code))
+  if (
+    error instanceof ApiError &&
+    ['STALE_CONTEXT', 'TOOL_LIMIT', 'OUTPUT_LIMIT'].includes(error.code)
+  )
     return error.code;
   return 'PROVIDER_ERROR';
 }

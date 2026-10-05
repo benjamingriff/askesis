@@ -1,3 +1,9 @@
+import { useQuery } from '@tanstack/react-query';
+import { api } from '../api';
+import { result } from '../lib/result';
+import { useWorkoutSelection } from '../lib/use-workout-selection';
+import { WorkoutDialog } from './Workout';
+import { PlanChanges, WorkoutChangesContext } from './PlanChanges';
 import { ClipboardList, Flag, Lock, PencilLine, Power, Sparkles } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
 import { Link } from 'react-router';
@@ -54,12 +60,14 @@ export function PlanView({
   onViewChange,
   eyebrow,
   switcher,
+  embedded = false,
 }: {
   plan: Plan;
   view: View;
   onViewChange: (view: View) => void;
   eyebrow?: ReactNode | undefined;
   switcher?: ReactNode | undefined;
+  embedded?: boolean;
 }) {
   const today = useLocalToday();
   const view: View =
@@ -67,6 +75,17 @@ export function PlanView({
   const version = planVersion(plan, view);
   const brief = useBriefState(plan.id, version);
   const workouts = useWorkouts(version);
+  const changes = useQuery({
+    queryKey: ['draft-changes', plan.id, ...(version ? [version.id, version.editNumber] : [])],
+    enabled: view === 'draft' && !!plan.draft,
+    queryFn: async () =>
+      result(
+        await api.GET('/api/v1/plans/{planId}/draft/changes', {
+          params: { path: { planId: plan.id } },
+        }),
+      ),
+  });
+  const selection = useWorkoutSelection(workouts.data ?? [], version?.id);
   const units = useUnits(brief.data?.brief.unit);
   const chat = useOpenPlanChat(plan.id);
   const [historyOpen, setHistoryOpen] = useState(false);
@@ -75,7 +94,7 @@ export function PlanView({
   const goal = brief.data?.brief.goal;
 
   return (
-    <div className="page plan-view">
+    <div className={`page plan-view${embedded ? ' embedded-plan' : ''}`}>
       <header className="page-header plan-header">
         <div className="page-heading">
           {eyebrow}
@@ -177,6 +196,27 @@ export function PlanView({
             </Notice>
           ) : null}
 
+          {view === 'draft' && changes.data && changes.data.editNumber === version?.editNumber ? (
+            <PlanChanges
+              summary={changes.data}
+              title={changes.data.baselineId ? 'Changes from your locked plan' : 'New plan draft'}
+              onOpen={(id) => {
+                const workout = workouts.data?.find((workout) => workout.id === id);
+                if (workout) selection.open(workout);
+              }}
+            />
+          ) : null}
+          {view === 'draft' && changes.error ? (
+            <ErrorState
+              message="Could not load saved changes."
+              onRetry={() => void changes.refetch()}
+            />
+          ) : null}
+          {workouts.isPlaceholderData || brief.isPlaceholderData ? (
+            <p className="muted" role="status">
+              Refreshing saved schedule…
+            </p>
+          ) : null}
           <PlanChatError chat={chat} />
           {(workouts.isPending || brief.isPending) && version ? (
             <LoadingState>Loading schedule…</LoadingState>
@@ -185,23 +225,50 @@ export function PlanView({
             <ErrorState message={workouts.error.message} onRetry={() => void workouts.refetch()} />
           ) : null}
           {workouts.data && version && brief.data && !brief.error ? (
-            <Schedule
-              key={version.id}
-              workouts={workouts.data}
-              version={version}
-              startDate={version.startDate}
-              endDate={version.endDate}
-              coverage={knownCoverage(brief.data)}
-              units={units}
-              today={today}
-              onAskCoach={
-                plan.archived
-                  ? undefined
-                  : (workout) =>
-                      chat.mutate(`About “${workout.title}” on ${workout.scheduledDate}: `)
+            <WorkoutChangesContext.Provider
+              value={
+                view === 'draft' && changes.data?.editNumber === version.editNumber
+                  ? changes.data.workouts
+                  : []
               }
-              onPlanRest={plan.archived ? undefined : () => chat.mutate('Plan the remaining weeks')}
-            />
+            >
+              <Schedule
+                key={version.id}
+                workouts={workouts.data}
+                version={version}
+                startDate={version.startDate}
+                endDate={version.endDate}
+                coverage={knownCoverage(brief.data)}
+                units={units}
+                today={today}
+                onAskCoach={
+                  plan.archived
+                    ? undefined
+                    : (workout) =>
+                        chat.mutate(`About “${workout.title}” on ${workout.scheduledDate}: `)
+                }
+                onPlanRest={
+                  plan.archived ? undefined : () => chat.mutate('Plan the remaining weeks')
+                }
+              />
+            </WorkoutChangesContext.Provider>
+          ) : null}
+          <WorkoutDialog
+            workout={selection.workout}
+            version={version}
+            units={units}
+            onClose={selection.close}
+          />
+          {selection.missing &&
+          !workouts.error &&
+          !workouts.isPending &&
+          !workouts.isPlaceholderData ? (
+            <Notice>
+              The selected workout was removed from this draft.{' '}
+              <button className="link-button" type="button" onClick={selection.close}>
+                Dismiss
+              </button>
+            </Notice>
           ) : null}
         </div>
 

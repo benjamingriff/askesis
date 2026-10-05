@@ -123,12 +123,24 @@ export class AgentApi {
       true,
     );
   }
+  progress(claim: Claim, input: unknown) {
+    return this.request(
+      `/runs/${claim.runId}/progress`,
+      claim.token,
+      z.object({ status: z.string() }),
+      input,
+      undefined,
+      true,
+    );
+  }
   finish(claim: Claim, input: unknown) {
     return this.request(
       `/runs/${claim.runId}/finish`,
       claim.token,
       z.object({ status: z.string() }),
       input,
+      undefined,
+      true,
     );
   }
 }

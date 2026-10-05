@@ -39,3 +39,27 @@ jobs:
 
       - name: Run lightweight validation
         run: pnpm check
+
+  database-and-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 11.18.0
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: PostgreSQL integration and invariants
+        run: pnpm test:db
+      - name: Populated Phase 5 migration preservation
+        run: pnpm test:live:upgrade
+      - name: Disposable streaming worker and public proxy smoke
+        run: pnpm smoke

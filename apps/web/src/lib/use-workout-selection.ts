@@ -14,6 +14,7 @@ export function useWorkoutSelection(workouts: WorkoutSummary[], versionId?: stri
     ) ?? null;
   return {
     workout,
+    missing: selection !== null && selection.versionId === versionId && !workout,
     open: (item: WorkoutSummary) => setSelection({ id: item.id, versionId: item.planVersionId }),
     close: () => setSelection(null),
   };

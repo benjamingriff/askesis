@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { createMemoryRouter, RouterProvider } from 'react-router';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { AccountQueryProvider } from '../query-provider';
@@ -50,6 +50,16 @@ beforeEach(() => {
     if (path === '/api/v1/chat-capabilities')
       return response({ executionAvailable: available, mode: available ? 'test' : 'unavailable' });
     if (path === '/api/v1/conversations') return response({ conversations: [], nextCursor: null });
+    if (path.endsWith('/runs')) return response({ runs: [], nextBeforeSequence: null });
+    if (path.endsWith('/output'))
+      return response({
+        runId: 'run-1',
+        status: 'running',
+        finalMessageId: null,
+        items: [],
+        timings: {},
+      });
+    if (path.endsWith('/changes')) return response({ summaries: [], legacy: false });
     if (path.endsWith('/events')) return response({ events: [], nextAfterSequence: null });
     if (path.endsWith('/messages'))
       return response({
@@ -61,7 +71,10 @@ beforeEach(() => {
     return response(detail);
   }) as typeof api.GET);
 });
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  vi.unstubAllGlobals();
+});
 
 it('keeps rename failures visible in the dialog and retries with refreshed conversation metadata', async () => {
   vi.mocked(api.PATCH)
@@ -132,7 +145,13 @@ it('allows a lost-response retry even after the accepted run becomes active', as
   await screen.findByText(/Response lost/);
   client.setQueryData(['chat', 'detail', 'c1'], {
     ...conversation,
-    activeRun: { id: 'run-1', conversationId: 'c1', status: 'running', failureCode: null },
+    activeRun: {
+      id: 'run-1',
+      userMessageId: 'm1',
+      conversationId: 'c1',
+      status: 'running',
+      failureCode: null,
+    },
   });
   await screen.findByText('Working');
   expect(screen.getByRole('button', { name: 'Retry send' })).toBeEnabled();
@@ -275,4 +294,181 @@ it('shows a plan-wide run from another chat in an empty conversation', async () 
     'href',
     '/chat/other',
   );
+});
+
+it('recovers older interrupted turns and renders the durable final message once', async () => {
+  const original = vi.mocked(api.GET).getMockImplementation()!;
+  const run = (id: string, status: string, userMessageId: string) => ({
+    id,
+    status,
+    userMessageId,
+    conversationId: 'c1',
+    planId: null,
+    context: null,
+    failureCode: status === 'failed' ? 'PROVIDER_ERROR' : null,
+    createdAt: '2026-10-05T10:00:00Z',
+    startedAt: '2026-10-05T10:00:00Z',
+    finishedAt: '2026-10-05T10:00:01Z',
+  });
+  const runs = [
+    run('stopped', 'cancelled', 'm1'),
+    run('failed', 'failed', 'm2'),
+    run('finished', 'completed', 'm3'),
+  ];
+  vi.mocked(api.GET).mockImplementation((async (
+    path: string,
+    options?: { params?: { path?: { runId?: string } } },
+  ) => {
+    if (path.endsWith('/runs')) return response({ runs, nextBeforeSequence: null });
+    if (path.endsWith('/messages'))
+      return response({
+        messages: [
+          ...['m1', 'm2', 'm3'].map((id, index) => ({
+            id,
+            sequence: index + 1,
+            role: 'user',
+            content: `Question ${index + 1}`,
+            producingRunId: null,
+            context: null,
+          })),
+          {
+            id: 'final',
+            sequence: 4,
+            role: 'assistant',
+            content: 'Completed answer',
+            producingRunId: 'finished',
+            context: null,
+          },
+        ],
+        nextBeforeSequence: null,
+      });
+    if (path.endsWith('/output')) {
+      const id = options?.params?.path?.runId;
+      return response({
+        runId: id,
+        status: runs.find((run) => run.id === id)?.status,
+        finalMessageId: id === 'finished' ? 'final' : null,
+        items: [
+          {
+            itemId: 'text',
+            position: 0,
+            content: id === 'finished' ? 'Completed answer' : `${id} visible prefix`,
+            revision: 1,
+            isFinal: id === 'finished',
+            truncated: false,
+          },
+        ],
+        timings: {},
+      });
+    }
+    return Reflect.apply(original, api, [path, options]);
+  }) as typeof api.GET);
+  mount('/chat/c1');
+  expect(await screen.findByText('stopped visible prefix')).toBeInTheDocument();
+  expect(await screen.findByText('failed visible prefix')).toBeInTheDocument();
+  expect(screen.getByText('Stopped · incomplete')).toBeInTheDocument();
+  expect(screen.getByText('Failed · incomplete')).toBeInTheDocument();
+  await waitFor(() => expect(screen.getAllByText('Completed answer')).toHaveLength(1));
+  expect(api.POST).not.toHaveBeenCalled();
+});
+it('lets the next question be typed while busy, disables Send, and preserves it through plan tab and panel changes', async () => {
+  const original = vi.mocked(api.GET).getMockImplementation()!;
+  detail = {
+    ...conversation,
+    planId: 'plan-1',
+    planName: 'Live plan',
+    activeRun: {
+      id: 'r1',
+      userMessageId: 'm1',
+      conversationId: 'c1',
+      status: 'running',
+      failureCode: null,
+    },
+  } as never;
+  vi.mocked(api.GET).mockImplementation((async (path: string, ...args: unknown[]) => {
+    // The full plan read can be loading while the user switches views.
+    if (path === '/api/v1/plans/{planId}') return new Promise(() => {});
+    return Reflect.apply(original, api, [path, ...args]);
+  }) as typeof api.GET);
+  mount('/chat/c1');
+  await screen.findByText('Working');
+  const input = screen.getByLabelText('Message');
+  expect(input).toBeEnabled();
+  fireEvent.change(input, { target: { value: 'My next question' } });
+  expect(screen.getByRole('button', { name: 'Send message' })).toBeDisabled();
+  expect(screen.getByRole('button', { name: 'Stop' })).toBeEnabled();
+  fireEvent.click(screen.getByRole('radio', { name: 'Plan' }));
+  fireEvent.click(screen.getByRole('radio', { name: 'Chat' }));
+  expect(screen.getByLabelText('Message')).toBe(input);
+  expect(input).toHaveValue('My next question');
+  fireEvent.click(screen.getByRole('button', { name: 'Close plan' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Open plan panel' }));
+  expect(input).toHaveValue('My next question');
+  fireEvent.keyDown(input, { key: 'Enter' });
+  expect(api.POST).not.toHaveBeenCalled();
+});
+
+it('holds the reading position during streamed growth and offers Jump to latest', async () => {
+  let resize: ResizeObserverCallback | undefined;
+  vi.stubGlobal(
+    'ResizeObserver',
+    class {
+      constructor(callback: ResizeObserverCallback) {
+        resize = callback;
+      }
+      observe() {}
+      disconnect() {}
+    },
+  );
+  detail = {
+    ...conversation,
+    activeRun: {
+      id: 'r1',
+      userMessageId: 'm1',
+      conversationId: 'c1',
+      status: 'running',
+      failureCode: null,
+    },
+  } as never;
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  mount('/chat/c1', client);
+  await screen.findByText('Working');
+  const node = document.querySelector('.message-scroll') as HTMLDivElement;
+  let height = 1000;
+  Object.defineProperty(node, 'scrollHeight', { get: () => height });
+  Object.defineProperty(node, 'clientHeight', { value: 300 });
+  node.scrollTop = 300;
+  const scroll = vi.fn((options?: ScrollToOptions | number, y?: number) => {
+    node.scrollTop = typeof options === 'number' ? (y ?? 0) : Number(options?.top);
+  });
+  node.scrollTo = scroll;
+  fireEvent.scroll(node);
+  height = 1200;
+  act(() => {
+    client.setQueryData(['chat', 'output', 'r1'], {
+      runId: 'r1',
+      status: 'running',
+      finalMessageId: null,
+      items: [
+        {
+          itemId: 'text',
+          position: 0,
+          content: 'More streamed text',
+          revision: 2,
+          isFinal: false,
+          truncated: false,
+        },
+      ],
+      timings: {},
+    });
+    resize?.([], {} as ResizeObserver);
+  });
+  expect(node.scrollTop).toBe(300);
+  expect(scroll).not.toHaveBeenCalled();
+  fireEvent.click(await screen.findByRole('button', { name: 'Jump to latest' }));
+  expect(scroll).toHaveBeenLastCalledWith({ top: 1200, behavior: 'smooth' });
+  height = 1300;
+  act(() => resize?.([], {} as ResizeObserver));
+  expect(scroll).toHaveBeenLastCalledWith({ top: 1300, behavior: 'auto' });
+  client.clear();
 });

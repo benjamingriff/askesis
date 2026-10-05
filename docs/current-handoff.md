@@ -1,7 +1,7 @@
 # Current agent handoff
 
-**Updated:** 2026-10-04
-**Current phase:** Phase 5 merged and deployed to Railway with the private coaching worker. Phase 6 continues after the web design-system alignment (PR #3); live synchronization follows.
+**Updated:** 2026-10-05
+**Current phase:** Phase 6 web implementation is delivered for review. Local verification is recorded below; live-provider acceptance and Railway rollout remain pending.
 **Completed phase:** Phase 1 — engineering foundation and Railway deployment validation
 
 ## Purpose
@@ -18,6 +18,42 @@ Before making changes, read:
 Do not place credentials, Clerk tokens, database URLs, Sentry credentials, or Railway secrets in chat, logs, commits, or this file.
 
 ## Repository state at handoff
+
+### Phase 6 live web implementation — 2026-10-05
+
+The implementation adds durable streamed output, owner-scoped replay and
+account-bound authenticated fetch SSE, immutable tool-change cards, lineage-based
+draft comparisons, mobile-web Chat/Plan tabs and a collapsible desktop plan panel.
+Saved schedule batches update while the coach continues. Older interrupted turns
+retain accepted text; reconnect does not restart work. Human review baselines,
+version selection and lifecycle guards remain in place.
+
+See the [runtime](./phase-6-runtime.md) for limits, measurements and API-first
+rollout order, and the [validation report](./phase-6-validation.md) for commands
+and remaining gates. No mobile files or model/reasoning/prompt settings changed.
+The user requested a PR for their own review and explicitly excluded an agent
+review; do not request one as part of this handoff.
+
+### Phase 6 product refinement and implementation scope — 2026-10-05
+
+The user resolved the product questions in the [Phase 6 design](./phase-6-design.md).
+The [implementation plan](./phase-6-implementation-plan.md) scopes durable output,
+authenticated live events, read-only draft differences, streamed chat and responsive
+plan review, followed by integrated verification. This checkpoint changes planning
+documents only; its verification gates are not already-passing application tests.
+
+Accepted decisions: responsive web only; mobile-web Chat/Plan tabs and a collapsible
+desktop plan panel; full-plan review with change highlights; immediate saved-batch
+updates; editable composer with Send disabled while busy; reading-position-aware
+scrolling; cumulative draft differences against the latest lock and per-run chat
+summaries; clear activity, change labels and saved-horizon progress; retained,
+labelled partial replies after reload; automatic reconnect without replaying work;
+deliberate continuation after failure; and preserved unsaved human edits.
+
+Measure generation/model/tool timings now; dedicated optimization follows later.
+The Expo mobile app is a reference prototype and must not be edited, including its
+dependencies, configuration and data. No application implementation, provider call,
+PR, push or deployment is part of this refinement checkpoint.
 
 ### Phase 5 production deployment — 2026-10-04
 

@@ -33,6 +33,8 @@ export function useBriefState(planId: string, version: PlanVersion | null) {
     // so the state is part of the key.
     queryKey: ['plans', planId, 'brief', version?.state, ...versionKey(version)],
     enabled: !!version,
+    placeholderData: (previous, query) =>
+      query?.queryKey.at(-2) === version?.id ? previous : undefined,
     // Locked versions never change, and draft changes advance editNumber (part of the key).
     refetchOnWindowFocus: false,
     queryFn: async () =>
@@ -52,6 +54,8 @@ export function useWorkouts(version: Pick<PlanVersion, 'id' | 'editNumber'> | nu
   return useQuery({
     queryKey: ['plan-workouts', ...versionKey(version)],
     enabled: !!version,
+    placeholderData: (previous, query) =>
+      query?.queryKey.at(-2) === version?.id ? previous : undefined,
     queryFn: async () =>
       result(
         await api.GET('/api/v1/workouts', { params: { query: { planVersionId: version!.id } } }),
