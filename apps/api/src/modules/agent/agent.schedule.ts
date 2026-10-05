@@ -4,7 +4,7 @@ import type { z } from 'zod';
 import type { DB } from '../../database/generated.js';
 import { Id } from '../plans/plan.common.js';
 import { PlanError } from '../plans/plan.service.js';
-import { readBrief, changed } from '../plans/brief.service.js';
+import { readBrief, recordDraftChange } from '../plans/brief.service.js';
 import { readAggregate } from '../plans/plan.aggregate.js';
 import { validatePlan } from '../plans/plan.validation.js';
 import type { ScheduleSchema, CoverageSchema } from './agent.schemas.js';
@@ -412,7 +412,7 @@ export async function writeSchedule(
     await sql`UPDATE plan_briefs SET schedule_review_required = false WHERE plan_version_id = ${versionId}::uuid`.execute(
       db,
     );
-  await changed(db, versionId, false, false);
+  await recordDraftChange(db, versionId, 'edit-only');
   return { ids: result, findings };
 }
 async function removeCoverage(db: Tx, versionId: string, range: Range) {

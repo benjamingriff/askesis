@@ -303,12 +303,17 @@ function upgradeCachedBrief(body: unknown): unknown {
       : state.calibrations,
   };
 }
-export async function changed(db: Database, id: string, clear: boolean, stale: boolean) {
-  if (clear)
+type DraftChangeEffect =
+  'edit-only' | 'invalidate-confirmation' | 'invalidate-confirmation-and-review-schedule';
+
+export async function recordDraftChange(db: Database, id: string, effect: DraftChangeEffect) {
+  if (effect !== 'edit-only') {
+    const reviewSchedule = effect === 'invalidate-confirmation-and-review-schedule';
     await sql`UPDATE plan_briefs SET confirmed_hash = NULL, confirmed_at = NULL,
     confirmed_edit_number = NULL, validator_version = NULL, acknowledged_warning_codes = NULL,
-    schedule_review_required = schedule_review_required OR (${stale} AND EXISTS (SELECT 1 FROM workouts WHERE plan_version_id = ${id}::uuid))
+    schedule_review_required = schedule_review_required OR (${reviewSchedule} AND EXISTS (SELECT 1 FROM workouts WHERE plan_version_id = ${id}::uuid))
     WHERE plan_version_id = ${id}::uuid`.execute(db);
+  }
   await db
     .updateTable('plan_versions')
     .set({ edit_number: sql`edit_number + 1`, updated_at: new Date() })
@@ -351,7 +356,11 @@ export async function saveBriefRows(
         ON CONFLICT (plan_version_id,weekday) DO UPDATE SET availability = EXCLUDED.availability`.execute(
       db,
     );
-  await changed(db, state.versionId, clear, true);
+  await recordDraftChange(
+    db,
+    state.versionId,
+    clear ? 'invalidate-confirmation-and-review-schedule' : 'edit-only',
+  );
 }
 export async function confirmBrief(
   athleteId: string,
@@ -479,7 +488,7 @@ async function applyProfile(
   await sql`DELETE FROM calibration_profiles c WHERE c.plan_version_id = ${state.versionId}::uuid AND NOT EXISTS (SELECT 1 FROM plan_calibration_periods p WHERE p.profile_id = c.id)`.execute(
     db,
   );
-  await changed(db, state.versionId, true, false);
+  await recordDraftChange(db, state.versionId, 'invalidate-confirmation');
 }
 export async function useCalibration(
   athleteId: string,
