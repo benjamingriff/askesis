@@ -32,7 +32,7 @@ Saving identical latest inputs/output provenance is a no-op. Reusing the current
 
 ## Workout resolution and versioning
 
-Symbolic zone targets resolve by workout date in the same plan version. No matching period yields unresolved guidance, with validation blocking an uncovered zone prescription. Absolute pace targets remain absolute. Resolved running paces are returned in the selected display unit; consumers must use the returned unit. The public projection does not expose the internal fitness value as a score.
+Symbolic zone targets resolve by workout date in the same plan version. No matching period yields unresolved guidance, with validation blocking an uncovered zone prescription. Absolute pace targets remain absolute. When the coach saves a pace target without a zone target, the API also stores the calibrated zone that pace falls in (the containing range, else the nearest target) so clients can show the effort by zone; the pace itself is unchanged. Resolved running paces are returned in the selected display unit; consumers must use the returned unit. The public projection does not expose the internal fitness value as a score.
 
 Unlock/restore clone briefs, profile/zone identities, effective periods and coverage with the schedule. Hashing includes persisted semantic calibration content and provenance for current schema versions. Earlier locked version hashes are preserved.
 

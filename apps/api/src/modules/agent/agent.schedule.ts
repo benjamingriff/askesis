@@ -7,6 +7,7 @@ import { PlanError } from '../plans/plan.service.js';
 import { readBrief, recordDraftChange } from '../plans/brief.service.js';
 import { readAggregate } from '../plans/plan.aggregate.js';
 import { validatePlan } from '../plans/plan.validation.js';
+import { nearestZone, ZONE_KEYS } from '../plans/pace.calculator.js';
 import type { ScheduleSchema, CoverageSchema } from './agent.schemas.js';
 
 type Tx = Transaction<DB>;
@@ -220,6 +221,22 @@ export async function writeSchedule(
     weekIds.set(w.key, id);
     result[w.key] = id;
   }
+  type Target = Schedule['workouts'][number]['steps'][number]['targets'][number];
+  // Explicit paces also get the calibrated zone they fall in, so every client can colour the
+  // effort by zone. The coach's pace stays as written; a zone it chose is never replaced.
+  const withZone = (targets: Target[], date: string): Target[] => {
+    const pace = targets.find((t) => t.type === 'pace');
+    if (!pace || targets.some((t) => t.type === 'zone')) return targets;
+    const calibration = state.calibrations.find(
+      (c) => c.effectiveFrom <= date && (c.effectiveUntil === null || c.effectiveUntil > date),
+    );
+    const zones = (calibration?.zones ?? []).flatMap((zone) => {
+      const key = ZONE_KEYS.find((k) => k === zone.key);
+      return key ? [{ ...zone, key }] : [];
+    });
+    const zone = nearestZone(pace.secondsPerKilometre, zones);
+    return zone ? [...targets, { type: 'zone', key: zone.key }] : targets;
+  };
   for (const w of input.workouts) {
     if (range && (!inside(w.date, w.date, range) || w.id))
       bad('Range replacement accepts new workouts only, dated within its range.');
@@ -309,7 +326,7 @@ export async function writeSchedule(
             unit: s.completion.type === 'open' ? null : s.completion.unit,
           })
           .execute();
-      for (const [j, t] of s.targets.entries())
+      for (const [j, t] of withZone(s.targets, w.date).entries())
         await db
           .insertInto('step_targets')
           .values({
