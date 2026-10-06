@@ -27,6 +27,7 @@
   --radius-sm: 14px;
   --radius-xs: 10px;
   --shadow: 0 18px 50px rgba(0, 0, 0, 0.28);
+  --tab-bar-shadow: 0 8px 18px rgba(0, 0, 0, 0.5);
   --sidebar-width: 256px;
   --tab-bar-height: 64px;
   --page-max: 1180px;
