@@ -41,6 +41,7 @@ import { DayRow, WorkoutCard, WorkoutDialog } from './Workout';
 import { Button, Card, EmptyState, IconButton, Pill, Segmented, Notice, cx } from './ui';
 
 type Mode = 'weeks' | 'calendar';
+export type SchedulePresentation = 'interactive' | 'week-list';
 const MODE_KEY = 'askesis-schedule-mode';
 
 /** Runna-style schedule: weekly volume, a week at a time, or a month calendar. */
@@ -55,6 +56,7 @@ export function Schedule({
   onAskCoach,
   onPlanRest,
   selection,
+  presentation = 'interactive',
 }: {
   workouts: WorkoutSummary[];
   version?: Pick<PlanVersion, 'id' | 'editNumber'> | null | undefined;
@@ -68,6 +70,8 @@ export function Schedule({
   onPlanRest?: (() => void) | undefined;
   /** A parent that also opens workouts (for example from a change summary) owns selection. */
   selection?: WorkoutSelection | undefined;
+  /** Library details retain weekly workout navigation without offering a calendar. */
+  presentation?: SchedulePresentation | undefined;
 }) {
   const weeks = useMemo(
     () => summarizeWeeks(workouts, startDate, endDate, coverage),
@@ -76,9 +80,10 @@ export function Schedule({
   const current = weeks.find((w) => today >= w.startDate && today <= w.endDate)?.number ?? null;
   const firstUpcoming =
     current ?? weeks.find((w) => w.endDate >= today)?.number ?? weeks.at(-1)?.number ?? 1;
-  const [mode, setMode] = useState<Mode>(() =>
+  const [preferredMode, setMode] = useState<Mode>(() =>
     readStorage(MODE_KEY) === 'calendar' ? 'calendar' : 'weeks',
   );
+  const mode = presentation === 'week-list' ? 'weeks' : preferredMode;
   const [selectedWeek, setSelectedWeek] = useFollowingState(firstUpcoming);
   const ownSelection = useWorkoutSelection(workouts, version?.id);
   const dialog = selection ?? ownSelection;
@@ -101,18 +106,20 @@ export function Schedule({
     <section className="schedule" aria-labelledby="schedule-heading">
       <div className="schedule-header">
         <h2 id="schedule-heading">Schedule</h2>
-        <Segmented<Mode>
-          label="Schedule view"
-          value={mode}
-          onChange={(next) => {
-            setMode(next);
-            writeStorage(MODE_KEY, next);
-          }}
-          options={[
-            { value: 'weeks', label: 'Weeks', icon: List },
-            { value: 'calendar', label: 'Calendar', icon: CalendarDays },
-          ]}
-        />
+        {presentation === 'interactive' ? (
+          <Segmented<Mode>
+            label="Schedule view"
+            value={mode}
+            onChange={(next) => {
+              setMode(next);
+              writeStorage(MODE_KEY, next);
+            }}
+            options={[
+              { value: 'weeks', label: 'Weeks', icon: List },
+              { value: 'calendar', label: 'Calendar', icon: CalendarDays },
+            ]}
+          />
+        ) : null}
       </div>
 
       {mode === 'weeks' ? (

@@ -695,9 +695,13 @@
 }
 .embedded-plan-heading {
   display: flex;
+  flex-wrap: wrap;
   align-items: flex-start;
   justify-content: space-between;
   gap: 12px;
+}
+.embedded-plan-heading .plan-meta {
+  margin-top: 0;
 }
 .embedded-plan-heading h2 {
   margin-top: 2px;

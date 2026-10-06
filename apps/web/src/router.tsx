@@ -81,6 +81,7 @@ export const router = createBrowserRouter([
           { path: '/chat', element: <ChatPage /> },
           { path: '/chat/new', element: <ChatPage composing /> },
           { path: '/chat/archive', element: <ChatPage archived /> },
+          { path: '/chat/archive/:conversationId', element: <ChatPage archived /> },
           { path: '/chat/:conversationId', element: <ChatPage /> },
           { path: '/settings', element: <SettingsPage /> },
         ],

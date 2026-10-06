@@ -91,6 +91,7 @@ export function PlanDraftPage() {
       ) : null}
       {version && workouts.data && brief.data && !brief.error ? (
         <Schedule
+          presentation="week-list"
           workouts={workouts.data}
           version={version}
           startDate={version.startDate}

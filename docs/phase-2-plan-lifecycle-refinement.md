@@ -21,7 +21,6 @@ It does not deliver:
 - Persistent chat or agent interaction.
 - A full workout or plan-content editor.
 - Rich field-by-field diffs.
-- Markdown export.
 - Product-quality visual refinement.
 - Plan sharing, ownership transfer, or collaboration.
 
@@ -117,6 +116,8 @@ When an active plan is unlocked, the UI supports both:
 - The unpublished draft being reviewed or edited.
 
 Unlocking initially opens the draft. The browser remembers the selected plan and locked/draft view as local UI preferences. Backend reads never infer content source from those preferences.
+
+Phase 7 refinement retains this behavior and specifies locked content as the fallback when no valid preference exists or when switching plans. Lifecycle and activation labels remain independent of the displayed source.
 
 ## Drafts, locking, and immutability
 
@@ -280,7 +281,6 @@ Discard behavior:
 - Inaccessible and nonexistent resources follow the API's hidden-authorization behavior.
 - There is no plan sharing, membership, transfer, or collaboration during alpha.
 - The existing `plan_memberships` table and member-based workout authorization are removed in Phase 2.
-- Markdown export is the future sharing mechanism, but export itself is outside Phase 2.
 
 ## Shared reference data
 

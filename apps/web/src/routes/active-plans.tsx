@@ -77,6 +77,7 @@ export function ActivePlansPage() {
     <>
       {refreshError}
       <PlanView
+        schedulePresentation="interactive"
         key={plan.id}
         plan={plan}
         view={view}

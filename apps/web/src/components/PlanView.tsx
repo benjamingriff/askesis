@@ -1,4 +1,4 @@
-import { ClipboardList, Flag, Lock, PencilLine, Power, Sparkles } from 'lucide-react';
+import { ClipboardList, Flag, Lock, PencilLine, Sparkles } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
 import { Link } from 'react-router';
 import { daysBetween, formatRange, startOfWeek } from '../lib/format';
@@ -18,15 +18,14 @@ import { PlanHistory } from '../routes/plan-history';
 import { useUnits } from '../settings';
 import { useOpenPlanChat, PlanChatError, PlanToolbar } from './PlanLifecycle';
 import { PlanChanges, WorkoutChangesContext } from './PlanChanges';
-import { CalibrationSource, CoverageNote, PaceGuides, StatusPill } from './PlanWidgets';
-import { Schedule } from './Schedule';
+import { CalibrationSource, CoverageNote, PaceGuides, PlanStatus } from './PlanWidgets';
+import { Schedule, type SchedulePresentation } from './Schedule';
 import {
   Card,
   cx,
   ErrorState,
   LoadingState,
   Notice,
-  Pill,
   ProgressBar,
   SectionHeader,
   Segmented,
@@ -63,6 +62,7 @@ export function PlanView({
   switcher,
   embedded = false,
   onAskCoach,
+  schedulePresentation,
 }: {
   plan: Plan;
   view: View;
@@ -72,6 +72,7 @@ export function PlanView({
   embedded?: boolean | undefined;
   /** Replaces opening the plan's chat, for example to prefill the chat already beside it. */
   onAskCoach?: ((prompt: string) => void) | undefined;
+  schedulePresentation: SchedulePresentation;
 }) {
   const today = useLocalToday();
   const view: View =
@@ -120,12 +121,7 @@ export function PlanView({
             <span className="label">Training plan</span>
             <h1>{plan.displayName}</h1>
             <div className="plan-meta">
-              <StatusPill plan={plan} view={view} />
-              {plan.active ? (
-                <Pill tone="neutral" icon={Power}>
-                  Active
-                </Pill>
-              ) : null}
+              <PlanStatus plan={plan} view={view} />
               <span className="muted">
                 {formatRange(version?.startDate ?? null, version?.endDate ?? null)}
               </span>
@@ -163,7 +159,9 @@ export function PlanView({
                     {formatRange(version?.startDate ?? null, version?.endDate ?? null)}
                   </span>
                 </div>
-                <StatusPill plan={plan} view={view} />
+                <div className="plan-meta">
+                  <PlanStatus plan={plan} view={view} />
+                </div>
               </div>
             ) : null}
             {goal ? (
@@ -243,6 +241,7 @@ export function PlanView({
             <WorkoutChangesContext.Provider value={changes.data?.workouts ?? []}>
               <Schedule
                 key={version.id}
+                presentation={schedulePresentation}
                 workouts={workouts.data}
                 version={version}
                 startDate={version.startDate}

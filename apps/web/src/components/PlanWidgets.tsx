@@ -1,5 +1,15 @@
 import type { CSSProperties } from 'react';
-import { Archive, CheckCircle2, Clock3, Lock, PencilLine, TriangleAlert } from 'lucide-react';
+import {
+  Archive,
+  CheckCircle2,
+  Clock3,
+  Lock,
+  LockOpen,
+  PencilLine,
+  Power,
+  PowerOff,
+  TriangleAlert,
+} from 'lucide-react';
 import { addDays, formatDistance, formatPace, formatShort, formatShortYear } from '../lib/format';
 import type { WeekSummary } from '../lib/workouts';
 import {
@@ -16,24 +26,69 @@ import { Pill, cx } from './ui';
 // ---- Plan state --------------------------------------------------------------------------------
 
 /** State is shown as a pill; actions live in the toolbar so an icon never means two things. */
-export function StatusPill({ plan, view }: { plan: Plan; view?: 'locked' | 'draft' }) {
+export function StatusPill({ plan }: { plan: Plan }) {
   if (plan.archived)
     return (
       <Pill icon={Archive} tone="neutral">
         Archived
       </Pill>
     );
-  const showingDraft = view ? view === 'draft' && !!plan.draft : !!plan.draft;
-  if (showingDraft)
+  if (plan.draft && plan.locked)
+    return (
+      <Pill
+        icon={LockOpen}
+        tone="accent"
+        title="An editable draft exists alongside the unchanged locked version."
+      >
+        Unlocked
+      </Pill>
+    );
+  if (plan.draft)
     return (
       <Pill icon={PencilLine} tone="accent" title="Editable draft. Your coach can change it.">
-        {plan.locked ? `Draft · from v${plan.locked.versionNumber}` : 'Draft'}
+        Draft
       </Pill>
     );
   return (
     <Pill icon={Lock} tone="locked" title="Locked version. Unlock to make changes.">
-      Locked v{plan.locked?.versionNumber}
+      Locked
     </Pill>
+  );
+}
+
+/** Lifecycle, activation and displayed content are independent facts. */
+export function PlanStatus({ plan, view }: { plan: Plan; view?: 'locked' | 'draft' }) {
+  const source = view === 'draft' && plan.draft ? plan.draft : (plan.locked ?? plan.draft);
+  return (
+    <>
+      <StatusPill plan={plan} />
+      <Pill
+        icon={plan.active ? Power : PowerOff}
+        tone="neutral"
+        title={
+          plan.archived
+            ? 'Archived plans are inactive and read-only.'
+            : plan.active
+              ? 'Shown in Today and the active Plan area.'
+              : !plan.locked
+                ? 'Lock a version before activating this plan.'
+                : 'Kept in your library; activate it to follow it.'
+        }
+      >
+        {plan.active ? 'Active' : 'Inactive'}
+      </Pill>
+      {view && source ? (
+        <Pill tone="neutral" title="Content currently shown below.">
+          {source.state === 'draft'
+            ? source.basedOnVersionId && source.basedOnVersionId !== plan.locked?.id
+              ? 'Restored draft'
+              : plan.locked
+                ? `Draft · from v${plan.locked.versionNumber}`
+                : 'Initial draft'
+            : `Locked v${source.versionNumber}`}
+        </Pill>
+      ) : null}
+    </>
   );
 }
 

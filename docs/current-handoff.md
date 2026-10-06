@@ -1,8 +1,8 @@
 # Current agent handoff
 
-**Updated:** 2026-10-05
-**Current phase:** Phase 6 web implementation is delivered for review. Local verification is recorded below; live-provider acceptance and Railway rollout remain pending.
-**Completed phase:** Phase 1 — engineering foundation and Railway deployment validation
+**Updated:** 2026-10-06
+**Current phase:** Phase 7 implementation complete — local validation and development account policy verified. Next product increment: connect the native client. Web deployment and release walkthrough remain outstanding.
+**Completed phase:** Phase 6 — live coaching, synchronization and plan review; confirmed complete and working by the owner on 2026-10-06.
 
 ## Purpose
 
@@ -18,6 +18,18 @@ Before making changes, read:
 Do not place credentials, Clerk tokens, database URLs, Sentry credentials, or Railway secrets in chat, logs, commits, or this file.
 
 ## Repository state at handoff
+
+### Phase 7 bounded completion — 2026-10-06
+
+The owner agreed to finish Phase 7 and then connect the native app. The [refinement and closeout](./phase-7-closeout.md) resolves source/creation defaults and keeps optional history polish and the previously deferred editor-unmount edge outside this pass. Reviewed discard/unlock/archive confirmations now retain their original baseline; library details use weekly lists without a calendar; lifecycle, source and activation labels are separate; archived chat details retain their collection and reconcile after restoration.
+
+After incorporating main's shared request-key and draft-change-effects fixes, full repository checks pass with 215 unit/component tests, and the disposable PostgreSQL suite passes 76 tests plus version invariants. The owner disabled the Clerk development instance's future-account self-deletion default; the CLI then restricted both existing accounts. Fresh API reads confirm all three settings are disabled, and the reloaded hosted account UI retains identity/security management and sign-out without Delete account. This completes G1–G5 within the refined scope. The new web code is local and has not been deployed; a deployed desktop/narrow-screen walkthrough remains a release step. Mobile files are untouched.
+
+### Phase 6 closeout and Phase 7 scope — 2026-10-06
+
+The owner confirmed that Phase 6 is fully complete and working. This supersedes the review, live-acceptance and rollout pending statuses in the historical entries below. The original local verification remains in the [validation record](./phase-6-validation.md); this closeout records owner acceptance, not a new agent-run production test.
+
+Markdown plan export has been removed from the product roadmap, including Phase 7 and the private-alpha milestone. Do not reintroduce it as deferred work. Phase 7 now focuses on remaining plan, chat and account management gaps. See the [gap investigation](./phase-7-gap-investigation.md) for evidence, priorities and acceptance checks.
 
 ### Phase 6 review revisions — 2026-10-05
 

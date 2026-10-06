@@ -1,39 +1,42 @@
 # Web application
 
-This directory will contain the Askesis training-plan interface.
+This directory contains the responsive Askesis training-plan and coaching interface. Phase 7 implementation is complete; the [closeout](../../docs/phase-7-closeout.md) records management changes, validation and remaining release checks.
 
 ## Responsibility
 
-The web application will:
+The web application:
 
-- Display plan intent, blocks, weeks, and workouts.
-- Visualise workout prescription trees across endurance and strength disciplines.
-- Show macro targets alongside derived or estimated plan metrics.
-- Resolve and display the calibration behind semantic intensity targets.
-- Send all reads and mutations through the core platform API.
+- Displays plan context, schedules and workout prescriptions.
+- Shows draft differences, prescribed coverage and date-appropriate pace guides.
+- Provides human review and plan lifecycle controls.
+- Renders persistent coaching conversations, streamed replies and saved agent activity.
+- Sends all reads and mutations through the core platform API.
 
-It will not access PostgreSQL directly or own training-plan business rules. If the chosen framework provides server-side capabilities, they may act as a thin backend-for-frontend for sessions, rendering, response composition, and UI-specific caching.
+It does not access PostgreSQL directly or own training-plan business rules.
 
 ## Selected stack
 
-The initial frontend will use:
+The frontend uses:
 
 ```text
 React
 Vite
 React Router
-Router loaders and actions
+TanStack Query
+Authenticated live event stream
 ```
 
-TanStack Query will be introduced with persistent chat and live agent mutations. React Router remains the router for the v1 prototype.
+TanStack Query owns API reads, mutation state and targeted live refresh. React Router owns navigation.
 
 ## Current vertical slice
 
-The application uses a Grok-inspired persistent shell with three prototype areas:
+The application follows the shared [web design system](../../docs/web-design-system.md), using the Expo prototype as its visual reference:
 
-- `/plan` renders a compact calendar and scheduled workouts from the Hono API. Each workout expands through a React Router fetcher to show its nested sequence, repeats, completions, targets, instructions, tags, and date-appropriate resolved zones.
-- `/chat` provides a cosmetic coaching-chat interface with hardcoded conversation history and local mock replies. It does not call an agent or persist messages yet.
-- `/settings` uses Clerk account data and provides profile management and sign-out controls.
+- `/today` shows the selected active plan's locked schedule for the current week.
+- `/plan` shows active plans with remembered plan/source selection and week/calendar navigation.
+- `/plans` and `/plans/archive` provide library and archive access, plan details, history and lifecycle controls.
+- `/chat` and `/chat/archive` provide persistent conversations, live coaching, cancellation and retained interrupted replies. Plan-linked conversations include responsive Chat/Plan review.
+- `/settings` provides Clerk account management, sign-out, appearance and display preferences.
 
 Clerk protects the application routes, and the generated API client attaches the current session token to API requests.
 
