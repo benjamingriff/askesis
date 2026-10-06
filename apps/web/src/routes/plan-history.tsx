@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft, CircleAlert, ClipboardList, History, Lock, TriangleAlert } from 'lucide-react';
-import { useRef, useState } from 'react';
+import { useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router';
 import type { paths } from '@askesis/api-client';
 import { api } from '../api';
@@ -18,6 +18,7 @@ import {
 import { formatDateTime, formatRange, formatShort } from '../lib/format';
 import { useLocalToday } from '../lib/use-local-today';
 import { result } from '../lib/result';
+import { useRequestKey } from '../lib/use-request-key';
 import { knownCoverage, useBriefState, usePlan, useWorkouts } from '../plan-data';
 import { usePlanPreferences } from '../plan-selection';
 import { useUnits } from '../settings';
@@ -104,7 +105,7 @@ function RevisionView({ planId, revisionId }: { planId: string; revisionId: stri
   );
   const units = useUnits(brief.data?.brief.unit);
   const [preview, setPreview] = useState<Preview | null>(null);
-  const keys = useRef(new Map<string, string>());
+  const requestKey = useRequestKey();
   const mutation = useMutation({
     mutationFn: async (action: 'preview' | 'restore') => {
       if (action === 'preview') {
@@ -123,12 +124,9 @@ function RevisionView({ planId, revisionId }: { planId: string; revisionId: stri
         expectedCurrentVersionId: preview.currentVersionId,
         expectedSourceHash: preview.sourceHash,
       };
-      const signature = JSON.stringify(body);
-      const key = keys.current.get(signature) ?? crypto.randomUUID();
-      keys.current.set(signature, key);
       return result(
         await api.POST('/api/v1/plans/{planId}/revisions/{revisionId}/restore', {
-          params: { ...params, header: { 'idempotency-key': key } },
+          params: { ...params, header: { 'idempotency-key': requestKey(body) } },
           body,
         }),
       );

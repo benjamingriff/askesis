@@ -115,6 +115,69 @@ it('switches display units without changing the saved baseline distance', async 
   );
 });
 
+it.each(['save', 'confirm', 'calibrate'] as const)(
+  'reuses the body request key when retrying %s after a connection failure',
+  async (action) => {
+    vi.mocked(api.PUT).mockRejectedValue(new Error('Connection lost'));
+    vi.mocked(api.POST).mockRejectedValue(new Error('Connection lost'));
+    mount();
+    await screen.findByLabelText('Goal');
+    if (action === 'save') {
+      fireEvent.change(screen.getByLabelText('Goal'), { target: { value: 'A revised goal' } });
+    } else if (action === 'calibrate') {
+      fireEvent.change(screen.getByLabelText('Finish time (mm:ss or hh:mm:ss)'), {
+        target: { value: '25:00' },
+      });
+    }
+    const submit = () => {
+      if (action === 'confirm') {
+        fireEvent.click(screen.getByRole('button', { name: 'Review brief for confirmation' }));
+      }
+      fireEvent.click(
+        screen.getByRole('button', {
+          name:
+            action === 'save'
+              ? 'Save changes'
+              : action === 'confirm'
+                ? 'Confirm brief'
+                : 'Calculate and save pace guides',
+        }),
+      );
+    };
+    submit();
+    expect(await screen.findByRole('alert')).toHaveTextContent('Connection lost');
+    const calls = action === 'save' ? vi.mocked(api.PUT) : vi.mocked(api.POST);
+    expect(calls.mock.calls[0]?.[1]).toEqual(
+      expect.objectContaining({
+        body: expect.objectContaining({
+          expectedDraftId: 'draft-1',
+          expectedEditNumber: 1,
+          idempotencyKey: expect.any(String),
+        }),
+      }),
+    );
+    submit();
+    await waitFor(() => expect(calls).toHaveBeenCalledTimes(2));
+    expect(calls.mock.calls[1]).toEqual(calls.mock.calls[0]);
+  },
+);
+
+it('uses a distinct key for changed brief input and retains the previous input key', async () => {
+  vi.mocked(api.PUT).mockRejectedValue(new Error('Connection lost'));
+  mount();
+  const goal = await screen.findByLabelText('Goal');
+  for (const value of ['First goal', 'Changed goal', 'First goal']) {
+    fireEvent.change(goal, { target: { value } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save changes' }));
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Save changes' })).toBeEnabled());
+    expect(screen.getByRole('alert')).toHaveTextContent('Connection lost');
+  }
+  const calls = vi.mocked(api.PUT).mock.calls;
+  expect(calls).toHaveLength(3);
+  expect(calls[1]?.[1]?.body?.idempotencyKey).not.toBe(calls[0]?.[1]?.body?.idempotencyKey);
+  expect(calls[2]).toEqual(calls[0]);
+});
+
 it('requires explicit review and warning acknowledgement before confirmation', async () => {
   state.findings = [
     { code: 'VOLUME', severity: 'warning', message: 'Review the increase in runs.', path: 'brief' },
