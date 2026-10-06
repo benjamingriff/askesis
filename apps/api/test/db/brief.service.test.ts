@@ -50,6 +50,7 @@ async function prepared(startDate = '2026-05-01') {
 afterAll(closeDatabase);
 it('requires human confirmation, preserves it across unit conversion, and clears it for changed facts', async () => {
   const { plan, state } = await prepared();
+  expect(state.scheduleReviewRequired).toBe(false);
   expect(state.findings.map((f) => f.code)).toContain('brief.calibration_required');
   let s = await addCalibration(
     owner,
@@ -66,18 +67,24 @@ it('requires human confirmation, preserves it across unit conversion, and clears
     acknowledgedWarningCodes: [],
   });
   expect(s.confirmed).toBe(true);
+  expect(s.editNumber).toBe(state.editNumber + 1);
   expect(
     await addCalibration(owner, plan.id, {
       ...cmd(s),
       input: { method: 'threshold_pace', secondsPerKilometre: 300 },
     }),
   ).toEqual(s);
+  expect(await saveBrief(owner, plan.id, { ...cmd(s), brief: s.brief })).toEqual(s);
   const hash = s.hash;
+  const editNumber = s.editNumber;
   s = await saveBrief(owner, plan.id, { ...cmd(s), brief: { ...s.brief, unit: 'miles' } });
   expect(s.confirmed).toBe(true);
   expect(s.hash).toBe(hash);
+  expect(s.editNumber).toBe(editNumber + 1);
   s = await saveBrief(owner, plan.id, { ...cmd(s), brief: { ...s.brief, desiredRuns: 7 } });
   expect(s.confirmed).toBe(false);
+  expect(s.editNumber).toBe(editNumber + 2);
+  expect(s.scheduleReviewRequired).toBe(false);
   expect(s.findings.map((f) => f.code)).toContain('brief.desired_frequency_exceeds_capacity');
 });
 it('preserves past guides, replaces same-day updates, reuses history, and safely retries', async () => {

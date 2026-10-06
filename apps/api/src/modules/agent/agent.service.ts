@@ -18,7 +18,12 @@ import { ContextSchema } from '../chat/chat.schemas.js';
 import { compareVersions, storedSummary } from '../live/live.changes.js';
 import { readAggregate } from '../plans/plan.aggregate.js';
 import { contentHash, type SemanticValue } from '../plans/plan.canonical.js';
-import { addCalibrationRows, changed, readBrief, saveBriefRows } from '../plans/brief.service.js';
+import {
+  addCalibrationRows,
+  recordDraftChange,
+  readBrief,
+  saveBriefRows,
+} from '../plans/brief.service.js';
 import { createPlanRows, detail, PlanError, preview } from '../plans/plan.service.js';
 import {
   ToolSchemas,
@@ -368,7 +373,7 @@ export async function executeTool(
                 .set({ content_schema_version: 3 })
                 .where('id', '=', versionId)
                 .execute();
-              await changed(db, versionId, true, false);
+              await recordDraftChange(db, versionId, 'invalidate-confirmation');
             }
           }
           if (name === 'read_plan_context')
@@ -474,11 +479,12 @@ export async function executeTool(
                 })
                 .where('id', '=', versionId)
                 .execute();
-              await changed(
+              await recordDraftChange(
                 db,
                 versionId,
-                state.startDate !== input.startDate || state.endDate !== input.endDate,
-                true,
+                state.startDate !== input.startDate || state.endDate !== input.endDate
+                  ? 'invalidate-confirmation-and-review-schedule'
+                  : 'edit-only',
               );
               if (input.startDate && state.startDate !== input.startDate) {
                 const first = await db

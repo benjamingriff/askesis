@@ -32,7 +32,7 @@ import {
   unlockPlan,
   discardDraft,
 } from '../../src/modules/plans/plan.service.js';
-import { getBrief } from '../../src/modules/plans/brief.service.js';
+import { confirmBrief, getBrief } from '../../src/modules/plans/brief.service.js';
 import { emptyBrief } from '../../src/modules/plans/brief.schemas.js';
 import type { z } from 'zod';
 import type { ScheduleSchema } from '../../src/modules/agent/agent.schemas.js';
@@ -181,6 +181,184 @@ async function planning() {
   });
   return { ...a, p };
 }
+async function confirmCurrentBrief(planId: string) {
+  const state = await getBrief(owner, planId);
+  return confirmBrief(owner, planId, {
+    expectedDraftId: state.versionId,
+    expectedEditNumber: state.editNumber,
+    expectedHash: state.hash,
+    acknowledgedWarningCodes: state.findings
+      .filter((f) => f.severity === 'warning')
+      .map((f) => f.code),
+  });
+}
+function confirmationMetadata(versionId: string) {
+  return db
+    .selectFrom('plan_briefs')
+    .select([
+      'confirmed_hash',
+      'confirmed_at',
+      'confirmed_edit_number',
+      'validator_version',
+      'acknowledged_warning_codes',
+    ])
+    .where('plan_version_id', '=', versionId)
+    .executeTakeFirstOrThrow();
+}
+const clearedConfirmation = {
+  confirmed_hash: null,
+  confirmed_at: null,
+  confirmed_edit_number: null,
+  validator_version: null,
+  acknowledged_warning_codes: null,
+};
+
+it('preserves confirmation for edit-only changes and keeps schedule review sticky until covered', async () => {
+  const { claim, p } = await planning();
+  let state = await confirmCurrentBrief(p.id);
+  let confirmed = await confirmationMetadata(state.versionId);
+  const header = {
+    startDate: state.startDate,
+    endDate: state.endDate,
+    description: 'Updated description',
+  };
+  await tool(claim, 'update_plan_brief', { ...header, brief: state.brief });
+  let next = await getBrief(owner, p.id);
+  expect(next.editNumber).toBe(state.editNumber + 1);
+  expect(next.confirmed).toBe(true);
+  expect(next.scheduleReviewRequired).toBe(false);
+  expect(await confirmationMetadata(state.versionId)).toEqual(confirmed);
+  state = next;
+
+  await tool(claim, 'apply_schedule_changes', batch);
+  next = await getBrief(owner, p.id);
+  expect(next.editNumber).toBe(state.editNumber + 1);
+  expect(next.confirmed).toBe(true);
+  expect(next.scheduleReviewRequired).toBe(false);
+  expect(await confirmationMetadata(state.versionId)).toEqual(confirmed);
+  state = next;
+
+  const calibration = {
+    input: { method: 'threshold_pace', secondsPerKilometre: 320 },
+    provenance: 'agent_estimate',
+    estimateBasis: 'Revised starting estimate based on recent easy running.',
+  };
+  await tool(claim, 'set_fitness_calibration', calibration);
+  next = await getBrief(owner, p.id);
+  expect(next.editNumber).toBe(state.editNumber + 1);
+  expect(next.confirmed).toBe(false);
+  expect(next.scheduleReviewRequired).toBe(false);
+  expect(await confirmationMetadata(state.versionId)).toEqual(clearedConfirmation);
+  state = await confirmCurrentBrief(p.id);
+  confirmed = await confirmationMetadata(state.versionId);
+
+  await tool(claim, 'update_plan_brief', {
+    ...header,
+    brief: { ...state.brief, unit: 'miles' },
+  });
+  next = await getBrief(owner, p.id);
+  expect(next.editNumber).toBe(state.editNumber + 1);
+  expect(next.confirmed).toBe(true);
+  expect(next.scheduleReviewRequired).toBe(false);
+  expect(await confirmationMetadata(state.versionId)).toEqual(confirmed);
+  state = next;
+
+  await tool(claim, 'update_plan_brief', {
+    ...header,
+    brief: { ...state.brief, goal: 'Run a comfortable half marathon' },
+  });
+  next = await getBrief(owner, p.id);
+  expect(next.editNumber).toBe(state.editNumber + 1);
+  expect(next.confirmed).toBe(false);
+  expect(next.scheduleReviewRequired).toBe(true);
+  expect(await confirmationMetadata(state.versionId)).toEqual(clearedConfirmation);
+  state = await confirmCurrentBrief(p.id);
+  confirmed = await confirmationMetadata(state.versionId);
+
+  await tool(claim, 'update_plan_brief', {
+    ...header,
+    brief: { ...state.brief, unit: 'kilometres' },
+  });
+  next = await getBrief(owner, p.id);
+  expect(next.editNumber).toBe(state.editNumber + 1);
+  expect(next.confirmed).toBe(true);
+  expect(next.scheduleReviewRequired).toBe(true);
+  expect(await confirmationMetadata(state.versionId)).toEqual(confirmed);
+  state = next;
+
+  await tool(claim, 'set_fitness_calibration', {
+    ...calibration,
+    input: { method: 'threshold_pace', secondsPerKilometre: 310 },
+  });
+  next = await getBrief(owner, p.id);
+  expect(next.editNumber).toBe(state.editNumber + 1);
+  expect(next.confirmed).toBe(false);
+  expect(next.scheduleReviewRequired).toBe(true);
+  expect(await confirmationMetadata(state.versionId)).toEqual(clearedConfirmation);
+  state = await confirmCurrentBrief(p.id);
+  confirmed = await confirmationMetadata(state.versionId);
+
+  // An unfinished schedule edit cannot clear review; complete current coverage can.
+  for (const coverage of [null, batch.coverage]) {
+    const before = await getBrief(owner, p.id);
+    await tool(claim, 'apply_schedule_changes', {
+      ...batch,
+      blocks: [],
+      weeks: [],
+      workouts: [],
+      coverage,
+    });
+    const after = await getBrief(owner, p.id);
+    expect(after.editNumber).toBe(before.editNumber + 1);
+    expect(after.confirmed).toBe(true);
+    expect(after.scheduleReviewRequired).toBe(coverage === null);
+    expect(await confirmationMetadata(state.versionId)).toEqual(confirmed);
+  }
+});
+
+it.each([false, true])(
+  'upgrades the agent schema while invalidating confirmation and retaining schedule review %s',
+  async (reviewRequired) => {
+    const { claim, p } = await planning();
+    await tool(claim, 'apply_schedule_changes', batch);
+    if (reviewRequired)
+      await tool(claim, 'update_plan_brief', {
+        brief: { ...brief, goal: 'Run a comfortable half marathon' },
+        startDate: '2027-01-01',
+        endDate: '2027-03-31',
+        description: 'Initial month then reassess',
+      });
+    const before = await confirmCurrentBrief(p.id);
+    expect(before.scheduleReviewRequired).toBe(reviewRequired);
+    // Represent an older draft; a no-op brief write should change only the schema.
+    await db
+      .updateTable('plan_versions')
+      .set({ content_schema_version: 2 })
+      .where('id', '=', before.versionId)
+      .execute();
+    const input = {
+      brief: before.brief,
+      startDate: before.startDate,
+      endDate: before.endDate,
+      description: 'Initial month then reassess',
+    };
+    await tool(claim, 'update_plan_brief', input);
+    const after = await getBrief(owner, p.id);
+    expect(after.editNumber).toBe(before.editNumber + 1);
+    expect(after.confirmed).toBe(false);
+    expect(after.scheduleReviewRequired).toBe(reviewRequired);
+    expect(await confirmationMetadata(before.versionId)).toEqual(clearedConfirmation);
+    const version = await db
+      .selectFrom('plan_versions')
+      .select('content_schema_version')
+      .where('id', '=', before.versionId)
+      .executeTakeFirstOrThrow();
+    expect(version.content_schema_version).toBe(3);
+    await tool(claim, 'update_plan_brief', input);
+    expect(await getBrief(owner, p.id)).toEqual(after);
+  },
+);
+
 it('rejects machine credentials at the private boundary and keeps bootstrap authority out of run context', async () => {
   const { claim } = await accepted();
   for (const token of ['', 'browser-session-token', bootstrap]) {
@@ -631,12 +809,18 @@ it('reconciles coverage after agent and human date edits and locks only in-range
   const first = (await tool(claim, 'apply_schedule_changes', batch)) as {
     result: { ids: Record<string, string> };
   };
+  const beforeDateEdit = await confirmCurrentBrief(p.id);
   await tool(claim, 'update_plan_brief', {
     brief,
     startDate: '2027-01-01',
     endDate: '2027-01-05',
     description: 'Shorter plan',
   });
+  const afterDateEdit = await getBrief(owner, p.id);
+  expect(afterDateEdit.editNumber).toBe(beforeDateEdit.editNumber + 1);
+  expect(afterDateEdit.confirmed).toBe(false);
+  expect(afterDateEdit.scheduleReviewRequired).toBe(true);
+  expect(await confirmationMetadata(beforeDateEdit.versionId)).toEqual(clearedConfirmation);
   expect((await getBrief(owner, p.id)).coverage).toEqual([
     { startDate: '2027-01-01', endDate: '2027-01-05', current: false },
   ]);
