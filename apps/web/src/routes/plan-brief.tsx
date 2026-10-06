@@ -9,7 +9,7 @@ import {
   Save,
   TriangleAlert,
 } from 'lucide-react';
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { Link, useBeforeUnload, useBlocker, useParams } from 'react-router';
 import { api } from '../api';
 import { CalibrationSource, PaceGuides } from '../components/PlanWidgets';
@@ -28,6 +28,7 @@ import {
 } from '../components/ui';
 import { formatShortYear, WEEKDAYS_LONG } from '../lib/format';
 import { result } from '../lib/result';
+import { useRequestKey } from '../lib/use-request-key';
 import type { BriefState } from '../plan-data';
 import { useUnits } from '../settings';
 
@@ -100,7 +101,7 @@ function BriefEditor({ state, planId }: { state: State; planId: string }) {
   const command = { expectedDraftId: state.versionId, expectedEditNumber: state.editNumber };
   const params = { path: { planId } };
   const dirty = JSON.stringify(brief) !== JSON.stringify(state.brief);
-  const keys = useRef(new Map<string, string>());
+  const requestKey = useRequestKey();
   const blocker = useBlocker(dirty);
   const units = useUnits(state.brief.unit);
   useBeforeUnload(
@@ -116,7 +117,7 @@ function BriefEditor({ state, planId }: { state: State; planId: string }) {
   );
   const mutation = useMutation({
     mutationFn: async (action: 'save' | 'confirm' | 'calibrate' | `reuse:${string}`) => {
-      const signature = JSON.stringify([
+      const idempotencyKey = requestKey([
         action,
         command,
         brief,
@@ -127,8 +128,7 @@ function BriefEditor({ state, planId }: { state: State; planId: string }) {
         threshold,
         ack,
       ]);
-      if (!keys.current.has(signature)) keys.current.set(signature, crypto.randomUUID());
-      const request = { ...command, idempotencyKey: keys.current.get(signature)! };
+      const request = { ...command, idempotencyKey };
       if (action === 'save')
         return result(
           await api.PUT('/api/v1/plans/{planId}/draft/brief', {

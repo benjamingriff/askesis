@@ -139,6 +139,50 @@ it('clears the confirmation after a stale restore rejection', async () => {
   ).not.toBeInTheDocument();
 });
 
+it('retains restore retry keys while distinguishing changed reviewed metadata', async () => {
+  let reviewed = preview;
+  mocks.post.mockImplementation(async (path: string) => {
+    if (path.endsWith('restore-preview')) return { data: reviewed };
+    throw new Error('Connection lost');
+  });
+  mount();
+  for (const sourceHash of [
+    preview.sourceHash,
+    preview.sourceHash,
+    'b'.repeat(64),
+    preview.sourceHash,
+  ]) {
+    reviewed = { ...preview, sourceHash };
+    fireEvent.click(await screen.findByRole('button', { name: 'Review restore as draft' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Confirm restore as draft' }));
+    await waitFor(() =>
+      expect(
+        screen.queryByRole('button', { name: 'Confirm restore as draft' }),
+      ).not.toBeInTheDocument(),
+    );
+    expect(screen.getByRole('alert')).toHaveTextContent('Connection lost');
+  }
+  const restores = mocks.post.mock.calls.filter(([path]) => path.endsWith('/restore'));
+  expect(restores).toHaveLength(4);
+  expect(restores[0]?.[1]).toEqual({
+    params: {
+      path: { planId: 'plan', revisionId: 'v1' },
+      header: { 'idempotency-key': expect.any(String) },
+    },
+    body: {
+      expectedStateVersion: 4,
+      expectedCurrentVersionId: 'v2',
+      expectedSourceHash: preview.sourceHash,
+    },
+  });
+  expect(restores[1]).toEqual(restores[0]);
+  expect(restores[2]?.[1].params.header['idempotency-key']).not.toBe(
+    restores[0]?.[1].params.header['idempotency-key'],
+  );
+  expect(restores[2]?.[1].body.expectedSourceHash).toBe('b'.repeat(64));
+  expect(restores[3]).toEqual(restores[0]);
+});
+
 it.each([
   [{ ...current, archived: true }, 'Unarchive this plan before restoring.'],
   [{ ...current, draft: { id: 'draft' } }, 'Lock or discard the existing draft before restoring.'],
