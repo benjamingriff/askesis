@@ -138,6 +138,14 @@ export function applyTheme(theme: Theme, root: HTMLElement = document.documentEl
     '--warning-soft': alpha(STATUS_COLORS.warning, 0.14),
     '--danger': readableOn(STATUS_COLORS.danger, c.bg),
     '--danger-soft': alpha(STATUS_COLORS.danger, 0.14),
+    // Dark themes lift the floating tab bar with a lighter fill and rim; a shadow alone
+    // barely shows against a near-black page.
+    '--tab-bar-bg': alpha(theme.isDark ? c.surfaceRaised : c.surface, theme.isDark ? 0.78 : 0.72),
+    '--tab-bar-border': alpha(c.text, theme.isDark ? 0.16 : 0.12),
+    '--tab-bar-active': theme.isDark ? alpha(c.text, 0.1) : c.surfaceRaised,
+    '--tab-bar-shadow': theme.isDark
+      ? 'inset 0 1px 0 rgba(255, 255, 255, 0.12), 0 1px 2px rgba(0, 0, 0, 0.6), 0 12px 32px rgba(0, 0, 0, 0.55)'
+      : 'inset 0 1px 0 rgba(255, 255, 255, 0.7), 0 1px 2px rgba(0, 0, 0, 0.08), 0 10px 28px rgba(0, 0, 0, 0.14)',
   };
   for (const [key, value] of Object.entries(vars)) root.style.setProperty(key, value);
   root.style.colorScheme = theme.isDark ? 'dark' : 'light';
