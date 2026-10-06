@@ -66,4 +66,4 @@ workouts (anything before today) are derived, not recorded.
 `src/state/plan.tsx` and `src/state/chat.tsx` are the seams: they expose the same shapes the API
 returns (plan weeks → workouts → step trees; conversations → runs) and are the only places that
 read the seed data. `src/lib/metrics.ts` already derives distance/duration from step trees and
-pace guides the way `docs/data-model.md` describes.
+pace guides the way `docs/architecture/data-model.md` describes.

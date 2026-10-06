@@ -1,6 +1,6 @@
 # Web application
 
-This directory contains the responsive Askesis training-plan and coaching interface. Phase 7 implementation is complete; the [closeout](../../docs/phase-7-closeout.md) records management changes, validation and remaining release checks.
+This directory contains the responsive Askesis training-plan and coaching interface. Phase 7 implementation is complete; the [closeout](../../docs/archive/phase-7/phase-7-closeout.md) records management changes, validation and remaining release checks.
 
 ## Responsibility
 
@@ -30,7 +30,7 @@ TanStack Query owns API reads, mutation state and targeted live refresh. React R
 
 ## Current vertical slice
 
-The application follows the shared [web design system](../../docs/web-design-system.md), using the Expo prototype as its visual reference:
+The application follows the shared [web design system](../../docs/product/web-design-system.md), using the Expo prototype as its visual reference:
 
 - `/today` shows the selected active plan's locked schedule for the current week.
 - `/plan` shows active plans with remembered plan/source selection and week/calendar navigation.
@@ -40,7 +40,7 @@ The application follows the shared [web design system](../../docs/web-design-sys
 
 Clerk protects the application routes, and the generated API client attaches the current session token to API requests.
 
-Run it locally from the repository root:
+Provide the public `VITE_CLERK_PUBLISHABLE_KEY` in ignored `apps/web/.env.local` or the shell environment; Vite does not automatically load root `.env`. Then run from the repository root:
 
 ```bash
 pnpm dev:web

@@ -1,7 +1,9 @@
 # ADR 0001: Initial application stack
 
-- **Status:** Accepted
+- **Status:** Partially superseded (worker/client integration and browser data strategy)
 - **Date:** 2026-07-22
+
+**Later decisions:** [ADR 0003](./0003-coaching-worker.md) supersedes the Pi worker choice; [ADR 0004](./0004-live-synchronization.md) records TanStack Query and live event delivery beyond the initial loader/action strategy. The original rationale below is retained as the 2026-07-22 decision, not current runtime instructions. Current implementation uses a private `/internal/agent` namespace and hand-written fetch/Zod worker client; the generated public client is used by web. Thus the original shared-generated-client diagram and Pi integration statements below are superseded. The React/Vite, Hono/OpenAPI, Kysely/Atlas and API/database boundaries remain accepted.
 
 ## Context
 
