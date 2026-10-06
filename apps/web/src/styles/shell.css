@@ -242,9 +242,11 @@
     margin: 0 auto;
     padding: 5px;
     border-radius: calc(var(--tab-bar-height) / 2);
-    border: 1px solid var(--border);
-    background: color-mix(in srgb, var(--surface) 94%, transparent);
-    backdrop-filter: blur(16px);
+    border: 1px solid var(--tab-bar-border);
+    background: var(--tab-bar-bg);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    backdrop-filter: blur(20px) saturate(180%);
+    box-shadow: var(--tab-bar-shadow);
   }
   .tab {
     flex: 1;
@@ -260,7 +262,7 @@
     transition: background 0.18s ease;
   }
   .tab.active {
-    background: var(--surface-raised);
+    background: var(--tab-bar-active);
     color: var(--accent-text);
   }
   .page {
