@@ -245,25 +245,6 @@
     border: 1px solid var(--border);
     background: color-mix(in srgb, var(--surface) 94%, transparent);
     backdrop-filter: blur(16px);
-    box-shadow: var(--tab-bar-shadow);
-  }
-  /* Soft fade so scrolling content doesn't collide with the pill. It lives on the
-     shell, not the bar: the bar's backdrop-filter would pin a fixed child to the
-     bar and paint it square across the pill. */
-  .app-shell::after {
-    content: '';
-    position: fixed;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    z-index: 29;
-    height: calc(var(--tab-bar-height) + max(12px, env(safe-area-inset-bottom)) + 28px);
-    background: linear-gradient(
-      to bottom,
-      color-mix(in srgb, var(--bg) 0%, transparent),
-      color-mix(in srgb, var(--bg) 92%, transparent)
-    );
-    pointer-events: none;
   }
   .tab {
     flex: 1;
