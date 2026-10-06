@@ -28,8 +28,10 @@ This directory records the proposed direction for Askesis beyond the original fi
 - [Web design system](./web-design-system.md) — shared mobile/web theme tokens, component kit, navigation and lifecycle UI patterns.
 - [Phase 6 design](./phase-6-design.md) — agreed live coaching, chat/plan review, interrupted output, recovery and measurement scope.
 - [Phase 6 runtime](./phase-6-runtime.md) — delivery, recovery, measurement and rollout contracts.
-- [Phase 6 validation](./phase-6-validation.md) — local checks and outstanding live acceptance.
+- [Phase 6 validation](./phase-6-validation.md) — local checks and owner-confirmed Phase 6 acceptance closeout.
 - [Phase 6 implementation plan](./phase-6-implementation-plan.md) — durable output, authenticated events, draft comparisons, responsive web integration and verification stages.
+- [Phase 7 gap investigation](./phase-7-gap-investigation.md) — existing management controls, evidence-backed gaps and a proposed completion sequence.
+- [Phase 7 refinement and closeout](./phase-7-closeout.md) — bounded completion scope, resolved defaults, implementation and validation status, and the transition to mobile.
 - [Example queries](./example-queries.md) — inspect plans, workout trees, weekly totals, and calibrations.
 - [Implementation roadmap](./implementation-roadmap.md) — the earlier data-model implementation sequence and deferred concerns.
 

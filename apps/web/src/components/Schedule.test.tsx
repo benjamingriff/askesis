@@ -137,3 +137,31 @@ it('labels empty days as unplanned when generation stopped before any coverage w
   expect(screen.queryByText('Rest day')).not.toBeInTheDocument();
   expect(screen.getAllByText('Not planned yet')).toHaveLength(6);
 });
+
+it('constrains library presentation without changing the saved calendar preference', () => {
+  localStorage.setItem('askesis-schedule-mode', 'calendar');
+  const schedule = (presentation: 'week-list' | 'interactive') => (
+    <AccountQueryProvider>
+      <Schedule
+        workouts={[workout]}
+        startDate="2027-01-11"
+        endDate="2027-01-24"
+        coverage={[{ startDate: '2027-01-11', endDate: '2027-01-24' }]}
+        units="km"
+        today="2027-01-12"
+        presentation={presentation}
+      />
+    </AccountQueryProvider>
+  );
+  const mounted = render(schedule('week-list'));
+  expect(screen.queryByRole('radio', { name: 'Calendar' })).not.toBeInTheDocument();
+  expect(screen.queryByRole('grid')).not.toBeInTheDocument();
+  expect(screen.getByRole('button', { name: /6 km easy run/ })).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Next week' })).toBeEnabled();
+  fireEvent.click(screen.getByRole('button', { name: 'Next week' }));
+  expect(screen.getByRole('heading', { name: /Week 2/ })).toBeInTheDocument();
+  expect(localStorage.getItem('askesis-schedule-mode')).toBe('calendar');
+  mounted.rerender(schedule('interactive'));
+  expect(screen.getByRole('radio', { name: 'Calendar' })).toHaveAttribute('aria-checked', 'true');
+  expect(screen.getByRole('grid')).toBeInTheDocument();
+});

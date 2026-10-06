@@ -97,6 +97,7 @@ function mount(path = '/plans/plan-1') {
 }
 beforeEach(() => {
   vi.resetAllMocks();
+  localStorage.clear();
   current = structuredClone(plan) as Plan;
   vi.mocked(api.GET).mockImplementation((async (
     path: string,
@@ -136,6 +137,27 @@ async function openMenuItem(name: string) {
   fireEvent.click(await screen.findByRole('button', { name: 'Plan options' }));
   await act(async () => fireEvent.click(screen.getByRole('menuitem', { name })));
 }
+
+it.each(['/plans/plan-1', '/plan'])(
+  'uses the intended schedule presentation on %s despite a saved calendar preference',
+  async (path) => {
+    current = { ...lockedPlan(current), active: true };
+    localStorage.setItem('askesis-schedule-mode', 'calendar');
+    mount(path);
+    await screen.findByRole('heading', { name: 'Schedule' });
+    if (path === '/plan') {
+      expect(screen.getByRole('radio', { name: 'Calendar' })).toHaveAttribute(
+        'aria-checked',
+        'true',
+      );
+      expect(screen.getByRole('grid')).toBeInTheDocument();
+    } else {
+      expect(screen.queryByRole('radio', { name: 'Calendar' })).not.toBeInTheDocument();
+      expect(screen.queryByRole('grid')).not.toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Previous week' })).toBeInTheDocument();
+    }
+  },
+);
 
 it.each(['/plans/plan-1', '/plan'])(
   'refreshes metadata and brief on %s while preserving the details form concurrency baseline',

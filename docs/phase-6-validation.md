@@ -1,5 +1,7 @@
 # Phase 6 validation
 
+**Status: complete, 2026-10-06.** The owner confirmed that Phase 6 is fully complete and working. This closes the live-provider, browser and hosted-rollout follow-ups recorded below. The command results remain the original implementation evidence; no new production verification was run by the agent during this documentation closeout.
+
 Implementation prepared for owner review on 2026-10-05, rebased onto merged `main`
 at `4c9b41a`, including the Phase 5 production deployment/logging update. This report distinguishes
 local verification from live-provider/browser/hosted acceptance.
@@ -78,24 +80,25 @@ produce `firstSavedBatchMs`. Categories can overlap and must not be summed as an
 exclusive latency breakdown. See the [runtime](./phase-6-runtime.md) for field
 semantics and missing-category behavior.
 
-## Outstanding acceptance
+## Original acceptance follow-ups (closed by owner confirmation)
 
 `pnpm smoke:agent:live` was attempted with the available local credential and failed
 with HTTP 401 (`invalid_api_key`). No successful real-provider streaming or new
-real-coaching timing baseline is claimed. Repeat with a valid local OpenAI key;
+real-coaching timing baseline was claimed at that checkpoint. The original follow-up was to repeat with a valid local OpenAI key;
 keep `gpt-6.1-sol`, medium reasoning and `running-coach-v2` for the full walkthrough.
 The bounded compatibility smoke intentionally uses low reasoning and synthetic
 context, as it did before this phase.
 
 The collaborative T3 preview opened, but navigation to the local Vite server failed
 or timed out for loopback and LAN addresses. Consequently no signed-in desktop or
-narrow-screen visual walkthrough is claimed for this implementation. Automated
+narrow-screen visual walkthrough was claimed at that checkpoint. Automated
 component tests cover the state/recovery behavior; browser layout and signed-in
-interaction still need the owner walkthrough.
+interaction were left for the owner walkthrough at that checkpoint.
 
-No Railway deployment or hosted SSE/reconnect verification was performed. Apply
-the migration and deploy API, worker, then web in the [runtime rollout order](./phase-6-runtime.md#rollout-order).
-Hosted acceptance should cover saved schedule changes before final completion,
+At that checkpoint, no Railway deployment or hosted SSE/reconnect verification
+was performed. The original follow-up was to apply the migration and deploy API,
+worker, then web in the [runtime rollout order](./phase-6-runtime.md#rollout-order).
+The hosted acceptance checklist covered saved schedule changes before final completion,
 Stop after a saved batch, provider failure, reload/network interruption, historical
 version selection, another session's edits and cross-account isolation.
 

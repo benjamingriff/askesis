@@ -40,7 +40,7 @@ Splitting authoritative plan data between PostgreSQL and a document or key-value
 - More difficult backup and restoration
 - More complex validation queries
 
-Specialised secondary systems may be introduced later—for example Redis for caching, OpenSearch for search, object storage for exports, or a warehouse for analytics—but they will not own core plan state.
+Specialised secondary systems may be introduced later—for example Redis for caching, OpenSearch for search, or a warehouse for analytics—but they will not own core plan state.
 
 ## Proposed tables
 

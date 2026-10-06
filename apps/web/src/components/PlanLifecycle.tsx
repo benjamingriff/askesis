@@ -102,6 +102,7 @@ export function PlanToolbar({
   const requestKey = useRequestKey();
   const chat = useOpenPlanChat(plan.id);
   const [confirm, setConfirm] = useState<Confirm>(null);
+  const [reviewedPlan, setReviewedPlan] = useState<Plan | null>(null);
   const [preview, setPreview] = useState<Preview | null>(null);
   const [briefConfirmed, setBriefConfirmed] = useState(false);
   const [acknowledged, setAcknowledged] = useState(false);
@@ -132,6 +133,9 @@ export function PlanToolbar({
 
   const mutation = useMutation({
     mutationFn: async (action: Action): Promise<Plan> => {
+      // Confirmations retain the state the user reviewed, including after a failed/uncertain
+      // request. Immediate activation commands intentionally use the current desired state.
+      const baseline = reviewedPlan ?? plan;
       if (
         action === 'activate' ||
         action === 'deactivate' ||
@@ -141,7 +145,12 @@ export function PlanToolbar({
         return result(
           await api.POST(`/api/v1/plans/{planId}/${action}`, {
             params,
-            body: { expectedStateVersion: plan.stateVersion },
+            body: {
+              expectedStateVersion:
+                action === 'archive' || action === 'unarchive'
+                  ? baseline.stateVersion
+                  : plan.stateVersion,
+            },
           }),
         );
       // Lock exactly what was reviewed: the preview carries the reviewed concurrency values,
@@ -154,15 +163,22 @@ export function PlanToolbar({
               expectedEditNumber: preview.editNumber,
             }
           : {
-              expectedStateVersion: plan.stateVersion,
-              ...(plan.draft
-                ? { expectedDraftId: plan.draft.id, expectedEditNumber: plan.draft.editNumber }
+              expectedStateVersion: baseline.stateVersion,
+              ...(baseline.draft
+                ? {
+                    expectedDraftId: baseline.draft.id,
+                    expectedEditNumber: baseline.draft.editNumber,
+                  }
                 : {}),
             };
       if (action === 'unlock')
         return result(await api.POST('/api/v1/plans/{planId}/unlock', { params, body }));
       const header = {
-        'idempotency-key': requestKey({ action, body, preview, acknowledged, briefConfirmed }),
+        'idempotency-key': requestKey(
+          action === 'discard'
+            ? { action, body }
+            : { action, body, preview, acknowledged, briefConfirmed },
+        ),
       };
       if (action === 'discard')
         return result(
@@ -203,12 +219,14 @@ export function PlanToolbar({
   const open = (next: Confirm) => {
     mutation.reset();
     setLocked(null);
+    setReviewedPlan(structuredClone(plan));
     setConfirm(next);
     if (next === 'review') validate.mutate();
   };
   const close = () => {
     if (mutation.isPending) return;
     setConfirm(null);
+    setReviewedPlan(null);
     setPreview(null);
     setLocked(null);
     mutation.reset();
@@ -331,7 +349,13 @@ export function PlanToolbar({
 
       <ConfirmDialog
         confirm={confirm}
-        plan={plan}
+        plan={reviewedPlan ?? plan}
+        changed={
+          !!reviewedPlan &&
+          (reviewedPlan.stateVersion !== plan.stateVersion ||
+            reviewedPlan.draft?.id !== plan.draft?.id ||
+            reviewedPlan.draft?.editNumber !== plan.draft?.editNumber)
+        }
         busy={busy}
         error={mutation.error?.message}
         onClose={close}
@@ -401,6 +425,7 @@ const COPY = {
 function ConfirmDialog({
   confirm,
   plan,
+  changed,
   busy,
   error,
   onClose,
@@ -408,6 +433,7 @@ function ConfirmDialog({
 }: {
   confirm: Confirm;
   plan: Plan;
+  changed: boolean;
   busy: boolean;
   error?: string | undefined;
   onClose: () => void;
@@ -451,6 +477,12 @@ function ConfirmDialog({
           ? `All draft changes will be permanently removed. Locked version ${plan.locked?.versionNumber} stays unchanged.`
           : copy.body}
       </p>
+      {changed ? (
+        <Notice tone="warning">
+          The plan changed elsewhere. Cancel and reopen this confirmation to review the latest
+          changes.
+        </Notice>
+      ) : null}
       {error ? (
         <Notice tone="danger" role="alert">
           {error}

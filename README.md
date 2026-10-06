@@ -4,7 +4,9 @@ Askesis is an early-stage platform for creating, storing, validating, and eventu
 
 ## Current vertical slice
 
-The repository now contains an end-to-end read path:
+Phases 1–6 are complete. Phase 7 implementation and local validation are complete; see the [closeout](./docs/phase-7-closeout.md) for the verified account policy and remaining release checks. The next product increment connects the native client.
+
+The application reads and changes authoritative training data through:
 
 ```text
 React + React Router
@@ -14,7 +16,7 @@ Hono API
 PostgreSQL
 ```
 
-The web application provides a Clerk-authenticated dashboard-style plan calendar, an expandable workout schedule, a cosmetic mock coaching chat, and Clerk-backed account settings. The ten workouts from the seeded Cardiff example unfold on demand to show their nested prescription, repeats, recoveries, completion conditions, targets, and resolved training zones.
+The responsive web application provides active-plan schedules, a plan library, immutable versions, human-controlled lifecycle actions, persistent coaching conversations and Clerk-backed account settings. A private coaching worker creates and modifies drafts through authorized API tools. Assistant replies stream while saved plan changes appear in the review panel; interrupted output and committed edits survive reloads. Workout details show nested prescriptions, repeats, recoveries, targets and resolved training zones.
 
 ## Package management
 
@@ -62,8 +64,8 @@ See [`docs/local-development.md`](./docs/local-development.md) for local develop
 - Atlas owns schema migrations.
 - Kysely provides typed database queries.
 - Hono exposes a REST/OpenAPI domain API.
-- React Router loaders and actions handle initial frontend data flow.
-- The generated API client is shared with the web application and future Pi worker.
+- React Router owns navigation; TanStack Query owns browser server state and live refresh.
+- The generated API client is shared with the web application and coaching worker.
 - Only the API accesses PostgreSQL.
 
 See [`docs/README.md`](./docs/README.md) for architecture decisions, the data model, and the implementation roadmap.
@@ -73,7 +75,9 @@ See [`docs/README.md`](./docs/README.md) for architecture decisions, the data mo
 ```text
 apps/
   api/          Hono API and Kysely repositories
+  agent/        Private coaching worker using the OpenAI Agents SDK
   web/          React, Vite, and React Router
+  mobile/       Separate Expo UI reference prototype
 packages/
   api-client/   Generated OpenAPI types and client factory
 database/

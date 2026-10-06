@@ -26,6 +26,8 @@ function mount(path = '/chat', client?: QueryClient) {
   const router = createMemoryRouter(
     [
       { path: '/chat', element: <ChatPage /> },
+      { path: '/chat/archive', element: <ChatPage archived /> },
+      { path: '/chat/archive/:conversationId', element: <ChatPage archived /> },
       { path: '/chat/:conversationId', element: <ChatPage /> },
     ],
     { initialEntries: [path] },
@@ -254,6 +256,93 @@ it('loads durable history after navigation and enforces archive read-only state'
   expect(screen.getByLabelText('Message')).toBeDisabled();
   for (const button of screen.getAllByRole('button', { name: 'Restore conversation' }))
     expect(button).toBeEnabled();
+});
+
+function listSavedConversation() {
+  const original = vi.mocked(api.GET).getMockImplementation()!;
+  vi.mocked(api.GET).mockImplementation((async (
+    path: string,
+    options?: { params?: { query?: { collection?: string } } },
+  ) => {
+    if (path === '/api/v1/conversations') {
+      const inCollection =
+        options?.params?.query?.collection === (detail.archived ? 'archive' : 'open');
+      return response({
+        conversations: inCollection ? [{ ...detail, activityAt: '2026-10-06T10:00:00Z' }] : [],
+        nextCursor: null,
+      });
+    }
+    return Reflect.apply(original, api, [path, options]);
+  }) as typeof api.GET);
+}
+
+it('opens an archived row with its archive collection and returns there from the detail', async () => {
+  detail = { ...conversation, archived: true };
+  listSavedConversation();
+  const router = mount('/chat/archive');
+  const row = await screen.findByRole('link', { name: /Test conversation/ });
+  expect(row).toHaveAttribute('href', '/chat/archive/c1');
+  fireEvent.click(row);
+  await screen.findByText('Saved message');
+  expect(screen.getByRole('radio', { name: 'Archived' })).toHaveAttribute('aria-checked', 'true');
+  expect(screen.getByRole('link', { name: 'Archived conversations' })).toHaveAttribute(
+    'href',
+    '/chat/archive',
+  );
+  fireEvent.click(screen.getByRole('link', { name: 'Archived conversations' }));
+  await waitFor(() => expect(router.state.location.pathname).toBe('/chat/archive'));
+  expect(await screen.findByRole('heading', { name: 'Conversation archive' })).toBeInTheDocument();
+});
+
+it.each(['/chat/c1', '/chat/archive/c1'])(
+  'keeps archived direct links at %s in the archive, then moves restored chats to Open',
+  async (path) => {
+    detail = { ...conversation, archived: true };
+    listSavedConversation();
+    vi.mocked(api.POST).mockImplementationOnce((async () => {
+      detail = { ...detail, archived: false, stateVersion: 2 };
+      return response(detail);
+    }) as typeof api.POST);
+    const router = mount(path);
+    await waitFor(() => expect(router.state.location.pathname).toBe('/chat/archive/c1'));
+    expect(await screen.findByText(/archived and read-only/)).toBeInTheDocument();
+    expect(screen.getByRole('radio', { name: 'Archived' })).toHaveAttribute('aria-checked', 'true');
+    fireEvent.click(screen.getByRole('button', { name: 'Restore conversation' }));
+    await waitFor(() => expect(router.state.location.pathname).toBe('/chat/c1'));
+    await waitFor(() =>
+      expect(screen.getByRole('radio', { name: 'Open' })).toHaveAttribute('aria-checked', 'true'),
+    );
+    expect(screen.getByRole('link', { name: 'All conversations' })).toHaveAttribute(
+      'href',
+      '/chat',
+    );
+    expect(await screen.findByRole('link', { name: /Test conversation/ })).toHaveAttribute(
+      'href',
+      '/chat/c1',
+    );
+    expect(screen.getByLabelText('Message')).toBeEnabled();
+    expect(api.POST).toHaveBeenCalledWith(
+      '/api/v1/conversations/{conversationId}/unarchive',
+      expect.objectContaining({ body: { expectedStateVersion: 1 } }),
+    );
+  },
+);
+
+it('moves an archived conversation into the archive immediately after saving the action', async () => {
+  listSavedConversation();
+  vi.mocked(api.POST).mockImplementationOnce((async () => {
+    detail = { ...detail, archived: true, stateVersion: 2 };
+    return response(detail);
+  }) as typeof api.POST);
+  const router = mount('/chat/c1');
+  await screen.findByText('Saved message');
+  fireEvent.click(screen.getByRole('button', { name: 'Conversation options' }));
+  fireEvent.click(screen.getByRole('menuitem', { name: 'Archive conversation' }));
+  await waitFor(() => expect(router.state.location.pathname).toBe('/chat/archive/c1'));
+  await waitFor(() =>
+    expect(screen.getByRole('radio', { name: 'Archived' })).toHaveAttribute('aria-checked', 'true'),
+  );
+  expect(screen.getByLabelText('Message')).toBeDisabled();
 });
 it('formats assistant Markdown while preserving the literal user message', async () => {
   const original = vi.mocked(api.GET).getMockImplementation()!;

@@ -62,7 +62,7 @@ function ChatWorkspace({
   return (
     <div className={cx('chat-layout', (conversationId || composing) && 'has-conversation')}>
       <ConversationList archived={archived} activeId={conversationId} />
-      {archived ? (
+      {archived && !conversationId ? (
         <section className="chat-main chat-placeholder">
           <div className="chat-empty">
             <span className="empty-icon">
@@ -73,13 +73,19 @@ function ChatWorkspace({
           </div>
         </section>
       ) : (
-        <ConversationPanel conversationId={conversationId} />
+        <ConversationPanel conversationId={conversationId} archived={archived} />
       )}
     </div>
   );
 }
 
-function ConversationPanel({ conversationId }: { conversationId: string | undefined }) {
+function ConversationPanel({
+  conversationId,
+  archived,
+}: {
+  conversationId: string | undefined;
+  archived: boolean;
+}) {
   const live = useLiveState();
   const [workspaceView, setWorkspaceView] = useState<'chat' | 'plan'>('chat');
   const [planCollapsed, setPlanCollapsed] = useState(
@@ -115,6 +121,14 @@ function ConversationPanel({ conversationId }: { conversationId: string | undefi
       ),
   });
   const conversation = detail.data;
+  // Old direct links and remote archive/restore events follow the actual saved collection.
+  useEffect(() => {
+    if (conversation && conversation.archived !== archived)
+      void navigate(
+        conversation.archived ? `/chat/archive/${conversation.id}` : `/chat/${conversation.id}`,
+        { replace: true },
+      );
+  }, [conversation, archived, navigate]);
   const planId = conversation?.planId ?? null;
   const plan = usePlan(planId);
   const draftChanges = useDraftChanges(planId ?? '', (planId && plan.data?.draft) || null);
@@ -326,7 +340,11 @@ function ConversationPanel({ conversationId }: { conversationId: string | undefi
       )}
     >
       <header className="chat-topbar">
-        <Link to="/chat" className="chat-back" aria-label="All conversations">
+        <Link
+          to={archived ? '/chat/archive' : '/chat'}
+          className="chat-back"
+          aria-label={archived ? 'Archived conversations' : 'All conversations'}
+        >
           <ArrowLeft size={18} aria-hidden="true" />
         </Link>
         <div className="chat-heading">

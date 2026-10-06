@@ -2,15 +2,15 @@
 
 ## Status and contract
 
-**Implemented for review, 2026-10-05.** Implements the
+**Complete, 2026-10-06.** The owner confirmed Phase 6 is fully complete and working. Implemented on 2026-10-05 against the
 [Phase 6 design](./phase-6-design.md) against merged `main` at `4351ec9`.
 Product questions are resolved. The technical choices below are implementation
 defaults; refine them against tests without changing the agreed behavior.
 
-Local verification and remaining acceptance limits are recorded in the
+Local verification and the owner-confirmed acceptance closeout are recorded in the
 [validation report](./phase-6-validation.md). The [runtime](./phase-6-runtime.md)
 records the final contracts, bounds and rollout order. The stages below preserve
-the agreed implementation checklist; they do not claim hosted acceptance.
+the agreed implementation checklist; the completion status comes from owner acceptance.
 
 This scope delivers streaming replies, accurate activity, live committed plan
 updates, persistent interrupted output, chat-side plan review, workout differences
@@ -336,5 +336,5 @@ complete. All changes to `apps/mobile` remain excluded throughout verification.
 
 Phase 6 is complete when the agreed live review experience and recovery checks
 pass, including persistence of interrupted output and targeted updates while chat
-is closed. This scope does not deliver native API integration, Markdown export,
+is closed. This scope does not deliver native API integration,
 new model selection, generation-speed optimization or Phase 8 alpha operations.

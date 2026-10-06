@@ -2,7 +2,7 @@
 
 ## Status
 
-**Accepted direction. Phase 0 is complete and the Phase 1 implementation contract is agreed.** Individual later phases will be refined immediately before implementation. This document records the intended sequence, scope, and current technical decisions so that future work can be evaluated against a shared plan.
+**Accepted direction. Phases 1–6 are complete; Phase 7 implementation is complete, with local validation and development account policy verified.** Individual later phases will be refined immediately before implementation. This document records the intended sequence, scope, and current technical decisions so that future work can be evaluated against a shared plan.
 
 ## Objective
 
@@ -19,7 +19,7 @@ Chat and plan updates appear in the UI as work progresses
     ↓
 Athlete reviews and locks a plan revision
     ↓
-Athlete follows, revises, restores, or exports the plan
+Athlete follows, revises, or restores the plan
 ```
 
 The objective is to get this loop working end to end, learn from real use for several months, and only then reconsider major platform choices or broader product features.
@@ -101,7 +101,6 @@ After the prototype has been used for several months, the team may reassess whet
 - Draft, lock, version, restore, and archive workflows
 - Conversational collection of a structured, plan-specific brief
 - Plan-specific running fitness calibration and pace recommendations
-- Markdown plan export
 - Clerk-managed identity controls
 - Railway deployment
 - Invitation-restricted Clerk production authentication
@@ -145,7 +144,7 @@ The hosted alpha is invitation-only and supports running only. It succeeds when 
 5. Generate and refine a running plan through chat.
 6. Review and explicitly lock its first version.
 7. Activate it and view its calendar and workouts.
-8. Return later to unlock, refine, lock a new version, restore an older version, or export it.
+8. Return later to unlock, refine, lock a new version, or restore an older version.
 
 A brand-new account sees an empty Plan view with **Create a plan** as its primary action and the empty Plan Library as a secondary destination.
 
@@ -196,10 +195,10 @@ Activation is separate from locking:
 
 - The calendar-based **Plan** view shows active plans only.
 - It includes the calendar and workout list.
-- When an active plan is unlocked, this view shows the unpublished draft with a prominent indicator rather than showing the unchanged locked version.
+- When an active plan is unlocked, this view labels it Unlocked and offers both the stable locked source and its unpublished draft. Unlocking selects the draft; explicit source choices are remembered per account. With no valid preference, or when switching plans, the view starts with locked content.
 - The **Plan Library** contains all non-archived plans, including active and inactive plans.
 - Opening a library plan shows its plan details and workout list without the calendar.
-- The library exposes activation, lock state, version history, export, and archive controls.
+- The library exposes activation, lock state, version history and archive controls.
 - Archived plans and chats live in a separate archive area.
 
 ### Locking and unlocking
@@ -282,23 +281,9 @@ Any change to this aggregate happens in the unlocked draft and is committed toge
 ### Sharing and permissions
 
 - Every plan has one owning account for the alpha.
-- Only its owner can activate, unlock, edit, lock, restore, export, or archive it.
+- Only its owner can activate, unlock, edit, lock, restore, or archive it.
 - User-facing plan sharing and collaboration are deferred.
 - Phase 2 removes the existing membership model; alpha plans are owner-only.
-- Markdown export is the initial sharing mechanism.
-
-### Export
-
-Users may export either the current locked version or an unpublished draft as Markdown. Draft exports are clearly labelled. Export includes:
-
-- Structured plan brief and assumptions
-- Goals
-- Fitness calibration and zones
-- Weekly schedule
-- Workout prescriptions and notes
-- Version number and export timestamp
-
-Chats and private agent reasoning are excluded.
 
 ### Phase 0 exit criteria
 
@@ -309,7 +294,7 @@ Chats and private agent reasoning are excluded.
 - [x] Lock, unlock, validation, discard, and restore semantics agreed.
 - [x] Complete-aggregate version boundary agreed.
 - [x] Chat ownership and archival semantics agreed.
-- [x] Alpha account, sharing, deletion, sport, and export scope agreed.
+- [x] Alpha account, sharing, deletion, and sport scope agreed.
 
 ## Phase 1: engineering foundation and deployment rail
 
@@ -802,6 +787,8 @@ Aggregate spend ceilings are deferred to provider setup at the user's request. T
 
 ## Phase 6: live synchronization and TanStack Query
 
+**Status: complete.** The owner confirmed on 2026-10-06 that Phase 6 is fully complete and working. See the [validation record](./phase-6-validation.md) for the original local evidence and acceptance closeout.
+
 TanStack Query is already in place. Add an authenticated server event stream and
 complete the live coaching/review experience. The [Phase 6 design](./phase-6-design.md)
 records the accepted product refinement; the [implementation plan](./phase-6-implementation-plan.md)
@@ -853,6 +840,10 @@ Avoid storing every individual model token as a separate durable database mutati
 
 ## Phase 7: product management controls
 
+**Status: implementation complete; local checks and development account policy verified.** Much of this scope was delivered in Phases 2–6; the [gap investigation](./phase-7-gap-investigation.md) records the original findings. The [refinement and closeout](./phase-7-closeout.md) completes G1–G5, records resolved defaults and keeps optional history/editor refinements outside the mobile critical path. Fresh API and hosted-account checks confirm self-deletion is disabled for both existing users and future accounts. Web deployment and a desktop/narrow-screen walkthrough remain release verification steps.
+
+**Scope decision, 2026-10-06:** Markdown plan export has been removed as a possible feature. It is not part of Phase 7, the private alpha, or the future feature backlog.
+
 Build the controls required for daily prototype use.
 
 ### Plan view and library
@@ -872,7 +863,6 @@ Build the controls required for daily prototype use.
 - View version history and differences
 - Restore an older version as a draft
 - Archive and unarchive
-- Export locked versions or drafts as Markdown
 
 ### Chats
 
@@ -890,16 +880,7 @@ Build the controls required for daily prototype use.
 
 There is no global Askesis athlete profile and no user-facing permanent deletion flow in the alpha. Maintain a documented operator-assisted process for data-removal requests.
 
-### Export
-
-An initial endpoint can generate Markdown from the authoritative normalized representation:
-
-```http
-GET /api/v1/plans/:planId/export?format=markdown&source=locked
-GET /api/v1/plans/:planId/export?format=markdown&source=draft
-```
-
-Draft exports must be labelled. Chats and private agent reasoning are excluded.
+The account self-deletion restriction is a private-alpha policy. A native App Store release with account creation requires a complete account/data deletion flow initiated from the app; revisit this policy before that release.
 
 ### Exit criteria
 
@@ -907,7 +888,6 @@ Draft exports must be labelled. Chats and private agent reasoning are excluded.
 - Active plans, the library, and archive have distinct and understandable roles.
 - Human review gates lock, unlock, discard, and restore actions.
 - Permanent deletion is absent from user-facing controls.
-- Markdown export represents the complete selected version or draft.
 
 ## Phase 8: friends-and-family release
 
@@ -947,7 +927,7 @@ Complete the operational and product work required before invitations are sent.
 ### Exit criteria
 
 - Invited users can onboard without developer assistance.
-- A user can create, revise, lock, restore, and export a plan through chat.
+- A user can create and revise a plan through chat, then review, lock, and restore it through human controls.
 - Cross-user access tests pass.
 - Backups, monitoring, cost controls, and the operator-assisted data-removal process are operational.
 - The repository can be shared publicly without exposing private data.
@@ -1022,7 +1002,6 @@ Prompt and skill revisions should preserve an original platform version and supp
 ## Milestone 4: private alpha
 
 - Plan, chat, and account controls
-- Markdown export
 - Refined first-use journey and interface
 - Rate and spending limits
 - Monitoring and backups

@@ -66,7 +66,7 @@ export function ConversationList({
         {rows.map((row) => (
           <Link
             key={row.id}
-            to={`/chat/${row.id}`}
+            to={archived ? `/chat/archive/${row.id}` : `/chat/${row.id}`}
             className={cx('conversation-row', row.id === activeId && 'active')}
             aria-current={row.id === activeId ? 'page' : undefined}
           >

@@ -315,6 +315,7 @@ function RevisionView({ planId, revisionId }: { planId: string; revisionId: stri
           ) : null}
           {workouts.data && brief.data && !brief.error ? (
             <Schedule
+              presentation="week-list"
               workouts={workouts.data}
               version={revision}
               startDate={revision.startDate}

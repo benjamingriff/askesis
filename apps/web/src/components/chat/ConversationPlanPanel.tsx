@@ -56,6 +56,7 @@ export function ConversationPlanPanel({
       ) : null}
       {plan.data ? (
         <PlanView
+          schedulePresentation="interactive"
           plan={plan.data}
           view={view}
           onViewChange={setView}

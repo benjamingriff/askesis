@@ -307,6 +307,7 @@ Before sharing the prototype:
 
 - [ ] Clerk production keys are used rather than development keys.
 - [ ] Clerk secret keys exist only in the API service.
+- [ ] Private-alpha account self-deletion is disabled for the instance and existing users; verify the [Phase 7 account policy](./phase-7-closeout.md#account-configuration-and-verification). Revisit this restriction before a native App Store release.
 - [ ] PostgreSQL credentials exist only in the API and migration environment.
 - [ ] The API has no unnecessary public domain.
 - [ ] `CLERK_AUTHORIZED_PARTIES` contains only deployed origins.

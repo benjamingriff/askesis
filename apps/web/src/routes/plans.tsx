@@ -1,10 +1,10 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { ArrowLeft, CalendarDays, ChevronRight, Plus, Power } from 'lucide-react';
+import { ArrowLeft, CalendarDays, ChevronRight, Plus } from 'lucide-react';
 import { useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router';
 import { api } from '../api';
 import { useRequestKey } from '../components/PlanLifecycle';
-import { StatusPill } from '../components/PlanWidgets';
+import { PlanStatus } from '../components/PlanWidgets';
 import { PlanView } from '../components/PlanView';
 import {
   Button,
@@ -13,7 +13,6 @@ import {
   ErrorState,
   LoadingState,
   Notice,
-  Pill,
   Segmented,
 } from '../components/ui';
 import { formatRange } from '../lib/format';
@@ -87,12 +86,7 @@ export function PlansPage({ archived = false }: { archived?: boolean }) {
             <li key={plan.id}>
               <Link to={`/plans/${plan.id}`} className="plan-card">
                 <div className="plan-card-top">
-                  <StatusPill plan={plan} />
-                  {plan.active ? (
-                    <Pill icon={Power} tone="neutral">
-                      Active
-                    </Pill>
-                  ) : null}
+                  <PlanStatus plan={plan} />
                 </div>
                 <strong>{plan.displayName}</strong>
                 <span className="muted">
@@ -240,6 +234,7 @@ export function PlanPage() {
         view={view}
         onViewChange={setView}
         eyebrow={back}
+        schedulePresentation="week-list"
       />
     </>
   );

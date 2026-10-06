@@ -2,15 +2,15 @@
 
 ## Status
 
-**Product refinement complete, 2026-10-05.** This refines Phase 6 of the
+**Phase complete, 2026-10-06.** The owner confirmed that the delivered Phase 6 experience is fully complete and working. Product refinement was completed on 2026-10-05. This refines Phase 6 of the
 [V1 roadmap](./v1-poc-development-plan.md), against merged `main` at `4351ec9`.
 Phase 5 and the web design-system alignment are already merged. Accepted product
 decisions are marked below; supporting engineering defaults are scoped in the
 [implementation plan](./phase-6-implementation-plan.md). No product questions
-remain open. The web implementation is now delivered for review; runtime details
+remain open. The web implementation is complete; runtime details
 and verification are recorded in the [runtime](./phase-6-runtime.md) and
-[validation report](./phase-6-validation.md). Live-provider acceptance and hosted
-rollout remain pending.
+[validation report](./phase-6-validation.md). The owner confirmation closes the previous live-provider acceptance and hosted
+rollout follow-ups.
 
 **User direction, 2026-10-05:** refine the product through questions before starting
 the build. Related, straightforward questions may be grouped; questions needing
@@ -266,10 +266,10 @@ using that evidence.
 
 ## Scope boundary
 
-Product refinement is complete and the web implementation is delivered for review.
-Export and remaining management controls
+Phase 6 is complete. Remaining management controls
 stay in Phase 7; invitation setup, release spending limits, backups and final
 alpha readiness stay in Phase 8. Native API wiring is deferred to separate work.
+Markdown plan export was removed from the product roadmap on 2026-10-06.
 Web research, automatic workout ingestion, broad multi-sport coaching,
 prompt customization, dedicated generation-speed optimization and a generic
 real-time infrastructure platform are outside this build.
