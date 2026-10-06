@@ -138,7 +138,6 @@ export function applyTheme(theme: Theme, root: HTMLElement = document.documentEl
     '--warning-soft': alpha(STATUS_COLORS.warning, 0.14),
     '--danger': readableOn(STATUS_COLORS.danger, c.bg),
     '--danger-soft': alpha(STATUS_COLORS.danger, 0.14),
-    '--tab-bar-shadow': `0 8px 18px rgba(0, 0, 0, ${theme.isDark ? 0.5 : 0.14})`,
   };
   for (const [key, value] of Object.entries(vars)) root.style.setProperty(key, value);
   root.style.colorScheme = theme.isDark ? 'dark' : 'light';
