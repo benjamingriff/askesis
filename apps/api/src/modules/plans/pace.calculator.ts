@@ -1,4 +1,4 @@
-/** Askesis run-pace-v1. See docs/run-pace-v1.md for equations and range policy. */
+/** Askesis run-pace-v1. See docs/product/run-pace-v1.md for equations and range policy. */
 export const CALCULATOR_VERSION = 'run-pace-v1';
 export const MILE_METRES = 1609.344;
 export type PaceInput =

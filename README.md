@@ -1,10 +1,10 @@
 # Askesis
 
-Askesis is an early-stage platform for creating, storing, validating, and eventually adapting structured training plans.
+Askesis is an early-stage platform for creating, storing, validating, and adapting structured training plans.
 
 ## Current vertical slice
 
-Phases 1–6 are complete. Phase 7 implementation and local validation are complete; see the [closeout](./docs/phase-7-closeout.md) for the verified account policy and remaining release checks. The next product increment connects the native client.
+Phases 1–7 are implemented, and Phase 7 is merged into `main`. Development continues on the responsive web app, drawing selected features from the mobile reference prototype; native integration is deferred. See the [current handoff](./docs/current-handoff.md) for priorities and the [Phase 7 closeout](./docs/archive/phase-7/phase-7-closeout.md) for verification evidence.
 
 The application reads and changes authoritative training data through:
 
@@ -29,7 +29,7 @@ pnpm install --frozen-lockfile
 
 ## Run with Docker
 
-Build and start PostgreSQL, Atlas migrations, the development seed, API, and web application:
+Configure ignored `.env` with Clerk development keys as described in [local setup](./docs/operations/local-development.md), then build/start PostgreSQL, Atlas migrations, seed, fixture publication, API and web. Real coaching additionally requires the [agent profile](./docs/operations/phase-5-runtime.md#local-setup):
 
 ```bash
 docker compose up --build -d
@@ -40,7 +40,7 @@ Open:
 - Web: <http://localhost:8080>
 - API documentation: <http://localhost:3000/api/docs>
 - API readiness: <http://localhost:3000/api/ready>
-- Workout endpoint: <http://localhost:3000/api/v1/workouts> (requires a Clerk session token)
+- Workout API: `/api/v1/workouts?planVersionId=<version-UUID>` (requires an owner Clerk session)
 
 Inspect service state:
 
@@ -56,7 +56,7 @@ docker compose down
 
 Run the lightweight validation suite with `pnpm check`, PostgreSQL integration tests with `pnpm test:db`, and the disposable full-stack smoke test with `pnpm smoke`.
 
-See [`docs/local-development.md`](./docs/local-development.md) for local development and type-generation commands.
+See [`docs/operations/local-development.md`](./docs/operations/local-development.md) for local development and type-generation commands.
 
 ## Architecture
 
@@ -65,8 +65,8 @@ See [`docs/local-development.md`](./docs/local-development.md) for local develop
 - Kysely provides typed database queries.
 - Hono exposes a REST/OpenAPI domain API.
 - React Router owns navigation; TanStack Query owns browser server state and live refresh.
-- The generated API client is shared with the web application and coaching worker.
-- Only the API accesses PostgreSQL.
+- Web uses the generated public API client; the worker uses a fetch/Zod client for internal routes into the same domain services.
+- Only the API accesses PostgreSQL among application services; operator migration/backup/test jobs also connect.
 
 See [`docs/README.md`](./docs/README.md) for architecture decisions, the data model, and the implementation roadmap.
 
@@ -85,6 +85,11 @@ database/
   seed/         Idempotent development seed
   fixtures/     Legacy source plan material
 docs/
+  product/      Roadmap, behavior contracts and interface guidance
+  architecture/ Service boundaries, data model and schema contracts
+  operations/   Development, deployment and recovery guides
+  adr/          Numbered architecture decisions
+  archive/      Completed delivery plans and validation records
 ```
 
 ## Existing fixtures
