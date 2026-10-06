@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { calculatePaces, planToday } from './pace.calculator.js';
+import { calculatePaces, nearestZone, planToday } from './pace.calculator.js';
 
 describe('run-pace-v1', () => {
   it('matches the published 38:46 10K reference scalar of approximately 53.9', () => {
@@ -45,6 +45,19 @@ describe('run-pace-v1', () => {
       expect(() =>
         calculatePaces({ method: 'threshold_pace', secondsPerKilometre: pace }),
       ).toThrow();
+  });
+  it('assigns explicit paces to the containing zone, else the nearest target', () => {
+    const { zones } = calculatePaces({ method: 'threshold_pace', secondsPerKilometre: 270 });
+    const zone = (key: string) => zones.find((z) => z.key === key)!;
+    for (const z of zones) {
+      expect(nearestZone(z.target, zones)?.key).toBe(z.key);
+      expect(nearestZone(z.fast, zones)?.key).toBe(z.key);
+    }
+    // A few seconds off a zone's range still reads as that zone.
+    expect(nearestZone(zone('interval').fast - 3, zones)?.key).toBe('interval');
+    expect(nearestZone(zone('easy').slow + 60, zones)?.key).toBe('easy');
+    expect(nearestZone(zone('repetition').fast - 30, zones)?.key).toBe('repetition');
+    expect(nearestZone(300, [])).toBeNull();
   });
   it('uses the plan calendar date across midnight and daylight saving', () => {
     const now = new Date('2026-09-09T23:30:00Z');
