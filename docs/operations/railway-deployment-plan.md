@@ -32,7 +32,7 @@ sh -c 'atlas migrate apply --dir file:///app/database/migrations --url "${DATABA
 
 That command assumes a base URL without query parameters and the earlier private connection's disabled-TLS configuration. Verify current connection settings; use `&` rather than another `?` if adding a parameter to a URL with a query. The explicit shell expands the environment variable. Repository `atlas.hcl` defines only the `local` environment, so there is no `--env railway` target.
 
-Check `/api/ready` for current checkpoint `20261005120000`; `/api/health` is process-only. Migrations are append-only. Backup/rehearse difficult changes before rollout. Do not roll back by dropping durable run/live/version tables.
+Check `/api/ready` for current checkpoint `20261007120000`; `/api/health` is process-only. Migrations are append-only. Backup/rehearse difficult changes before rollout. Do not roll back by dropping durable run/live/version tables.
 
 Public Swagger/OpenAPI paths are always registered in the current application. There is no configuration switch that disables them. A private API behind nginx avoids a separate public API entry point.
 

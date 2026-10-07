@@ -1,5 +1,6 @@
 import type { ClerkClient } from '@clerk/backend';
 import { getDatabase } from '../database/client.js';
+import { validTimezone } from '../modules/athletes/timezone.js';
 import type { AuthenticatedAthlete } from './types.js';
 
 const provider = 'clerk';
@@ -9,7 +10,12 @@ async function findAthlete(clerkUserId: string): Promise<AuthenticatedAthlete | 
   const row = await database
     .selectFrom('athlete_identities')
     .innerJoin('athletes', 'athletes.id', 'athlete_identities.athlete_id')
-    .select(['athletes.id', 'athletes.display_name', 'athlete_identities.id as identity_id'])
+    .select([
+      'athletes.id',
+      'athletes.display_name',
+      'athletes.timezone',
+      'athlete_identities.id as identity_id',
+    ])
     .where('athlete_identities.provider', '=', provider)
     .where('athlete_identities.provider_subject', '=', clerkUserId)
     .executeTakeFirst();
@@ -26,6 +32,7 @@ async function findAthlete(clerkUserId: string): Promise<AuthenticatedAthlete | 
     id: row.id,
     displayName: row.display_name,
     clerkUserId,
+    timezone: row.timezone,
   };
 }
 
@@ -55,7 +62,7 @@ export async function ensureAthlete(
       const athlete = await transaction
         .insertInto('athletes')
         .values({ display_name: displayName })
-        .returning(['id', 'display_name'])
+        .returning(['id', 'display_name', 'timezone'])
         .executeTakeFirstOrThrow();
 
       await transaction
@@ -71,6 +78,7 @@ export async function ensureAthlete(
         id: athlete.id,
         displayName: athlete.display_name,
         clerkUserId,
+        timezone: athlete.timezone,
       };
     });
   } catch (error) {
@@ -79,4 +87,22 @@ export async function ensureAthlete(
     if (concurrentlyCreated !== null) return concurrentlyCreated;
     throw error;
   }
+}
+
+/**
+ * Follow the timezone the athlete's device reports. Requests without a valid header keep the
+ * stored value, which background work (the coaching worker) also uses.
+ */
+export async function syncAthleteTimezone(
+  athlete: AuthenticatedAthlete,
+  reported: string | undefined,
+): Promise<AuthenticatedAthlete> {
+  const timezone = validTimezone(reported);
+  if (timezone === null || timezone === athlete.timezone) return athlete;
+  await getDatabase()
+    .updateTable('athletes')
+    .set({ timezone, updated_at: new Date() })
+    .where('id', '=', athlete.id)
+    .execute();
+  return { ...athlete, timezone };
 }

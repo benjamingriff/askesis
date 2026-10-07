@@ -16,7 +16,7 @@ const config = parseAgentConfig(process.env);
 const model = new ScriptedModel([
   modelResponse({
     usage: new Usage(),
-    output: [functionCall('read_plan_context', {}, { callId: 'smoke-context' })],
+    output: [functionCall('read_performance', {}, { callId: 'smoke-performance' })],
   }),
   modelResponse({
     usage: new Usage(),

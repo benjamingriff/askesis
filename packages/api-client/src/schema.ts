@@ -149,7 +149,6 @@ export interface paths {
                                         prescriptionChanged: boolean;
                                     }[];
                                     assumptionsChanged: boolean;
-                                    paceGuidesChanged: boolean;
                                     datesChanged: boolean;
                                     counts: {
                                         added: number;
@@ -161,6 +160,7 @@ export interface paths {
                                     approximate?: boolean;
                                 } | null;
                                 legacyChanges: boolean;
+                                performanceChanged: boolean;
                                 output: {
                                     itemId: string;
                                     position: number;
@@ -377,7 +377,6 @@ export interface paths {
                                     prescriptionChanged: boolean;
                                 }[];
                                 assumptionsChanged: boolean;
-                                paceGuidesChanged: boolean;
                                 datesChanged: boolean;
                                 counts: {
                                     added: number;
@@ -389,6 +388,7 @@ export interface paths {
                                 approximate?: boolean;
                             } | null;
                             legacyChanges: boolean;
+                            performanceChanged: boolean;
                             output: {
                                 itemId: string;
                                 position: number;
@@ -483,7 +483,6 @@ export interface paths {
                                 prescriptionChanged: boolean;
                             }[];
                             assumptionsChanged: boolean;
-                            paceGuidesChanged: boolean;
                             datesChanged: boolean;
                             counts: {
                                 added: number;
@@ -1011,6 +1010,11 @@ export interface paths {
                                         };
                                     };
                                 };
+                                calibrationBasis: {
+                                    system: string;
+                                    calibrationId: string;
+                                    effectiveFrom: string;
+                                }[];
                             }[];
                         };
                     };
@@ -1140,6 +1144,11 @@ export interface paths {
                                         };
                                     };
                                 };
+                                calibrationBasis: {
+                                    system: string;
+                                    calibrationId: string;
+                                    effectiveFrom: string;
+                                }[];
                             };
                             content: {
                                 [key: string]: unknown;
@@ -2440,7 +2449,6 @@ export interface paths {
                                     goal: string;
                                     /** @enum {string} */
                                     unit: "kilometres" | "miles";
-                                    timezone: string;
                                     weeklyDistance: {
                                         /** @enum {string} */
                                         status: "unanswered";
@@ -2506,26 +2514,6 @@ export interface paths {
                                     prescribedThrough: string | null;
                                     /** @enum {string} */
                                     status: "in_progress" | "completed" | "interrupted";
-                                }[];
-                                calibrations: {
-                                    id: string;
-                                    effectiveFrom: string;
-                                    effectiveUntil: string | null;
-                                    /** @enum {string} */
-                                    method: "race_result" | "threshold_pace";
-                                    distanceMetres: number | null;
-                                    durationSeconds: number | null;
-                                    secondsPerKilometre: number | null;
-                                    calculatorVersion: string;
-                                    /** @enum {string} */
-                                    provenance: "user_supplied" | "user_estimate" | "agent_estimate";
-                                    estimateBasis: string | null;
-                                    zones: {
-                                        key: string;
-                                        fast: number;
-                                        target: number;
-                                        slow: number;
-                                    }[];
                                 }[];
                             };
                             draftId: string;
@@ -4456,7 +4444,7 @@ export interface paths {
             };
             requestBody?: never;
             responses: {
-                /** @description Brief and calibration state. */
+                /** @description Brief, confirmation and coverage state. */
                 200: {
                     headers: {
                         [name: string]: unknown;
@@ -4472,7 +4460,6 @@ export interface paths {
                                 goal: string;
                                 /** @enum {string} */
                                 unit: "kilometres" | "miles";
-                                timezone: string;
                                 weeklyDistance: {
                                     /** @enum {string} */
                                     status: "unanswered";
@@ -4538,26 +4525,6 @@ export interface paths {
                                 prescribedThrough: string | null;
                                 /** @enum {string} */
                                 status: "in_progress" | "completed" | "interrupted";
-                            }[];
-                            calibrations: {
-                                id: string;
-                                effectiveFrom: string;
-                                effectiveUntil: string | null;
-                                /** @enum {string} */
-                                method: "race_result" | "threshold_pace";
-                                distanceMetres: number | null;
-                                durationSeconds: number | null;
-                                secondsPerKilometre: number | null;
-                                calculatorVersion: string;
-                                /** @enum {string} */
-                                provenance: "user_supplied" | "user_estimate" | "agent_estimate";
-                                estimateBasis: string | null;
-                                zones: {
-                                    key: string;
-                                    fast: number;
-                                    target: number;
-                                    slow: number;
-                                }[];
                             }[];
                         };
                     };
@@ -4628,7 +4595,6 @@ export interface paths {
                             goal: string;
                             /** @enum {string} */
                             unit: "kilometres" | "miles";
-                            timezone: string;
                             weeklyDistance: {
                                 /** @enum {string} */
                                 status: "unanswered";
@@ -4676,7 +4642,7 @@ export interface paths {
                 };
             };
             responses: {
-                /** @description Brief and calibration state. */
+                /** @description Brief, confirmation and coverage state. */
                 200: {
                     headers: {
                         [name: string]: unknown;
@@ -4692,7 +4658,6 @@ export interface paths {
                                 goal: string;
                                 /** @enum {string} */
                                 unit: "kilometres" | "miles";
-                                timezone: string;
                                 weeklyDistance: {
                                     /** @enum {string} */
                                     status: "unanswered";
@@ -4758,26 +4723,6 @@ export interface paths {
                                 prescribedThrough: string | null;
                                 /** @enum {string} */
                                 status: "in_progress" | "completed" | "interrupted";
-                            }[];
-                            calibrations: {
-                                id: string;
-                                effectiveFrom: string;
-                                effectiveUntil: string | null;
-                                /** @enum {string} */
-                                method: "race_result" | "threshold_pace";
-                                distanceMetres: number | null;
-                                durationSeconds: number | null;
-                                secondsPerKilometre: number | null;
-                                calculatorVersion: string;
-                                /** @enum {string} */
-                                provenance: "user_supplied" | "user_estimate" | "agent_estimate";
-                                estimateBasis: string | null;
-                                zones: {
-                                    key: string;
-                                    fast: number;
-                                    target: number;
-                                    slow: number;
-                                }[];
                             }[];
                         };
                     };
@@ -4855,7 +4800,7 @@ export interface paths {
             };
             requestBody?: never;
             responses: {
-                /** @description Brief and calibration state. */
+                /** @description Brief, confirmation and coverage state. */
                 200: {
                     headers: {
                         [name: string]: unknown;
@@ -4871,7 +4816,6 @@ export interface paths {
                                 goal: string;
                                 /** @enum {string} */
                                 unit: "kilometres" | "miles";
-                                timezone: string;
                                 weeklyDistance: {
                                     /** @enum {string} */
                                     status: "unanswered";
@@ -4937,26 +4881,6 @@ export interface paths {
                                 prescribedThrough: string | null;
                                 /** @enum {string} */
                                 status: "in_progress" | "completed" | "interrupted";
-                            }[];
-                            calibrations: {
-                                id: string;
-                                effectiveFrom: string;
-                                effectiveUntil: string | null;
-                                /** @enum {string} */
-                                method: "race_result" | "threshold_pace";
-                                distanceMetres: number | null;
-                                durationSeconds: number | null;
-                                secondsPerKilometre: number | null;
-                                calculatorVersion: string;
-                                /** @enum {string} */
-                                provenance: "user_supplied" | "user_estimate" | "agent_estimate";
-                                estimateBasis: string | null;
-                                zones: {
-                                    key: string;
-                                    fast: number;
-                                    target: number;
-                                    slow: number;
-                                }[];
                             }[];
                         };
                     };
@@ -5036,7 +4960,7 @@ export interface paths {
             };
             requestBody?: never;
             responses: {
-                /** @description Brief and calibration state. */
+                /** @description Brief, confirmation and coverage state. */
                 200: {
                     headers: {
                         [name: string]: unknown;
@@ -5052,7 +4976,6 @@ export interface paths {
                                 goal: string;
                                 /** @enum {string} */
                                 unit: "kilometres" | "miles";
-                                timezone: string;
                                 weeklyDistance: {
                                     /** @enum {string} */
                                     status: "unanswered";
@@ -5118,26 +5041,6 @@ export interface paths {
                                 prescribedThrough: string | null;
                                 /** @enum {string} */
                                 status: "in_progress" | "completed" | "interrupted";
-                            }[];
-                            calibrations: {
-                                id: string;
-                                effectiveFrom: string;
-                                effectiveUntil: string | null;
-                                /** @enum {string} */
-                                method: "race_result" | "threshold_pace";
-                                distanceMetres: number | null;
-                                durationSeconds: number | null;
-                                secondsPerKilometre: number | null;
-                                calculatorVersion: string;
-                                /** @enum {string} */
-                                provenance: "user_supplied" | "user_estimate" | "agent_estimate";
-                                estimateBasis: string | null;
-                                zones: {
-                                    key: string;
-                                    fast: number;
-                                    target: number;
-                                    slow: number;
-                                }[];
                             }[];
                         };
                     };
@@ -5225,7 +5128,7 @@ export interface paths {
                 };
             };
             responses: {
-                /** @description Brief and calibration state. */
+                /** @description Brief, confirmation and coverage state. */
                 200: {
                     headers: {
                         [name: string]: unknown;
@@ -5241,7 +5144,6 @@ export interface paths {
                                 goal: string;
                                 /** @enum {string} */
                                 unit: "kilometres" | "miles";
-                                timezone: string;
                                 weeklyDistance: {
                                     /** @enum {string} */
                                     status: "unanswered";
@@ -5308,26 +5210,6 @@ export interface paths {
                                 /** @enum {string} */
                                 status: "in_progress" | "completed" | "interrupted";
                             }[];
-                            calibrations: {
-                                id: string;
-                                effectiveFrom: string;
-                                effectiveUntil: string | null;
-                                /** @enum {string} */
-                                method: "race_result" | "threshold_pace";
-                                distanceMetres: number | null;
-                                durationSeconds: number | null;
-                                secondsPerKilometre: number | null;
-                                calculatorVersion: string;
-                                /** @enum {string} */
-                                provenance: "user_supplied" | "user_estimate" | "agent_estimate";
-                                estimateBasis: string | null;
-                                zones: {
-                                    key: string;
-                                    fast: number;
-                                    target: number;
-                                    slow: number;
-                                }[];
-                            }[];
                         };
                     };
                 };
@@ -5384,7 +5266,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/plans/{planId}/draft/calibrations": {
+    "/api/v1/performance": {
         parameters: {
             query?: never;
             header?: never;
@@ -5395,117 +5277,18 @@ export interface paths {
             parameters: {
                 query?: never;
                 header?: never;
-                path: {
-                    planId: string;
-                };
+                path?: never;
                 cookie?: never;
             };
             requestBody?: never;
             responses: {
-                /** @description Brief and calibration state. */
+                /** @description The athlete’s calibration timeline and the entries in effect today. */
                 200: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": {
-                            versionId: string;
-                            editNumber: number;
-                            startDate: string | null;
-                            endDate: string | null;
-                            readOnly: boolean;
-                            brief: {
-                                goal: string;
-                                /** @enum {string} */
-                                unit: "kilometres" | "miles";
-                                timezone: string;
-                                weeklyDistance: {
-                                    /** @enum {string} */
-                                    status: "unanswered";
-                                    value: unknown;
-                                } | {
-                                    /** @enum {string} */
-                                    status: "unknown";
-                                    value: unknown;
-                                } | {
-                                    /** @enum {string} */
-                                    status: "known";
-                                    value: number;
-                                };
-                                currentRuns: {
-                                    /** @enum {string} */
-                                    status: "unanswered";
-                                    value: unknown;
-                                } | {
-                                    /** @enum {string} */
-                                    status: "unknown";
-                                    value: unknown;
-                                } | {
-                                    /** @enum {string} */
-                                    status: "known";
-                                    value: number;
-                                };
-                                longestRun: {
-                                    /** @enum {string} */
-                                    status: "unanswered";
-                                    value: unknown;
-                                } | {
-                                    /** @enum {string} */
-                                    status: "unknown";
-                                    value: unknown;
-                                } | {
-                                    /** @enum {string} */
-                                    status: "known";
-                                    value: number;
-                                };
-                                desiredRuns: number | null;
-                                weekdays: ("available" | "preferred" | "unavailable")[];
-                                context: string;
-                            };
-                            confirmed: boolean;
-                            hash: string;
-                            scheduleReviewRequired: boolean;
-                            findings: {
-                                code: string;
-                                /** @enum {string} */
-                                severity: "error" | "warning";
-                                message: string;
-                                path: string;
-                            }[];
-                            coverage: {
-                                startDate: string;
-                                endDate: string;
-                                current: boolean;
-                            }[];
-                            generations?: {
-                                runId: string;
-                                startDate: string;
-                                endDate: string;
-                                prescribedThrough: string | null;
-                                /** @enum {string} */
-                                status: "in_progress" | "completed" | "interrupted";
-                            }[];
-                            calibrations: {
-                                id: string;
-                                effectiveFrom: string;
-                                effectiveUntil: string | null;
-                                /** @enum {string} */
-                                method: "race_result" | "threshold_pace";
-                                distanceMetres: number | null;
-                                durationSeconds: number | null;
-                                secondsPerKilometre: number | null;
-                                calculatorVersion: string;
-                                /** @enum {string} */
-                                provenance: "user_supplied" | "user_estimate" | "agent_estimate";
-                                estimateBasis: string | null;
-                                zones: {
-                                    key: string;
-                                    fast: number;
-                                    target: number;
-                                    slow: number;
-                                }[];
-                            }[];
-                        };
+                        "application/json": components["schemas"]["PerformanceState"];
                     };
                 };
                 /** @description Request rejected. */
@@ -5556,142 +5339,43 @@ export interface paths {
             };
         };
         put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/performance/calibrations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Record a race result or test. Pace guides change from today in the athlete’s timezone for every plan; earlier days keep their paces. */
         post: {
             parameters: {
                 query?: never;
                 header?: never;
-                path: {
-                    planId: string;
-                };
+                path?: never;
                 cookie?: never;
             };
             requestBody: {
                 content: {
-                    "application/json": {
-                        expectedDraftId: string;
-                        expectedEditNumber: number;
-                        idempotencyKey?: string;
-                        input: {
-                            /** @enum {string} */
-                            method: "race_result";
-                            distanceMetres: number;
-                            durationSeconds: number;
-                        } | {
-                            /** @enum {string} */
-                            method: "threshold_pace";
-                            secondsPerKilometre: number;
-                        };
-                        /** @enum {string} */
-                        provenance?: "user_supplied" | "user_estimate" | "agent_estimate";
-                        estimateBasis?: string;
-                    };
+                    "application/json": components["schemas"]["RecordCalibration"];
                 };
             };
             responses: {
-                /** @description Brief and calibration state. */
+                /** @description The athlete’s calibration timeline and the entries in effect today. */
                 200: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": {
-                            versionId: string;
-                            editNumber: number;
-                            startDate: string | null;
-                            endDate: string | null;
-                            readOnly: boolean;
-                            brief: {
-                                goal: string;
-                                /** @enum {string} */
-                                unit: "kilometres" | "miles";
-                                timezone: string;
-                                weeklyDistance: {
-                                    /** @enum {string} */
-                                    status: "unanswered";
-                                    value: unknown;
-                                } | {
-                                    /** @enum {string} */
-                                    status: "unknown";
-                                    value: unknown;
-                                } | {
-                                    /** @enum {string} */
-                                    status: "known";
-                                    value: number;
-                                };
-                                currentRuns: {
-                                    /** @enum {string} */
-                                    status: "unanswered";
-                                    value: unknown;
-                                } | {
-                                    /** @enum {string} */
-                                    status: "unknown";
-                                    value: unknown;
-                                } | {
-                                    /** @enum {string} */
-                                    status: "known";
-                                    value: number;
-                                };
-                                longestRun: {
-                                    /** @enum {string} */
-                                    status: "unanswered";
-                                    value: unknown;
-                                } | {
-                                    /** @enum {string} */
-                                    status: "unknown";
-                                    value: unknown;
-                                } | {
-                                    /** @enum {string} */
-                                    status: "known";
-                                    value: number;
-                                };
-                                desiredRuns: number | null;
-                                weekdays: ("available" | "preferred" | "unavailable")[];
-                                context: string;
-                            };
-                            confirmed: boolean;
-                            hash: string;
-                            scheduleReviewRequired: boolean;
-                            findings: {
-                                code: string;
-                                /** @enum {string} */
-                                severity: "error" | "warning";
-                                message: string;
-                                path: string;
-                            }[];
-                            coverage: {
-                                startDate: string;
-                                endDate: string;
-                                current: boolean;
-                            }[];
-                            generations?: {
-                                runId: string;
-                                startDate: string;
-                                endDate: string;
-                                prescribedThrough: string | null;
-                                /** @enum {string} */
-                                status: "in_progress" | "completed" | "interrupted";
-                            }[];
-                            calibrations: {
-                                id: string;
-                                effectiveFrom: string;
-                                effectiveUntil: string | null;
-                                /** @enum {string} */
-                                method: "race_result" | "threshold_pace";
-                                distanceMetres: number | null;
-                                durationSeconds: number | null;
-                                secondsPerKilometre: number | null;
-                                calculatorVersion: string;
-                                /** @enum {string} */
-                                provenance: "user_supplied" | "user_estimate" | "agent_estimate";
-                                estimateBasis: string | null;
-                                zones: {
-                                    key: string;
-                                    fast: number;
-                                    target: number;
-                                    slow: number;
-                                }[];
-                            }[];
-                        };
+                        "application/json": components["schemas"]["PerformanceState"];
                     };
                 };
                 /** @description Request rejected. */
@@ -5747,7 +5431,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/plans/{planId}/draft/calibrations/{calibrationId}/use-again": {
+    "/api/v1/performance/calibrations/preview": {
         parameters: {
             query?: never;
             header?: never;
@@ -5756,12 +5440,97 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /** @description Calculate zones for an input without recording it. */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["PreviewCalibration"];
+                };
+            };
+            responses: {
+                /** @description Calculated zones beside the entry in effect today. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CalibrationPreview"];
+                    };
+                };
+                /** @description Request rejected. */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Request rejected. */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Request rejected. */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Request rejected. */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Request rejected. */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/performance/calibrations/{calibrationId}/retract": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Withdraw a mistaken entry. The previous entry applies again. */
         post: {
             parameters: {
                 query?: never;
                 header?: never;
                 path: {
-                    planId: string;
                     calibrationId: string;
                 };
                 cookie?: never;
@@ -5769,117 +5538,18 @@ export interface paths {
             requestBody: {
                 content: {
                     "application/json": {
-                        expectedDraftId: string;
-                        expectedEditNumber: number;
                         idempotencyKey?: string;
                     };
                 };
             };
             responses: {
-                /** @description Brief and calibration state. */
+                /** @description The athlete’s calibration timeline and the entries in effect today. */
                 200: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": {
-                            versionId: string;
-                            editNumber: number;
-                            startDate: string | null;
-                            endDate: string | null;
-                            readOnly: boolean;
-                            brief: {
-                                goal: string;
-                                /** @enum {string} */
-                                unit: "kilometres" | "miles";
-                                timezone: string;
-                                weeklyDistance: {
-                                    /** @enum {string} */
-                                    status: "unanswered";
-                                    value: unknown;
-                                } | {
-                                    /** @enum {string} */
-                                    status: "unknown";
-                                    value: unknown;
-                                } | {
-                                    /** @enum {string} */
-                                    status: "known";
-                                    value: number;
-                                };
-                                currentRuns: {
-                                    /** @enum {string} */
-                                    status: "unanswered";
-                                    value: unknown;
-                                } | {
-                                    /** @enum {string} */
-                                    status: "unknown";
-                                    value: unknown;
-                                } | {
-                                    /** @enum {string} */
-                                    status: "known";
-                                    value: number;
-                                };
-                                longestRun: {
-                                    /** @enum {string} */
-                                    status: "unanswered";
-                                    value: unknown;
-                                } | {
-                                    /** @enum {string} */
-                                    status: "unknown";
-                                    value: unknown;
-                                } | {
-                                    /** @enum {string} */
-                                    status: "known";
-                                    value: number;
-                                };
-                                desiredRuns: number | null;
-                                weekdays: ("available" | "preferred" | "unavailable")[];
-                                context: string;
-                            };
-                            confirmed: boolean;
-                            hash: string;
-                            scheduleReviewRequired: boolean;
-                            findings: {
-                                code: string;
-                                /** @enum {string} */
-                                severity: "error" | "warning";
-                                message: string;
-                                path: string;
-                            }[];
-                            coverage: {
-                                startDate: string;
-                                endDate: string;
-                                current: boolean;
-                            }[];
-                            generations?: {
-                                runId: string;
-                                startDate: string;
-                                endDate: string;
-                                prescribedThrough: string | null;
-                                /** @enum {string} */
-                                status: "in_progress" | "completed" | "interrupted";
-                            }[];
-                            calibrations: {
-                                id: string;
-                                effectiveFrom: string;
-                                effectiveUntil: string | null;
-                                /** @enum {string} */
-                                method: "race_result" | "threshold_pace";
-                                distanceMetres: number | null;
-                                durationSeconds: number | null;
-                                secondsPerKilometre: number | null;
-                                calculatorVersion: string;
-                                /** @enum {string} */
-                                provenance: "user_supplied" | "user_estimate" | "agent_estimate";
-                                estimateBasis: string | null;
-                                zones: {
-                                    key: string;
-                                    fast: number;
-                                    target: number;
-                                    slow: number;
-                                }[];
-                            }[];
-                        };
+                        "application/json": components["schemas"]["PerformanceState"];
                     };
                 };
                 /** @description Request rejected. */
@@ -6018,17 +5688,83 @@ export interface components {
         };
         ResolvedZone: {
             /** Format: uuid */
-            profileId: string;
-            effectiveFrom?: string;
-            calculatorVersion?: string;
+            calibrationId: string;
+            effectiveFrom: string;
+            calculatorVersion: string;
             method: string;
-            fitnessValue: number | null;
             metric: string;
             minimumValue: number | null;
             targetValue: number | null;
             maximumValue: number | null;
             unit: string;
         } | null;
+        PerformanceState: {
+            timezone: string;
+            today: string;
+            current: components["schemas"]["CalibrationEntry"][];
+            entries: components["schemas"]["CalibrationEntry"][];
+        };
+        CalibrationEntry: {
+            id: string;
+            system: components["schemas"]["PerformanceSystem"];
+            method: string;
+            input: components["schemas"]["PaceInput"];
+            calculatorVersion: string;
+            /** @enum {string} */
+            provenance: "user_supplied" | "user_estimate" | "agent_estimate";
+            estimateBasis: string | null;
+            observedOn: string | null;
+            effectiveFrom: string;
+            recordedAt: string;
+            /** @enum {string} */
+            recordedBy: "athlete" | "coach";
+            conversationId: string | null;
+            retractedAt: string | null;
+            zones: components["schemas"]["CalibrationZone"][];
+        };
+        /** @enum {string} */
+        PerformanceSystem: "run_pace";
+        PaceInput: {
+            /** @enum {string} */
+            method: "race_result";
+            distanceMetres: number;
+            durationSeconds: number;
+        } | {
+            /** @enum {string} */
+            method: "threshold_pace";
+            secondsPerKilometre: number;
+        };
+        CalibrationZone: {
+            key: string;
+            metric: string;
+            unit: string;
+            minimum: number;
+            target: number;
+            maximum: number;
+        };
+        RecordCalibration: {
+            /** @enum {string} */
+            system: "run_pace";
+            input: components["schemas"]["PaceInput"];
+            /** @enum {string} */
+            provenance?: "user_supplied" | "user_estimate" | "agent_estimate";
+            estimateBasis?: string;
+            /** Format: date */
+            observedOn?: string;
+            idempotencyKey?: string;
+        };
+        CalibrationPreview: {
+            system: components["schemas"]["PerformanceSystem"];
+            method: string;
+            calculatorVersion: string;
+            zones: components["schemas"]["CalibrationZone"][];
+            current: components["schemas"]["CalibrationEntry"] & unknown;
+        };
+        PreviewCalibration: {
+            /** @enum {string} */
+            system: "run_pace";
+            input: components["schemas"]["PaceInput"];
+        };
     };
     responses: never;
     parameters: never;

@@ -8,3 +8,14 @@ export const FindingSchema = z.object({
   message: z.string(),
   path: z.string(),
 });
+
+/** A domain rejection with its public code and HTTP status. */
+export class PlanError extends Error {
+  constructor(
+    public code: string,
+    message: string,
+    public status: 404 | 409 | 422 = 409,
+  ) {
+    super(message);
+  }
+}

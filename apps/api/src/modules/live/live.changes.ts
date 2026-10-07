@@ -66,7 +66,6 @@ export function compareAggregates(
     workouts: workouts.sort(byDate),
     counts: countChanges(workouts),
     assumptionsChanged: changed(['brief', 'weekdays', 'description']),
-    paceGuidesChanged: changed(['calibrations']),
     datesChanged: changed(['startDate', 'endDate']),
   };
 }
@@ -181,7 +180,6 @@ export function combineSummaries(summaries: ChangeSummary[]): ChangeSummary | nu
     workouts: workouts.sort(byDate),
     counts,
     assumptionsChanged: summaries.some((s) => s.assumptionsChanged),
-    paceGuidesChanged: summaries.some((s) => s.paceGuidesChanged),
     datesChanged: summaries.some((s) => s.datesChanged),
     ...(approximate ? { approximate } : {}),
   });

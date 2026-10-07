@@ -31,7 +31,9 @@ import {
   previewLock,
   unlockPlan,
   discardDraft,
+  getRevision,
 } from '../../src/modules/plans/plan.service.js';
+import { getPerformance } from '../../src/modules/performance/performance.service.js';
 import { confirmBrief, getBrief } from '../../src/modules/plans/brief.service.js';
 import { emptyBrief } from '../../src/modules/plans/brief.schemas.js';
 import type { z } from 'zod';
@@ -61,7 +63,7 @@ async function worker() {
     provider: 'openai',
     model: 'gpt-6.1-sol',
     reasoning: 'medium',
-    promptVersion: 'running-coach-v2',
+    promptVersion: 'running-coach-v3',
     ready: true,
   });
   return id;
@@ -174,10 +176,12 @@ async function planning() {
     endDate: '2027-03-31',
     description: 'Initial month then reassess',
   });
-  await tool(a.claim, 'set_fitness_calibration', {
+  await tool(a.claim, 'record_performance', {
+    system: 'run_pace',
     input: { method: 'threshold_pace', secondsPerKilometre: 330 },
     provenance: 'agent_estimate',
     estimateBasis: 'Starting estimate based on reported easy running; reassess after a few runs.',
+    observedOn: null,
   });
   return { ...a, p };
 }
@@ -238,19 +242,17 @@ it('preserves confirmation for edit-only changes and keeps schedule review stick
   expect(await confirmationMetadata(state.versionId)).toEqual(confirmed);
   state = next;
 
+  // Fitness belongs to the athlete: recording it never edits, unconfirms or stales the plan.
   const calibration = {
+    system: 'run_pace',
     input: { method: 'threshold_pace', secondsPerKilometre: 320 },
     provenance: 'agent_estimate',
     estimateBasis: 'Revised starting estimate based on recent easy running.',
+    observedOn: null,
   };
-  await tool(claim, 'set_fitness_calibration', calibration);
-  next = await getBrief(owner, p.id);
-  expect(next.editNumber).toBe(state.editNumber + 1);
-  expect(next.confirmed).toBe(false);
-  expect(next.scheduleReviewRequired).toBe(false);
-  expect(await confirmationMetadata(state.versionId)).toEqual(clearedConfirmation);
-  state = await confirmCurrentBrief(p.id);
-  confirmed = await confirmationMetadata(state.versionId);
+  await tool(claim, 'record_performance', calibration);
+  expect(await getBrief(owner, p.id)).toEqual(state);
+  expect(await confirmationMetadata(state.versionId)).toEqual(confirmed);
 
   await tool(claim, 'update_plan_brief', {
     ...header,
@@ -286,17 +288,12 @@ it('preserves confirmation for edit-only changes and keeps schedule review stick
   expect(await confirmationMetadata(state.versionId)).toEqual(confirmed);
   state = next;
 
-  await tool(claim, 'set_fitness_calibration', {
+  await tool(claim, 'record_performance', {
     ...calibration,
     input: { method: 'threshold_pace', secondsPerKilometre: 310 },
   });
-  next = await getBrief(owner, p.id);
-  expect(next.editNumber).toBe(state.editNumber + 1);
-  expect(next.confirmed).toBe(false);
-  expect(next.scheduleReviewRequired).toBe(true);
-  expect(await confirmationMetadata(state.versionId)).toEqual(clearedConfirmation);
-  state = await confirmCurrentBrief(p.id);
-  confirmed = await confirmationMetadata(state.versionId);
+  expect(await getBrief(owner, p.id)).toEqual(state);
+  expect(await confirmationMetadata(state.versionId)).toEqual(confirmed);
 
   // An unfinished schedule edit cannot clear review; complete current coverage can.
   for (const coverage of [null, batch.coverage]) {
@@ -315,49 +312,6 @@ it('preserves confirmation for edit-only changes and keeps schedule review stick
     expect(await confirmationMetadata(state.versionId)).toEqual(confirmed);
   }
 });
-
-it.each([false, true])(
-  'upgrades the agent schema while invalidating confirmation and retaining schedule review %s',
-  async (reviewRequired) => {
-    const { claim, p } = await planning();
-    await tool(claim, 'apply_schedule_changes', batch);
-    if (reviewRequired)
-      await tool(claim, 'update_plan_brief', {
-        brief: { ...brief, goal: 'Run a comfortable half marathon' },
-        startDate: '2027-01-01',
-        endDate: '2027-03-31',
-        description: 'Initial month then reassess',
-      });
-    const before = await confirmCurrentBrief(p.id);
-    expect(before.scheduleReviewRequired).toBe(reviewRequired);
-    // Represent an older draft; a no-op brief write should change only the schema.
-    await db
-      .updateTable('plan_versions')
-      .set({ content_schema_version: 2 })
-      .where('id', '=', before.versionId)
-      .execute();
-    const input = {
-      brief: before.brief,
-      startDate: before.startDate,
-      endDate: before.endDate,
-      description: 'Initial month then reassess',
-    };
-    await tool(claim, 'update_plan_brief', input);
-    const after = await getBrief(owner, p.id);
-    expect(after.editNumber).toBe(before.editNumber + 1);
-    expect(after.confirmed).toBe(false);
-    expect(after.scheduleReviewRequired).toBe(reviewRequired);
-    expect(await confirmationMetadata(before.versionId)).toEqual(clearedConfirmation);
-    const version = await db
-      .selectFrom('plan_versions')
-      .select('content_schema_version')
-      .where('id', '=', before.versionId)
-      .executeTakeFirstOrThrow();
-    expect(version.content_schema_version).toBe(3);
-    await tool(claim, 'update_plan_brief', input);
-    expect(await getBrief(owner, p.id)).toEqual(after);
-  },
-);
 
 it('rejects machine credentials at the private boundary and keeps bootstrap authority out of run context', async () => {
   const { claim } = await accepted();
@@ -453,7 +407,9 @@ it('generates complete prescriptions, safely replays mutations, and locks a part
   expect(await executeTool(claim.runId, claim.token, cmd)).toEqual(result);
   const b = await getBrief(owner, p.id);
   expect(b.coverage).toEqual([{ startDate: '2027-01-01', endDate: '2027-01-07', current: true }]);
-  expect(b.calibrations[0]).toMatchObject({ provenance: 'agent_estimate' });
+  expect((await getPerformance(owner)).current).toEqual([
+    expect.objectContaining({ provenance: 'agent_estimate', recordedBy: 'coach' }),
+  ]);
   expect(
     await db
       .selectFrom('workouts')
@@ -481,6 +437,15 @@ it('generates complete prescriptions, safely replays mutations, and locks a part
   };
   const locked = await lockPlan(owner, p.id, lock, randomUUID());
   expect(locked.locked).toBeTruthy();
+  // The version records the fitness it was locked against, outside its content hash.
+  const revision = await getRevision(owner, p.id, locked.locked!.id);
+  expect(revision.revision.calibrationBasis).toEqual([
+    {
+      system: 'run_pace',
+      calibrationId: (await getPerformance(owner)).current[0]!.id,
+      effectiveFrom: expect.any(String),
+    },
+  ]);
   const draft = await unlockPlan(owner, p.id, locked.stateVersion);
   expect((await getBrief(owner, p.id)).coverage).toEqual(b.coverage);
   await discardDraft(
@@ -1222,7 +1187,7 @@ it('requires the current prompt contract before a worker contributes readiness o
   await db.updateTable('agent_workers').set({ ready: false }).execute();
   await db
     .updateTable('agent_workers')
-    .set({ ready: true, prompt_version: 'running-coach-v1' })
+    .set({ ready: true, prompt_version: 'running-coach-v2' })
     .where('id', '=', id)
     .execute();
   expect((await chatCapabilities()).executionAvailable).toBe(false);
@@ -1232,7 +1197,7 @@ it('requires the current prompt contract before a worker contributes readiness o
     provider: 'openai',
     model: 'gpt-6.1-sol',
     reasoning: 'medium',
-    promptVersion: 'running-coach-v2',
+    promptVersion: 'running-coach-v3',
     ready: true,
   });
   expect((await chatCapabilities()).executionAvailable).toBe(true);
@@ -1316,4 +1281,58 @@ it('keeps current lineage highlights separate from immutable per-run changes acr
   ]);
   expect(turn.activity.map((a) => a.state)).toEqual(['completed', 'completed', 'completed']);
   expect(turn.legacyChanges).toBe(false);
+});
+
+it('previews, records and retracts a reported race from a standalone chat without a plan', async () => {
+  const { claim, created } = await accepted();
+  const context = (await runContext(claim.runId, claim.token)) as { performance: unknown };
+  const before = await getPerformance(owner);
+  expect(context.performance).toEqual(before);
+  const race = {
+    system: 'run_pace',
+    input: { method: 'race_result', distanceMetres: 21097.5, durationSeconds: 5880 },
+  };
+  const preview = (await tool(claim, 'preview_performance', race)) as {
+    result: { preview: { zones: unknown[]; current: unknown } };
+  };
+  expect(preview.result.preview.zones).toHaveLength(5);
+  expect(preview.result.preview.current).toEqual(before.current[0] ?? null);
+  expect(await getPerformance(owner)).toEqual(before);
+  const report = {
+    ...race,
+    provenance: 'user_supplied',
+    estimateBasis: 'Half marathon at the weekend, flat course, all-out effort.',
+  };
+  await expect(
+    tool(claim, 'record_performance', { ...report, observedOn: '2999-01-01' }),
+  ).rejects.toMatchObject({ code: 'OBSERVED_IN_FUTURE' });
+  const recorded = (await tool(claim, 'record_performance', {
+    ...report,
+    observedOn: before.today,
+  })) as { result: { recorded: { id: string } }; versionId: string | null };
+  expect(recorded.versionId).toBeNull();
+  const after = await getPerformance(owner);
+  expect(after.entries).toHaveLength(before.entries.length + 1);
+  expect(after.current[0]).toMatchObject({
+    id: recorded.result.recorded.id,
+    recordedBy: 'coach',
+    conversationId: created.conversation.id,
+    observedOn: before.today,
+    effectiveFrom: after.today,
+    provenance: 'user_supplied',
+  });
+  await tool(claim, 'retract_performance', { calibrationId: recorded.result.recorded.id });
+  const retracted = await getPerformance(owner);
+  expect(retracted.current).toEqual(before.current);
+  expect(retracted.entries[0]).toMatchObject({
+    id: recorded.result.recorded.id,
+    retractedAt: expect.any(String),
+  });
+  await finishRun(claim.runId, claim.token, {
+    status: 'completed',
+    content: 'I recorded your half marathon, then withdrew it as you asked.',
+  });
+  const turn = await getTurn(owner, claim.runId);
+  expect(turn.performanceChanged).toBe(true);
+  expect(turn.changes).toBeNull();
 });

@@ -126,6 +126,10 @@ export const RevisionSchema = VersionSchema.extend({
   findings: z.array(FindingSchema),
   acknowledgedWarningCodes: z.array(z.string()),
   summary: SummarySchema,
+  /** Athlete calibration entries in effect when this version was locked. */
+  calibrationBasis: z.array(
+    z.object({ system: z.string(), calibrationId: Id, effectiveFrom: z.string() }),
+  ),
 });
 export const RevisionDetailSchema = z.object({
   revision: RevisionSchema,

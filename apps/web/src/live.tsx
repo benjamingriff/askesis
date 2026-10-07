@@ -103,6 +103,12 @@ export function invalidateNotification(client: QueryClient, event: string, raw: 
       if (conversationId) invalidate('chat', 'detail', conversationId);
       invalidate('chat', 'list');
       return;
+    case 'performance.changed':
+      // Fitness belongs to the athlete: every plan's resolved paces and lock checks follow it.
+      invalidate('performance');
+      invalidate('plan-workouts');
+      invalidate('plans');
+      return;
     case 'plan.changed':
       if (!planId) return;
       invalidate('plans', planId);

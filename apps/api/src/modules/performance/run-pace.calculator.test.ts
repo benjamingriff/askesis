@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { calculatePaces, planToday } from './pace.calculator.js';
+import { calculatePaces } from './run-pace.calculator.js';
 
 describe('run-pace-v1', () => {
   it('matches the published 38:46 10K reference scalar of approximately 53.9', () => {
@@ -45,11 +45,5 @@ describe('run-pace-v1', () => {
       expect(() =>
         calculatePaces({ method: 'threshold_pace', secondsPerKilometre: pace }),
       ).toThrow();
-  });
-  it('uses the plan calendar date across midnight and daylight saving', () => {
-    const now = new Date('2026-09-09T23:30:00Z');
-    expect(planToday('Europe/London', now)).toBe('2026-09-10');
-    expect(planToday('America/Los_Angeles', now)).toBe('2026-09-09');
-    expect(planToday('Europe/London', new Date('2026-01-01T23:30:00Z'))).toBe('2026-01-01');
   });
 });

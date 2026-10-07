@@ -10,7 +10,14 @@ import {
   PowerOff,
   TriangleAlert,
 } from 'lucide-react';
-import { addDays, formatDistance, formatPace, formatShort, formatShortYear } from '../lib/format';
+import {
+  addDays,
+  formatClock,
+  formatDistance,
+  formatPace,
+  formatShort,
+  formatShortYear,
+} from '../lib/format';
 import type { WeekSummary } from '../lib/workouts';
 import {
   isEstimate,
@@ -294,7 +301,7 @@ export function PaceGuides({
             </span>
             <strong>{formatPace(zone.target, units, false)}</strong>
             <small>
-              {formatPace(zone.fast, units, false)}–{formatPace(zone.slow, units)}
+              {formatPace(zone.minimum, units, false)}–{formatPace(zone.maximum, units)}
             </small>
             {!compact && meta ? <p>{meta.description}</p> : null}
           </div>
@@ -329,10 +336,11 @@ export function CalibrationSource({
         ) : null}
       </div>
       <p>
-        {calibration.method === 'threshold_pace'
-          ? `Estimated threshold: ${formatPace(calibration.secondsPerKilometre!, units)}`
-          : `Race evidence: ${formatDistance(calibration.distanceMetres, units)} in ${Math.floor(calibration.durationSeconds! / 60)}:${String(calibration.durationSeconds! % 60).padStart(2, '0')}`}
-        {' · from '}
+        {calibration.input.method === 'threshold_pace'
+          ? `Estimated threshold: ${formatPace(calibration.input.secondsPerKilometre, units)}`
+          : `Race evidence: ${formatDistance(calibration.input.distanceMetres, units)} in ${formatClock(calibration.input.durationSeconds)}`}
+        {calibration.observedOn ? ` on ${formatShortYear(calibration.observedOn)}` : ''}
+        {' · applies from '}
         {formatShortYear(calibration.effectiveFrom)}
       </p>
       {calibration.estimateBasis ? (
@@ -342,9 +350,7 @@ export function CalibrationSource({
         </p>
       ) : null}
       {estimate ? (
-        <p className="muted">
-          These paces are estimates. Update the paces and plan after a few runs.
-        </p>
+        <p className="muted">These paces are estimates. Update them after a few runs or a race.</p>
       ) : null}
     </div>
   );

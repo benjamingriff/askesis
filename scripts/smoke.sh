@@ -38,7 +38,7 @@ $compose exec -T postgres psql --username askesis_smoke --dbname askesis_smoke -
 INSERT INTO conversations(id,owner_id,title,next_sequence) VALUES
  ('00000000-0000-4000-8000-000000000901','00000000-0000-0000-0000-000000000001','Worker smoke',2);
 INSERT INTO conversation_messages(id,conversation_id,sequence,role,content) VALUES
- ('00000000-0000-4000-8000-000000000902','00000000-0000-4000-8000-000000000901',1,'user','Read my planning context.');
+ ('00000000-0000-4000-8000-000000000902','00000000-0000-4000-8000-000000000901',1,'user','Read my fitness.');
 INSERT INTO agent_runs(id,owner_id,conversation_id,user_message_id,deadline_at) VALUES
  ('00000000-0000-4000-8000-000000000903','00000000-0000-0000-0000-000000000001','00000000-0000-4000-8000-000000000901','00000000-0000-4000-8000-000000000902',now()+interval '2 minutes');
 SQL

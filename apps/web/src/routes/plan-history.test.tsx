@@ -36,7 +36,6 @@ const preview = {
 };
 const emptyBrief = {
   coverage: [],
-  calibrations: [],
   findings: [],
   brief: { unit: 'kilometres' },
 };
@@ -220,7 +219,6 @@ it.each(['loaded', 'failed'])(
       hash: 'h',
       scheduleReviewRequired: false,
       coverage: [{ startDate: '2027-01-11', endDate: '2027-01-12', current: true }],
-      calibrations: [],
       findings: [],
       brief: { unit: 'kilometres' },
     };

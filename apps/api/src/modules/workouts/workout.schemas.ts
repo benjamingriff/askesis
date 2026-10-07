@@ -58,11 +58,11 @@ export const StepCompletionSchema = z
 
 export const ResolvedZoneSchema = z
   .object({
-    profileId: DatabaseIdSchema,
-    effectiveFrom: z.string().optional(),
-    calculatorVersion: z.string().optional(),
+    /** The athlete calibration entry in effect on the workout date. */
+    calibrationId: DatabaseIdSchema,
+    effectiveFrom: z.string(),
+    calculatorVersion: z.string(),
     method: z.string(),
-    fitnessValue: z.number().nullable(),
     metric: z.string(),
     minimumValue: z.number().nullable(),
     targetValue: z.number().nullable(),

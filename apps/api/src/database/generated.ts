@@ -136,6 +136,34 @@ export interface ApiIdempotencyKeys {
   response_status: number;
 }
 
+export interface AthleteCalibrations {
+  athlete_id: string;
+  calculator_version: string;
+  effective_from: Timestamp;
+  estimate_basis: string | null;
+  fitness_value: Numeric | null;
+  id: Generated<string>;
+  input: Json;
+  method: string;
+  observed_on: Timestamp | null;
+  provenance: string;
+  recorded_at: Generated<Timestamp>;
+  recorded_by_run_id: string | null;
+  retracted_at: Timestamp | null;
+  retracted_by_run_id: string | null;
+  system: string;
+}
+
+export interface AthleteCalibrationZones {
+  calibration_id: string;
+  maximum_value: Numeric;
+  metric: string;
+  minimum_value: Numeric;
+  target_value: Numeric;
+  unit: string;
+  zone_key: string;
+}
+
 export interface AthleteIdentities {
   athlete_id: string;
   created_at: Generated<Timestamp>;
@@ -149,6 +177,7 @@ export interface Athletes {
   created_at: Generated<Timestamp>;
   display_name: string;
   id: Generated<string>;
+  timezone: Generated<string>;
   updated_at: Generated<Timestamp>;
 }
 
@@ -165,36 +194,6 @@ export interface AtlasSchemaRevisionsAtlasSchemaRevisions {
   total: Generated<Int8>;
   type: Generated<Int8>;
   version: string;
-}
-
-export interface CalibrationProfiles {
-  calculator_version: string;
-  created_at: Generated<Timestamp>;
-  discipline: string;
-  estimate_basis: string | null;
-  fitness_value: Numeric | null;
-  id: Generated<string>;
-  lineage_id: Generated<string>;
-  method: string;
-  plan_version_id: string;
-  provenance: Generated<string>;
-  race_distance_metres: Numeric | null;
-  race_duration_seconds: number | null;
-  system: string;
-  threshold_seconds_per_kilometre: Numeric | null;
-}
-
-export interface CalibrationZones {
-  id: Generated<string>;
-  lineage_id: Generated<string>;
-  maximum_value: Numeric | null;
-  metric: string;
-  minimum_value: Numeric | null;
-  plan_version_id: string;
-  profile_id: string;
-  target_value: Numeric | null;
-  unit: string;
-  zone_key: string;
 }
 
 export interface ConversationMessages {
@@ -264,7 +263,6 @@ export interface PlanBriefs {
   longest_run_status: Generated<string>;
   plan_version_id: string;
   schedule_review_required: Generated<boolean>;
-  timezone: Generated<string>;
   validator_version: number | null;
   weekly_distance_metres: Numeric | null;
   weekly_distance_status: Generated<string>;
@@ -276,16 +274,6 @@ export interface PlanBriefWeekdays {
   lineage_id: Generated<string>;
   plan_version_id: string;
   weekday: number;
-}
-
-export interface PlanCalibrationPeriods {
-  effective_from: Timestamp;
-  effective_until: Timestamp | null;
-  id: Generated<string>;
-  lineage_id: Generated<string>;
-  plan_version_id: string;
-  profile_id: string;
-  system: string;
 }
 
 export interface Plans {
@@ -313,6 +301,7 @@ export interface PlanScheduleCoverage {
 export interface PlanVersions {
   acknowledged_warning_codes: string[] | null;
   based_on_version_id: string | null;
+  calibration_basis: Json | null;
   change_summary: Json | null;
   content_hash: string | null;
   content_hash_version: number | null;
@@ -475,11 +464,11 @@ export interface DB {
   agent_tool_receipts: AgentToolReceipts;
   agent_workers: AgentWorkers;
   api_idempotency_keys: ApiIdempotencyKeys;
+  athlete_calibration_zones: AthleteCalibrationZones;
+  athlete_calibrations: AthleteCalibrations;
   athlete_identities: AthleteIdentities;
   athletes: Athletes;
   "atlas_schema_revisions.atlas_schema_revisions": AtlasSchemaRevisionsAtlasSchemaRevisions;
-  calibration_profiles: CalibrationProfiles;
-  calibration_zones: CalibrationZones;
   conversation_messages: ConversationMessages;
   conversations: Conversations;
   live_event_heads: LiveEventHeads;
@@ -487,7 +476,6 @@ export interface DB {
   movement_definitions: MovementDefinitions;
   plan_brief_weekdays: PlanBriefWeekdays;
   plan_briefs: PlanBriefs;
-  plan_calibration_periods: PlanCalibrationPeriods;
   plan_schedule_coverage: PlanScheduleCoverage;
   plan_versions: PlanVersions;
   plans: Plans;

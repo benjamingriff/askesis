@@ -36,7 +36,7 @@ docker compose run --rm migrate migrate hash --env local
 docker compose run --rm migrate
 ```
 
-Never modify deployed/shared migrations; add another migration. The current API readiness checkpoint is `20261005120000`. Regenerate database types after applying schema changes, with the correct process-level `DATABASE_URL`.
+Never modify deployed/shared migrations; add another migration. The current API readiness checkpoint is `20261007120000`. Regenerate database types after applying schema changes, with the correct process-level `DATABASE_URL`.
 
 ## Seed lifecycle
 

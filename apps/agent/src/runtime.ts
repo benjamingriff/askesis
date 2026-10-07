@@ -158,6 +158,8 @@ export class SdkRuntime implements CoachingRuntime {
                   'INVALID_TOOL_INPUT',
                   'SCHEDULE_INVALID',
                   'CALIBRATION_INVALID',
+                  'CALIBRATION_NOT_FOUND',
+                  'OBSERVED_IN_FUTURE',
                   'DATES_REQUIRED',
                   'BRIEF_REQUIRED',
                   'INVALID_PLAN_RANGE',
@@ -172,7 +174,7 @@ export class SdkRuntime implements CoachingRuntime {
                   error: {
                     code: error.code,
                     message:
-                      'Review the tool schema and current plan constraints before correcting this request.',
+                      'Review the tool schema and current plan or performance constraints before correcting this request.',
                   },
                 });
               throw error;
@@ -198,6 +200,7 @@ export class SdkRuntime implements CoachingRuntime {
     const current = {
       plan: context.plan,
       brief: context.brief,
+      performance: context.performance,
       historyTruncated: context.historyTruncated,
     };
     const input = [

@@ -46,12 +46,10 @@ const brief = {
   hash: 'h',
   scheduleReviewRequired: false,
   coverage: [],
-  calibrations: [],
   findings: [],
   brief: {
     goal: '',
     unit: 'kilometres',
-    timezone: 'UTC',
     weeklyDistance: { status: 'unanswered', value: null },
     currentRuns: { status: 'unanswered', value: null },
     longestRun: { status: 'unanswered', value: null },
@@ -85,7 +83,9 @@ beforeEach(() => {
           ? { workouts: [] }
           : path.endsWith('/revisions')
             ? { revisions: [] }
-            : brief,
+            : path === '/api/v1/performance'
+              ? { timezone: 'Europe/London', today: '2027-01-01', current: [], entries: [] }
+              : brief,
   }));
 });
 afterEach(() => {

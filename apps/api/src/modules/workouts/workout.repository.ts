@@ -1,6 +1,7 @@
 import type { Selectable } from 'kysely';
 import { getDatabase } from '../../database/client.js';
 import type { Workouts } from '../../database/generated.js';
+import { readEntries, resolveCalibration } from '../performance/performance.service.js';
 import {
   StepCompletionSchema,
   StepTargetSchema,
@@ -136,7 +137,7 @@ export async function getWorkoutDetail(
     .executeTakeFirst();
   const paceFactor = brief?.distance_unit === 'miles' ? 1.609344 : 1;
 
-  const [stepRows, targetRows, tagRows, calibrationRows] = await Promise.all([
+  const [stepRows, targetRows, tagRows, calibrations] = await Promise.all([
     database
       .selectFrom('workout_steps')
       .leftJoin('step_completions', 'step_completions.step_id', 'workout_steps.id')
@@ -186,56 +187,28 @@ export async function getWorkoutDetail(
       .where('workout_id', '=', workoutId)
       .orderBy('tag')
       .execute(),
-    database
-      .selectFrom('plan_calibration_periods')
-      .innerJoin(
-        'calibration_profiles',
-        'calibration_profiles.id',
-        'plan_calibration_periods.profile_id',
-      )
-      .innerJoin('calibration_zones', 'calibration_zones.profile_id', 'calibration_profiles.id')
-      .select([
-        'plan_calibration_periods.system',
-        'calibration_profiles.id as profile_id',
-        'calibration_profiles.method',
-        'calibration_profiles.fitness_value',
-        'calibration_zones.zone_key',
-        'calibration_zones.metric',
-        'plan_calibration_periods.effective_from',
-        'calibration_profiles.calculator_version',
-        'calibration_zones.minimum_value',
-        'calibration_zones.target_value',
-        'calibration_zones.maximum_value',
-        'calibration_zones.unit',
-      ])
-      .where('plan_calibration_periods.plan_version_id', '=', workoutRow.plan_version_id)
-      .where('plan_calibration_periods.effective_from', '<=', workoutRow.scheduled_date)
-      .where((expression) =>
-        expression.or([
-          expression('plan_calibration_periods.effective_until', 'is', null),
-          expression('plan_calibration_periods.effective_until', '>', workoutRow.scheduled_date),
-        ]),
-      )
-      .execute(),
+    readEntries(database, athleteId),
   ]);
 
-  const resolvedZones = new Map(
-    calibrationRows.map((row) => [
-      `${row.system}:${row.zone_key}`,
-      {
-        profileId: row.profile_id,
-        effectiveFrom: String(row.effective_from).slice(0, 10),
-        calculatorVersion: row.calculator_version,
-        method: row.method,
-        fitnessValue: null,
-        metric: row.metric,
-        minimumValue: row.minimum_value === null ? null : Number(row.minimum_value) * paceFactor,
-        targetValue: row.target_value === null ? null : Number(row.target_value) * paceFactor,
-        maximumValue: row.maximum_value === null ? null : Number(row.maximum_value) * paceFactor,
-        unit: paceFactor === 1 ? row.unit : 'seconds_per_mile',
-      },
-    ]),
-  );
+  const scheduledDate = formatDate(workoutRow.scheduled_date);
+  // Zones follow the athlete's calibration timeline on the workout date, never plan content.
+  const resolveZone = (system: string, key: string) => {
+    const entry = resolveCalibration(calibrations, system, scheduledDate);
+    const zone = entry?.zones.find((candidate) => candidate.key === key);
+    if (!entry || !zone) return null;
+    const factor = zone.unit === 'seconds_per_kilometre' ? paceFactor : 1;
+    return {
+      calibrationId: entry.id,
+      effectiveFrom: entry.effectiveFrom,
+      calculatorVersion: entry.calculatorVersion,
+      method: entry.method,
+      metric: zone.metric,
+      minimumValue: zone.minimum * factor,
+      targetValue: zone.target * factor,
+      maximumValue: zone.maximum * factor,
+      unit: factor === 1 ? zone.unit : 'seconds_per_mile',
+    };
+  };
 
   const targetsByStep = new Map<string, ReturnType<typeof StepTargetSchema.parse>[]>();
   for (const row of targetRows) {
@@ -246,7 +219,7 @@ export async function getWorkoutDetail(
     const resolvedZone =
       row.zone_system === null || row.zone_key === null
         ? null
-        : (resolvedZones.get(`${row.zone_system}:${row.zone_key}`) ?? null);
+        : resolveZone(row.zone_system, row.zone_key);
 
     targets.push(
       StepTargetSchema.parse({

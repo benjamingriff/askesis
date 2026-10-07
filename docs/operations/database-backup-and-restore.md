@@ -88,7 +88,7 @@ dropdb askesis_restore_check
 4. Restore the most recent verified backup.
 5. Apply any later append-only Atlas migrations.
 6. Point a private API instance at the restored database.
-7. Verify readiness, identity mappings, version pointers/hashes, briefs/calibration/coverage, conversations and representative owner-authorized reads. Restored queued/leased runs need deliberate review: startup sweep can expire old work; do not replay model sessions automatically.
+7. Verify readiness, identity mappings, version pointers/hashes, briefs/coverage, athlete calibration timelines, conversations and representative owner-authorized reads. Restored queued/leased runs need deliberate review: startup sweep can expire old work; do not replay model sessions automatically.
 8. Switch application traffic only after verification.
 9. Record the incident, backup timestamp, data-loss window, and corrective action.
 

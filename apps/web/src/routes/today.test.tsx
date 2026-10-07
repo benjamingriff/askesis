@@ -40,26 +40,10 @@ const brief = {
   hash: 'h',
   scheduleReviewRequired: false,
   coverage: [{ startDate: '2027-01-01', endDate: '2027-01-12', current: true }],
-  calibrations: [
-    {
-      id: 'cal',
-      effectiveFrom: '2027-01-01',
-      effectiveUntil: null,
-      method: 'threshold_pace',
-      distanceMetres: null,
-      durationSeconds: null,
-      secondsPerKilometre: 330,
-      calculatorVersion: 'v1',
-      provenance: 'user_estimate',
-      estimateBasis: null,
-      zones: [{ key: 'easy', target: 400, fast: 380, slow: 420 }],
-    },
-  ],
   findings: [],
   brief: {
     goal: '',
     unit: 'kilometres',
-    timezone: 'UTC',
     weeklyDistance: { status: 'unanswered', value: null },
     currentRuns: { status: 'unanswered', value: null },
     longestRun: { status: 'unanswered', value: null },
@@ -67,6 +51,39 @@ const brief = {
     weekdays: Array(7).fill('available'),
     context: '',
   },
+};
+/** The athlete's pace guides, shared by every plan. */
+const performance = {
+  timezone: 'UTC',
+  today: '2027-01-12',
+  current: [
+    {
+      id: '00000000-0000-4000-8000-000000000001',
+      system: 'run_pace',
+      method: 'threshold_pace',
+      input: { method: 'threshold_pace', secondsPerKilometre: 330 },
+      calculatorVersion: 'run-pace-v1',
+      provenance: 'user_estimate',
+      estimateBasis: null,
+      observedOn: null,
+      effectiveFrom: '2027-01-01',
+      recordedAt: '2027-01-01T09:00:00.000Z',
+      recordedBy: 'athlete',
+      conversationId: null,
+      retractedAt: null,
+      zones: [
+        {
+          key: 'easy',
+          metric: 'pace',
+          unit: 'seconds_per_kilometre',
+          minimum: 380,
+          target: 400,
+          maximum: 420,
+        },
+      ],
+    },
+  ],
+  entries: [],
 };
 function mount() {
   const router = createMemoryRouter(
@@ -102,7 +119,9 @@ beforeEach(() => {
         ? { plans: [plan] }
         : path === '/api/v1/workouts'
           ? { workouts: [] }
-          : brief,
+          : path === '/api/v1/performance'
+            ? performance
+            : brief,
   }));
 });
 afterEach(() => {
@@ -111,7 +130,7 @@ afterEach(() => {
   focusManager.setFocused(undefined);
 });
 
-it('shows the locked schedule and links pace details to the locked brief', async () => {
+it('shows the locked schedule and links the athlete’s pace guides to Performance', async () => {
   mount();
   await waitFor(() =>
     expect(mocks.get).toHaveBeenCalledWith('/api/v1/workouts', {
@@ -123,8 +142,9 @@ it('shows the locked schedule and links pace details to the locked brief', async
   ).toBe(false);
   expect(await screen.findByRole('link', { name: 'Details' })).toHaveAttribute(
     'href',
-    '/plans/plan-a/versions/locked-a/brief',
+    '/performance',
   );
+  expect(screen.getByText('6:40')).toBeInTheDocument();
   expect(await screen.findByText('Rest day')).toBeInTheDocument();
 });
 
@@ -192,7 +212,9 @@ it('does not declare a rest day when coverage could not be loaded', async () => 
       ? { data: { plans: [plan] } }
       : path === '/api/v1/workouts'
         ? { data: { workouts: [] } }
-        : { error: { error: { message: 'Brief unavailable' } } },
+        : path === '/api/v1/performance'
+          ? { data: performance }
+          : { error: { error: { message: 'Brief unavailable' } } },
   );
   mount();
   expect(await screen.findByText(/Couldn’t load this plan’s coverage/)).toBeInTheDocument();
@@ -265,7 +287,9 @@ it('closes a superseded workout after locking a new version without resetting th
                   tags: [],
                   prescription: { kind: 'sequence', steps: [] },
                 }
-              : brief,
+              : path === '/api/v1/performance'
+                ? performance
+                : brief,
     }),
   );
   mount();

@@ -1,7 +1,12 @@
 import { z } from 'zod';
-import { BriefSchema, PaceInputSchema } from '../plans/brief.schemas.js';
+import { BriefSchema } from '../plans/brief.schemas.js';
 import { Id } from '../plans/plan.schemas.js';
-export const PROMPT_VERSION = 'running-coach-v2';
+import {
+  PaceInputSchema,
+  PerformanceSystemSchema,
+  ProvenanceSchema,
+} from '../performance/performance.schemas.js';
+export const PROMPT_VERSION = 'running-coach-v3';
 
 export const RegisterSchema = z
   .object({
@@ -129,13 +134,20 @@ export const ToolSchemas = {
       description: z.string().max(20000).nullable(),
     })
     .strict(),
-  set_fitness_calibration: z
+  read_performance: z.object({}).strict(),
+  preview_performance: z
+    .object({ system: PerformanceSystemSchema, input: PaceInputSchema })
+    .strict(),
+  record_performance: z
     .object({
+      system: PerformanceSystemSchema,
       input: PaceInputSchema,
-      provenance: z.enum(['user_supplied', 'user_estimate', 'agent_estimate']),
+      provenance: ProvenanceSchema,
       estimateBasis: z.string().trim().min(1).max(4000),
+      observedOn: date.nullable(),
     })
     .strict(),
+  retract_performance: z.object({ calibrationId: Id }).strict(),
   apply_schedule_changes: ScheduleSchema,
   replace_schedule_range: ReplaceSchema,
   validate_plan: z.object({}).strict(),
@@ -150,8 +162,14 @@ const descriptions: Record<ToolName, string> = {
     'Create and bind one new plan to a standalone conversation only after the user expresses intent to create a plan. Never locks.',
   update_plan_brief:
     'Save current planning assumptions and dates. Missing facts stay unanswered; unknown means user says they do not know. Distances are metres. Weekdays Monday through Sunday.',
-  set_fitness_calibration:
-    'Calculate running pace zones from a race result or estimated threshold pace. Persist estimate provenance and reasoning. Never treat age alone as measured evidence.',
+  read_performance:
+    "Read the athlete's calibration timeline: the entry in effect today for each system and recent history. Works with or without a plan.",
+  preview_performance:
+    'Calculate the zones an input would produce, beside the current entry, without saving anything. Use it to compare a reported result with current fitness.',
+  record_performance:
+    "Record a race result or estimated threshold pace on the athlete's timeline. Pace guides change from today for every plan; earlier days keep their paces. observedOn is the race or test date (null if unknown). Describe the evidence in estimateBasis. Never treat age alone as measured evidence.",
+  retract_performance:
+    'Withdraw a mistaken entry the user asks to undo; the previous entry applies again. Never retract to hide an inconvenient result.',
   apply_schedule_changes:
     'Atomically add/update/delete dated blocks, weeks and full workout trees. Set generation to the whole intended horizon on the first schedule batch of this run; subsequent batches may repeat it or use null. Local keys reference new parents; existing UUIDs may be parent keys. Steps are ordered, first root parentIndex null, later parentIndex points to an earlier container. Efforts need a completion and containers need children. Coverage asserts fully prescribed dates, including rest days; use null for unfinished chunks.',
   replace_schedule_range:

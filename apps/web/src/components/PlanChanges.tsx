@@ -35,12 +35,11 @@ export function hasChanges(summary: ChangeSummary) {
     summary.workouts.length > 0 ||
     !!summary.omittedWorkouts ||
     summary.assumptionsChanged ||
-    summary.paceGuidesChanged ||
     summary.datesChanged
   );
 }
 
-/** One line: workout counts by kind, then assumption, pace-guide and date changes. */
+/** One line: workout counts by kind, then assumption and date changes. */
 export function describeChanges(summary: ChangeSummary) {
   const counts = summary.counts ?? { added: 0, changed: 0, moved: 0, removed: 0 };
   return [
@@ -48,7 +47,6 @@ export function describeChanges(summary: ChangeSummary) {
       .filter((kind) => counts[kind] > 0)
       .map((kind) => `${counts[kind]} ${kind}`),
     ...(summary.assumptionsChanged ? ['assumptions updated'] : []),
-    ...(summary.paceGuidesChanged ? ['pace guides updated'] : []),
     ...(summary.datesChanged ? ['plan dates updated'] : []),
   ]
     .join(' · ')

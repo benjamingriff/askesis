@@ -1,6 +1,7 @@
 import { sql, type Kysely, type Transaction } from 'kysely';
 import type { DB } from '../../database/generated.js';
 import { canonicalDecimal, canonicalJson, type SemanticValue } from './plan.canonical.js';
+import { unresolvedZoneTargets } from '../performance/performance.service.js';
 import type { ValidationPlan } from './plan.validation.js';
 
 export type Database = Kysely<DB> | Transaction<DB>;
@@ -9,9 +10,6 @@ export const contentTables = [
   'plan_schedule_coverage',
   'plan_briefs',
   'plan_brief_weekdays',
-  'calibration_profiles',
-  'calibration_zones',
-  'plan_calibration_periods',
   'training_blocks',
   'training_weeks',
   'week_targets',
@@ -45,13 +43,10 @@ const numeric = new Set([
   'minimum_value',
   'target_value',
   'maximum_value',
-  'fitness_value',
   'distance_value',
   'estimated_distance_metres',
   'weekly_distance_metres',
   'longest_run_metres',
-  'race_distance_metres',
-  'threshold_seconds_per_kilometre',
 ]);
 const date = (value: Row[string] | undefined): string =>
   value instanceof Date ? value.toISOString().slice(0, 10) : String(value);
@@ -82,11 +77,7 @@ export async function readAggregate(db: Database, versionId: string): Promise<Ag
     return Object.fromEntries(
       Object.entries(row)
         .filter(
-          ([key]) =>
-            !excluded.has(key) &&
-            !key.endsWith('_id') &&
-            key !== 'definition_number' &&
-            !(version.content_schema_version < 3 && ['provenance', 'estimate_basis'].includes(key)),
+          ([key]) => !excluded.has(key) && !key.endsWith('_id') && key !== 'definition_number',
         )
         .map(([key, value]) => [
           key,
@@ -175,53 +166,30 @@ export async function readAggregate(db: Database, versionId: string): Promise<Ag
       endDate: version.end_date === null ? null : date(version.end_date),
       brief: ordered(rows.plan_briefs.map((row) => leaf('plan_briefs', row))),
       weekdays: ordered(rows.plan_brief_weekdays.map((row) => leaf('plan_brief_weekdays', row))),
-      ...(version.content_schema_version >= 3
-        ? {
-            coverage: ordered(
-              rows.plan_schedule_coverage.map((row) => leaf('plan_schedule_coverage', row)),
-            ),
-          }
-        : {}),
-      blocks: ordered(blocks),
-      calibrations: ordered(
-        rows.calibration_profiles.map((profile) =>
-          capture('calibration_profiles', profile, {
-            ...fields(profile),
-            zones: ordered(
-              children('calibration_zones', 'profile_id', profile.id).map((row) =>
-                leaf('calibration_zones', row),
-              ),
-            ),
-            periods: ordered(
-              children('plan_calibration_periods', 'profile_id', profile.id).map((row) =>
-                leaf('plan_calibration_periods', row),
-              ),
-            ),
-          }),
-        ),
+      coverage: ordered(
+        rows.plan_schedule_coverage.map((row) => leaf('plan_schedule_coverage', row)),
       ),
+      blocks: ordered(blocks),
     },
     entities,
     validation: {
-      unresolvedZones: rows.step_targets
-        .filter((target) => {
-          if (target.target_type !== 'zone') return false;
-          const step = rows.workout_steps.find((item) => item.id === target.step_id);
-          const workout = rows.workouts.find((item) => item.id === step?.workout_id);
-          if (!workout) return true;
-          return !rows.plan_calibration_periods.some(
-            (period) =>
-              period.system === target.zone_system &&
-              date(period.effective_from) <= date(workout.scheduled_date) &&
-              (period.effective_until === null ||
-                date(period.effective_until) > date(workout.scheduled_date)) &&
-              rows.calibration_zones.some(
-                (zone) =>
-                  zone.profile_id === period.profile_id && zone.zone_key === target.zone_key,
-              ),
-          );
-        })
-        .map((target) => String(target.id)),
+      // Zones resolve against the plan owner's calibration timeline, not plan content.
+      unresolvedZones: await unresolvedZoneTargets(
+        db,
+        versionId,
+        rows.step_targets
+          .filter((target) => target.target_type === 'zone')
+          .map((target) => {
+            const step = rows.workout_steps.find((item) => item.id === target.step_id);
+            const workout = rows.workouts.find((item) => item.id === step?.workout_id);
+            return {
+              id: String(target.id),
+              system: String(target.zone_system),
+              key: String(target.zone_key),
+              date: workout ? date(workout.scheduled_date) : '',
+            };
+          }),
+      ),
       startDate: version.start_date === null ? null : date(version.start_date),
       endDate: version.end_date === null ? null : date(version.end_date),
       blocks: rows.training_blocks.map((row) => ({
@@ -348,9 +316,7 @@ export async function cloneContent(db: Transaction<DB>, source: string, destinat
       if (column === 'plan_version_id') return sql`${destination}::uuid`;
       if (
         column === 'id' ||
-        ['block_id', 'week_id', 'workout_id', 'step_id', 'parent_step_id', 'profile_id'].includes(
-          column,
-        )
+        ['block_id', 'week_id', 'workout_id', 'step_id', 'parent_step_id'].includes(column)
       ) {
         return sql`(SELECT new_id FROM plan_clone_ids WHERE old_id = ${sql.ref(`source.${column}`)})`;
       }

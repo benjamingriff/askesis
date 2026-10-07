@@ -8,6 +8,8 @@ The web application:
 
 - Displays plan context, schedules and workout prescriptions.
 - Shows draft differences, prescribed coverage and date-appropriate pace guides.
+- Records and withdraws the athlete's race results and threshold estimates on the Performance page; every plan uses them.
+- Reports the device timezone on every API request.
 - Provides human review and plan lifecycle controls.
 - Renders persistent coaching conversations, streamed replies and saved agent activity.
 - Sends all reads and mutations through the core platform API.
