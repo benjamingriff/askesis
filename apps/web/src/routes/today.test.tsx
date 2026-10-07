@@ -44,10 +44,15 @@ const brief = {
   brief: {
     goal: '',
     unit: 'kilometres',
-    weeklyDistance: { status: 'unanswered', value: null },
-    currentRuns: { status: 'unanswered', value: null },
-    longestRun: { status: 'unanswered', value: null },
-    desiredRuns: null,
+    sports: [
+      {
+        sport: 'run',
+        currentSessions: { status: 'unanswered', value: null },
+        desiredSessions: null,
+        weeklyDistance: { status: 'unanswered', value: null },
+        longestDistance: { status: 'unanswered', value: null },
+      },
+    ],
     weekdays: Array(7).fill('available'),
     context: '',
   },
@@ -84,6 +89,7 @@ const performance = {
     },
   ],
   entries: [],
+  usedByPlans: ['run_pace'],
 };
 function mount() {
   const router = createMemoryRouter(

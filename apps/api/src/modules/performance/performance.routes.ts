@@ -50,7 +50,7 @@ export function registerPerformanceRoutes(app: OpenAPIHono<AppEnvironment>) {
       path: '/api/v1/performance/calibrations',
       tags: ['Performance'],
       description:
-        'Record a race result or test. Pace guides change from today in the athlete’s timezone for every plan; earlier days keep their paces.',
+        'Record a race result, power test or swim test. Zones change from today in the athlete’s timezone for every plan; earlier days keep theirs.',
       request: { body: body(RecordCalibrationSchema) },
       responses: state,
     }),

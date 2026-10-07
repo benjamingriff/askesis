@@ -6,10 +6,12 @@ import { PlanError } from './plan.service.js';
 import { contentHash, type SemanticValue } from './plan.canonical.js';
 import type { Database } from './plan.aggregate.js';
 import type { Json } from '../../database/generated.js';
+import { BRIEF_SPORTS, SPORT_NAMES } from './disciplines.js';
 import {
   BriefSchema,
   BriefStateSchema,
   emptyBrief,
+  type SportBaseline,
   type SaveBriefSchema,
   type ConfirmBriefSchema,
   type BriefCommand,
@@ -41,18 +43,15 @@ export async function readBrief(db: Database, versionId: string, readOnly = fals
     await sql<Row>`SELECT * FROM plan_brief_weekdays WHERE plan_version_id = ${versionId}::uuid ORDER BY weekday`.execute(
       db,
     );
-  const answer = (status: string, field: string) => ({
-    status: row![status],
-    value: number(row![field]),
-  });
+  const sportRows =
+    await sql<Row>`SELECT * FROM plan_brief_sports WHERE plan_version_id = ${versionId}::uuid`.execute(
+      db,
+    );
   const brief = row
     ? BriefSchema.parse({
         goal: row.goal_text,
         unit: row.distance_unit,
-        weeklyDistance: answer('weekly_distance_status', 'weekly_distance_metres'),
-        currentRuns: answer('current_runs_status', 'current_runs_per_week'),
-        longestRun: answer('longest_run_status', 'longest_run_metres'),
-        desiredRuns: number(row.desired_runs_per_week),
+        sports: sortSports(sportRows.rows.map(sportFromRow)),
         weekdays: days.rows.map((day) => day.availability),
         context: row.context,
       })
@@ -86,7 +85,7 @@ export async function readBrief(db: Database, versionId: string, readOnly = fals
   });
   const add = (code: string, message: string, severity: 'error' | 'warning' = 'error') =>
     findings.push({ code, message, severity, path: 'brief' });
-  if (!brief.goal) add('brief.goal_required', 'Describe your running goal.');
+  if (!brief.goal) add('brief.goal_required', 'Describe your training goal.');
   if (!version.start_date || !version.end_date)
     add('brief.dates_required', 'Set the plan start and end dates.');
   if (
@@ -99,41 +98,15 @@ export async function readBrief(db: Database, versionId: string, readOnly = fals
     )
   )
     add('brief.coverage_outside_plan', 'Prescribed coverage must fit within the plan dates.');
-  for (const [key, value] of Object.entries({
-    weeklyDistance: brief.weeklyDistance,
-    currentRuns: brief.currentRuns,
-    longestRun: brief.longestRun,
-  }))
-    if (value.status === 'unanswered')
-      add(`brief.${key}_unanswered`, `Answer ${key}, or choose unknown.`);
+  if (!brief.sports.length) add('brief.sport_required', 'Choose at least one sport to train.');
+  for (const sport of brief.sports) sportFindings(sport, add);
   const capacity = brief.weekdays.filter((day) => day !== 'unavailable').length * 2;
-  if (!capacity) add('brief.allowed_day_required', 'Allow running on at least one weekday.');
-  if (brief.desiredRuns === null)
-    add('brief.desired_frequency_required', 'Choose your desired runs per week.');
-  else if (brief.desiredRuns > capacity)
+  const desired = brief.sports.reduce((total, sport) => total + (sport.desiredSessions ?? 0), 0);
+  if (!capacity) add('brief.allowed_day_required', 'Allow training on at least one weekday.');
+  else if (desired > capacity)
     add(
       'brief.desired_frequency_exceeds_capacity',
-      'Allow enough days for at most two runs per day.',
-    );
-  if (
-    brief.longestRun.value !== null &&
-    brief.weeklyDistance.value !== null &&
-    brief.longestRun.value > brief.weeklyDistance.value
-  )
-    add(
-      'brief.longest_run_exceeds_weekly_distance',
-      'Your longest run exceeds your typical weekly distance. Check that this represents your recent training.',
-      'warning',
-    );
-  if (
-    brief.currentRuns.value !== null &&
-    brief.desiredRuns !== null &&
-    brief.desiredRuns > brief.currentRuns.value + 2
-  )
-    add(
-      'brief.frequency_increase_unusual',
-      'Your desired frequency is more than two runs above your current frequency.',
-      'warning',
+      'Allow enough days for at most two sessions per day.',
     );
   return BriefStateSchema.parse({
     versionId,
@@ -153,6 +126,80 @@ export async function readBrief(db: Database, versionId: string, readOnly = fals
     })),
     generations,
   });
+}
+
+const SPORT_ORDER = new Map<string, number>(BRIEF_SPORTS.map((sport, index) => [sport, index]));
+function sortSports<Sport extends { sport: unknown }>(sports: Sport[]) {
+  return [...sports].sort(
+    (a, b) => SPORT_ORDER.get(String(a.sport))! - SPORT_ORDER.get(String(b.sport))!,
+  );
+}
+const answer = (status: unknown, value: unknown) => ({ status, value: number(value) });
+function sportFromRow(row: Row) {
+  const common = {
+    sport: row.sport,
+    currentSessions: answer(row.current_sessions_status, row.current_sessions_per_week),
+    desiredSessions: number(row.desired_sessions_per_week),
+  };
+  if (row.sport === 'strength') return common;
+  const weekly = answer(row.weekly_volume_status, row.weekly_volume);
+  const longest = answer(row.longest_session_status, row.longest_session);
+  return row.sport === 'cycle'
+    ? { ...common, weeklyDuration: weekly, longestDuration: longest }
+    : { ...common, weeklyDistance: weekly, longestDistance: longest };
+}
+/** Weekly volume and longest session in their stored units: metres, or seconds for cycling. */
+function volume(sport: SportBaseline) {
+  if (sport.sport === 'strength') return null;
+  return sport.sport === 'cycle'
+    ? { weekly: sport.weeklyDuration, longest: sport.longestDuration }
+    : { weekly: sport.weeklyDistance, longest: sport.longestDistance };
+}
+function sportFindings(
+  sport: SportBaseline,
+  add: (code: string, message: string, severity?: 'error' | 'warning') => void,
+) {
+  const name = SPORT_NAMES[sport.sport];
+  const code = (suffix: string) => `brief.${sport.sport}.${suffix}`;
+  const unit = sport.sport === 'cycle' ? 'time' : 'distance';
+  const amounts = volume(sport);
+  if (sport.currentSessions.status === 'unanswered')
+    add(
+      code('current_sessions_unanswered'),
+      `Answer current ${name} sessions per week, or choose unknown.`,
+    );
+  if (amounts?.weekly.status === 'unanswered')
+    add(
+      code('weekly_volume_unanswered'),
+      `Answer typical weekly ${name} ${unit}, or choose unknown.`,
+    );
+  if (amounts?.longest.status === 'unanswered')
+    add(
+      code('longest_session_unanswered'),
+      `Answer your longest recent ${name} session, or choose unknown.`,
+    );
+  if (sport.desiredSessions === null)
+    add(code('desired_frequency_required'), `Choose your desired ${name} sessions per week.`);
+  if (
+    amounts?.longest.value != null &&
+    amounts.weekly.value != null &&
+    amounts.longest.value > amounts.weekly.value
+  )
+    add(
+      code('longest_exceeds_weekly'),
+      `Your longest ${name} session exceeds your typical weekly ${name} ${unit}. Check that this represents your recent training.`,
+      'warning',
+    );
+  if (
+    sport.currentSessions.value !== null &&
+    sport.desiredSessions !== null &&
+    sport.desiredSessions > sport.currentSessions.value + 2
+  )
+    add(
+      code('frequency_increase_unusual'),
+      `Your desired ${name} frequency is more than two sessions above your current frequency.`,
+      'warning',
+    );
 }
 
 async function ownedVersion(
@@ -279,23 +326,35 @@ export async function saveBriefRows(
   state: Awaited<ReturnType<typeof readBrief>>,
   brief: z.infer<typeof BriefSchema>,
 ) {
-  const b = brief;
+  // Sports are stored and read in a fixed order; compare like with like.
+  const b = { ...brief, sports: sortSports(brief.sports) };
   if (JSON.stringify(b) === JSON.stringify(state.brief)) return;
   const { unit: _a, ...oldFacts } = state.brief;
   const { unit: _b, ...newFacts } = b;
   const clear = contentHash(semantic(oldFacts)) !== contentHash(semantic(newFacts));
-  await sql`INSERT INTO plan_briefs (plan_version_id, goal_text, distance_unit,
-      weekly_distance_status, weekly_distance_metres, current_runs_status, current_runs_per_week,
-      longest_run_status, longest_run_metres, desired_runs_per_week, context)
-      VALUES (${state.versionId}::uuid, ${b.goal}, ${b.unit}, ${b.weeklyDistance.status}, ${b.weeklyDistance.value},
-      ${b.currentRuns.status}, ${b.currentRuns.value}, ${b.longestRun.status}, ${b.longestRun.value}, ${b.desiredRuns}, ${b.context})
-      ON CONFLICT (plan_version_id) DO UPDATE SET goal_text = EXCLUDED.goal_text, distance_unit = EXCLUDED.distance_unit,
-      weekly_distance_status = EXCLUDED.weekly_distance_status, weekly_distance_metres = EXCLUDED.weekly_distance_metres,
-      current_runs_status = EXCLUDED.current_runs_status, current_runs_per_week = EXCLUDED.current_runs_per_week,
-      longest_run_status = EXCLUDED.longest_run_status, longest_run_metres = EXCLUDED.longest_run_metres,
-      desired_runs_per_week = EXCLUDED.desired_runs_per_week, context = EXCLUDED.context`.execute(
-    db,
-  );
+  await sql`INSERT INTO plan_briefs (plan_version_id, goal_text, distance_unit, context)
+      VALUES (${state.versionId}::uuid, ${b.goal}, ${b.unit}, ${b.context})
+      ON CONFLICT (plan_version_id) DO UPDATE SET goal_text = EXCLUDED.goal_text,
+      distance_unit = EXCLUDED.distance_unit, context = EXCLUDED.context`.execute(db);
+  // Upsert by sport so a baseline keeps its lineage across edits and versions.
+  await sql`DELETE FROM plan_brief_sports WHERE plan_version_id = ${state.versionId}::uuid
+      AND NOT (sport = ANY(${b.sports.map((sport) => sport.sport)}::text[]))`.execute(db);
+  for (const sport of b.sports) {
+    const amounts = volume(sport);
+    await sql`INSERT INTO plan_brief_sports (plan_version_id, sport, current_sessions_status,
+        current_sessions_per_week, desired_sessions_per_week, weekly_volume_status, weekly_volume,
+        longest_session_status, longest_session)
+        VALUES (${state.versionId}::uuid, ${sport.sport}, ${sport.currentSessions.status},
+        ${sport.currentSessions.value}, ${sport.desiredSessions}, ${amounts?.weekly.status ?? null},
+        ${amounts?.weekly.value ?? null}, ${amounts?.longest.status ?? null}, ${amounts?.longest.value ?? null})
+        ON CONFLICT (plan_version_id, sport) DO UPDATE SET
+        current_sessions_status = EXCLUDED.current_sessions_status,
+        current_sessions_per_week = EXCLUDED.current_sessions_per_week,
+        desired_sessions_per_week = EXCLUDED.desired_sessions_per_week,
+        weekly_volume_status = EXCLUDED.weekly_volume_status, weekly_volume = EXCLUDED.weekly_volume,
+        longest_session_status = EXCLUDED.longest_session_status,
+        longest_session = EXCLUDED.longest_session`.execute(db);
+  }
   for (const [i, availability] of b.weekdays.entries())
     await sql`INSERT INTO plan_brief_weekdays (plan_version_id, weekday, availability) VALUES (${state.versionId}::uuid,${i + 1},${availability})
         ON CONFLICT (plan_version_id,weekday) DO UPDATE SET availability = EXCLUDED.availability`.execute(
@@ -348,11 +407,11 @@ export async function briefLockFindings(
   const findings = [...state.findings];
   const workouts = await db
     .selectFrom('workouts')
-    .select(['scheduled_date', 'primary_discipline'])
+    .select('scheduled_date')
     .where('plan_version_id', '=', versionId)
     .execute();
   const counts = new Map<string, number>();
-  for (const workout of workouts.filter((w) => w.primary_discipline === 'run')) {
+  for (const workout of workouts) {
     const scheduled = date(workout.scheduled_date)!;
     counts.set(scheduled, (counts.get(scheduled) ?? 0) + 1);
   }
@@ -362,14 +421,14 @@ export async function briefLockFindings(
       findings.push({
         code: `brief.unavailable_day:${scheduled}`,
         severity: 'error',
-        message: `A run is scheduled on an unavailable day (${scheduled}).`,
+        message: `A session is scheduled on an unavailable day (${scheduled}).`,
         path: 'workouts',
       });
     if (count > 2)
       findings.push({
-        code: `brief.too_many_daily_runs:${scheduled}`,
+        code: `brief.too_many_daily_sessions:${scheduled}`,
         severity: 'error',
-        message: `More than two runs are scheduled on ${scheduled}.`,
+        message: `More than two sessions are scheduled on ${scheduled}.`,
         path: 'workouts',
       });
   }

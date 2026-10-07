@@ -2449,46 +2449,7 @@ export interface paths {
                                     goal: string;
                                     /** @enum {string} */
                                     unit: "kilometres" | "miles";
-                                    weeklyDistance: {
-                                        /** @enum {string} */
-                                        status: "unanswered";
-                                        value: unknown;
-                                    } | {
-                                        /** @enum {string} */
-                                        status: "unknown";
-                                        value: unknown;
-                                    } | {
-                                        /** @enum {string} */
-                                        status: "known";
-                                        value: number;
-                                    };
-                                    currentRuns: {
-                                        /** @enum {string} */
-                                        status: "unanswered";
-                                        value: unknown;
-                                    } | {
-                                        /** @enum {string} */
-                                        status: "unknown";
-                                        value: unknown;
-                                    } | {
-                                        /** @enum {string} */
-                                        status: "known";
-                                        value: number;
-                                    };
-                                    longestRun: {
-                                        /** @enum {string} */
-                                        status: "unanswered";
-                                        value: unknown;
-                                    } | {
-                                        /** @enum {string} */
-                                        status: "unknown";
-                                        value: unknown;
-                                    } | {
-                                        /** @enum {string} */
-                                        status: "known";
-                                        value: number;
-                                    };
-                                    desiredRuns: number | null;
+                                    sports: components["schemas"]["SportBaseline"][];
                                     weekdays: ("available" | "preferred" | "unavailable")[];
                                     context: string;
                                 };
@@ -4460,46 +4421,7 @@ export interface paths {
                                 goal: string;
                                 /** @enum {string} */
                                 unit: "kilometres" | "miles";
-                                weeklyDistance: {
-                                    /** @enum {string} */
-                                    status: "unanswered";
-                                    value: unknown;
-                                } | {
-                                    /** @enum {string} */
-                                    status: "unknown";
-                                    value: unknown;
-                                } | {
-                                    /** @enum {string} */
-                                    status: "known";
-                                    value: number;
-                                };
-                                currentRuns: {
-                                    /** @enum {string} */
-                                    status: "unanswered";
-                                    value: unknown;
-                                } | {
-                                    /** @enum {string} */
-                                    status: "unknown";
-                                    value: unknown;
-                                } | {
-                                    /** @enum {string} */
-                                    status: "known";
-                                    value: number;
-                                };
-                                longestRun: {
-                                    /** @enum {string} */
-                                    status: "unanswered";
-                                    value: unknown;
-                                } | {
-                                    /** @enum {string} */
-                                    status: "unknown";
-                                    value: unknown;
-                                } | {
-                                    /** @enum {string} */
-                                    status: "known";
-                                    value: number;
-                                };
-                                desiredRuns: number | null;
+                                sports: components["schemas"]["SportBaseline"][];
                                 weekdays: ("available" | "preferred" | "unavailable")[];
                                 context: string;
                             };
@@ -4595,46 +4517,7 @@ export interface paths {
                             goal: string;
                             /** @enum {string} */
                             unit: "kilometres" | "miles";
-                            weeklyDistance: {
-                                /** @enum {string} */
-                                status: "unanswered";
-                                value: unknown;
-                            } | {
-                                /** @enum {string} */
-                                status: "unknown";
-                                value: unknown;
-                            } | {
-                                /** @enum {string} */
-                                status: "known";
-                                value: number;
-                            };
-                            currentRuns: {
-                                /** @enum {string} */
-                                status: "unanswered";
-                                value: unknown;
-                            } | {
-                                /** @enum {string} */
-                                status: "unknown";
-                                value: unknown;
-                            } | {
-                                /** @enum {string} */
-                                status: "known";
-                                value: number;
-                            };
-                            longestRun: {
-                                /** @enum {string} */
-                                status: "unanswered";
-                                value: unknown;
-                            } | {
-                                /** @enum {string} */
-                                status: "unknown";
-                                value: unknown;
-                            } | {
-                                /** @enum {string} */
-                                status: "known";
-                                value: number;
-                            };
-                            desiredRuns: number | null;
+                            sports: components["schemas"]["SportBaseline"][];
                             weekdays: ("available" | "preferred" | "unavailable")[];
                             context: string;
                         };
@@ -4658,46 +4541,7 @@ export interface paths {
                                 goal: string;
                                 /** @enum {string} */
                                 unit: "kilometres" | "miles";
-                                weeklyDistance: {
-                                    /** @enum {string} */
-                                    status: "unanswered";
-                                    value: unknown;
-                                } | {
-                                    /** @enum {string} */
-                                    status: "unknown";
-                                    value: unknown;
-                                } | {
-                                    /** @enum {string} */
-                                    status: "known";
-                                    value: number;
-                                };
-                                currentRuns: {
-                                    /** @enum {string} */
-                                    status: "unanswered";
-                                    value: unknown;
-                                } | {
-                                    /** @enum {string} */
-                                    status: "unknown";
-                                    value: unknown;
-                                } | {
-                                    /** @enum {string} */
-                                    status: "known";
-                                    value: number;
-                                };
-                                longestRun: {
-                                    /** @enum {string} */
-                                    status: "unanswered";
-                                    value: unknown;
-                                } | {
-                                    /** @enum {string} */
-                                    status: "unknown";
-                                    value: unknown;
-                                } | {
-                                    /** @enum {string} */
-                                    status: "known";
-                                    value: number;
-                                };
-                                desiredRuns: number | null;
+                                sports: components["schemas"]["SportBaseline"][];
                                 weekdays: ("available" | "preferred" | "unavailable")[];
                                 context: string;
                             };
@@ -4816,46 +4660,7 @@ export interface paths {
                                 goal: string;
                                 /** @enum {string} */
                                 unit: "kilometres" | "miles";
-                                weeklyDistance: {
-                                    /** @enum {string} */
-                                    status: "unanswered";
-                                    value: unknown;
-                                } | {
-                                    /** @enum {string} */
-                                    status: "unknown";
-                                    value: unknown;
-                                } | {
-                                    /** @enum {string} */
-                                    status: "known";
-                                    value: number;
-                                };
-                                currentRuns: {
-                                    /** @enum {string} */
-                                    status: "unanswered";
-                                    value: unknown;
-                                } | {
-                                    /** @enum {string} */
-                                    status: "unknown";
-                                    value: unknown;
-                                } | {
-                                    /** @enum {string} */
-                                    status: "known";
-                                    value: number;
-                                };
-                                longestRun: {
-                                    /** @enum {string} */
-                                    status: "unanswered";
-                                    value: unknown;
-                                } | {
-                                    /** @enum {string} */
-                                    status: "unknown";
-                                    value: unknown;
-                                } | {
-                                    /** @enum {string} */
-                                    status: "known";
-                                    value: number;
-                                };
-                                desiredRuns: number | null;
+                                sports: components["schemas"]["SportBaseline"][];
                                 weekdays: ("available" | "preferred" | "unavailable")[];
                                 context: string;
                             };
@@ -4976,46 +4781,7 @@ export interface paths {
                                 goal: string;
                                 /** @enum {string} */
                                 unit: "kilometres" | "miles";
-                                weeklyDistance: {
-                                    /** @enum {string} */
-                                    status: "unanswered";
-                                    value: unknown;
-                                } | {
-                                    /** @enum {string} */
-                                    status: "unknown";
-                                    value: unknown;
-                                } | {
-                                    /** @enum {string} */
-                                    status: "known";
-                                    value: number;
-                                };
-                                currentRuns: {
-                                    /** @enum {string} */
-                                    status: "unanswered";
-                                    value: unknown;
-                                } | {
-                                    /** @enum {string} */
-                                    status: "unknown";
-                                    value: unknown;
-                                } | {
-                                    /** @enum {string} */
-                                    status: "known";
-                                    value: number;
-                                };
-                                longestRun: {
-                                    /** @enum {string} */
-                                    status: "unanswered";
-                                    value: unknown;
-                                } | {
-                                    /** @enum {string} */
-                                    status: "unknown";
-                                    value: unknown;
-                                } | {
-                                    /** @enum {string} */
-                                    status: "known";
-                                    value: number;
-                                };
-                                desiredRuns: number | null;
+                                sports: components["schemas"]["SportBaseline"][];
                                 weekdays: ("available" | "preferred" | "unavailable")[];
                                 context: string;
                             };
@@ -5144,46 +4910,7 @@ export interface paths {
                                 goal: string;
                                 /** @enum {string} */
                                 unit: "kilometres" | "miles";
-                                weeklyDistance: {
-                                    /** @enum {string} */
-                                    status: "unanswered";
-                                    value: unknown;
-                                } | {
-                                    /** @enum {string} */
-                                    status: "unknown";
-                                    value: unknown;
-                                } | {
-                                    /** @enum {string} */
-                                    status: "known";
-                                    value: number;
-                                };
-                                currentRuns: {
-                                    /** @enum {string} */
-                                    status: "unanswered";
-                                    value: unknown;
-                                } | {
-                                    /** @enum {string} */
-                                    status: "unknown";
-                                    value: unknown;
-                                } | {
-                                    /** @enum {string} */
-                                    status: "known";
-                                    value: number;
-                                };
-                                longestRun: {
-                                    /** @enum {string} */
-                                    status: "unanswered";
-                                    value: unknown;
-                                } | {
-                                    /** @enum {string} */
-                                    status: "unknown";
-                                    value: unknown;
-                                } | {
-                                    /** @enum {string} */
-                                    status: "known";
-                                    value: number;
-                                };
-                                desiredRuns: number | null;
+                                sports: components["schemas"]["SportBaseline"][];
                                 weekdays: ("available" | "preferred" | "unavailable")[];
                                 context: string;
                             };
@@ -5355,7 +5082,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description Record a race result or test. Pace guides change from today in the athlete’s timezone for every plan; earlier days keep their paces. */
+        /** @description Record a race result, power test or swim test. Zones change from today in the athlete’s timezone for every plan; earlier days keep theirs. */
         post: {
             parameters: {
                 query?: never;
@@ -5698,17 +5425,165 @@ export interface components {
             maximumValue: number | null;
             unit: string;
         } | null;
+        SportBaseline: {
+            /** @enum {string} */
+            sport: "run";
+            currentSessions: {
+                /** @enum {string} */
+                status: "unanswered";
+                value: unknown;
+            } | {
+                /** @enum {string} */
+                status: "unknown";
+                value: unknown;
+            } | {
+                /** @enum {string} */
+                status: "known";
+                value: number;
+            };
+            desiredSessions: number | null;
+            weeklyDistance: {
+                /** @enum {string} */
+                status: "unanswered";
+                value: unknown;
+            } | {
+                /** @enum {string} */
+                status: "unknown";
+                value: unknown;
+            } | {
+                /** @enum {string} */
+                status: "known";
+                value: number;
+            };
+            longestDistance: {
+                /** @enum {string} */
+                status: "unanswered";
+                value: unknown;
+            } | {
+                /** @enum {string} */
+                status: "unknown";
+                value: unknown;
+            } | {
+                /** @enum {string} */
+                status: "known";
+                value: number;
+            };
+        } | {
+            /** @enum {string} */
+            sport: "swim";
+            currentSessions: {
+                /** @enum {string} */
+                status: "unanswered";
+                value: unknown;
+            } | {
+                /** @enum {string} */
+                status: "unknown";
+                value: unknown;
+            } | {
+                /** @enum {string} */
+                status: "known";
+                value: number;
+            };
+            desiredSessions: number | null;
+            weeklyDistance: {
+                /** @enum {string} */
+                status: "unanswered";
+                value: unknown;
+            } | {
+                /** @enum {string} */
+                status: "unknown";
+                value: unknown;
+            } | {
+                /** @enum {string} */
+                status: "known";
+                value: number;
+            };
+            longestDistance: {
+                /** @enum {string} */
+                status: "unanswered";
+                value: unknown;
+            } | {
+                /** @enum {string} */
+                status: "unknown";
+                value: unknown;
+            } | {
+                /** @enum {string} */
+                status: "known";
+                value: number;
+            };
+        } | {
+            /** @enum {string} */
+            sport: "cycle";
+            currentSessions: {
+                /** @enum {string} */
+                status: "unanswered";
+                value: unknown;
+            } | {
+                /** @enum {string} */
+                status: "unknown";
+                value: unknown;
+            } | {
+                /** @enum {string} */
+                status: "known";
+                value: number;
+            };
+            desiredSessions: number | null;
+            weeklyDuration: {
+                /** @enum {string} */
+                status: "unanswered";
+                value: unknown;
+            } | {
+                /** @enum {string} */
+                status: "unknown";
+                value: unknown;
+            } | {
+                /** @enum {string} */
+                status: "known";
+                value: number;
+            };
+            longestDuration: {
+                /** @enum {string} */
+                status: "unanswered";
+                value: unknown;
+            } | {
+                /** @enum {string} */
+                status: "unknown";
+                value: unknown;
+            } | {
+                /** @enum {string} */
+                status: "known";
+                value: number;
+            };
+        } | {
+            /** @enum {string} */
+            sport: "strength";
+            currentSessions: {
+                /** @enum {string} */
+                status: "unanswered";
+                value: unknown;
+            } | {
+                /** @enum {string} */
+                status: "unknown";
+                value: unknown;
+            } | {
+                /** @enum {string} */
+                status: "known";
+                value: number;
+            };
+            desiredSessions: number | null;
+        };
         PerformanceState: {
             timezone: string;
             today: string;
             current: components["schemas"]["CalibrationEntry"][];
             entries: components["schemas"]["CalibrationEntry"][];
+            usedByPlans: components["schemas"]["PerformanceSystem"][];
         };
         CalibrationEntry: {
             id: string;
             system: components["schemas"]["PerformanceSystem"];
             method: string;
-            input: components["schemas"]["PaceInput"];
+            input: components["schemas"]["CalibrationMethodInput"];
             calculatorVersion: string;
             /** @enum {string} */
             provenance: "user_supplied" | "user_estimate" | "agent_estimate";
@@ -5723,8 +5598,8 @@ export interface components {
             zones: components["schemas"]["CalibrationZone"][];
         };
         /** @enum {string} */
-        PerformanceSystem: "run_pace";
-        PaceInput: {
+        PerformanceSystem: "run_pace" | "cycle_power" | "swim_pace";
+        CalibrationMethodInput: {
             /** @enum {string} */
             method: "race_result";
             distanceMetres: number;
@@ -5733,6 +5608,27 @@ export interface components {
             /** @enum {string} */
             method: "threshold_pace";
             secondsPerKilometre: number;
+        } | {
+            /** @enum {string} */
+            method: "ftp";
+            watts: number;
+        } | {
+            /** @enum {string} */
+            method: "twenty_minute_test";
+            averageWatts: number;
+        } | {
+            /** @enum {string} */
+            method: "ramp_test";
+            bestMinuteWatts: number;
+        } | {
+            /** @enum {string} */
+            method: "css_test";
+            t400Seconds: number;
+            t200Seconds: number;
+        } | {
+            /** @enum {string} */
+            method: "css_pace";
+            secondsPer100Metres: number;
         };
         CalibrationZone: {
             key: string;
@@ -5752,6 +5648,59 @@ export interface components {
             /** Format: date */
             observedOn?: string;
             idempotencyKey?: string;
+        } | {
+            /** @enum {string} */
+            system: "cycle_power";
+            input: components["schemas"]["PowerInput"];
+            /** @enum {string} */
+            provenance?: "user_supplied" | "user_estimate" | "agent_estimate";
+            estimateBasis?: string;
+            /** Format: date */
+            observedOn?: string;
+            idempotencyKey?: string;
+        } | {
+            /** @enum {string} */
+            system: "swim_pace";
+            input: components["schemas"]["SwimInput"];
+            /** @enum {string} */
+            provenance?: "user_supplied" | "user_estimate" | "agent_estimate";
+            estimateBasis?: string;
+            /** Format: date */
+            observedOn?: string;
+            idempotencyKey?: string;
+        };
+        PaceInput: {
+            /** @enum {string} */
+            method: "race_result";
+            distanceMetres: number;
+            durationSeconds: number;
+        } | {
+            /** @enum {string} */
+            method: "threshold_pace";
+            secondsPerKilometre: number;
+        };
+        PowerInput: {
+            /** @enum {string} */
+            method: "ftp";
+            watts: number;
+        } | {
+            /** @enum {string} */
+            method: "twenty_minute_test";
+            averageWatts: number;
+        } | {
+            /** @enum {string} */
+            method: "ramp_test";
+            bestMinuteWatts: number;
+        };
+        SwimInput: {
+            /** @enum {string} */
+            method: "css_test";
+            t400Seconds: number;
+            t200Seconds: number;
+        } | {
+            /** @enum {string} */
+            method: "css_pace";
+            secondsPer100Metres: number;
         };
         CalibrationPreview: {
             system: components["schemas"]["PerformanceSystem"];
@@ -5764,6 +5713,14 @@ export interface components {
             /** @enum {string} */
             system: "run_pace";
             input: components["schemas"]["PaceInput"];
+        } | {
+            /** @enum {string} */
+            system: "cycle_power";
+            input: components["schemas"]["PowerInput"];
+        } | {
+            /** @enum {string} */
+            system: "swim_pace";
+            input: components["schemas"]["SwimInput"];
         };
     };
     responses: never;

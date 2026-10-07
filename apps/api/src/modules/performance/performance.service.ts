@@ -5,7 +5,12 @@ import { localDate } from '../athletes/timezone.js';
 import { canonicalJson, contentHash, type SemanticValue } from '../plans/plan.canonical.js';
 import { PlanError } from '../plans/plan.common.js';
 import type { ValidationFinding } from '../plans/plan.validation.js';
-import { CALIBRATORS, calibrate, systemsForDiscipline } from './performance.calibrators.js';
+import {
+  CALIBRATORS,
+  calibrate,
+  PERFORMANCE_SYSTEMS,
+  systemForDiscipline,
+} from './performance.calibrators.js';
 import {
   CalibrationEntrySchema,
   CalibrationPreviewResultSchema,
@@ -107,14 +112,31 @@ export async function readPerformance(
   const timezone = await athleteTimezone(db, athleteId);
   const today = localDate(timezone, now);
   const entries = await readEntries(db, athleteId);
+  const sports = await athleteSports(db, athleteId);
   return PerformanceStateSchema.parse({
     timezone,
     today,
-    current: (Object.keys(CALIBRATORS) as PerformanceSystem[])
-      .map((system) => resolveCalibration(entries, system, today))
-      .filter((entry) => entry !== null),
+    current: PERFORMANCE_SYSTEMS.map((system) => resolveCalibration(entries, system, today)).filter(
+      (entry) => entry !== null,
+    ),
     entries: [...entries].reverse(),
+    usedByPlans: PERFORMANCE_SYSTEMS.filter((system) => sports.has(CALIBRATORS[system].discipline)),
   });
+}
+
+/** Sports in the current versions of the athlete's unarchived plans: briefs, workouts and steps. */
+async function athleteSports(db: Database, athleteId: string): Promise<Set<string>> {
+  const versions = db
+    .selectFrom('plans')
+    .select(sql<string>`COALESCE(current_draft_version_id, current_locked_version_id)`.as('id'))
+    .where('owner_id', '=', athleteId)
+    .where('archived_at', 'is', null);
+  const { rows } = await sql<{ sport: string }>`
+    SELECT sport FROM plan_brief_sports WHERE plan_version_id IN (${versions})
+    UNION SELECT primary_discipline FROM workouts WHERE plan_version_id IN (${versions})
+    UNION SELECT discipline FROM workout_steps
+      WHERE plan_version_id IN (${versions}) AND discipline IS NOT NULL`.execute(db);
+  return new Set(rows.map((row) => row.sport));
 }
 
 export async function getPerformance(athleteId: string, now = new Date()) {
@@ -329,27 +351,32 @@ async function versionOwner(db: Database, versionId: string) {
   return row.owner_id;
 }
 
-/** A plan can lock only when its athlete has calibrated every system its disciplines use. */
+/**
+ * A plan can lock only when its athlete has calibrated every system its sports use. Sports are
+ * read from each effort step as well as the workout, so a brick's ride and run both count.
+ */
 export async function performanceLockFindings(
   db: Database,
   versionId: string,
 ): Promise<ValidationFinding[]> {
   const entries = await readEntries(db, await versionOwner(db, versionId));
-  const disciplines = await db
-    .selectFrom('workouts')
-    .select('primary_discipline')
-    .distinct()
-    .where('plan_version_id', '=', versionId)
-    .execute();
-  return disciplines
-    .flatMap((row) => systemsForDiscipline(row.primary_discipline))
-    .filter((system) => !entries.some((entry) => entry.system === system && !entry.retractedAt))
-    .map((system) => ({
-      code: `performance.${system}_required`,
-      severity: 'error' as const,
-      message: 'Add a race result or estimated threshold pace on the Performance page.',
-      path: 'performance',
-    }));
+  const { rows } = await sql<{ discipline: string }>`
+    SELECT primary_discipline AS discipline FROM workouts WHERE plan_version_id = ${versionId}::uuid
+    UNION SELECT discipline FROM workout_steps
+      WHERE plan_version_id = ${versionId}::uuid AND kind = 'effort' AND discipline IS NOT NULL`.execute(
+    db,
+  );
+  const systems = new Set(rows.map((row) => systemForDiscipline(row.discipline)));
+  return PERFORMANCE_SYSTEMS.filter(
+    (system) =>
+      systems.has(system) &&
+      !entries.some((entry) => entry.system === system && !entry.retractedAt),
+  ).map((system) => ({
+    code: `performance.${system}_required`,
+    severity: 'error' as const,
+    message: CALIBRATORS[system].requirement,
+    path: 'performance',
+  }));
 }
 
 /** The entries current at lock, recorded with the version as provenance outside its hash. */

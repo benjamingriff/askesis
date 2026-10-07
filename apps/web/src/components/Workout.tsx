@@ -5,26 +5,67 @@ import {
   dayNumber,
   formatDistance,
   formatDuration,
+  formatLoad,
   formatLong,
   formatPace,
+  formatSpeed,
+  formatSwimDistance,
+  formatSwimPace,
   WEEKDAYS_SHORT,
   weekdayIndex,
+  type LoadUnits,
+  type PoolUnits,
 } from '../lib/format';
+import { formatZoneValue, SPORT_META, zoneLabel, type Sport } from '../lib/sports';
 import { inferKind, KIND_META } from '../lib/workouts';
 import { useWorkoutDetail, type PlanVersion } from '../plan-data';
-import type { Units } from '../settings';
+import { useSportUnits, type Units } from '../settings';
 import { WorkoutChangeBadge } from './PlanChanges';
 import { IntensityChart } from './IntensityChart';
 import { Stat } from './PlanWidgets';
 import { Button, Dialog, ErrorState, KindIcon, LoadingState, cx } from './ui';
 
-export function workoutMeta(workout: WorkoutSummary, units: Units): string {
+export function workoutMeta(workout: WorkoutSummary, units: Units, pool: PoolUnits = 'm'): string {
   const parts = [];
   if (workout.estimatedDistanceMetres !== null)
-    parts.push(formatDistance(workout.estimatedDistanceMetres, units));
+    parts.push(
+      workout.discipline === 'swim'
+        ? formatSwimDistance(workout.estimatedDistanceMetres, pool)
+        : formatDistance(workout.estimatedDistanceMetres, units),
+    );
   if (workout.estimatedDurationSeconds !== null)
     parts.push(formatDuration(workout.estimatedDurationSeconds));
-  return parts.join(' · ') || workout.discipline;
+  return parts.join(' · ') || SPORT_META[workout.discipline as Sport]?.label || workout.discipline;
+}
+
+/** Headline numbers for a workout, in the units its sport is usually described in. */
+export function workoutStats(workout: WorkoutSummary, units: Units, pool: PoolUnits) {
+  const { estimatedDistanceMetres: metres, estimatedDurationSeconds: seconds } = workout;
+  const stats: { label: string; value: string; unit?: string }[] = [];
+  if (metres !== null)
+    stats.push(
+      workout.discipline === 'swim'
+        ? { label: 'Distance', value: formatSwimDistance(metres, pool) }
+        : { label: 'Distance', value: formatDistance(metres, units, false), unit: units },
+    );
+  if (seconds !== null) stats.push({ label: 'Time', value: formatDuration(seconds) });
+  if (metres && seconds) {
+    if (workout.discipline === 'run')
+      stats.push({
+        label: 'Avg pace',
+        value: formatPace((seconds / metres) * 1000, units, false),
+        unit: `/${units}`,
+      });
+    if (workout.discipline === 'swim')
+      stats.push({
+        label: 'Avg pace',
+        value: formatSwimPace((seconds / metres) * 100, pool, false),
+        unit: `/100${pool}`,
+      });
+    if (workout.discipline === 'cycle')
+      stats.push({ label: 'Avg speed', value: formatSpeed(metres / seconds, units) });
+  }
+  return stats;
 }
 
 /** One day of the plan: date gutter on the left, workout cards (or rest) on the right. */
@@ -86,6 +127,7 @@ export function WorkoutCard({
   onOpen: (workout: WorkoutSummary) => void;
 }) {
   const kind = KIND_META[inferKind(workout)];
+  const { pool } = useSportUnits();
   return (
     <button
       type="button"
@@ -102,7 +144,7 @@ export function WorkoutCard({
           <WorkoutChangeBadge id={workout.id} />
         </span>
         <strong>{workout.title}</strong>
-        <small>{workoutMeta(workout, units)}</small>
+        <small>{workoutMeta(workout, units, pool)}</small>
       </span>
       <ChevronRight size={18} aria-hidden="true" className="chevron" />
     </button>
@@ -111,41 +153,57 @@ export function WorkoutCard({
 
 // ---- Prescription ------------------------------------------------------------------------------
 
-function formatValue(value: number | null, unit: string | null, units: Units): string | null {
+type Display = { units: Units; pool: PoolUnits; load: LoadUnits };
+
+function formatValue(
+  value: number | null,
+  unit: string | null,
+  display: Display,
+  discipline: string | null,
+): string | null {
   if (value === null) return null;
+  const { units } = display;
   if (unit === 'seconds') return value % 60 === 0 ? `${value / 60} min` : `${value}s`;
   if (unit === 'minutes') return `${value} min`;
+  if (unit === 'metres' && discipline === 'swim') return formatSwimDistance(value, display.pool);
   if (unit === 'metres') return value >= 1000 ? formatDistance(value, units) : `${value} m`;
   if (unit === 'kilometres') return formatDistance(value * 1000, units);
   if (unit === 'miles') return formatDistance(value * 1609.344, units);
   if (unit === 'repetitions') return `${value} reps`;
-  if (unit === 'seconds_per_kilometre') return formatPace(value, units);
-  if (unit === 'seconds_per_mile') return formatPace(value / 1.609344, units);
-  return unit === null ? String(value) : `${value} ${unit.replaceAll('_', ' ')}`;
+  if (unit === 'kilograms') return formatLoad(value, display.load);
+  if (unit === 'pounds') return formatLoad(value / 2.20462, display.load);
+  if (unit === null) return String(value);
+  return formatZoneValue(value, unit, display);
 }
 
-function formatCompletion(step: WorkoutStep, units: Units): string | null {
+function formatCompletion(step: WorkoutStep, display: Display): string | null {
   const completion = step.completion;
   if (completion === null) return null;
-  if (completion.value !== null) return formatValue(completion.value, completion.unit, units);
+  if (completion.value !== null)
+    return formatValue(completion.value, completion.unit, display, step.discipline);
   if (completion.type === 'until_condition')
     return `until ${completion.conditionType?.replaceAll('_', ' ') ?? 'complete'}`;
   return completion.type.replaceAll('_', ' ');
 }
 
-function formatTarget(target: StepTarget, units: Units): string {
+function formatTarget(target: StepTarget, display: Display, discipline: string | null): string {
   if (target.type === 'zone' && target.zoneKey !== null) {
     const zone = target.resolvedZone;
-    const name = target.zoneKey.charAt(0).toUpperCase() + target.zoneKey.slice(1);
+    const name = zoneLabel(target.zoneKey, target.zoneSystem);
     if (zone && zone.minimumValue !== null && zone.maximumValue !== null) {
-      return `${name} · ${formatValue(zone.minimumValue, zone.unit, units)}–${formatValue(zone.maximumValue, zone.unit, units)}`;
+      return `${name} · ${formatValue(zone.minimumValue, zone.unit, display, discipline)}–${formatValue(zone.maximumValue, zone.unit, display, discipline)}`;
     }
     return name;
   }
   if (target.text !== null) return target.text;
-  const minimum = formatValue(target.minimumValue, target.unit, units);
-  const preferred = formatValue(target.targetValue, target.unit, units);
-  const maximum = formatValue(target.maximumValue, target.unit, units);
+  if (target.type === 'rpe' && target.targetValue !== null) return `RPE ${target.targetValue}`;
+  if (target.type === 'rir' && target.targetValue !== null)
+    return `${target.targetValue} rep${target.targetValue === 1 ? '' : 's'} in reserve`;
+  if (target.type === 'load' && target.targetValue !== null)
+    return `~${formatValue(target.targetValue, target.unit, display, discipline)}`;
+  const minimum = formatValue(target.minimumValue, target.unit, display, discipline);
+  const preferred = formatValue(target.targetValue, target.unit, display, discipline);
+  const maximum = formatValue(target.maximumValue, target.unit, display, discipline);
   const range =
     minimum !== null && maximum !== null
       ? minimum === maximum
@@ -155,28 +213,41 @@ function formatTarget(target: StepTarget, units: Units): string {
   return `${target.type.replaceAll('_', ' ')}${range === null ? '' : ` ${range}`}`;
 }
 
-export function StepList({ step, units }: { step: WorkoutStep; units: Units }) {
-  if (step.kind === 'sequence')
-    return (
-      <ol className="step-list">
-        {step.steps.map((child) => (
-          <StepItem step={child} units={units} key={child.id} />
-        ))}
-      </ol>
-    );
+export function StepList({
+  step,
+  units,
+  mixed = false,
+}: {
+  step: WorkoutStep;
+  units: Units;
+  /** Label each effort's sport, as in a brick or a Hyrox session. */
+  mixed?: boolean | undefined;
+}) {
+  const display = { units, ...useSportUnits() };
+  const children = step.kind === 'sequence' ? step.steps : [step];
   return (
     <ol className="step-list">
-      <StepItem step={step} units={units} />
+      {children.map((child) => (
+        <StepItem step={child} display={display} mixed={mixed} key={child.id} />
+      ))}
     </ol>
   );
 }
 
-function StepItem({ step, units }: { step: WorkoutStep; units: Units }) {
+function StepItem({
+  step,
+  display,
+  mixed,
+}: {
+  step: WorkoutStep;
+  display: Display;
+  mixed: boolean;
+}) {
   if (step.kind === 'sequence')
     return (
       <>
         {step.steps.map((child) => (
-          <StepItem step={child} units={units} key={child.id} />
+          <StepItem step={child} display={display} mixed={mixed} key={child.id} />
         ))}
       </>
     );
@@ -190,25 +261,38 @@ function StepItem({ step, units }: { step: WorkoutStep; units: Units }) {
         </div>
         <ol>
           {step.steps.map((child) => (
-            <StepItem step={child} units={units} key={child.id} />
+            <StepItem step={child} display={display} mixed={mixed} key={child.id} />
           ))}
         </ol>
       </li>
     );
-  const completion = formatCompletion(step, units);
+  const completion = formatCompletion(step, display);
   const zone = step.targets.find((t) => t.type === 'zone')?.zoneKey ?? null;
+  const sport = step.discipline ? SPORT_META[step.discipline as Sport] : undefined;
   return (
-    <li className={cx('step', `step-${step.role ?? 'other'}`)} data-zone={zone ?? undefined}>
+    <li
+      className={cx('step', `step-${step.role ?? 'other'}`)}
+      data-zone={zone ?? undefined}
+      data-sport={step.discipline ?? undefined}
+    >
       <span className="step-marker" aria-hidden="true" />
       <div className="step-copy">
-        <span className="label">{step.role ?? 'step'}</span>
+        <span className="label">
+          {mixed && sport ? (
+            <span className="step-sport" style={{ '--kind': sport.color } as CSSProperties}>
+              <sport.icon size={12} aria-hidden="true" /> {sport.label}
+              {step.role ? ' · ' : ''}
+            </span>
+          ) : null}
+          {step.role ?? (mixed && sport ? '' : 'step')}
+        </span>
         <strong>{step.label ?? step.movement?.name ?? 'Effort'}</strong>
         {step.instructions ? <p>{step.instructions}</p> : null}
         {step.targets.length ? (
           <div className="target-list">
             {step.targets.map((target, index) => (
               <span className="target" key={`${target.type}-${index}`}>
-                {formatTarget(target, units)}
+                {formatTarget(target, display, step.discipline)}
               </span>
             ))}
           </div>
@@ -234,9 +318,9 @@ export function WorkoutDialog({
   onAskCoach?: ((workout: WorkoutSummary) => void) | undefined;
 }) {
   const detail = useWorkoutDetail(workout?.id, version);
+  const { pool } = useSportUnits();
   if (!workout) return null;
   const kind = KIND_META[inferKind(workout)];
-  const { estimatedDistanceMetres: metres, estimatedDurationSeconds: seconds } = workout;
   return (
     <Dialog
       open
@@ -263,23 +347,9 @@ export function WorkoutDialog({
     >
       <div className="workout-detail">
         <div className="workout-stats">
-          {metres !== null ? (
-            <Stat
-              label="Distance"
-              value={formatDistance(metres, units, false)}
-              unit={units}
-              large
-            />
-          ) : null}
-          {seconds !== null ? <Stat label="Time" value={formatDuration(seconds)} large /> : null}
-          {metres && seconds ? (
-            <Stat
-              label="Avg pace"
-              value={formatPace((seconds / metres) * 1000, units, false)}
-              unit={`/${units}`}
-              large
-            />
-          ) : null}
+          {workoutStats(workout, units, pool).map((stat) => (
+            <Stat key={stat.label} label={stat.label} value={stat.value} unit={stat.unit} large />
+          ))}
         </div>
         {workout.purpose ? <p className="workout-purpose">{workout.purpose}</p> : null}
         {workout.description ? <p className="muted">{workout.description}</p> : null}
@@ -301,7 +371,11 @@ export function WorkoutDialog({
               </div>
             ) : null}
             <h3 className="steps-heading">Prescription</h3>
-            <StepList step={detail.data.prescription} units={units} />
+            <StepList
+              step={detail.data.prescription}
+              units={units}
+              mixed={workout.discipline === 'mixed'}
+            />
           </>
         ) : null}
       </div>

@@ -64,7 +64,7 @@ async function worker() {
     provider: 'openai',
     model: 'gpt-6.1-sol',
     reasoning: 'medium',
-    promptVersion: 'running-coach-v3',
+    promptVersion: 'multisport-coach-v1',
     ready: true,
   });
   return id;
@@ -105,10 +105,15 @@ async function tool(
 const brief = {
   ...emptyBrief(),
   goal: 'Run a comfortable 10K',
-  weeklyDistance: { status: 'known' as const, value: 18000 },
-  currentRuns: { status: 'known' as const, value: 3 },
-  longestRun: { status: 'known' as const, value: 8000 },
-  desiredRuns: 3,
+  sports: [
+    {
+      sport: 'run' as const,
+      currentSessions: { status: 'known' as const, value: 3 },
+      desiredSessions: 3,
+      weeklyDistance: { status: 'known' as const, value: 18000 },
+      longestDistance: { status: 'known' as const, value: 8000 },
+    },
+  ],
 };
 const effort = {
   parentIndex: null,
@@ -149,6 +154,7 @@ const batch: z.infer<typeof ScheduleSchema> = {
       weekKey: 'week1',
       date: '2027-01-02',
       position: 1,
+      discipline: 'run',
       title: 'Easy run',
       description: null,
       purpose: 'Build consistency',
@@ -1246,7 +1252,7 @@ it('requires the current prompt contract before a worker contributes readiness o
     provider: 'openai',
     model: 'gpt-6.1-sol',
     reasoning: 'medium',
-    promptVersion: 'running-coach-v3',
+    promptVersion: 'multisport-coach-v1',
     ready: true,
   });
   expect((await chatCapabilities()).executionAvailable).toBe(true);
@@ -1384,4 +1390,253 @@ it('previews, records and retracts a reported race from a standalone chat withou
   const turn = await getTurn(owner, claim.runId);
   expect(turn.performanceChanged).toBe(true);
   expect(turn.changes).toBeNull();
+});
+
+it('prescribes rides, swims, bricks and strength with sport-specific targets and requires each sport’s calibration to lock', async () => {
+  const { claim, p } = await planning();
+  const sports = [
+    brief.sports[0],
+    {
+      sport: 'cycle',
+      currentSessions: { status: 'known', value: 2 },
+      desiredSessions: 2,
+      weeklyDuration: { status: 'known', value: 10800 },
+      longestDuration: { status: 'known', value: 5400 },
+    },
+    {
+      sport: 'swim',
+      currentSessions: { status: 'known', value: 1 },
+      desiredSessions: 2,
+      weeklyDistance: { status: 'known', value: 3000 },
+      longestDistance: { status: 'known', value: 2000 },
+    },
+    { sport: 'strength', currentSessions: { status: 'known', value: 0 }, desiredSessions: 1 },
+  ];
+  await tool(claim, 'update_plan_brief', {
+    brief: { ...brief, goal: 'Olympic triathlon', sports },
+    startDate: '2027-01-01',
+    endDate: '2027-03-31',
+    description: null,
+  });
+  const leaf = (parentIndex: number, extra: object) => ({
+    ...effort,
+    parentIndex,
+    role: 'work' as const,
+    instructions: null,
+    ...extra,
+  });
+  const root = { ...effort, kind: 'sequence', role: null, completion: null, targets: [] };
+  const workout = (key: string, date: string, discipline: string, steps: object[]) => ({
+    ...batch.workouts[0]!,
+    key,
+    date,
+    discipline,
+    title: key,
+    steps,
+  });
+  const minutes = (value: number) => ({ type: 'duration', value: value * 60, unit: 'seconds' });
+  const schedule = {
+    ...batch,
+    workouts: [
+      workout('Ride', '2027-01-01', 'cycle', [
+        root,
+        leaf(0, {
+          label: 'Endurance',
+          completion: minutes(40),
+          targets: [{ type: 'zone', key: 'endurance' }],
+        }),
+        leaf(0, {
+          label: 'Over-geared',
+          completion: minutes(10),
+          targets: [
+            { type: 'power', watts: 240 },
+            { type: 'rpe', value: 7 },
+          ],
+        }),
+      ]),
+      workout('Swim', '2027-01-02', 'swim', [
+        root,
+        { ...root, kind: 'repeat', repeatCount: 6, parentIndex: 0 },
+        leaf(1, {
+          label: '100 at CSS',
+          completion: { type: 'distance', value: 100, unit: 'metres' },
+          targets: [{ type: 'zone', key: 'threshold' }],
+        }),
+        leaf(1, {
+          role: 'recovery',
+          label: 'Rest',
+          completion: { type: 'duration', value: 15, unit: 'seconds' },
+          targets: [],
+        }),
+      ]),
+      workout('Brick', '2027-01-03', 'mixed', [
+        root,
+        leaf(0, {
+          discipline: 'cycle',
+          label: 'Ride',
+          completion: minutes(45),
+          targets: [{ type: 'zone', key: 'tempo' }],
+        }),
+        leaf(0, {
+          discipline: 'other',
+          role: 'transition',
+          label: 'T2',
+          completion: minutes(2),
+          targets: [],
+        }),
+        leaf(0, {
+          discipline: 'run',
+          label: 'Run off the bike',
+          completion: minutes(15),
+          targets: [{ type: 'zone', key: 'marathon' }],
+        }),
+      ]),
+      workout('Strength', '2027-01-04', 'strength', [
+        root,
+        { ...root, kind: 'repeat', repeatCount: 3, parentIndex: 0 },
+        leaf(1, {
+          label: 'Back squat',
+          completion: { type: 'repetitions', value: 6, unit: 'repetitions' },
+          targets: [
+            { type: 'rir', value: 2 },
+            { type: 'load', kilograms: 60 },
+          ],
+        }),
+        leaf(1, { role: 'recovery', label: 'Rest', completion: minutes(2), targets: [] }),
+      ]),
+    ],
+  };
+  const invalid = async (change: (input: typeof schedule) => void) => {
+    const input = structuredClone(schedule);
+    change(input);
+    await expect(tool(claim, 'apply_schedule_changes', input)).rejects.toMatchObject({
+      code: 'SCHEDULE_INVALID',
+    });
+  };
+  // Zones belong to the step's sport, sport-specific targets stay with their sport, and a mixed
+  // workout names every effort's sport.
+  await invalid(
+    (input) =>
+      ((input.workouts[0]!.steps[1] as { targets: object[] }).targets = [
+        { type: 'zone', key: 'interval' },
+      ]),
+  );
+  await invalid(
+    (input) =>
+      ((input.workouts[3]!.steps[2] as { targets: object[] }).targets = [
+        { type: 'zone', key: 'threshold' },
+      ]),
+  );
+  await invalid(
+    (input) =>
+      ((input.workouts[1]!.steps[2] as { targets: object[] }).targets = [
+        { type: 'power', watts: 200 },
+      ]),
+  );
+  await invalid(
+    (input) => delete (input.workouts[2]!.steps[1] as { discipline?: string }).discipline,
+  );
+  await tool(claim, 'record_performance', {
+    system: 'cycle_power',
+    input: { method: 'ftp', watts: 250 },
+    provenance: 'agent_estimate',
+    estimateBasis: 'Estimated from reported riding; replace after a ramp test.',
+    observedOn: null,
+  });
+  // Zone targets resolve against the athlete's fitness, so swimming needs calibration first.
+  await expect(tool(claim, 'apply_schedule_changes', schedule)).rejects.toMatchObject({
+    message: expect.stringContaining('matching calibration zone'),
+  });
+  const swimTest = (await tool(claim, 'record_performance', {
+    system: 'swim_pace',
+    input: { method: 'css_test', t400Seconds: 380, t200Seconds: 170 },
+    provenance: 'user_supplied',
+    estimateBasis: '400/200 test last week.',
+    observedOn: null,
+  })) as { result: { recorded: { id: string } } };
+  await expect(
+    tool(claim, 'record_performance', {
+      system: 'swim_pace',
+      input: { method: 'ftp', watts: 200 },
+      provenance: 'user_supplied',
+      estimateBasis: 'Mismatched system and input.',
+      observedOn: null,
+    }),
+  ).rejects.toMatchObject({ code: 'CALIBRATION_INVALID' });
+  await tool(claim, 'apply_schedule_changes', schedule);
+  const { versionId } = await runContext(claim.runId, claim.token);
+  const rows = await db
+    .selectFrom('workouts')
+    .innerJoin('workout_steps', 'workout_steps.workout_id', 'workouts.id')
+    .leftJoin('step_targets', 'step_targets.step_id', 'workout_steps.id')
+    .select([
+      'workouts.title',
+      'workouts.primary_discipline',
+      'workout_steps.label',
+      'workout_steps.discipline',
+      'step_targets.target_type',
+      'step_targets.zone_system',
+      'step_targets.zone_key',
+      'step_targets.target_value',
+      'step_targets.unit',
+    ])
+    .where('workouts.plan_version_id', '=', versionId)
+    .where('workout_steps.kind', '=', 'effort')
+    .orderBy('workouts.scheduled_date')
+    .orderBy('workout_steps.position')
+    .orderBy('step_targets.position')
+    .execute();
+  const pick = (label: string) =>
+    rows
+      .filter((row) => row.label === label)
+      .map((row) => [row.discipline, row.target_type, row.zone_system ?? row.unit, row.zone_key]);
+  expect(pick('Endurance')).toEqual([['cycle', 'zone', 'cycle_power', 'endurance']]);
+  // An explicit power gets the calibrated zone it falls in (240 W is threshold at 250 W FTP).
+  expect(pick('Over-geared')).toEqual([
+    ['cycle', 'power', 'watts', null],
+    ['cycle', 'rpe', 'rpe', null],
+    ['cycle', 'zone', 'cycle_power', 'threshold'],
+  ]);
+  expect(pick('100 at CSS')).toEqual([['swim', 'zone', 'swim_pace', 'threshold']]);
+  expect(pick('Run off the bike')).toEqual([['run', 'zone', 'run_pace', 'marathon']]);
+  expect(pick('T2')).toEqual([['other', null, null, null]]);
+  expect(pick('Back squat')).toEqual([
+    ['strength', 'rir', 'repetitions', null],
+    ['strength', 'load', 'kilograms', null],
+  ]);
+  expect(new Set(rows.map((row) => row.primary_discipline))).toEqual(
+    new Set(['cycle', 'swim', 'mixed', 'strength']),
+  );
+  await finishRun(claim.runId, claim.token, { status: 'completed', content: 'First week ready.' });
+  // Strength needs no calibration; swimming does, and the brick's run and ride are counted.
+  const performanceCodes = async () =>
+    (await previewLock(owner, p.id)).findings
+      .map((f) => f.code)
+      .filter((code) => code.startsWith('performance.'));
+  expect(await performanceCodes()).toEqual([]);
+  const performance = await getPerformance(owner);
+  expect(performance.usedByPlans).toEqual(['run_pace', 'cycle_power', 'swim_pace']);
+  // Withdrawing the only swim result blocks locking again.
+  const { retractCalibration, recordCalibration } =
+    await import('../../src/modules/performance/performance.service.js');
+  await retractCalibration(owner, swimTest.result.recorded.id);
+  expect(await performanceCodes()).toEqual(['performance.swim_pace_required']);
+  await recordCalibration(owner, {
+    system: 'swim_pace',
+    input: { method: 'css_pace', secondsPer100Metres: 105 },
+  });
+  expect(await performanceCodes()).toEqual([]);
+  const detail = await import('../../src/modules/workouts/workout.repository.js');
+  const swim = await db
+    .selectFrom('workouts')
+    .select('id')
+    .where('plan_version_id', '=', versionId)
+    .where('primary_discipline', '=', 'swim')
+    .executeTakeFirstOrThrow();
+  const prescription = (await detail.getWorkoutDetail(owner, swim.id))!.prescription;
+  expect(prescription.steps[0]!.steps[0]!.targets[0]!.resolvedZone).toMatchObject({
+    metric: 'pace',
+    unit: 'seconds_per_100_metres',
+    targetValue: 105,
+  });
 });

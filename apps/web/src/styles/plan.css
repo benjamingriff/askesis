@@ -1321,3 +1321,22 @@
     width: 32px;
   }
 }
+
+/* Zones for each sport a plan trains. */
+.plan-zones {
+  display: grid;
+  gap: 16px;
+}
+.plan-zone-system {
+  display: grid;
+  gap: 10px;
+}
+.plan-zone-system h3 {
+  margin: 0;
+}
+.step-sport {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--kind);
+}

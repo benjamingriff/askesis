@@ -10,6 +10,8 @@ export type ApiError = components['schemas']['Error'];
 export type PerformanceState = components['schemas']['PerformanceState'];
 export type CalibrationEntry = components['schemas']['CalibrationEntry'];
 export type CalibrationZone = components['schemas']['CalibrationZone'];
+export type RecordCalibration = components['schemas']['RecordCalibration'];
+export type SportBaseline = components['schemas']['SportBaseline'];
 
 export function createAskesisClient(baseUrl = '') {
   return createClient<paths>({ baseUrl });

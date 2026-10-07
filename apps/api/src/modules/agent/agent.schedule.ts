@@ -7,8 +7,10 @@ import { PlanError } from '../plans/plan.service.js';
 import { readBrief, recordDraftChange } from '../plans/brief.service.js';
 import { readAggregate } from '../plans/plan.aggregate.js';
 import { validatePlan } from '../plans/plan.validation.js';
-import { nearestZone, ZONE_KEYS } from '../performance/run-pace.calculator.js';
+import { nearestZone } from '../performance/run-pace.calculator.js';
+import { CALIBRATORS, systemForDiscipline } from '../performance/performance.calibrators.js';
 import { readEntries, resolveCalibration } from '../performance/performance.service.js';
+import { SPORT_NAMES, type StepDiscipline } from '../plans/disciplines.js';
 import type { ScheduleSchema, CoverageSchema } from './agent.schemas.js';
 
 type Tx = Transaction<DB>;
@@ -223,20 +225,60 @@ export async function writeSchedule(
     result[w.key] = id;
   }
   type Target = Schedule['workouts'][number]['steps'][number]['targets'][number];
-  // Explicit paces also get the calibrated zone they fall in, so every client can colour the
-  // effort by zone. The coach's pace stays as written; a zone it chose is never replaced.
-  // Zones come from the athlete's fitness on the workout date, as reads resolve them.
+  // Explicit paces and powers also get the calibrated zone they fall in, so every client can
+  // colour the effort by zone. The coach's value stays as written; a zone it chose is never
+  // replaced. Zones come from the athlete's fitness on the workout date, as reads resolve them.
   const calibrations = await readEntries(db, run.owner_id);
-  const withZone = (targets: Target[], date: string): Target[] => {
-    const pace = targets.find((t) => t.type === 'pace');
-    if (!pace || targets.some((t) => t.type === 'zone')) return targets;
-    const calibration = resolveCalibration(calibrations, 'run_pace', date);
-    const zones = (calibration?.zones ?? []).flatMap((zone) => {
-      const key = ZONE_KEYS.find((k) => k === zone.key);
-      return key ? [{ key, fast: zone.minimum, target: zone.target, slow: zone.maximum }] : [];
-    });
-    const zone = nearestZone(pace.secondsPerKilometre, zones);
+  const withZone = (targets: Target[], discipline: StepDiscipline, date: string): Target[] => {
+    const system = systemForDiscipline(discipline);
+    const explicit = targets.find(
+      (t) => t.type === 'pace' || t.type === 'swim_pace' || t.type === 'power',
+    );
+    if (!system || !explicit || targets.some((t) => t.type === 'zone')) return targets;
+    const value =
+      explicit.type === 'pace'
+        ? explicit.secondsPerKilometre
+        : explicit.type === 'swim_pace'
+          ? explicit.secondsPer100Metres
+          : explicit.type === 'power'
+            ? explicit.watts
+            : null;
+    const calibration = resolveCalibration(calibrations, system, date);
+    // Zone minimums are the fast (or low-power) end of each band, maximums the other end.
+    const zones = (calibration?.zones ?? []).map((zone) => ({
+      key: zone.key,
+      fast: zone.minimum,
+      target: zone.target,
+      slow: zone.maximum,
+    }));
+    const zone = value === null ? null : nearestZone(value, zones);
     return zone ? [...targets, { type: 'zone', key: zone.key }] : targets;
+  };
+  /** Which sports may carry each kind of target. */
+  const allowed: Partial<Record<Target['type'], StepDiscipline[]>> = {
+    pace: ['run'],
+    swim_pace: ['swim'],
+    power: ['cycle'],
+    rir: ['strength'],
+    load: ['strength'],
+  };
+  const checkTargets = (targets: Target[], discipline: StepDiscipline) => {
+    const name = SPORT_NAMES[discipline];
+    for (const t of targets) {
+      const sports = allowed[t.type];
+      if (sports && !sports.includes(discipline))
+        bad(`A ${t.type} target does not apply to a ${name} effort.`);
+      if (t.type !== 'zone') continue;
+      const system = systemForDiscipline(discipline);
+      if (!system)
+        bad(
+          `Zones apply to run, cycle and swim efforts; use rpe, rir, load or instructions for ${name}.`,
+        );
+      else if (!CALIBRATORS[system].zoneKeys.includes(t.key))
+        bad(
+          `'${t.key}' is not a ${name} zone. Use one of: ${CALIBRATORS[system].zoneKeys.join(', ')}.`,
+        );
+    }
   };
   for (const w of input.workouts) {
     if (range && (!inside(w.date, w.date, range) || w.id))
@@ -253,7 +295,7 @@ export async function writeSchedule(
       title: w.title,
       description: w.description,
       purpose: w.purpose,
-      primary_discipline: 'run',
+      primary_discipline: w.discipline,
       priority: w.priority,
       estimated_duration_seconds: w.estimatedDurationSeconds,
       estimated_distance_metres: w.estimatedDistanceMetres,
@@ -296,6 +338,13 @@ export async function writeSchedule(
             (s.kind === 'repeat' ? s.repeatCount === null : s.repeatCount !== null)
       )
         bad('Provide complete effort steps and valid sequence/repeat containers.');
+      const discipline =
+        s.kind === 'effort'
+          ? (s.discipline ?? (w.discipline === 'mixed' ? null : w.discipline))
+          : null;
+      if (s.kind === 'effort' && !discipline)
+        bad('Each effort in a mixed workout needs its own discipline.');
+      if (discipline) checkTargets(s.targets, discipline);
       const sid = randomUUID();
       stepIds.push(sid);
       const position = (siblingCounts.get(s.parentIndex) ?? 0) + 1;
@@ -309,7 +358,7 @@ export async function writeSchedule(
           parent_step_id: s.parentIndex === null ? null : stepIds[s.parentIndex]!,
           position,
           kind: s.kind,
-          discipline: s.kind === 'effort' ? 'run' : null,
+          discipline,
           repeat_count: s.repeatCount,
           role: s.role,
           label: s.label,
@@ -327,20 +376,15 @@ export async function writeSchedule(
             unit: s.completion.type === 'open' ? null : s.completion.unit,
           })
           .execute();
-      for (const [j, t] of withZone(s.targets, w.date).entries())
+      const targets = discipline ? withZone(s.targets, discipline, w.date) : s.targets;
+      for (const [j, t] of targets.entries())
         await db
           .insertInto('step_targets')
           .values({
             step_id: sid,
             plan_version_id: versionId,
             position: j + 1,
-            target_type: t.type,
-            zone_system: t.type === 'zone' ? 'run_pace' : null,
-            zone_key: t.type === 'zone' ? t.key : null,
-            target_value:
-              t.type === 'pace' ? t.secondsPerKilometre : t.type === 'rpe' ? t.value : null,
-            unit: t.type === 'pace' ? 'seconds_per_kilometre' : t.type === 'rpe' ? 'rpe' : null,
-            text_value: t.type === 'instruction' ? t.text : null,
+            ...targetColumns(t, discipline),
           })
           .execute();
     }
@@ -367,7 +411,7 @@ export async function writeSchedule(
     if (state.brief.weekdays[weekday] === 'unavailable')
       bad('A workout falls on an unavailable weekday.');
     daily.set(d, (daily.get(d) ?? 0) + 1);
-    if (daily.get(d)! > 2) bad('At most two runs can be scheduled per day.');
+    if (daily.get(d)! > 2) bad('At most two sessions can be scheduled per day.');
   }
   // Every mutation invalidates its old and new dates. A later unfinished batch
   // must not inherit completion from an earlier batch in this same run.
@@ -432,6 +476,50 @@ export async function writeSchedule(
     );
   await recordDraftChange(db, versionId, 'edit-only');
   return { ids: result, findings };
+}
+type Target = Schedule['workouts'][number]['steps'][number]['targets'][number];
+/** Stored columns for a coaching target. Zones resolve in the system of the step's sport. */
+function targetColumns(t: Target, discipline: StepDiscipline | null) {
+  const none = {
+    zone_system: null,
+    zone_key: null,
+    target_value: null,
+    unit: null,
+    text_value: null,
+  };
+  switch (t.type) {
+    case 'zone':
+      return {
+        ...none,
+        target_type: 'zone',
+        zone_system: systemForDiscipline(discipline),
+        zone_key: t.key,
+      };
+    case 'pace':
+      return {
+        ...none,
+        target_type: 'pace',
+        target_value: t.secondsPerKilometre,
+        unit: 'seconds_per_kilometre',
+      };
+    case 'swim_pace':
+      return {
+        ...none,
+        target_type: 'pace',
+        target_value: t.secondsPer100Metres,
+        unit: 'seconds_per_100_metres',
+      };
+    case 'power':
+      return { ...none, target_type: 'power', target_value: t.watts, unit: 'watts' };
+    case 'rpe':
+      return { ...none, target_type: 'rpe', target_value: t.value, unit: 'rpe' };
+    case 'rir':
+      return { ...none, target_type: 'rir', target_value: t.value, unit: 'repetitions' };
+    case 'load':
+      return { ...none, target_type: 'load', target_value: t.kilograms, unit: 'kilograms' };
+    case 'instruction':
+      return { ...none, target_type: 'instruction', text_value: t.text };
+  }
 }
 async function removeCoverage(db: Tx, versionId: string, range: Range) {
   const overlaps = await db

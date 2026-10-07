@@ -9,10 +9,10 @@ import {
   Save,
   TriangleAlert,
 } from 'lucide-react';
-import { useCallback, useState } from 'react';
+import { useCallback, useState, type CSSProperties } from 'react';
 import { Link, useBeforeUnload, useBlocker, useParams } from 'react-router';
 import { api } from '../api';
-import { CalibrationSource, PaceGuides } from '../components/PlanWidgets';
+import { PlanZones, zonesTitle } from '../components/PlanWidgets';
 import { CoverageSummary } from '../components/PlanningReview';
 import {
   Button,
@@ -27,15 +27,34 @@ import {
   Segmented,
   cx,
 } from '../components/ui';
-import { formatShortYear, WEEKDAYS_LONG } from '../lib/format';
+import { formatShortYear, METRES_PER_YARD, WEEKDAYS_LONG } from '../lib/format';
+import { BRIEF_SPORTS, SPORT_META, type BriefSport } from '../lib/sports';
 import { result } from '../lib/result';
 import { useRequestKey } from '../lib/use-request-key';
-import { currentRunPace, usePerformance, type BriefState } from '../plan-data';
-import { useUnits } from '../settings';
+import { type BriefState } from '../plan-data';
+import { useSportUnits, useUnits } from '../settings';
 
 type State = BriefState;
 type Brief = State['brief'];
 type Availability = Brief['weekdays'][number];
+type Baseline = Brief['sports'][number];
+type Answer = Baseline['currentSessions'];
+
+const unanswered = { status: 'unanswered', value: null } as const;
+/** A sport's baseline before any question is answered, matching the API's empty baseline. */
+export function emptyBaseline(sport: BriefSport): Baseline {
+  const common = { currentSessions: unanswered, desiredSessions: null };
+  if (sport === 'strength') return { sport, ...common };
+  if (sport === 'cycle')
+    return { sport, ...common, weeklyDuration: unanswered, longestDuration: unanswered };
+  return { sport, ...common, weeklyDistance: unanswered, longestDistance: unanswered };
+}
+const SPORT_HEADINGS: Record<BriefSport, string> = {
+  run: 'Running background',
+  cycle: 'Cycling background',
+  swim: 'Swimming background',
+  strength: 'Strength background',
+};
 const NEXT_AVAILABILITY: Record<Availability, Availability> = {
   available: 'preferred',
   preferred: 'unavailable',
@@ -93,8 +112,7 @@ function BriefEditor({ state, planId }: { state: State; planId: string }) {
   const requestKey = useRequestKey();
   const blocker = useBlocker(dirty);
   const units = useUnits(state.brief.unit);
-  const performance = usePerformance();
-  const latest = currentRunPace(performance.data);
+  const { pool } = useSportUnits();
   useBeforeUnload(
     useCallback(
       (event: BeforeUnloadEvent) => {
@@ -135,48 +153,119 @@ function BriefEditor({ state, planId }: { state: State; planId: string }) {
   const disabled = state.readOnly || !editing || mutation.isPending;
   const patch = <K extends keyof Brief>(key: K, value: Brief[K]) =>
     setBrief({ ...brief, [key]: value });
-  const baseline = (key: 'weeklyDistance' | 'currentRuns' | 'longestRun', label: string) => {
-    const answer = brief[key];
-    const factor = key === 'currentRuns' ? 1 : brief.unit === 'miles' ? 1609.344 : 1000;
-    return (
-      <div className="field baseline" key={key}>
-        <span>
-          {label}
-          {key !== 'currentRuns' && ` (${brief.unit})`}
-        </span>
-        <div className="baseline-row">
-          <Segmented<Brief[typeof key]['status']>
-            label={`${label} answer`}
-            value={answer.status}
-            onChange={(status) =>
-              patch(
-                key,
-                status === 'known'
-                  ? { status: 'known', value: answer.status === 'known' ? answer.value : 0 }
-                  : { status, value: null },
-              )
-            }
-            options={[
-              { value: 'known', label: 'Known', disabled },
-              { value: 'unknown', label: 'Unknown', disabled },
-              { value: 'unanswered', label: 'Not answered', disabled },
-            ]}
+  const setSport = (sport: BriefSport, baseline: Baseline | null) => {
+    const others = brief.sports.filter((current) => current.sport !== sport);
+    const sports = baseline ? [...others, baseline] : others;
+    patch(
+      'sports',
+      BRIEF_SPORTS.flatMap((key) => sports.filter((current) => current.sport === key)),
+    );
+  };
+  /** One answer: known with a value in display units, unknown, or not answered. */
+  const answerField = (
+    label: string,
+    answer: Answer,
+    onChange: (answer: Answer) => void,
+    { unit, factor = 1, whole = false }: { unit?: string; factor?: number; whole?: boolean } = {},
+  ) => (
+    <div className="field baseline" key={label}>
+      <span>
+        {label}
+        {unit ? ` (${unit})` : ''}
+      </span>
+      <div className="baseline-row">
+        <Segmented<Answer['status']>
+          label={`${label} answer`}
+          value={answer.status}
+          onChange={(status) =>
+            onChange(
+              status === 'known'
+                ? { status: 'known', value: answer.status === 'known' ? answer.value : 0 }
+                : { status, value: null },
+            )
+          }
+          options={[
+            { value: 'known', label: 'Known', disabled },
+            { value: 'unknown', label: 'Unknown', disabled },
+            { value: 'unanswered', label: 'Not answered', disabled },
+          ]}
+        />
+        {answer.status === 'known' ? (
+          <input
+            aria-label={label}
+            type="number"
+            min="0"
+            disabled={disabled}
+            step={whole ? '1' : 'any'}
+            value={Number((answer.value / factor).toFixed(6))}
+            onChange={(e) => onChange({ status: 'known', value: Number(e.target.value) * factor })}
           />
-          {answer.status === 'known' ? (
-            <input
-              aria-label={label}
-              type="number"
-              min="0"
-              disabled={disabled}
-              step={key === 'currentRuns' ? '1' : 'any'}
-              value={Number((answer.value / factor).toFixed(6))}
-              onChange={(e) =>
-                patch(key, { status: 'known', value: Number(e.target.value) * factor })
-              }
-            />
-          ) : null}
-        </div>
+        ) : null}
       </div>
+    </div>
+  );
+  const sportFields = (baseline: Baseline) => {
+    const noun = SPORT_META[baseline.sport].noun;
+    const update = (changes: Partial<Baseline>) =>
+      setSport(baseline.sport, { ...baseline, ...changes } as Baseline);
+    const distance =
+      baseline.sport === 'swim'
+        ? { unit: pool === 'yd' ? 'yards' : 'metres', factor: pool === 'yd' ? METRES_PER_YARD : 1 }
+        : { unit: brief.unit, factor: brief.unit === 'miles' ? 1609.344 : 1000 };
+    const hours = { unit: 'hours', factor: 3600 };
+    return (
+      <fieldset disabled={disabled} className="card" key={baseline.sport}>
+        <legend>{SPORT_HEADINGS[baseline.sport]}</legend>
+        {answerField(
+          `Current ${noun} sessions per week`,
+          baseline.currentSessions,
+          (currentSessions) => update({ currentSessions }),
+          { whole: true },
+        )}
+        {baseline.sport === 'cycle' ? (
+          <>
+            {answerField(
+              'Typical weekly riding time',
+              baseline.weeklyDuration,
+              (weeklyDuration) => update({ weeklyDuration }),
+              hours,
+            )}
+            {answerField(
+              'Longest recent ride',
+              baseline.longestDuration,
+              (longestDuration) => update({ longestDuration }),
+              hours,
+            )}
+          </>
+        ) : baseline.sport !== 'strength' ? (
+          <>
+            {answerField(
+              `Typical weekly ${noun} distance`,
+              baseline.weeklyDistance,
+              (weeklyDistance) => update({ weeklyDistance }),
+              distance,
+            )}
+            {answerField(
+              baseline.sport === 'run' ? 'Longest recent run' : 'Longest recent swim',
+              baseline.longestDistance,
+              (longestDistance) => update({ longestDistance }),
+              distance,
+            )}
+          </>
+        ) : null}
+        <label className="field narrow">
+          <span>Desired {noun} sessions per week</span>
+          <input
+            type="number"
+            min="1"
+            max="14"
+            value={baseline.desiredSessions ?? ''}
+            onChange={(e) =>
+              update({ desiredSessions: e.target.value === '' ? null : Number(e.target.value) })
+            }
+          />
+        </label>
+      </fieldset>
     );
   };
   const errors = state.findings.filter((f) => f.severity === 'error');
@@ -275,28 +364,34 @@ function BriefEditor({ state, planId }: { state: State; planId: string }) {
               </label>
             </fieldset>
             <fieldset disabled={disabled} className="card">
-              <legend>Running background</legend>
-              {baseline('weeklyDistance', 'Typical weekly running distance')}
-              {baseline('currentRuns', 'Current runs per week')}
-              {baseline('longestRun', 'Longest recent run')}
-              <label className="field narrow">
-                <span>Desired runs per week</span>
-                <input
-                  type="number"
-                  min="1"
-                  max="14"
-                  value={brief.desiredRuns ?? ''}
-                  onChange={(e) =>
-                    patch('desiredRuns', e.target.value === '' ? null : Number(e.target.value))
-                  }
-                />
-              </label>
+              <legend>Sports</legend>
+              <p className="muted">Choose every sport this plan trains.</p>
+              <div className="sport-chips" role="group" aria-label="Sports in this plan">
+                {BRIEF_SPORTS.map((sport) => {
+                  const meta = SPORT_META[sport];
+                  const selected = brief.sports.some((current) => current.sport === sport);
+                  return (
+                    <button
+                      key={sport}
+                      type="button"
+                      className={cx('sport-chip', selected && 'selected')}
+                      aria-pressed={selected}
+                      style={{ '--kind': meta.color } as CSSProperties}
+                      onClick={() => setSport(sport, selected ? null : emptyBaseline(sport))}
+                    >
+                      <meta.icon size={16} aria-hidden="true" />
+                      {meta.label}
+                    </button>
+                  );
+                })}
+              </div>
             </fieldset>
+            {brief.sports.map(sportFields)}
             <fieldset disabled={disabled} className="card">
               <legend>Weekly availability</legend>
               <p className="muted">
-                Tap a day to cycle between available, preferred and unavailable. Up to two runs can
-                be scheduled on each allowed day.
+                Tap a day to cycle between available, preferred and unavailable. Up to two sessions
+                can be scheduled on each allowed day.
               </p>
               <div className="weekday-chips">
                 {WEEKDAYS_LONG.map((day, i) => {
@@ -350,26 +445,20 @@ function BriefEditor({ state, planId }: { state: State; planId: string }) {
         <aside className="brief-side">
           <Card>
             <SectionHeader
-              title="Pace guides"
+              title={zonesTitle(brief.sports.map((baseline) => baseline.sport))}
               action={
                 <Link className="text-link" to="/performance">
                   Update
                 </Link>
               }
             />
-            {latest ? (
-              <>
-                <PaceGuides calibration={latest} units={units} />
-                <CalibrationSource calibration={latest} units={units} />
-              </>
-            ) : (
-              <p className="muted">
-                No fitness yet. Add a race result or estimate on the Performance page before
-                locking.
-              </p>
-            )}
+            <PlanZones
+              sports={brief.sports.map((baseline) => baseline.sport)}
+              units={units}
+              compact
+            />
             <p className="muted">
-              Pace guides belong to you and apply to every plan, so they are not part of this brief.
+              Zones belong to you and apply to every plan, so they are not part of this brief.
             </p>
           </Card>
           <Card>

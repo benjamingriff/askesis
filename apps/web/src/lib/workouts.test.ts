@@ -1,7 +1,7 @@
 import type { WorkoutStep, WorkoutSummary } from '@askesis/api-client';
 import { describe, expect, it } from 'vitest';
 import { METRES_PER_MILE, formatDistance, formatPace, formatRange, startOfWeek } from './format';
-import { inferKind, intensitySegments, summarizeWeeks } from './workouts';
+import { inferKind, intensitySegments, summarizeWeeks, volumeMeasure } from './workouts';
 
 const workout = (date: string, metres: number, title = 'Easy run'): WorkoutSummary => ({
   id: date,
@@ -13,7 +13,7 @@ const workout = (date: string, metres: number, title = 'Easy run'): WorkoutSumma
   title,
   description: null,
   purpose: null,
-  discipline: 'running',
+  discipline: 'run',
   priority: 'medium',
   estimatedDurationSeconds: 1800,
   estimatedDistanceMetres: metres,
@@ -28,7 +28,7 @@ describe('inferKind', () => {
     ['Easy run and strides', 'easy'],
     ['Recovery jog', 'recovery'],
   ])('classifies “%s” as %s', (title, kind) => {
-    expect(inferKind({ title, purpose: null, discipline: 'running' })).toBe(kind);
+    expect(inferKind({ title, purpose: null, discipline: 'run' })).toBe(kind);
   });
 });
 
@@ -86,7 +86,7 @@ describe('intensitySegments', () => {
           id: 'effort',
           kind: 'effort',
           role: 'work',
-          discipline: 'running',
+          discipline: 'run',
           repeatCount: null,
           label: 'Effort',
           instructions: null,
@@ -164,7 +164,7 @@ describe('intensitySegments', () => {
       id,
       kind: 'effort',
       role: 'work',
-      discipline: 'running',
+      discipline: 'run',
       repeatCount: null,
       label: zoneKey,
       instructions: null,
@@ -209,5 +209,73 @@ describe('format', () => {
     expect(formatPace(300, 'mi')).toBe('8:03/mi');
     expect(formatRange('2027-01-01', '2027-03-31')).toBe('1 Jan – 31 Mar 2027');
     expect(startOfWeek('2027-01-03')).toBe('2026-12-28');
+  });
+});
+
+describe('multi-sport presentation', () => {
+  const summary = (discipline: string, title: string) => ({ title, purpose: null, discipline });
+  it.each([
+    ['swim', 'CSS intervals', 'swim'],
+    ['cycle', 'Sweet spot 3 x 12', 'ride'],
+    ['strength', 'Lower body', 'strength'],
+    ['mixed', 'Bike to run brick', 'mixed'],
+    ['cycle', 'FTP ramp test', 'test'],
+  ])('classifies a %s workout “%s” as %s', (discipline, title, kind) => {
+    expect(inferKind(summary(discipline, title))).toBe(kind);
+  });
+  it('measures weekly volume by time once a plan trains more than running', () => {
+    expect(volumeMeasure([{ discipline: 'run' }, { discipline: 'run' }])).toBe('distance');
+    expect(volumeMeasure([{ discipline: 'run' }, { discipline: 'swim' }])).toBe('time');
+  });
+  it('times swim distances by swim pace and sets of lifts by reps and reps in reserve', () => {
+    const effort = (overrides: Partial<WorkoutStep>): WorkoutStep => ({
+      id: 'e',
+      kind: 'effort',
+      role: 'work',
+      discipline: 'swim',
+      repeatCount: null,
+      label: null,
+      instructions: null,
+      movement: null,
+      completion: {
+        type: 'distance',
+        value: 100,
+        unit: 'metres',
+        conditionType: null,
+        conditionValue: null,
+      },
+      targets: [],
+      steps: [],
+      ...overrides,
+    });
+    // 100 m at a default two minutes per 100 m.
+    expect(intensitySegments(effort({}))[0]!.seconds).toBe(120);
+    const squat = intensitySegments(
+      effort({
+        discipline: 'strength',
+        completion: {
+          type: 'repetitions',
+          value: 8,
+          unit: 'repetitions',
+          conditionType: null,
+          conditionValue: null,
+        },
+        targets: [
+          {
+            type: 'rir',
+            minimumValue: null,
+            targetValue: 1,
+            maximumValue: null,
+            unit: 'repetitions',
+            zoneSystem: null,
+            zoneKey: null,
+            text: null,
+            resolvedZone: null,
+          },
+        ],
+      }),
+    )[0]!;
+    expect(squat.seconds).toBe(24);
+    expect(squat.level).toBeCloseTo(4, 5);
   });
 });

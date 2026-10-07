@@ -142,6 +142,40 @@ export function formatPace(secondsPerKm: number, units: Units, withUnit = true):
   return withUnit ? `${text}/${units}` : text;
 }
 
+export const METRES_PER_YARD = 0.9144;
+export const POUNDS_PER_KILOGRAM = 2.20462;
+export type PoolUnits = 'm' | 'yd';
+export type LoadUnits = 'kg' | 'lb';
+
+/** Seconds per 100 metres → "m:ss/100m" or, in a yard pool, "m:ss/100yd". */
+export function formatSwimPace(secondsPer100m: number, pool: PoolUnits, withUnit = true): string {
+  const seconds = Math.round(secondsPer100m * (pool === 'yd' ? METRES_PER_YARD : 1));
+  const text = `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`;
+  return withUnit ? `${text}/100${pool}` : text;
+}
+
+/** Swim distances stay in pool units: "400 m" or "437 yd", never kilometres. */
+export function formatSwimDistance(metres: number, pool: PoolUnits): string {
+  const value = pool === 'yd' ? metres / METRES_PER_YARD : metres;
+  return `${Math.round(value).toLocaleString('en-GB')} ${pool}`;
+}
+
+export function formatPower(watts: number): string {
+  return `${Math.round(watts)} W`;
+}
+
+/** Kilograms → "60 kg", or pounds rounded to the nearest 5 lb plate step. */
+export function formatLoad(kilograms: number, load: LoadUnits): string {
+  if (load === 'lb') return `${Math.round((kilograms * POUNDS_PER_KILOGRAM) / 5) * 5} lb`;
+  return `${Number(kilograms.toFixed(1))} kg`;
+}
+
+/** Average speed for a ride: "28.4 km/h" or "17.6 mph". */
+export function formatSpeed(metresPerSecond: number, units: Units): string {
+  const value = units === 'mi' ? (metresPerSecond * 3600) / METRES_PER_MILE : metresPerSecond * 3.6;
+  return `${value.toFixed(1)} ${units === 'mi' ? 'mph' : 'km/h'}`;
+}
+
 export function briefUnits(unit: 'kilometres' | 'miles' | undefined | null): Units {
   return unit === 'miles' ? 'mi' : 'km';
 }

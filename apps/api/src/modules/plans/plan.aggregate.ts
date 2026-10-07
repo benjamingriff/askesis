@@ -9,6 +9,7 @@ type Row = Record<string, string | number | Date | null>;
 export const contentTables = [
   'plan_schedule_coverage',
   'plan_briefs',
+  'plan_brief_sports',
   'plan_brief_weekdays',
   'training_blocks',
   'training_weeks',
@@ -45,8 +46,8 @@ const numeric = new Set([
   'maximum_value',
   'distance_value',
   'estimated_distance_metres',
-  'weekly_distance_metres',
-  'longest_run_metres',
+  'weekly_volume',
+  'longest_session',
 ]);
 const date = (value: Row[string] | undefined): string =>
   value instanceof Date ? value.toISOString().slice(0, 10) : String(value);
@@ -165,6 +166,7 @@ export async function readAggregate(db: Database, versionId: string): Promise<Ag
       startDate: version.start_date === null ? null : date(version.start_date),
       endDate: version.end_date === null ? null : date(version.end_date),
       brief: ordered(rows.plan_briefs.map((row) => leaf('plan_briefs', row))),
+      sports: ordered(rows.plan_brief_sports.map((row) => leaf('plan_brief_sports', row))),
       weekdays: ordered(rows.plan_brief_weekdays.map((row) => leaf('plan_brief_weekdays', row))),
       coverage: ordered(
         rows.plan_schedule_coverage.map((row) => leaf('plan_schedule_coverage', row)),

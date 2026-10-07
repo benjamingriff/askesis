@@ -50,7 +50,7 @@ async function accepted() {
     provider: 'openai',
     model: 'gpt-6.1-sol',
     reasoning: 'medium',
-    promptVersion: 'running-coach-v3',
+    promptVersion: 'multisport-coach-v1',
     ready: true,
   });
   const created = await createConversation(

@@ -12,21 +12,28 @@ import {
 } from 'lucide-react';
 import {
   addDays,
-  formatClock,
   formatDistance,
-  formatPace,
+  formatDuration,
   formatShort,
   formatShortYear,
 } from '../lib/format';
+import {
+  currentEntry,
+  describeEvidence,
+  formatZoneValue,
+  isEstimate,
+  SYSTEM_META,
+  systemsForSports,
+} from '../lib/sports';
 import type { WeekSummary } from '../lib/workouts';
 import {
-  isEstimate,
   knownCoverage,
+  usePerformance,
   type BriefState,
   type Calibration,
   type Plan,
 } from '../plan-data';
-import type { Units } from '../settings';
+import { useSportUnits, type Units } from '../settings';
 import { ZONE_COLORS } from '../theme/palette';
 import { Pill, cx } from './ui';
 
@@ -177,19 +184,22 @@ export function WeekChart({
   current,
   onSelect,
   units,
+  measure = 'distance',
 }: {
   weeks: WeekSummary[];
   selected: number;
   current: number | null;
   onSelect: (week: number) => void;
   units: Units;
+  measure?: 'distance' | 'time' | undefined;
 }) {
-  const max = Math.max(...weeks.map((w) => w.metres), 1);
+  const amount = (week: WeekSummary) => (measure === 'time' ? week.seconds : week.metres);
+  const max = Math.max(...weeks.map(amount), 1);
   return (
     <div className="week-chart" role="group" aria-label="Weekly volume">
       {weeks.map((week) => {
         const active = week.number === selected;
-        const height = week.planned ? Math.max(10, (week.metres / max) * 100) : 26;
+        const height = week.planned ? Math.max(10, (amount(week) / max) * 100) : 26;
         return (
           <button
             key={week.number}
@@ -201,7 +211,7 @@ export function WeekChart({
               current !== null && week.number < current && 'past',
             )}
             aria-pressed={active}
-            aria-label={`Week ${week.number}${week.planned ? `, ${formatDistance(week.metres, units)}` : ', not planned'}`}
+            aria-label={`Week ${week.number}${week.planned ? `, ${measure === 'time' ? formatDuration(week.seconds) : formatDistance(week.metres, units)}` : ', not planned'}`}
             onClick={() => onSelect(week.number)}
           >
             <span className="bar-track">
@@ -242,38 +252,10 @@ export function Stat({
   );
 }
 
-// ---- Pace guides -------------------------------------------------------------------------------
+// ---- Zone guides ------------------------------------------------------------------------------
 
-const ZONE_ORDER = ['easy', 'marathon', 'threshold', 'interval', 'repetition'];
-export const ZONE_LABELS: Record<string, { label: string; short: string; description: string }> = {
-  easy: {
-    label: 'Easy',
-    short: 'E',
-    description: 'Relaxed aerobic running, warm-ups, cool-downs and recovery.',
-  },
-  marathon: {
-    label: 'Marathon',
-    short: 'M',
-    description: 'Sustained running guided by current marathon fitness.',
-  },
-  threshold: {
-    label: 'Threshold',
-    short: 'T',
-    description: 'Comfortably hard, controlled tempos and cruise intervals.',
-  },
-  interval: {
-    label: 'Interval',
-    short: 'I',
-    description: 'Hard aerobic repetitions with recovery between efforts.',
-  },
-  repetition: {
-    label: 'Repetition',
-    short: 'R',
-    description: 'Short, fast, relaxed efforts with generous recovery.',
-  },
-};
-
-export function PaceGuides({
+/** One system's zones, easiest to hardest: running pace, cycling power or swim pace. */
+export function ZoneGuides({
   calibration,
   units,
   compact,
@@ -282,13 +264,18 @@ export function PaceGuides({
   units: Units;
   compact?: boolean | undefined;
 }) {
-  const zones = ZONE_ORDER.map((key) => calibration.zones.find((z) => z.key === key)).filter(
-    (zone): zone is NonNullable<typeof zone> => !!zone,
-  );
+  const { pool } = useSportUnits();
+  const display = { units, pool };
+  const meta = SYSTEM_META[calibration.system];
+  const zones = Object.keys(meta.zones)
+    .map((key) => calibration.zones.find((z) => z.key === key))
+    .filter((zone): zone is NonNullable<typeof zone> => !!zone);
+  const bare = (value: number, unit: string) =>
+    formatZoneValue(value, unit, display).replace(/\/.*$/, '').replace(/ W$/, '');
   return (
-    <div className={cx('pace-guides', compact && 'compact')}>
+    <div className={cx('pace-guides', compact && 'compact')} data-system={calibration.system}>
       {zones.map((zone) => {
-        const meta = ZONE_LABELS[zone.key];
+        const zoneMeta = meta.zones[zone.key];
         return (
           <div
             className="pace-card"
@@ -297,19 +284,36 @@ export function PaceGuides({
           >
             <span className="zone-swatch" aria-hidden="true" />
             <span className="label">
-              {compact ? (meta?.label ?? zone.key) : `${meta?.short} · ${meta?.label ?? zone.key}`}
+              {compact
+                ? (zoneMeta?.label ?? zone.key)
+                : `${zoneMeta?.short} · ${zoneMeta?.label ?? zone.key}`}
             </span>
-            <strong>{formatPace(zone.target, units, false)}</strong>
+            <strong>{bare(zone.target, zone.unit)}</strong>
             <small>
-              {formatPace(zone.minimum, units, false)}–{formatPace(zone.maximum, units)}
+              {bare(zone.minimum, zone.unit)}–{formatZoneValue(zone.maximum, zone.unit, display)}
             </small>
-            {!compact && meta ? <p>{meta.description}</p> : null}
+            {!compact && zoneMeta ? <p>{zoneMeta.description}</p> : null}
           </div>
         );
       })}
     </div>
   );
 }
+
+const SOURCE_HEADINGS: Record<Calibration['system'], { measured: string; estimated: string }> = {
+  run_pace: {
+    measured: 'Pace guides calculated from your race result',
+    estimated: 'Estimated pace guides',
+  },
+  cycle_power: {
+    measured: 'Power zones calculated from your FTP',
+    estimated: 'Estimated power zones',
+  },
+  swim_pace: {
+    measured: 'Swim paces calculated from your CSS',
+    estimated: 'Estimated swim paces',
+  },
+};
 
 export function CalibrationSource({
   calibration,
@@ -318,16 +322,18 @@ export function CalibrationSource({
   calibration: Calibration;
   units: Units;
 }) {
+  const { pool } = useSportUnits();
   const estimate = isEstimate(calibration);
+  const heading = SOURCE_HEADINGS[calibration.system];
   return (
     <div className="calibration-source">
       <div className="calibration-heading">
         <strong>
           {calibration.provenance === 'agent_estimate'
-            ? 'Coach-estimated pace guides'
+            ? `Coach-${heading.estimated.toLowerCase()}`
             : estimate
-              ? 'Estimated pace guides'
-              : 'Pace guides calculated from your race result'}
+              ? heading.estimated
+              : heading.measured}
         </strong>
         {estimate ? (
           <Pill tone="warning" icon={TriangleAlert}>
@@ -336,22 +342,72 @@ export function CalibrationSource({
         ) : null}
       </div>
       <p>
-        {calibration.input.method === 'threshold_pace'
-          ? `Estimated threshold: ${formatPace(calibration.input.secondsPerKilometre, units)}`
-          : `Race evidence: ${formatDistance(calibration.input.distanceMetres, units)} in ${formatClock(calibration.input.durationSeconds)}`}
+        {estimate ? 'Estimate: ' : 'Evidence: '}
+        {describeEvidence(calibration, { units, pool })}
         {calibration.observedOn ? ` on ${formatShortYear(calibration.observedOn)}` : ''}
         {' · applies from '}
         {formatShortYear(calibration.effectiveFrom)}
       </p>
       {calibration.estimateBasis ? (
         <p>
-          {calibration.provenance === 'agent_estimate' ? 'Coach estimate: ' : 'Pace evidence: '}
+          {calibration.provenance === 'agent_estimate' ? 'Coach estimate: ' : 'Evidence: '}
           {calibration.estimateBasis}
         </p>
       ) : null}
       {estimate ? (
-        <p className="muted">These paces are estimates. Update them after a few runs or a race.</p>
+        <p className="muted">
+          These are estimates. Update them after a test, a race or a few sessions.
+        </p>
       ) : null}
     </div>
   );
+}
+
+/**
+ * The zones a plan's sports use, one system after another. Sports without calibration say so,
+ * because a plan cannot lock until each has some.
+ */
+export function PlanZones({
+  sports,
+  units,
+  compact,
+  showSource = true,
+}: {
+  sports: string[];
+  units: Units;
+  compact?: boolean | undefined;
+  showSource?: boolean | undefined;
+}) {
+  const performance = usePerformance();
+  const systems = systemsForSports(sports.length ? sports : ['run']);
+  return (
+    <div className="plan-zones">
+      {systems.map((system) => {
+        const entry = currentEntry(performance.data, system);
+        const meta = SYSTEM_META[system];
+        return (
+          <section key={system} className="plan-zone-system" aria-label={meta.title}>
+            {systems.length > 1 ? <h3 className="label">{meta.title}</h3> : null}
+            {entry ? (
+              <>
+                <ZoneGuides calibration={entry} units={units} compact={compact} />
+                {showSource ? <CalibrationSource calibration={entry} units={units} /> : null}
+              </>
+            ) : performance.isPending ? null : (
+              <p className="muted">
+                No {meta.noun} yet. Add a result or an estimate on the Performance page, or share
+                one with your coach.
+              </p>
+            )}
+          </section>
+        );
+      })}
+    </div>
+  );
+}
+
+/** "Pace guides" for running-only plans, "Training zones" once other sports join. */
+export function zonesTitle(sports: string[]) {
+  const systems = systemsForSports(sports.length ? sports : ['run']);
+  return systems.length === 1 ? SYSTEM_META[systems[0]!].title : 'Training zones';
 }

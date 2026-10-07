@@ -51,10 +51,15 @@ async function publish() {
         brief: {
           ...emptyBrief(),
           goal: 'Run Cardiff Half Marathon comfortably and consistently.',
-          weeklyDistance: { status: 'known', value: 40000 },
-          currentRuns: { status: 'known', value: 5 },
-          longestRun: { status: 'known', value: 12000 },
-          desiredRuns: 5,
+          sports: [
+            {
+              sport: 'run',
+              currentSessions: { status: 'known', value: 5 },
+              desiredSessions: 5,
+              weeklyDistance: { status: 'known', value: 40000 },
+              longestDistance: { status: 'known', value: 12000 },
+            },
+          ],
           weekdays: [
             'available',
             'available',

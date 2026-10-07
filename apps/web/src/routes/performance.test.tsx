@@ -36,7 +36,13 @@ let performance: PerformanceState;
 beforeEach(() => {
   vi.resetAllMocks();
   localStorage.clear();
-  performance = { timezone: 'Europe/London', today: '2026-10-07', current: [], entries: [] };
+  performance = {
+    timezone: 'Europe/London',
+    today: '2026-10-07',
+    current: [],
+    entries: [],
+    usedByPlans: [],
+  };
   vi.mocked(api.GET).mockImplementation(
     async () =>
       ({ data: structuredClone(performance), response: new Response() }) as Awaited<
@@ -90,7 +96,7 @@ it('records a race with its date, applying from today in the device timezone', a
       },
     }),
   );
-  expect(await screen.findByText(/Race evidence: 21.1 km in 1:38:00/)).toBeInTheDocument();
+  expect(await screen.findByText(/Evidence: 21.1 km in 1:38:00/)).toBeInTheDocument();
 });
 
 it('records the same result again after recording a different one', async () => {
@@ -170,4 +176,65 @@ it('shows coach-recorded history and withdraws a mistaken result after confirmat
     ),
   );
   expect(await screen.findByText('Withdrawn')).toBeInTheDocument();
+});
+
+it('shows sports the athlete’s plans train and adds others on request', async () => {
+  performance = { ...performance, usedByPlans: ['run_pace', 'cycle_power'] };
+  mount();
+  expect(await screen.findByText(/No cycling power yet/)).toBeInTheDocument();
+  expect(screen.queryByText(/No swim paces yet/)).not.toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: 'Swimming' }));
+  expect(await screen.findByText(/No swim paces yet/)).toBeInTheDocument();
+  expect(screen.queryByText('Add another sport')).not.toBeInTheDocument();
+});
+
+it('records an FTP from a 20-minute test and a CSS test swum in a yard pool', async () => {
+  localStorage.setItem('askesis.settings.v1', JSON.stringify({ ...DEFAULT_SETTINGS, pool: 'yd' }));
+  performance = { ...performance, usedByPlans: ['cycle_power', 'swim_pace'] };
+  vi.mocked(api.POST).mockResolvedValue({
+    data: performance,
+    response: new Response(),
+  } as Awaited<ReturnType<typeof api.POST>>);
+  mount();
+  fireEvent.change(await screen.findByLabelText('Power input'), {
+    target: { value: 'twenty_minute_test' },
+  });
+  fireEvent.change(screen.getByLabelText('Average power for 20 minutes (watts)'), {
+    target: { value: '263' },
+  });
+  fireEvent.click(screen.getByRole('button', { name: 'Calculate and save power zones' }));
+  await waitFor(() =>
+    expect(api.POST).toHaveBeenCalledWith('/api/v1/performance/calibrations', {
+      body: {
+        system: 'cycle_power',
+        input: { method: 'twenty_minute_test', averageWatts: 263 },
+        provenance: 'user_supplied',
+        observedOn: '2026-10-07',
+        idempotencyKey: expect.any(String),
+      },
+    }),
+  );
+  fireEvent.change(screen.getByLabelText('400 yd time (mm:ss)'), { target: { value: '5:48' } });
+  fireEvent.change(screen.getByLabelText('200 yd time (mm:ss)'), { target: { value: '2:36' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Calculate and save swim paces' }));
+  await waitFor(() => expect(api.POST).toHaveBeenCalledTimes(2));
+  const body = (vi.mocked(api.POST).mock.calls[1]![1] as { body: { input: object } }).body;
+  expect(body).toMatchObject({ system: 'swim_pace', provenance: 'user_supplied' });
+  expect(body.input).toEqual({
+    method: 'css_test',
+    t400Seconds: expect.closeTo(348 / 0.9144, 6),
+    t200Seconds: expect.closeTo(156 / 0.9144, 6),
+  });
+});
+
+it('shows a malformed swim time as a form error instead of saving', async () => {
+  performance = { ...performance, usedByPlans: ['swim_pace'] };
+  mount();
+  fireEvent.change(await screen.findByLabelText('400 m time (mm:ss)'), {
+    target: { value: '6.20' },
+  });
+  fireEvent.change(screen.getByLabelText('200 m time (mm:ss)'), { target: { value: '2:50' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Calculate and save swim paces' }));
+  expect(await screen.findByRole('alert')).toHaveTextContent('Enter a time as mm:ss');
+  expect(api.POST).not.toHaveBeenCalled();
 });

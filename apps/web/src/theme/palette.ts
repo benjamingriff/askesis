@@ -145,16 +145,28 @@ export const KIND_COLORS = {
   strength: '#A78BFA',
   race: '#F472B6',
   rest: '#6B7280',
+  swim: '#22D3EE',
+  ride: '#FB923C',
+  mixed: '#818CF8',
 } as const;
 
-/** Askesis pace-guide zones (run_pace system) mapped onto the mobile zone hues. */
+/**
+ * Zone hues shared by every system, easiest to hardest. Keys used by more than one system (for
+ * example threshold) mean a comparable effort, so they share a colour.
+ */
 export const ZONE_COLORS: Record<string, string> = {
   recovery: '#7DD3FC',
   easy: '#34D399',
+  endurance: '#34D399',
   marathon: '#A3E635',
+  tempo: '#A3E635',
+  sweet_spot: '#FDE047',
   threshold: '#FBBF24',
   interval: '#FB923C',
+  vo2max: '#FB923C',
+  speed: '#F87171',
   repetition: '#F87171',
+  anaerobic: '#F87171',
 };
 
 export const STATUS_COLORS = {

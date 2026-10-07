@@ -26,6 +26,7 @@
     "test:live:upgrade": "./scripts/test-live-upgrade.sh",
     "test:agent:upgrade": "./scripts/test-agent-upgrade.sh",
     "test:performance:upgrade": "./scripts/test-performance-upgrade.sh",
+    "test:multisport:upgrade": "./scripts/test-multisport-upgrade.sh",
     "test:cutover": "sh ./scripts/test-plan-cutover.sh",
     "test:coverage": "pnpm -r --if-present run test:coverage",
     "typecheck": "pnpm -r --if-present run typecheck",
