@@ -171,9 +171,9 @@ const descriptions: Record<ToolName, string> = {
   retract_performance:
     'Withdraw a mistaken entry the user asks to undo; the previous entry applies again. Never retract to hide an inconvenient result.',
   apply_schedule_changes:
-    'Atomically add/update/delete dated blocks, weeks and full workout trees. Set generation to the whole intended horizon on the first schedule batch of this run; subsequent batches may repeat it or use null. Local keys reference new parents; existing UUIDs may be parent keys. Steps are ordered, first root parentIndex null, later parentIndex points to an earlier container. Efforts need a completion and containers need children. Coverage asserts fully prescribed dates, including rest days; use null for unfinished chunks.',
+    'Atomically add/update/delete dated blocks, weeks and full workout trees. Set generation to the whole intended horizon on the first schedule batch of this run; subsequent batches may repeat it or use null. Local keys reference new parents; existing UUIDs may be parent keys. Steps are ordered, first root parentIndex null, later parentIndex points to an earlier container. Efforts need a completion and containers need children. Give every running effort a zone target; pace targets only refine it. Coverage asserts fully prescribed dates, including rest days; use null for unfinished chunks.',
   replace_schedule_range:
-    'Atomically replace workouts only inside the explicit range, preserving all content outside it. Set generation to the whole intended horizon on the first schedule batch of this run; subsequent batches may repeat it or use null. Existing parents may be referenced by UUID. New blocks/weeks must fit inside the range. Never declare coverage for an unfinished chunk.',
+    'Atomically replace workouts only inside the explicit range, preserving all content outside it. Set generation to the whole intended horizon on the first schedule batch of this run; subsequent batches may repeat it or use null. Existing parents may be referenced by UUID. New blocks/weeks must fit inside the range. Give every running effort a zone target; pace targets only refine it. Never declare coverage for an unfinished chunk.',
   validate_plan:
     'Check draft structure and human review requirements; returns findings and current hashes. Does not confirm or lock.',
 };

@@ -2,7 +2,7 @@
 
 ## Development and deployment
 
-- [Local development](./local-development.md): web/API startup, validation and generated types.
+- [Local development](./local-development.md): web/API startup, agent sign-in and screenshot/video verification, background server lifetime, validation and generated types.
 - [Database setup](./database-setup.md): Docker Compose, Atlas and development fixtures.
 - [Railway deployment](./railway-deployment-plan.md): service topology, configuration, migrations and release checks.
 - [Worker operations](./phase-5-runtime.md): credentials, provider configuration, limits, leases and failure recovery.

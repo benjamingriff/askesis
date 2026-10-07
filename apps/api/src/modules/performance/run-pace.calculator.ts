@@ -72,3 +72,20 @@ export function calculatePaces(input: PaceInput): {
     })),
   };
 }
+
+type ZoneRange = { key: string; fast: number; target: number; slow: number };
+
+/** The calibrated zone a pace belongs to: one whose range contains it, else the nearest target. */
+export function nearestZone<Zone extends ZoneRange>(
+  secondsPerKilometre: number,
+  zones: readonly Zone[],
+): Zone | null {
+  const containing = zones.filter(
+    (zone) => secondsPerKilometre >= zone.fast && secondsPerKilometre <= zone.slow,
+  );
+  const distance = (zone: Zone) => Math.abs(zone.target - secondsPerKilometre);
+  return (containing.length ? containing : zones).reduce<Zone | null>(
+    (best, zone) => (!best || distance(zone) < distance(best) ? zone : best),
+    null,
+  );
+}

@@ -7,6 +7,7 @@ const WebBuildEnvironmentSchema = z.object({
   VITE_CLERK_PUBLISHABLE_KEY: z.string().min(1),
   VITE_API_BASE_URL: z.string().optional(),
   VITE_API_PROXY_TARGET: z.string().url().optional(),
+  WEB_PORT: z.coerce.number().int().min(1).max(65535).optional(),
   VITE_SENTRY_DSN: z.string().url().optional().or(z.literal('')),
   VITE_SENTRY_RELEASE: z.string().optional(),
   SENTRY_AUTH_TOKEN: z.string().min(1).optional(),
@@ -58,7 +59,8 @@ export default defineConfig(({ mode }) => {
     },
     server: {
       host: '0.0.0.0',
-      port: 5173,
+      port: result.data.WEB_PORT ?? 5173,
+      strictPort: true,
       proxy: {
         '/api': {
           target: result.data.VITE_API_PROXY_TARGET ?? 'http://localhost:3000',

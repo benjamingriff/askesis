@@ -38,6 +38,7 @@ import { confirmBrief, getBrief } from '../../src/modules/plans/brief.service.js
 import { emptyBrief } from '../../src/modules/plans/brief.schemas.js';
 import type { z } from 'zod';
 import type { ScheduleSchema } from '../../src/modules/agent/agent.schemas.js';
+import { calculatePaces } from '../../src/modules/performance/run-pace.calculator.js';
 const owner = '00000000-0000-0000-0000-000000000001';
 const bootstrap = 'local-test-bootstrap-credential-32-characters';
 const db = getDatabase();
@@ -216,6 +217,54 @@ const clearedConfirmation = {
   validator_version: null,
   acknowledged_warning_codes: null,
 };
+
+it('adds the nearest calibrated zone to pace-only efforts without replacing chosen zones', async () => {
+  const { claim } = await planning();
+  const { zones } = calculatePaces({ method: 'threshold_pace', secondsPerKilometre: 330 });
+  const pace = (key: string) => zones.find((zone) => zone.key === key)!.target;
+  const step = (label: string, targets: object[]) => ({
+    ...effort,
+    parentIndex: 0,
+    label,
+    targets,
+  });
+  await tool(claim, 'apply_schedule_changes', {
+    ...batch,
+    workouts: [
+      {
+        ...batch.workouts[0]!,
+        steps: [
+          { ...effort, kind: 'sequence', role: null, completion: null, targets: [] },
+          step('Warm up', [{ type: 'pace', secondsPerKilometre: pace('easy') + 20 }]),
+          step('Rep', [{ type: 'pace', secondsPerKilometre: pace('interval') - 3 }]),
+          step('Cruise', [
+            { type: 'zone', key: 'threshold' },
+            { type: 'pace', secondsPerKilometre: pace('interval') },
+          ]),
+          step('Strides', [{ type: 'rpe', value: 8 }]),
+        ],
+      },
+    ],
+  });
+  const { versionId } = await runContext(claim.runId, claim.token);
+  const rows = await db
+    .selectFrom('step_targets')
+    .innerJoin('workout_steps', 'workout_steps.id', 'step_targets.step_id')
+    .select(['workout_steps.label', 'step_targets.target_type', 'step_targets.zone_key'])
+    .where('step_targets.plan_version_id', '=', versionId)
+    .orderBy('workout_steps.position')
+    .orderBy('step_targets.position')
+    .execute();
+  expect(rows.map((row) => [row.label, row.target_type, row.zone_key])).toEqual([
+    ['Warm up', 'pace', null],
+    ['Warm up', 'zone', 'easy'],
+    ['Rep', 'pace', null],
+    ['Rep', 'zone', 'interval'],
+    ['Cruise', 'zone', 'threshold'],
+    ['Cruise', 'pace', null],
+    ['Strides', 'rpe', null],
+  ]);
+});
 
 it('preserves confirmation for edit-only changes and keeps schedule review sticky until covered', async () => {
   const { claim, p } = await planning();

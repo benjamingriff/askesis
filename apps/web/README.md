@@ -42,12 +42,12 @@ The application follows the shared [web design system](../../docs/product/web-de
 
 Clerk protects the application routes, and the generated API client attaches the current session token to API requests.
 
-Provide the public `VITE_CLERK_PUBLISHABLE_KEY` in ignored `apps/web/.env.local` or the shell environment; Vite does not automatically load root `.env`. Then run from the repository root:
+Provide the public `VITE_CLERK_PUBLISHABLE_KEY` in ignored root `.env`, `apps/web/.env.local` or the shell environment. The dev script loads root `.env` before Vite; root/shell values take precedence over app environment files. Then run from the repository root:
 
 ```bash
 pnpm dev:web
 ```
 
-Vite listens on <http://localhost:5173> and proxies `/api/*` to the API on port 3000.
+Vite defaults to <http://localhost:5173> (`WEB_PORT` overrides it) and proxies `/api/*` to the API on port 3000 (`VITE_API_PROXY_TARGET` overrides it). For dedicated development-account sign-in and screenshots/recordings from isolated worktrees, see [agent browser verification](../../docs/operations/local-development.md#agent-browser-verification-in-a-worktree).
 
 See [`../../docs/adr/0001-application-stack.md`](../../docs/adr/0001-application-stack.md) for the full decision.
