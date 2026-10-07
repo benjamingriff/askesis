@@ -113,8 +113,8 @@ it('shows each sport’s zones, distances and strength targets in the athlete’
       <StepList step={session} units="km" mixed />
     </SettingsProvider>,
   );
-  expect(screen.getByText('Sweet spot · 220 W–235 W')).toBeInTheDocument();
-  expect(screen.getByText('CSS · 1:32/100yd–1:37/100yd')).toBeInTheDocument();
+  expect(screen.getByText('Sweet spot · 220–235 W')).toBeInTheDocument();
+  expect(screen.getByText('CSS · 1:32–1:37/100yd')).toBeInTheDocument();
   expect(screen.getByText('100 yd')).toBeInTheDocument();
   expect(screen.getByText('6 reps')).toBeInTheDocument();
   expect(screen.getByText('2 reps in reserve')).toBeInTheDocument();

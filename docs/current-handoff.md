@@ -14,6 +14,7 @@ Phase 8 remains the release-readiness checklist for invitations: access restrict
 
 ## Recent decisions
 
+- 2026-10-07: plans can train running, cycling, swimming and strength, alone or combined ([ADR 0006](./adr/0006-multisport-plans.md)). `cycle_power` (FTP) and `swim_pace` (CSS) join `run_pace`; strength uses reps in reserve and suggested loads without calibration; the brief holds one baseline per sport. No heart-rate zones for now. Development fixtures add an Olympic triathlon and a Hyrox plan beside Cardiff.
 - 2026-10-07: fitness calibration moved from plan versions to the athlete ([ADR 0005](./adr/0005-athlete-owned-performance.md)). An account has one athlete; every plan is for them. Results form an append-only timeline per system (`run_pace` today, designed for swim/bike/strength systems next), apply from today in every plan, and are recorded on the web Performance page or by the coach from any chat. The athlete's timezone now follows their device. The migration truncated pre-alpha plan and coaching data.
 
 ## Verified delivery and outstanding checks
@@ -45,7 +46,7 @@ Phase 8 remains the release-readiness checklist for invitations: access restrict
 - Chat is the primary plan-editing interface.
 - Agents cannot lock or unlock plans; both require human confirmation.
 - Plan assumptions, coverage and workouts are versioned as one aggregate. Fitness calibration is athlete-owned and append-only; plans reference it by workout date and never copy it.
-- Intended alpha is invitation-only and running-only; invitation restrictions still need release configuration/verification.
+- Intended alpha is invitation-only; invitation restrictions still need release configuration/verification. Plans may train running, cycling, swimming and strength (ADR 0006).
 - One athlete per account. No user-facing permanent deletion, plan sharing, or demographic athlete profile during alpha.
 - Do not add development seed data to Railway.
 

@@ -186,12 +186,20 @@ function formatCompletion(step: WorkoutStep, display: Display): string | null {
   return completion.type.replaceAll('_', ' ');
 }
 
+/** "137 W" and "184 W" → "137–184 W"; "4:23/km" and "4:57/km" → "4:23–4:57/km". */
+export function compactRange(low: string, high: string): string {
+  const unit = /[ /][^ /]*$/.exec(high)?.[0];
+  return unit && low.endsWith(unit) ? `${low.slice(0, -unit.length)}–${high}` : `${low}–${high}`;
+}
+
 function formatTarget(target: StepTarget, display: Display, discipline: string | null): string {
   if (target.type === 'zone' && target.zoneKey !== null) {
     const zone = target.resolvedZone;
     const name = zoneLabel(target.zoneKey, target.zoneSystem);
     if (zone && zone.minimumValue !== null && zone.maximumValue !== null) {
-      return `${name} · ${formatValue(zone.minimumValue, zone.unit, display, discipline)}–${formatValue(zone.maximumValue, zone.unit, display, discipline)}`;
+      const low = formatValue(zone.minimumValue, zone.unit, display, discipline)!;
+      const high = formatValue(zone.maximumValue, zone.unit, display, discipline)!;
+      return `${name} · ${compactRange(low, high)}`;
     }
     return name;
   }
@@ -279,10 +287,12 @@ function StepItem({
       <div className="step-copy">
         <span className="label">
           {mixed && sport ? (
-            <span className="step-sport" style={{ '--kind': sport.color } as CSSProperties}>
-              <sport.icon size={12} aria-hidden="true" /> {sport.label}
+            <>
+              <span className="step-sport" style={{ '--kind': sport.color } as CSSProperties}>
+                <sport.icon size={12} aria-hidden="true" /> {sport.label}
+              </span>
               {step.role ? ' · ' : ''}
-            </span>
+            </>
           ) : null}
           {step.role ?? (mixed && sport ? '' : 'step')}
         </span>

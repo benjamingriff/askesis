@@ -462,9 +462,10 @@ it('generates complete prescriptions, safely replays mutations, and locks a part
   expect(await executeTool(claim.runId, claim.token, cmd)).toEqual(result);
   const b = await getBrief(owner, p.id);
   expect(b.coverage).toEqual([{ startDate: '2027-01-01', endDate: '2027-01-07', current: true }]);
-  expect((await getPerformance(owner)).current).toEqual([
-    expect.objectContaining({ provenance: 'agent_estimate', recordedBy: 'coach' }),
-  ]);
+  // The fixture also calibrates cycling and swimming for this athlete.
+  expect(
+    (await getPerformance(owner)).current.filter((entry) => entry.system === 'run_pace'),
+  ).toEqual([expect.objectContaining({ provenance: 'agent_estimate', recordedBy: 'coach' })]);
   expect(
     await db
       .selectFrom('workouts')
@@ -494,13 +495,11 @@ it('generates complete prescriptions, safely replays mutations, and locks a part
   expect(locked.locked).toBeTruthy();
   // The version records the fitness it was locked against, outside its content hash.
   const revision = await getRevision(owner, p.id, locked.locked!.id);
-  expect(revision.revision.calibrationBasis).toEqual([
-    {
-      system: 'run_pace',
-      calibrationId: (await getPerformance(owner)).current[0]!.id,
-      effectiveFrom: expect.any(String),
-    },
-  ]);
+  expect(revision.revision.calibrationBasis).toContainEqual({
+    system: 'run_pace',
+    calibrationId: (await getPerformance(owner)).current[0]!.id,
+    effectiveFrom: expect.any(String),
+  });
   const draft = await unlockPlan(owner, p.id, locked.stateVersion);
   expect((await getBrief(owner, p.id)).coverage).toEqual(b.coverage);
   await discardDraft(
@@ -1544,6 +1543,12 @@ it('prescribes rides, swims, bricks and strength with sport-specific targets and
     observedOn: null,
   });
   // Zone targets resolve against the athlete's fitness, so swimming needs calibration first.
+  // Withdraw any swim results (the development fixture records one) to start uncalibrated.
+  const { retractCalibration, recordCalibration } =
+    await import('../../src/modules/performance/performance.service.js');
+  for (const entry of (await getPerformance(owner)).entries)
+    if (entry.system === 'swim_pace' && !entry.retractedAt)
+      await retractCalibration(owner, entry.id);
   await expect(tool(claim, 'apply_schedule_changes', schedule)).rejects.toMatchObject({
     message: expect.stringContaining('matching calibration zone'),
   });
@@ -1617,8 +1622,6 @@ it('prescribes rides, swims, bricks and strength with sport-specific targets and
   const performance = await getPerformance(owner);
   expect(performance.usedByPlans).toEqual(['run_pace', 'cycle_power', 'swim_pace']);
   // Withdrawing the only swim result blocks locking again.
-  const { retractCalibration, recordCalibration } =
-    await import('../../src/modules/performance/performance.service.js');
   await retractCalibration(owner, swimTest.result.recorded.id);
   expect(await performanceCodes()).toEqual(['performance.swim_pace_required']);
   await recordCalibration(owner, {

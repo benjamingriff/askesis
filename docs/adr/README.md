@@ -8,7 +8,8 @@ Keep ADRs together in this folder, with one numbered document per significant te
 | [0002](./0002-package-management.md)        | Pinned pnpm workspace management                                         | Accepted; separate mobile prototype uses npm                                           |
 | [0003](./0003-coaching-worker.md)           | Private OpenAI Agents SDK worker with API-authorized domain tools        | Accepted; retrospectively recorded from Phase 5                                        |
 | [0004](./0004-live-synchronization.md)      | TanStack Query with authenticated, replayable SSE notifications          | Accepted; retrospectively recorded from Phase 6                                        |
-| [0005](./0005-athlete-owned-performance.md) | Athlete-owned, append-only performance calibration applied to every plan | Accepted                                                                               |
+| [0005](./0005-athlete-owned-performance.md) | Athlete-owned, append-only performance calibration applied to every plan | Accepted; extended by 0006                                                             |
+| [0006](./0006-multisport-plans.md)          | Multi-sport plans: cycling power, swim CSS and uncalibrated strength     | Accepted                                                                               |
 
 ## When to write an ADR
 

@@ -33,13 +33,13 @@ Keep the complete coaching/review loop useful before widening scope. Derive owne
 
 Implemented: multiple plans, activation/library/archive, complete draft/version lifecycle, structured plan-specific running brief, athlete-owned running pace calibration applied to every plan, persistent conversations/runs, authorized coaching tools, streamed output, live saved-plan review, cancellation/recovery, Clerk account UI and responsive themes/preferences.
 
-Not delivered: application invitation enforcement, rate/per-user spending limits, operator account-data removal command, sharing, merging, combined active-plan calendar, global training profile, prompt customization/user skills, completed-workout ingestion, wearable integration, broad multi-sport coaching, full manual workout editing or native API integration. Markdown plan export was removed from the roadmap.
+Not delivered: application invitation enforcement, rate/per-user spending limits, operator account-data removal command, sharing, merging, combined active-plan calendar, global training profile, prompt customization/user skills, completed-workout ingestion, wearable integration, heart-rate zones, strength performance tracking, full manual workout editing or native API integration. Markdown plan export was removed from the roadmap.
 
 # Delivery phases
 
 ## Phase 0: alpha product contract
 
-**Accepted scope.** Intended alpha is invitation-only and running-only. Invitation restriction is a release configuration/task, not already enforced in application middleware.
+**Accepted scope.** Intended alpha is invitation-only. Plans may train running, cycling, swimming and supporting strength ([ADR 0006](../adr/0006-multisport-plans.md)). Invitation restriction is a release configuration/task, not already enforced in application middleware.
 
 Clerk owns account identity. An account has one athlete and every plan is for that athlete; plans cannot describe another person or a hypothetical runner (decided 2026-10-07, [ADR 0005](../adr/0005-athlete-owned-performance.md)). Training assumptions belong to the versioned brief and fitness belongs to the athlete; there is no demographic profile.
 

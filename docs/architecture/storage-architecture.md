@@ -8,7 +8,7 @@ Verified against the applied migration sequence and generated types on 2026-10-0
 | ------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
 | Identity                        | `athletes`, `athlete_identities`                                                                                     |
 | Logical plan and versions       | `plans`, `plan_versions`                                                                                             |
-| Brief                           | `plan_briefs`, `plan_brief_weekdays`                                                                                 |
+| Brief                           | `plan_briefs`, `plan_brief_sports`, `plan_brief_weekdays`                                                            |
 | Athlete fitness                 | `athlete_calibrations`, `athlete_calibration_zones`                                                                  |
 | Coverage                        | `plan_schedule_coverage`                                                                                             |
 | Schedule                        | `training_blocks`, `training_weeks`, `week_targets`, `workouts`, `workout_tags`                                      |

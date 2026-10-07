@@ -3,6 +3,7 @@ import { getPlan, lockPlan, organizePlan, previewLock } from '../modules/plans/p
 import { confirmBrief, getBrief, saveBrief } from '../modules/plans/brief.service.js';
 import { emptyBrief } from '../modules/plans/brief.schemas.js';
 import { getPerformance, recordCalibration } from '../modules/performance/performance.service.js';
+import { publishMultisportFixtures } from './multisport-fixtures.js';
 
 // Explicit development operator command, never part of the production startup path.
 async function publish() {
@@ -17,7 +18,7 @@ async function publish() {
     .set({ timezone: 'Europe/London' })
     .where('id', '=', owner)
     .execute();
-  if (!(await getPerformance(owner)).entries.length) {
+  if (!(await getPerformance(owner)).entries.some((entry) => entry.system === 'run_pace')) {
     await recordCalibration(
       owner,
       {
@@ -99,7 +100,8 @@ async function publish() {
   if (plan.locked?.versionNumber !== 1 || plan.draft || plan.archived)
     throw new Error('Fixture has been edited; refusing to change its lifecycle.');
   await organizePlan(owner, planId, 'activate', plan.stateVersion);
-  console.log('Development fixture is locked and active at Version 1.');
+  await publishMultisportFixtures(owner);
+  console.log('Development fixtures are locked and active at Version 1.');
 }
 
 try {
