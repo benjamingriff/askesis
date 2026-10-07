@@ -34,7 +34,9 @@
     "generate:check": "./scripts/check-generated.sh",
     "migrations:check": "./scripts/check-migrations.sh",
     "smoke": "./scripts/smoke.sh",
-    "audit:production": "pnpm audit --prod --audit-level=high"
+    "audit:production": "pnpm audit --prod --audit-level=high",
+    "dev:marketing": "pnpm --filter @askesis/marketing dev",
+    "preview:marketing": "pnpm --filter @askesis/marketing preview"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.5",
@@ -42,6 +44,7 @@
     "@testing-library/react": "^16.3.2",
     "@vitest/coverage-v8": "^4.1.10",
     "eslint": "^9.39.5",
+    "eslint-plugin-astro": "^1.7.0",
     "eslint-plugin-import-x": "^4.17.1",
     "eslint-plugin-react": "^7.37.5",
     "eslint-plugin-react-hooks": "^7.1.1",
@@ -50,6 +53,7 @@
     "jsdom": "^29.1.1",
     "openapi-typescript": "^7.10.1",
     "prettier": "^3.9.6",
+    "prettier-plugin-astro": "^1.1.0",
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.65.0",
     "vitest": "^4.1.10"

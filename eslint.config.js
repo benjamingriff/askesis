@@ -1,4 +1,5 @@
 import js from '@eslint/js';
+import astro from 'eslint-plugin-astro';
 import react from 'eslint-plugin-react';
 import reactHooks from 'eslint-plugin-react-hooks';
 import reactRefresh from 'eslint-plugin-react-refresh';
@@ -10,6 +11,7 @@ export default tseslint.config(
     ignores: [
       '**/dist/**',
       '**/coverage/**',
+      '**/.astro/**',
       'apps/mobile/**',
       'apps/api/src/database/generated.ts',
       'packages/api-client/src/schema.ts',
@@ -17,6 +19,7 @@ export default tseslint.config(
   },
   js.configs.recommended,
   ...tseslint.configs.recommended,
+  ...astro.configs.recommended,
   {
     files: [
       'apps/api/**/*.ts',
@@ -24,6 +27,7 @@ export default tseslint.config(
       'packages/**/*.ts',
       '*.js',
       'scripts/dev-*.mjs',
+      'apps/marketing/astro.config.mjs',
     ],
     languageOptions: {
       globals: globals.node,

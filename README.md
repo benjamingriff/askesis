@@ -29,6 +29,10 @@ pnpm install --frozen-lockfile
 
 ## Run with Docker
 
+For the public marketing site alone, run `pnpm dev:marketing` and open
+<http://localhost:4321>. It runs directly with pnpm and needs no Docker, database, or login.
+See the [marketing site guide](./apps/marketing/README.md) for app links, builds, and static hosting.
+
 For agent UI verification in a fresh worktree, use `pnpm dev:setup`, `pnpm dev:local`, then `pnpm dev:login` in another terminal. This provisions an isolated local database and signs a dedicated Clerk development account into the sample plan; see the [browser verification workflow](./docs/operations/local-development.md#agent-browser-verification-in-a-worktree).
 
 Configure ignored `.env` with Clerk development keys as described in [local setup](./docs/operations/local-development.md), then build/start PostgreSQL, Atlas migrations, seed, fixture publication, API and web. Real coaching additionally requires the [agent profile](./docs/operations/phase-5-runtime.md#local-setup):
@@ -79,6 +83,7 @@ apps/
   api/          Hono API and Kysely repositories
   agent/        Private coaching worker using the OpenAI Agents SDK
   web/          React, Vite, and React Router
+  marketing/    Static Astro landing page
   mobile/       Separate Expo UI reference prototype
 packages/
   api-client/   Generated OpenAPI types and client factory

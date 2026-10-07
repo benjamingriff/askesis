@@ -1,0 +1,382 @@
+---
+const days = [
+  {
+    date: 'MON 11',
+    title: 'Easy run and strides',
+    detail: '40 min · 6.5 km',
+    kind: 'Easy',
+    tone: 'easy',
+  },
+  { date: 'TUE 12', title: 'Easy run', detail: '30 min · 5.5 km', kind: 'Easy', tone: 'easy' },
+  {
+    date: 'WED 13',
+    title: 'Uphill repetitions',
+    detail: '55 min · 9.5 km',
+    kind: 'Intervals',
+    tone: 'intervals',
+  },
+  { date: 'THU 14', title: 'Rest day', detail: 'Room to recover.', kind: 'Rest', tone: 'rest' },
+  { date: 'FRI 15', title: 'Easy run', detail: '30 min · 5.5 km', kind: 'Easy', tone: 'easy' },
+  { date: 'SAT 16', title: 'Long easy run', detail: '65 min · 12 km', kind: 'Long', tone: 'long' },
+  {
+    date: 'SUN 17',
+    title: 'Rest day',
+    detail: 'Ready for the week ahead.',
+    kind: 'Rest',
+    tone: 'rest',
+  },
+];
+---
+
+<div class="plan-preview" aria-label="Illustrative training week based on Askesis sample data">
+  <aside class="preview-sidebar" aria-hidden="true">
+    <span class="preview-brand">
+      A <strong>Askesis</strong>
+    </span>
+    <span class="preview-new-chat">+ New chat</span>
+    <span>
+      ◷ <span>Today</span>
+    </span>
+    <span class="preview-active">
+      ▤ <span>Plan</span>
+    </span>
+    <span>
+      ↗ <span>Coach</span>
+    </span>
+    <span>
+      ▦ <span>All plans</span>
+    </span>
+    <div class="preview-sidebar-bottom">YOUR NEXT STEP STARTS HERE</div>
+  </aside>
+  <div class="preview-plan">
+    <header class="preview-plan-heading">
+      <div>
+        <p class="preview-label">TRAINING PLAN</p>
+        <h3>Cardiff Half Marathon</h3>
+      </div>
+      <span class="preview-locked">✓ Locked</span>
+    </header>
+    <p class="preview-goal">Build consistency. Find your rhythm. Enjoy the run.</p>
+    <div class="preview-week-heading">
+      <h4>
+        Week 1 <span>11–17 May 2026</span>
+      </h4>
+      <span aria-hidden="true">‹ &nbsp; ›</span>
+    </div>
+    <div class="preview-stats">
+      <div>
+        <span>DISTANCE</span>
+        <strong>
+          39 <small>km</small>
+        </strong>
+      </div>
+      <div>
+        <span>TIME</span>
+        <strong>3h 40m</strong>
+      </div>
+      <div>
+        <span>SESSIONS</span>
+        <strong>5</strong>
+      </div>
+      <div class="preview-volume" aria-hidden="true">
+        <i></i>
+        <i></i>
+        <i></i>
+        <i></i>
+        <i></i>
+        <i></i>
+        <i></i>
+      </div>
+    </div>
+    <div class="preview-days">
+      {days.map((day) => (
+        <div class:list={['preview-day', day.tone]}>
+          <span class="preview-date">{day.date}</span>
+          <div>
+            <strong>{day.title}</strong>
+            <span>{day.detail}</span>
+          </div>
+          <span class="preview-kind">{day.kind}</span>
+        </div>
+      ))}
+    </div>
+  </div>
+</div>
+
+<style>
+  .plan-preview {
+    display: grid;
+    grid-template-columns: 185px 1fr;
+    text-align: left;
+    background: #0a0a0b;
+  }
+  .preview-sidebar {
+    display: flex;
+    flex-direction: column;
+    gap: 11px;
+    padding: 26px 16px;
+    background: #101012;
+    border-right: 1px solid #ffffff0c;
+    color: #a1a1a8;
+    font-size: 12px;
+  }
+  .preview-brand {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    color: #c8f031;
+    font-size: 18px;
+    margin: 0 6px 19px;
+  }
+  .preview-brand strong {
+    color: #f5f5f6;
+    font-size: 15px;
+  }
+  .preview-new-chat {
+    padding: 10px 12px;
+    border: 1px solid #ffffff14;
+    border-radius: 7px;
+    margin-bottom: 5px;
+  }
+  .preview-sidebar > span:not(.preview-brand, .preview-new-chat) {
+    padding: 9px 12px;
+    display: flex;
+    gap: 10px;
+  }
+  .preview-active {
+    background: #c8f03112;
+    border-radius: 7px;
+    color: #c8f031;
+  }
+  .preview-sidebar-bottom {
+    margin-top: auto;
+    font-size: 8px;
+    letter-spacing: 1px;
+    color: #8c8c96;
+    line-height: 1.8;
+    padding: 0 6px;
+  }
+  .preview-plan {
+    padding: 30px 38px;
+  }
+  .preview-plan-heading {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+  }
+  .preview-label {
+    font-size: 8px;
+    color: #a1a1a8;
+    letter-spacing: 1.5px;
+  }
+  .preview-plan-heading h3 {
+    margin: 8px 0 0;
+    font-size: 25px;
+    font-weight: 650;
+    letter-spacing: -0.7px;
+  }
+  .preview-locked {
+    font-size: 10px;
+    color: #34d399;
+    background: #34d39912;
+    padding: 7px 10px;
+    border-radius: 20px;
+  }
+  .preview-goal {
+    font-size: 11px;
+    color: #a1a1a8;
+    margin-top: 12px;
+  }
+  .preview-week-heading {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 29px;
+  }
+  .preview-week-heading h4 {
+    margin: 0;
+    font-size: 15px;
+    font-weight: 600;
+  }
+  .preview-week-heading h4 span {
+    margin-left: 14px;
+    font-size: 10px;
+    color: #a1a1a8;
+    font-weight: 400;
+  }
+  .preview-week-heading > span {
+    color: #a1a1a8;
+  }
+  .preview-stats {
+    display: flex;
+    gap: 40px;
+    padding: 20px;
+    margin-top: 14px;
+    border-radius: 12px;
+    background: #141416;
+    border: 1px solid #ffffff0c;
+  }
+  .preview-stats > div:not(.preview-volume) {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+  }
+  .preview-stats span {
+    color: #a1a1a8;
+    font-size: 8px;
+    letter-spacing: 1px;
+  }
+  .preview-stats strong {
+    font-size: 21px;
+    font-weight: 550;
+  }
+  .preview-stats small {
+    font-size: 12px;
+    font-weight: 400;
+    color: #a1a1a8;
+  }
+  .preview-volume {
+    display: flex;
+    align-items: end;
+    gap: 8px;
+    margin-left: auto;
+    height: 43px;
+  }
+  .preview-volume i {
+    background: #c8f031;
+    width: 9px;
+    height: 25px;
+    border-radius: 3px 3px 0 0;
+    opacity: 0.85;
+  }
+  .preview-volume i:nth-child(2) {
+    height: 21px;
+  }
+  .preview-volume i:nth-child(3) {
+    height: 34px;
+    background: #f87171;
+  }
+  .preview-volume i:nth-child(4),
+  .preview-volume i:nth-child(7) {
+    height: 3px;
+    background: #5e5e68;
+  }
+  .preview-volume i:nth-child(5) {
+    height: 21px;
+  }
+  .preview-volume i:nth-child(6) {
+    height: 43px;
+    background: #60a5fa;
+  }
+  .preview-days {
+    margin-top: 16px;
+  }
+  .preview-day {
+    display: grid;
+    grid-template-columns: 70px 1fr auto;
+    gap: 14px;
+    align-items: center;
+    padding: 13px 14px;
+    border-bottom: 1px solid #ffffff0a;
+  }
+  .preview-day:last-child {
+    border-bottom: none;
+  }
+  .preview-date {
+    color: #a1a1a8;
+    font-size: 9px;
+    letter-spacing: 0.7px;
+  }
+  .preview-day > div {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    border-left: 2px solid #34d399;
+    padding-left: 12px;
+  }
+  .preview-day strong {
+    font-size: 12px;
+    font-weight: 550;
+  }
+  .preview-day > div span {
+    font-size: 10px;
+    color: #a1a1a8;
+  }
+  .preview-kind {
+    font-size: 8px;
+    padding: 4px 8px;
+    border-radius: 20px;
+    color: #34d399;
+    background: #34d3990d;
+  }
+  .intervals .preview-kind {
+    color: #f87171;
+    background: #f871710d;
+  }
+  .intervals > div {
+    border-color: #f87171;
+  }
+  .long .preview-kind {
+    color: #60a5fa;
+    background: #60a5fa0d;
+  }
+  .long > div {
+    border-color: #60a5fa;
+  }
+  .rest .preview-kind {
+    color: #a1a1a8;
+    background: #ffffff08;
+  }
+  .rest > div {
+    border-color: #5e5e68;
+  }
+  .rest strong {
+    color: #a1a1a8;
+  }
+  @media (max-width: 900px) {
+    .preview-sidebar {
+      display: none;
+    }
+    .plan-preview {
+      grid-template-columns: 1fr;
+    }
+    .preview-plan {
+      padding: 26px;
+    }
+  }
+  @media (max-width: 520px) {
+    .preview-plan {
+      padding: 20px 12px;
+    }
+    .preview-plan-heading h3 {
+      font-size: 19px;
+    }
+    .preview-locked {
+      font-size: 8px;
+      padding: 5px 8px;
+    }
+    .preview-week-heading h4 span {
+      margin-left: 8px;
+      font-size: 9px;
+    }
+    .preview-stats {
+      gap: 20px;
+      padding: 14px;
+    }
+    .preview-stats strong {
+      font-size: 18px;
+    }
+    .preview-volume {
+      display: none;
+    }
+    .preview-day {
+      grid-template-columns: 48px 1fr auto;
+      gap: 8px;
+      padding: 12px 3px;
+    }
+    .preview-date {
+      font-size: 8px;
+    }
+  }
+</style>

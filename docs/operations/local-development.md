@@ -84,6 +84,16 @@ A hidden tab (`visible: false`) can still support automation and screenshots; th
 
 Stop only this worktree's database with `docker compose stop postgres`. Its volume is retained. Configuration diagnostics are available with `pnpm --filter @askesis/api verification:check`.
 
+## Marketing site
+
+The independent Astro landing page runs with `pnpm dev:marketing` at <http://localhost:4321>.
+It needs only the root dependency installation, with no Docker or authentication setup. Its
+development app links automatically use this worktree's `LOCAL_WEB_URL` when present; set
+`PUBLIC_APP_URL` to override the destination. The site and authenticated app can run side by side.
+
+See [the marketing guide](../../apps/marketing/README.md) for production builds, Vercel settings,
+and updating the sample training preview.
+
 ## Run the complete stack with Docker
 
 ```bash

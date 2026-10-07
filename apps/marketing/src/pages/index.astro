@@ -1,0 +1,176 @@
+---
+import { env } from 'node:process';
+import PlanPreview from '../components/PlanPreview.astro';
+import '../styles/site.css';
+
+const repositoryUrl = 'https://github.com/benjamingriff/askesis';
+const configuredAppUrl = import.meta.env.PUBLIC_APP_URL;
+const appUrl =
+  configuredAppUrl ||
+  (import.meta.env.DEV
+    ? new URL('/plan', env.LOCAL_WEB_URL || 'http://localhost:5173').href
+    : repositoryUrl);
+const appLabel = configuredAppUrl || import.meta.env.DEV ? 'Open Askesis' : 'Explore the project';
+const features = [
+  {
+    number: '01',
+    title: 'See the whole picture.',
+    description:
+      'Your goal, weekly volume, and every session in one place. Go from the big picture to the details of your next run.',
+    tag: 'A clear plan',
+  },
+  {
+    number: '02',
+    title: 'Make room for real life.',
+    description:
+      'Talk it through with your coach. Work on a draft alongside the conversation, with the changes ready to review.',
+    tag: 'A coach in your corner',
+  },
+  {
+    number: '03',
+    title: 'Keep the final say.',
+    description:
+      'Review the changes and lock in your plan when you’re ready. Your published schedule stays put until you choose to update it.',
+    tag: 'You’re in control',
+  },
+];
+const title = 'Askesis — Train with a plan. Adapt with purpose.';
+const description =
+  'A clear training plan, a coach to talk it through, and the freedom to adapt. Askesis brings your running goals and weekly sessions together.';
+const canonicalUrl = Astro.site ? new URL(Astro.url.pathname, Astro.site) : undefined;
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content={description} />
+    <meta name="theme-color" content="#0a0a0b" />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    {canonicalUrl && <link rel="canonical" href={canonicalUrl} />}
+    {canonicalUrl && <meta property="og:url" content={canonicalUrl} />}
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <title>{title}</title>
+  </head>
+  <body>
+    <a class="skip-link" href="#main">
+      Skip to content
+    </a>
+    <header class="site-header">
+      <nav class="container nav" aria-label="Main navigation">
+        <a class="wordmark" href="/" aria-label="Askesis home">
+          <svg viewBox="0 0 48 48" fill="none" aria-hidden="true">
+            <path d="M12 34 23 12h5l-5 10h8l5 12h-7l-3-7h-6l-3 7Z" fill="currentColor" />
+          </svg>
+          <span>
+            askesis<span class="wordmark-period">.</span>
+          </span>
+        </a>
+        <div class="nav-links">
+          <a class="nav-about" href="#approach">
+            The approach
+          </a>
+          <a class="nav-cta" href={appUrl}>
+            {appLabel} <span aria-hidden="true">↗</span>
+          </a>
+        </div>
+      </nav>
+    </header>
+
+    <main id="main">
+      <section class="hero" aria-labelledby="hero-heading">
+        <div class="hero-backdrop" aria-hidden="true"></div>
+        <div class="container hero-inner">
+          <p class="eyebrow">
+            <span class="status-dot"></span> A little structure. A lot of possibility.
+          </p>
+          <h1 id="hero-heading">
+            Train with a plan.
+            <br />
+            <span>Adapt with purpose.</span>
+          </h1>
+          <p class="hero-description">
+            Big goals meet everyday life. Bring your training, your coach,
+            <br class="desktop-break" /> and your next step into focus.
+          </p>
+          <div class="hero-actions">
+            <a class="button button-primary" href={appUrl}>
+              {appLabel} <span aria-hidden="true">↗</span>
+            </a>
+            <a class="button button-text" href="#the-plan">
+              Take a closer look <span aria-hidden="true">↓</span>
+            </a>
+          </div>
+          <p class="hero-note">Built for runners. Made to adapt.</p>
+
+          <figure class="product-preview" id="the-plan">
+            <div class="preview-bar" aria-hidden="true">
+              <div class="window-dots">
+                <i></i>
+                <i></i>
+                <i></i>
+              </div>
+              <span>YOUR PLAN, IN FOCUS</span>
+              <span class="preview-indicator">
+                <i></i> askesis
+              </span>
+            </div>
+            <PlanPreview />
+            <figcaption>
+              Clear sessions. One place to bring it all together.
+              <span>Illustrative preview · sample training data</span>
+            </figcaption>
+          </figure>
+        </div>
+      </section>
+
+      <section class="container approach" id="approach" aria-labelledby="approach-heading">
+        <div class="section-heading">
+          <p class="eyebrow">THE APPROACH</p>
+          <h2 id="approach-heading">
+            Structure for the work.
+            <br />
+            <span>Space for the rest of life.</span>
+          </h2>
+        </div>
+        <div class="features">
+          {features.map((feature) => (
+            <article class="feature">
+              <span class="feature-number">
+                {feature.number}
+                <span aria-hidden="true"> / </span>
+              </span>
+              <p class="feature-tag">{feature.tag}</p>
+              <h3>{feature.title}</h3>
+              <p>{feature.description}</p>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      <section class="container closing" aria-labelledby="closing-heading">
+        <div>
+          <p class="eyebrow">ONE SESSION AT A TIME</p>
+          <h2 id="closing-heading">Find your next step.</h2>
+          <p>Less second-guessing. More getting out the door.</p>
+        </div>
+        <a class="button button-primary" href={appUrl}>
+          {appLabel} <span aria-hidden="true">↗</span>
+        </a>
+      </section>
+    </main>
+
+    <footer class="container footer">
+      <a class="footer-brand" href="/">
+        askesis.
+      </a>
+      <span>A practice, not a finish line.</span>
+      <a href={repositoryUrl}>
+        Built in the open <span aria-hidden="true">↗</span>
+      </a>
+    </footer>
+  </body>
+</html>
