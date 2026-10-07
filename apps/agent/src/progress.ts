@@ -1,4 +1,3 @@
-import { setTimeout as pause } from 'node:timers/promises';
 import { ApiError, type AgentApi, type Claim } from './api.js';
 import { truncateText } from './text.js';
 
@@ -6,6 +5,26 @@ import { truncateText } from './text.js';
 const DELIVERY_BUDGET_MS = 30000;
 const transient = (error: unknown) =>
   !(error instanceof ApiError) || error.status >= 500 || error.status === 429;
+
+/** Backoff owns its timer/listener, so a hard stop never waits for the next attempt. */
+const pause = (delay: number, signal: AbortSignal) => {
+  signal.throwIfAborted();
+  return new Promise<void>((resolve, reject) => {
+    const cleanup = () => {
+      clearTimeout(timer);
+      signal.removeEventListener('abort', abort);
+    };
+    const abort = () => {
+      cleanup();
+      reject(signal.reason);
+    };
+    const timer = setTimeout(() => {
+      cleanup();
+      resolve();
+    }, delay);
+    signal.addEventListener('abort', abort, { once: true });
+  });
+};
 
 type Item = {
   itemId: string;
@@ -32,7 +51,7 @@ export class ProgressReporter {
     private claim: Claim,
     private interrupt: (reason: unknown) => void,
     /** Lease loss, timeout or shutdown: retrying a batch can no longer succeed. */
-    private stopped: () => boolean = () => false,
+    private hardStopSignal: AbortSignal = new AbortController().signal,
     private retryDelayMs = 250,
   ) {
     this.timer = setInterval(() => {
@@ -40,6 +59,7 @@ export class ProgressReporter {
       this.timerBusy = true;
       void this.flush()
         .catch((error) => {
+          clearInterval(this.timer);
           this.error = error;
           this.interrupt(error);
         })
@@ -121,6 +141,7 @@ export class ProgressReporter {
     }
     // Observe rejection immediately even if a timer initiated the write.
     this.tail.catch((error) => {
+      clearInterval(this.timer);
       this.error = error;
       this.interrupt(error);
     });
@@ -131,20 +152,34 @@ export class ProgressReporter {
    * backoff instead of failing the turn. Rejections and lost leases fail immediately.
    */
   private async deliver(body: unknown) {
-    const started = performance.now();
-    for (let attempt = 0; ; attempt++) {
-      try {
-        return await this.api.progress(this.claim, body);
-      } catch (error) {
-        const delay = Math.min(4000, this.retryDelayMs * 2 ** attempt);
-        if (
-          !transient(error) ||
-          this.stopped() ||
-          performance.now() - started + delay > DELIVERY_BUDGET_MS
-        )
-          throw error;
-        await pause(delay * (0.8 + Math.random() * 0.4));
+    this.hardStopSignal.throwIfAborted();
+    const remaining = Date.parse(this.claim.deadlineAt) - Date.now();
+    if (remaining <= 0) throw 'EXECUTION_TIMEOUT';
+    const budget = new AbortController();
+    const timer = setTimeout(
+      () =>
+        budget.abort(
+          remaining <= DELIVERY_BUDGET_MS
+            ? 'EXECUTION_TIMEOUT'
+            : new ApiError('API_UNREACHABLE', 503),
+        ),
+      Math.min(DELIVERY_BUDGET_MS, remaining),
+    );
+    const signal = AbortSignal.any([this.hardStopSignal, budget.signal]);
+    try {
+      for (let attempt = 0; ; attempt++) {
+        signal.throwIfAborted();
+        try {
+          return await this.api.progress(this.claim, body, signal);
+        } catch (error) {
+          signal.throwIfAborted();
+          if (!transient(error)) throw error;
+          const delay = Math.min(4000, this.retryDelayMs * 2 ** attempt);
+          await pause(delay * (0.8 + Math.random() * 0.4), signal);
+        }
       }
+    } finally {
+      clearTimeout(timer);
     }
   }
   /** Persist remaining text (required), then a best-effort timing summary. */

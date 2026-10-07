@@ -69,6 +69,7 @@ it('uses the SDK tool loop, serial execution and explicit tracing/privacy settin
     claim,
     api,
     new AbortController().signal,
+    new AbortController().signal,
   );
   expect(result.content).toBe('What would you like to achieve?');
   expect(tool).toHaveBeenCalledOnce();
@@ -98,7 +99,13 @@ it('carries its own latest edit number between tools and stops on external confl
     .mockResolvedValueOnce({ result: {}, versionId: 'draft', editNumber: 2, planId: 'plan' })
     .mockRejectedValueOnce(new ApiError('STALE_CONTEXT', 409));
   await expect(
-    new SdkRuntime(config, model).execute(context, claim, api, new AbortController().signal),
+    new SdkRuntime(config, model).execute(
+      context,
+      claim,
+      api,
+      new AbortController().signal,
+      new AbortController().signal,
+    ),
   ).rejects.toThrow();
   expect(calls.mock.calls[1]![1]).toMatchObject({
     expectedVersionId: 'draft',
@@ -110,11 +117,23 @@ it('propagates cancellation, provider failures and turn-limit exhaustion', async
   const controller = new AbortController();
   controller.abort();
   await expect(
-    new SdkRuntime(config, new ScriptedModel([])).execute(context, claim, api, controller.signal),
+    new SdkRuntime(config, new ScriptedModel([])).execute(
+      context,
+      claim,
+      api,
+      controller.signal,
+      new AbortController().signal,
+    ),
   ).rejects.toThrow();
   const errorModel = new ScriptedModel([modelError(new Error('provider failed'))]);
   await expect(
-    new SdkRuntime(config, errorModel).execute(context, claim, api, new AbortController().signal),
+    new SdkRuntime(config, errorModel).execute(
+      context,
+      claim,
+      api,
+      new AbortController().signal,
+      new AbortController().signal,
+    ),
   ).rejects.toThrow();
   const loop = new ScriptedModel([
     modelResponse({
@@ -133,6 +152,7 @@ it('propagates cancellation, provider failures and turn-limit exhaustion', async
       context,
       claim,
       api,
+      new AbortController().signal,
       new AbortController().signal,
     ),
   ).rejects.toMatchObject({ name: 'MaxTurnsExceededError' });
@@ -204,6 +224,7 @@ it('returns PLAN_REQUIRED to the model so it can create a draft, and caps the fi
     claim,
     api,
     new AbortController().signal,
+    new AbortController().signal,
   );
   expect(result.content).toHaveLength(32000);
 });
@@ -236,6 +257,7 @@ it('persists text before tools and a separate final segment, with bounded timing
     context,
     claim,
     api,
+    new AbortController().signal,
     new AbortController().signal,
   );
   expect(model.calls.every((call) => call.streamed)).toBe(true);
@@ -275,13 +297,19 @@ it.each(['provider failure', 'cancellation'] as const)(
     const api = new AgentApi('http://localhost');
     const progress = vi.spyOn(api, 'progress').mockResolvedValue({ status: 'running' });
     await expect(
-      new SdkRuntime(config, model).execute(context, claim, api, controller.signal),
+      new SdkRuntime(config, model).execute(
+        context,
+        claim,
+        api,
+        controller.signal,
+        new AbortController().signal,
+      ),
     ).rejects.toThrow();
     expect(JSON.stringify(progress.mock.calls)).toContain('Visible before interruption');
     expect(JSON.stringify(progress.mock.calls)).not.toContain('private provider error');
   },
 );
-it('retries progress and finish transport delivery with stable payloads', async () => {
+it('makes one progress transport attempt while retaining stable finish retries', async () => {
   const requests: unknown[] = [];
   let fail = true;
   const api = new AgentApi('http://localhost', async (_url, init) => {
@@ -294,8 +322,10 @@ it('retries progress and finish transport delivery with stable payloads', async 
   });
   // Restore the class method mocked by this suite's deterministic runtime setup.
   vi.mocked(AgentApi.prototype.progress).mockRestore();
-  await api.progress(claim, { sequence: 1, items: [] });
-  expect(requests[0]).toEqual(requests[1]);
+  await expect(
+    api.progress(claim, { sequence: 1, items: [] }, new AbortController().signal),
+  ).rejects.toThrow('Acknowledgement lost');
+  expect(requests).toHaveLength(1);
   requests.length = 0;
   fail = true;
   await api.finish(claim, { status: 'failed', failureCode: 'PROVIDER_ERROR' });
@@ -311,6 +341,7 @@ it('caps streamed Unicode replies without corrupting the durable final segment',
     context,
     claim,
     api,
+    new AbortController().signal,
     new AbortController().signal,
   );
   expect(result.content).toBe('x' + '😀'.repeat(15999));

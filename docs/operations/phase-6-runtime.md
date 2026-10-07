@@ -14,8 +14,15 @@ intermediate commentary and the final reply remain separate. Snapshots flush at
 400 ms or after a large chunk, before tools and on completion/interruption. A slow
 write applies backpressure. Transport retries reuse the exact batch identity: a
 network error, 5xx or 429 retries the same batch with exponential backoff for up to
-30 seconds, while a rejection, lost lease, timeout or shutdown fails at once. The
-timing summary is written last and best effort; it never fails a delivered reply.
+30 seconds per batch, capped by the run deadline. The reporter owns progress retries;
+each HTTP attempt retains its 20-second timeout within that shared budget, including
+response-body consumption. A rejection fails immediately; lease loss, execution timeout
+or shutdown interrupts pending progress requests and retry waits. User cancellation
+permits a final accepted-text flush, while a separate hard-stop signal remains able to
+interrupt it if shutdown, lease loss or deadline expiry follows. The timing summary is
+written last and best effort; it never fails a delivered reply. This bounds progress
+delivery, not total worker shutdown: finish retries and pending heartbeats have their
+own existing transport policy.
 
 Presentation is bounded to 100 items, 32,000 UTF-16 code units per item and 64,000
 per run, with Unicode-safe truncation. A final reply retains the existing 32,000
