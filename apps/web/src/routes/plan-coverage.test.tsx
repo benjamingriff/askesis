@@ -45,7 +45,6 @@ it.each(['draft', 'locked', 'inspection'])(
       scheduleReviewRequired: false,
       coverage: [{ startDate: '2027-01-11', endDate: '2027-01-12', current: true }],
       findings: [],
-      calibrations: [],
       brief: { unit: 'kilometres', goal: 'Training' },
     };
     const workouts = [
@@ -79,7 +78,9 @@ it.each(['draft', 'locked', 'inspection'])(
             ? { workouts }
             : path.endsWith('/revisions')
               ? { revisions: [] }
-              : plan,
+              : path === '/api/v1/performance'
+                ? { timezone: 'Europe/London', today: '2027-01-01', current: [], entries: [] }
+                : plan,
       };
     });
     const router = createMemoryRouter(

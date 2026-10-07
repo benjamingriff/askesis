@@ -31,7 +31,7 @@ Keep the complete coaching/review loop useful before widening scope. Derive owne
 
 ## V1 scope
 
-Implemented: multiple plans, activation/library/archive, complete draft/version lifecycle, structured plan-specific running brief/calibration, persistent conversations/runs, authorized coaching tools, streamed output, live saved-plan review, cancellation/recovery, Clerk account UI and responsive themes/preferences.
+Implemented: multiple plans, activation/library/archive, complete draft/version lifecycle, structured plan-specific running brief, athlete-owned running pace calibration applied to every plan, persistent conversations/runs, authorized coaching tools, streamed output, live saved-plan review, cancellation/recovery, Clerk account UI and responsive themes/preferences.
 
 Not delivered: application invitation enforcement, rate/per-user spending limits, operator account-data removal command, sharing, merging, combined active-plan calendar, global training profile, prompt customization/user skills, completed-workout ingestion, wearable integration, broad multi-sport coaching, full manual workout editing or native API integration. Markdown plan export was removed from the roadmap.
 
@@ -41,7 +41,7 @@ Not delivered: application invitation enforcement, rate/per-user spending limits
 
 **Accepted scope.** Intended alpha is invitation-only and running-only. Invitation restriction is a release configuration/task, not already enforced in application middleware.
 
-Clerk owns account identity. Each plan is owned by the account but can describe another person/hypothetical runner without a separate runner entity. Training assumptions belong to the versioned brief, not a global demographic profile.
+Clerk owns account identity. An account has one athlete and every plan is for that athlete; plans cannot describe another person or a hypothetical runner (decided 2026-10-07, [ADR 0005](../adr/0005-athlete-owned-performance.md)). Training assumptions belong to the versioned brief and fitness belongs to the athlete; there is no demographic profile.
 
 Create a plan in the web library creates a draft and its first chat. A standalone conversation can instead create/bind one plan when intent is clear. The API's generic create command has an explicit optional conversation flag; not every API caller automatically gets a chat.
 
@@ -67,9 +67,9 @@ Exact current commands/routes/concurrency rules are in the [schema contract](../
 
 ## Phase 3: plan brief and fitness calibration
 
-**Implemented.** Free-text goal/context, explicit unknown baselines, desired frequency, seven weekday preferences, units and timezone replace typed goals/constraints. Human structured editing remains available alongside chat tools.
+**Implemented.** Free-text goal/context, explicit unknown baselines, desired frequency, seven weekday preferences and units replace typed goals/constraints. Human structured editing remains available alongside chat tools. The plan timezone moved to the athlete's device on 2026-10-07.
 
-Version-owned deterministic running pace guides have estimate provenance and effective dates. Inputs use canonical metres/seconds-per-kilometre. Display units do not change semantic brief confirmation. No official proprietary pace-table equivalence or affected-future-workout report is promised.
+Deterministic running pace guides have estimate provenance and effective dates. They were version-owned in Phase 3; since 2026-10-07 they are an athlete-owned, append-only timeline that every plan resolves by workout date ([ADR 0005](../adr/0005-athlete-owned-performance.md)). Inputs use canonical metres/seconds-per-kilometre. Display units do not change semantic brief confirmation. No official proprietary pace-table equivalence or affected-future-workout report is promised.
 
 See [brief behavior](./phase-3-plan-brief-and-calibration-refinement.md), [schema/API](../architecture/phase-3-schema-contract.md) and [calculator policy](./run-pace-v1.md).
 
@@ -81,7 +81,7 @@ Current modes include real `agent` execution, development `test`, and `unavailab
 
 ## Phase 5: coaching agent worker and domain tools
 
-**Implemented.** A private worker executes the model/tool loop through run-scoped machine credentials. API services own leases, receipts, authorization and transactions. Eight tools read context/schedule, create a draft, update brief/calibration, apply/replace schedules and validate.
+**Implemented.** A private worker executes the model/tool loop through run-scoped machine credentials. API services own leases, receipts, authorization and transactions. Eleven tools read context/schedule, create a draft, update the brief, read/preview/record/retract the athlete's performance, apply/replace schedules and validate.
 
 There are no agent lifecycle-approval tools, SQL/shell/filesystem tools or web search. Queued work can survive restart; expired running sessions fail without replay. Committed batches survive Stop/failure. Partial horizons, labelled pace estimates and combined human confirmation/lock are supported.
 
@@ -91,7 +91,7 @@ See [coaching contract](./phase-5-design.md), [runtime bounds](../operations/pha
 
 **Implemented; owner confirmed complete 2026-10-06.** Bounded durable text snapshots, owner-scoped resource notifications, authenticated SSE/replay/reset, targeted query invalidation and disconnected fallback reads are present.
 
-Actual event types are `plan.changed`, `conversation.changed`, `message.changed`, `run.changed`, `activity.changed` and `output.changed`. Notifications contain identifiers; text arrives through authorized output/turn reads, not an `agent.run.output.delta` journal payload.
+Actual event types are `plan.changed`, `conversation.changed`, `message.changed`, `run.changed`, `activity.changed`, `output.changed` and (since 2026-10-07) `performance.changed`. Notifications contain identifiers; text arrives through authorized output/turn reads, not an `agent.run.output.delta` journal payload.
 
 Chat includes per-turn activity/incomplete output/net saved changes; responsive Chat/Plan review preserves draft/history selection and human baselines. Timing instrumentation does not itself optimize model latency.
 

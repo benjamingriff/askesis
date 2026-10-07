@@ -29,7 +29,6 @@ export const WorkoutChangeSchema = z.object({
 export const ChangeSummarySchema = z.object({
   workouts: z.array(WorkoutChangeSchema),
   assumptionsChanged: z.boolean(),
-  paceGuidesChanged: z.boolean(),
   datesChanged: z.boolean(),
   /** Every change, including workouts the list omits. */
   counts: z.object({
@@ -61,6 +60,8 @@ export const TurnSchema = RunSchema.extend({
   changes: ChangeSummarySchema.nullable(),
   /** Saved plan edits from before per-run summaries were recorded. */
   legacyChanges: z.boolean(),
+  /** The run recorded or retracted athlete calibration, so every plan's pace guides changed. */
+  performanceChanged: z.boolean(),
   output: z.array(OutputItemSchema),
   /** The durable reply was cut at the visible length limit. */
   replyTruncated: z.boolean(),

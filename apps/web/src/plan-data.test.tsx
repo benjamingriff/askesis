@@ -21,8 +21,7 @@ function Brief({ version }: { version: PlanVersion }) {
   const brief = useBriefState('plan', version);
   return (
     <div>
-      {brief.data?.brief.goal} / {brief.data?.coverage[0]?.endDate} /{' '}
-      {brief.data?.calibrations[0]?.secondsPerKilometre}
+      {brief.data?.brief.goal} / {brief.data?.coverage[0]?.endDate}
     </div>
   );
 }
@@ -36,43 +35,38 @@ afterEach(cleanup);
 it.each([
   { ...version, editNumber: 2 },
   { ...version, id: 'draft-2' },
-])(
-  'refreshes draft coverage and calibration when the version metadata changes: %j',
-  async (updated) => {
-    mocks.get
-      .mockResolvedValueOnce({
-        data: {
-          brief: { goal: 'Earlier assumptions' },
-          coverage: [{ endDate: '2027-01-12' }],
-          calibrations: [{ secondsPerKilometre: 330 }],
-        },
-      })
-      .mockResolvedValueOnce({
-        data: {
-          brief: { goal: 'Latest assumptions' },
-          coverage: [{ endDate: '2027-01-19' }],
-          calibrations: [{ secondsPerKilometre: 300 }],
-        },
-      });
-    const page = render(
-      <AccountQueryProvider>
-        <Brief version={version} />
-      </AccountQueryProvider>,
-    );
-    await screen.findByText('Earlier assumptions / 2027-01-12 / 330');
-    page.rerender(
-      <AccountQueryProvider>
-        <Brief version={updated} />
-      </AccountQueryProvider>,
-    );
-    await screen.findByText('Latest assumptions / 2027-01-19 / 300');
-    expect(mocks.get).toHaveBeenCalledTimes(2);
-  },
-);
+])('refreshes draft coverage when the version metadata changes: %j', async (updated) => {
+  mocks.get
+    .mockResolvedValueOnce({
+      data: {
+        brief: { goal: 'Earlier assumptions' },
+        coverage: [{ endDate: '2027-01-12' }],
+      },
+    })
+    .mockResolvedValueOnce({
+      data: {
+        brief: { goal: 'Latest assumptions' },
+        coverage: [{ endDate: '2027-01-19' }],
+      },
+    });
+  const page = render(
+    <AccountQueryProvider>
+      <Brief version={version} />
+    </AccountQueryProvider>,
+  );
+  await screen.findByText('Earlier assumptions / 2027-01-12');
+  page.rerender(
+    <AccountQueryProvider>
+      <Brief version={updated} />
+    </AccountQueryProvider>,
+  );
+  await screen.findByText('Latest assumptions / 2027-01-19');
+  expect(mocks.get).toHaveBeenCalledTimes(2);
+});
 
 it('reads the revision brief once a draft is locked in place with the same id and edit', async () => {
   mocks.get.mockResolvedValue({
-    data: { brief: { goal: 'Assumptions' }, coverage: [], calibrations: [] },
+    data: { brief: { goal: 'Assumptions' }, coverage: [] },
   });
   const page = render(
     <AccountQueryProvider>

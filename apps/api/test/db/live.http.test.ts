@@ -14,7 +14,9 @@ vi.mock('../../src/auth/athlete-provisioning.js', () => ({
   ensureAthlete: async () => ({
     id: '00000000-0000-0000-0000-000000000001',
     displayName: 'Fixture owner',
+    timezone: 'Europe/London',
   }),
+  syncAthleteTimezone: async (athlete: unknown) => athlete,
 }));
 import { app } from '../../src/app.js';
 import { closeDatabase } from '../../src/database/client.js';

@@ -4,11 +4,11 @@ The Askesis API is a Hono application running on Node.js. It is the only applica
 
 ## Current behavior
 
-The API serves owner-authorized plan/version lifecycle, briefs/calibration, workout reads, conversations, durable runs and authenticated live notifications. Private `/internal/agent/*` routes use bootstrap/run credentials for worker claims, tools, output and completion, separate from Clerk human sessions.
+The API serves owner-authorized plan/version lifecycle, briefs, the athlete's performance calibration, workout reads, conversations, durable runs and authenticated live notifications. Private `/internal/agent/*` routes use bootstrap/run credentials for worker claims, tools, output and completion, separate from Clerk human sessions.
 
-Workout lists require `planVersionId` and return that owner's version content; they do not automatically return the development seed. Detail reads assemble a nested prescription and resolve symbolic zones against the version/date calibration. The seed has its own synthetic owner.
+Workout lists require `planVersionId` and return that owner's version content; they do not automatically return the development seed. Detail reads assemble a nested prescription and resolve symbolic zones against the owner's calibration timeline on the workout date. The seed has its own synthetic owner.
 
-Public `/api/health` is process liveness; `/api/ready` checks the required Atlas checkpoint (`20261005120000`). `/api/docs` and `/api/openapi.json` expose the public contract; `packages/api-client` consumes it. The worker uses its own fetch/Zod internal client.
+Public `/api/health` is process liveness; `/api/ready` checks the required Atlas checkpoint (`20261007120000`). `/api/docs` and `/api/openapi.json` expose the public contract; `packages/api-client` consumes it. The worker uses its own fetch/Zod internal client.
 
 See [architecture](../../docs/architecture/README.md) and [exact public OpenAPI](../../packages/api-client/openapi.json).
 

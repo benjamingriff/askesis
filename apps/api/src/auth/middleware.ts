@@ -1,8 +1,11 @@
 import { createClerkClient } from '@clerk/backend';
 import type { MiddlewareHandler } from 'hono';
 import { getApiConfig } from '../config.js';
-import { ensureAthlete } from './athlete-provisioning.js';
+import { ensureAthlete, syncAthleteTimezone } from './athlete-provisioning.js';
 import type { AppEnvironment } from './types.js';
+
+/** Clients report the device's IANA timezone on every request. */
+export const TIMEZONE_HEADER = 'X-Askesis-Timezone';
 
 export const requireAuthentication: MiddlewareHandler<AppEnvironment> = async (context, next) => {
   const config = getApiConfig();
@@ -33,7 +36,10 @@ export const requireAuthentication: MiddlewareHandler<AppEnvironment> = async (c
   }
 
   const auth = requestState.toAuth();
-  const athlete = await ensureAthlete(clerk, auth.userId);
+  const athlete = await syncAthleteTimezone(
+    await ensureAthlete(clerk, auth.userId),
+    context.req.header(TIMEZONE_HEADER),
+  );
   context.set('athlete', athlete);
   await next();
 };

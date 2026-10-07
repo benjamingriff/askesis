@@ -358,7 +358,7 @@
         "type": "object",
         "nullable": true,
         "properties": {
-          "profileId": {
+          "calibrationId": {
             "type": "string",
             "format": "uuid",
             "pattern": "^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i"
@@ -371,10 +371,6 @@
           },
           "method": {
             "type": "string"
-          },
-          "fitnessValue": {
-            "type": "number",
-            "nullable": true
           },
           "metric": {
             "type": "string"
@@ -396,14 +392,311 @@
           }
         },
         "required": [
-          "profileId",
+          "calibrationId",
+          "effectiveFrom",
+          "calculatorVersion",
           "method",
-          "fitnessValue",
           "metric",
           "minimumValue",
           "targetValue",
           "maximumValue",
           "unit"
+        ]
+      },
+      "PerformanceState": {
+        "type": "object",
+        "properties": {
+          "timezone": {
+            "type": "string"
+          },
+          "today": {
+            "type": "string"
+          },
+          "current": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CalibrationEntry"
+            }
+          },
+          "entries": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CalibrationEntry"
+            }
+          }
+        },
+        "required": [
+          "timezone",
+          "today",
+          "current",
+          "entries"
+        ]
+      },
+      "CalibrationEntry": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+          },
+          "system": {
+            "$ref": "#/components/schemas/PerformanceSystem"
+          },
+          "method": {
+            "type": "string"
+          },
+          "input": {
+            "$ref": "#/components/schemas/PaceInput"
+          },
+          "calculatorVersion": {
+            "type": "string"
+          },
+          "provenance": {
+            "type": "string",
+            "enum": [
+              "user_supplied",
+              "user_estimate",
+              "agent_estimate"
+            ]
+          },
+          "estimateBasis": {
+            "type": "string",
+            "nullable": true
+          },
+          "observedOn": {
+            "type": "string",
+            "nullable": true
+          },
+          "effectiveFrom": {
+            "type": "string"
+          },
+          "recordedAt": {
+            "type": "string"
+          },
+          "recordedBy": {
+            "type": "string",
+            "enum": [
+              "athlete",
+              "coach"
+            ]
+          },
+          "conversationId": {
+            "type": "string",
+            "nullable": true,
+            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+          },
+          "retractedAt": {
+            "type": "string",
+            "nullable": true
+          },
+          "zones": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CalibrationZone"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "system",
+          "method",
+          "input",
+          "calculatorVersion",
+          "provenance",
+          "estimateBasis",
+          "observedOn",
+          "effectiveFrom",
+          "recordedAt",
+          "recordedBy",
+          "conversationId",
+          "retractedAt",
+          "zones"
+        ]
+      },
+      "PerformanceSystem": {
+        "type": "string",
+        "enum": [
+          "run_pace"
+        ]
+      },
+      "PaceInput": {
+        "oneOf": [
+          {
+            "type": "object",
+            "properties": {
+              "method": {
+                "type": "string",
+                "enum": [
+                  "race_result"
+                ]
+              },
+              "distanceMetres": {
+                "type": "number",
+                "minimum": 1609.344,
+                "maximum": 42195
+              },
+              "durationSeconds": {
+                "type": "integer",
+                "minimum": 0,
+                "exclusiveMinimum": true
+              }
+            },
+            "required": [
+              "method",
+              "distanceMetres",
+              "durationSeconds"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "method": {
+                "type": "string",
+                "enum": [
+                  "threshold_pace"
+                ]
+              },
+              "secondsPerKilometre": {
+                "type": "number",
+                "minimum": 0,
+                "exclusiveMinimum": true
+              }
+            },
+            "required": [
+              "method",
+              "secondsPerKilometre"
+            ],
+            "additionalProperties": false
+          }
+        ]
+      },
+      "CalibrationZone": {
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string"
+          },
+          "metric": {
+            "type": "string"
+          },
+          "unit": {
+            "type": "string"
+          },
+          "minimum": {
+            "type": "number"
+          },
+          "target": {
+            "type": "number"
+          },
+          "maximum": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "key",
+          "metric",
+          "unit",
+          "minimum",
+          "target",
+          "maximum"
+        ]
+      },
+      "RecordCalibration": {
+        "oneOf": [
+          {
+            "type": "object",
+            "properties": {
+              "system": {
+                "type": "string",
+                "enum": [
+                  "run_pace"
+                ]
+              },
+              "input": {
+                "$ref": "#/components/schemas/PaceInput"
+              },
+              "provenance": {
+                "type": "string",
+                "enum": [
+                  "user_supplied",
+                  "user_estimate",
+                  "agent_estimate"
+                ]
+              },
+              "estimateBasis": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 4000
+              },
+              "observedOn": {
+                "type": "string",
+                "format": "date"
+              },
+              "idempotencyKey": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 200
+              }
+            },
+            "required": [
+              "system",
+              "input"
+            ],
+            "additionalProperties": false
+          }
+        ]
+      },
+      "CalibrationPreview": {
+        "type": "object",
+        "properties": {
+          "system": {
+            "$ref": "#/components/schemas/PerformanceSystem"
+          },
+          "method": {
+            "type": "string"
+          },
+          "calculatorVersion": {
+            "type": "string"
+          },
+          "zones": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CalibrationZone"
+            }
+          },
+          "current": {
+            "$ref": "#/components/schemas/CalibrationEntry"
+          }
+        },
+        "required": [
+          "system",
+          "method",
+          "calculatorVersion",
+          "zones"
+        ]
+      },
+      "PreviewCalibration": {
+        "oneOf": [
+          {
+            "type": "object",
+            "properties": {
+              "system": {
+                "type": "string",
+                "enum": [
+                  "run_pace"
+                ]
+              },
+              "input": {
+                "$ref": "#/components/schemas/PaceInput"
+              }
+            },
+            "required": [
+              "system",
+              "input"
+            ],
+            "additionalProperties": false
+          }
         ]
       }
     },
@@ -719,9 +1012,6 @@
                               "assumptionsChanged": {
                                 "type": "boolean"
                               },
-                              "paceGuidesChanged": {
-                                "type": "boolean"
-                              },
                               "datesChanged": {
                                 "type": "boolean"
                               },
@@ -759,12 +1049,14 @@
                             "required": [
                               "workouts",
                               "assumptionsChanged",
-                              "paceGuidesChanged",
                               "datesChanged",
                               "counts"
                             ]
                           },
                           "legacyChanges": {
+                            "type": "boolean"
+                          },
+                          "performanceChanged": {
                             "type": "boolean"
                           },
                           "output": {
@@ -819,6 +1111,7 @@
                           "activity",
                           "changes",
                           "legacyChanges",
+                          "performanceChanged",
                           "output",
                           "replyTruncated"
                         ]
@@ -1227,9 +1520,6 @@
                         "assumptionsChanged": {
                           "type": "boolean"
                         },
-                        "paceGuidesChanged": {
-                          "type": "boolean"
-                        },
                         "datesChanged": {
                           "type": "boolean"
                         },
@@ -1267,12 +1557,14 @@
                       "required": [
                         "workouts",
                         "assumptionsChanged",
-                        "paceGuidesChanged",
                         "datesChanged",
                         "counts"
                       ]
                     },
                     "legacyChanges": {
+                      "type": "boolean"
+                    },
+                    "performanceChanged": {
                       "type": "boolean"
                     },
                     "output": {
@@ -1327,6 +1619,7 @@
                     "activity",
                     "changes",
                     "legacyChanges",
+                    "performanceChanged",
                     "output",
                     "replyTruncated"
                   ]
@@ -1452,9 +1745,6 @@
                     "assumptionsChanged": {
                       "type": "boolean"
                     },
-                    "paceGuidesChanged": {
-                      "type": "boolean"
-                    },
                     "datesChanged": {
                       "type": "boolean"
                     },
@@ -1504,7 +1794,6 @@
                   "required": [
                     "workouts",
                     "assumptionsChanged",
-                    "paceGuidesChanged",
                     "datesChanged",
                     "counts",
                     "versionId",
@@ -2378,6 +2667,29 @@
                               "headerChanges",
                               "entities"
                             ]
+                          },
+                          "calibrationBasis": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "system": {
+                                  "type": "string"
+                                },
+                                "calibrationId": {
+                                  "type": "string",
+                                  "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+                                },
+                                "effectiveFrom": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "system",
+                                "calibrationId",
+                                "effectiveFrom"
+                              ]
+                            }
                           }
                         },
                         "required": [
@@ -2396,7 +2708,8 @@
                           "validatorVersion",
                           "findings",
                           "acknowledgedWarningCodes",
-                          "summary"
+                          "summary",
+                          "calibrationBasis"
                         ]
                       }
                     }
@@ -2658,6 +2971,29 @@
                             "headerChanges",
                             "entities"
                           ]
+                        },
+                        "calibrationBasis": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "system": {
+                                "type": "string"
+                              },
+                              "calibrationId": {
+                                "type": "string",
+                                "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+                              },
+                              "effectiveFrom": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "system",
+                              "calibrationId",
+                              "effectiveFrom"
+                            ]
+                          }
                         }
                       },
                       "required": [
@@ -2676,7 +3012,8 @@
                         "validatorVersion",
                         "findings",
                         "acknowledgedWarningCodes",
-                        "summary"
+                        "summary",
+                        "calibrationBasis"
                       ]
                     },
                     "content": {
@@ -5346,11 +5683,6 @@
                                 "miles"
                               ]
                             },
-                            "timezone": {
-                              "type": "string",
-                              "minLength": 1,
-                              "maxLength": 100
-                            },
                             "weeklyDistance": {
                               "oneOf": [
                                 {
@@ -5565,7 +5897,6 @@
                           "required": [
                             "goal",
                             "unit",
-                            "timezone",
                             "weeklyDistance",
                             "currentRuns",
                             "longestRun",
@@ -5672,98 +6003,6 @@
                               "status"
                             ]
                           }
-                        },
-                        "calibrations": {
-                          "type": "array",
-                          "items": {
-                            "type": "object",
-                            "properties": {
-                              "id": {
-                                "type": "string",
-                                "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
-                              },
-                              "effectiveFrom": {
-                                "type": "string"
-                              },
-                              "effectiveUntil": {
-                                "type": "string",
-                                "nullable": true
-                              },
-                              "method": {
-                                "type": "string",
-                                "enum": [
-                                  "race_result",
-                                  "threshold_pace"
-                                ]
-                              },
-                              "distanceMetres": {
-                                "type": "number",
-                                "nullable": true
-                              },
-                              "durationSeconds": {
-                                "type": "number",
-                                "nullable": true
-                              },
-                              "secondsPerKilometre": {
-                                "type": "number",
-                                "nullable": true
-                              },
-                              "calculatorVersion": {
-                                "type": "string"
-                              },
-                              "provenance": {
-                                "type": "string",
-                                "enum": [
-                                  "user_supplied",
-                                  "user_estimate",
-                                  "agent_estimate"
-                                ]
-                              },
-                              "estimateBasis": {
-                                "type": "string",
-                                "nullable": true
-                              },
-                              "zones": {
-                                "type": "array",
-                                "items": {
-                                  "type": "object",
-                                  "properties": {
-                                    "key": {
-                                      "type": "string"
-                                    },
-                                    "fast": {
-                                      "type": "number"
-                                    },
-                                    "target": {
-                                      "type": "number"
-                                    },
-                                    "slow": {
-                                      "type": "number"
-                                    }
-                                  },
-                                  "required": [
-                                    "key",
-                                    "fast",
-                                    "target",
-                                    "slow"
-                                  ]
-                                }
-                              }
-                            },
-                            "required": [
-                              "id",
-                              "effectiveFrom",
-                              "effectiveUntil",
-                              "method",
-                              "distanceMetres",
-                              "durationSeconds",
-                              "secondsPerKilometre",
-                              "calculatorVersion",
-                              "provenance",
-                              "estimateBasis",
-                              "zones"
-                            ]
-                          }
                         }
                       },
                       "required": [
@@ -5777,8 +6016,7 @@
                         "hash",
                         "scheduleReviewRequired",
                         "findings",
-                        "coverage",
-                        "calibrations"
+                        "coverage"
                       ]
                     },
                     "draftId": {
@@ -9770,7 +10008,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Brief and calibration state.",
+            "description": "Brief, confirmation and coverage state.",
             "content": {
               "application/json": {
                 "schema": {
@@ -9807,11 +10045,6 @@
                             "kilometres",
                             "miles"
                           ]
-                        },
-                        "timezone": {
-                          "type": "string",
-                          "minLength": 1,
-                          "maxLength": 100
                         },
                         "weeklyDistance": {
                           "oneOf": [
@@ -10027,7 +10260,6 @@
                       "required": [
                         "goal",
                         "unit",
-                        "timezone",
                         "weeklyDistance",
                         "currentRuns",
                         "longestRun",
@@ -10134,98 +10366,6 @@
                           "status"
                         ]
                       }
-                    },
-                    "calibrations": {
-                      "type": "array",
-                      "items": {
-                        "type": "object",
-                        "properties": {
-                          "id": {
-                            "type": "string",
-                            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
-                          },
-                          "effectiveFrom": {
-                            "type": "string"
-                          },
-                          "effectiveUntil": {
-                            "type": "string",
-                            "nullable": true
-                          },
-                          "method": {
-                            "type": "string",
-                            "enum": [
-                              "race_result",
-                              "threshold_pace"
-                            ]
-                          },
-                          "distanceMetres": {
-                            "type": "number",
-                            "nullable": true
-                          },
-                          "durationSeconds": {
-                            "type": "number",
-                            "nullable": true
-                          },
-                          "secondsPerKilometre": {
-                            "type": "number",
-                            "nullable": true
-                          },
-                          "calculatorVersion": {
-                            "type": "string"
-                          },
-                          "provenance": {
-                            "type": "string",
-                            "enum": [
-                              "user_supplied",
-                              "user_estimate",
-                              "agent_estimate"
-                            ]
-                          },
-                          "estimateBasis": {
-                            "type": "string",
-                            "nullable": true
-                          },
-                          "zones": {
-                            "type": "array",
-                            "items": {
-                              "type": "object",
-                              "properties": {
-                                "key": {
-                                  "type": "string"
-                                },
-                                "fast": {
-                                  "type": "number"
-                                },
-                                "target": {
-                                  "type": "number"
-                                },
-                                "slow": {
-                                  "type": "number"
-                                }
-                              },
-                              "required": [
-                                "key",
-                                "fast",
-                                "target",
-                                "slow"
-                              ]
-                            }
-                          }
-                        },
-                        "required": [
-                          "id",
-                          "effectiveFrom",
-                          "effectiveUntil",
-                          "method",
-                          "distanceMetres",
-                          "durationSeconds",
-                          "secondsPerKilometre",
-                          "calculatorVersion",
-                          "provenance",
-                          "estimateBasis",
-                          "zones"
-                        ]
-                      }
                     }
                   },
                   "required": [
@@ -10239,8 +10379,7 @@
                     "hash",
                     "scheduleReviewRequired",
                     "findings",
-                    "coverage",
-                    "calibrations"
+                    "coverage"
                   ]
                 }
               }
@@ -10347,11 +10486,6 @@
                           "kilometres",
                           "miles"
                         ]
-                      },
-                      "timezone": {
-                        "type": "string",
-                        "minLength": 1,
-                        "maxLength": 100
                       },
                       "weeklyDistance": {
                         "oneOf": [
@@ -10567,7 +10701,6 @@
                     "required": [
                       "goal",
                       "unit",
-                      "timezone",
                       "weeklyDistance",
                       "currentRuns",
                       "longestRun",
@@ -10590,7 +10723,7 @@
         },
         "responses": {
           "200": {
-            "description": "Brief and calibration state.",
+            "description": "Brief, confirmation and coverage state.",
             "content": {
               "application/json": {
                 "schema": {
@@ -10627,11 +10760,6 @@
                             "kilometres",
                             "miles"
                           ]
-                        },
-                        "timezone": {
-                          "type": "string",
-                          "minLength": 1,
-                          "maxLength": 100
                         },
                         "weeklyDistance": {
                           "oneOf": [
@@ -10847,7 +10975,6 @@
                       "required": [
                         "goal",
                         "unit",
-                        "timezone",
                         "weeklyDistance",
                         "currentRuns",
                         "longestRun",
@@ -10954,98 +11081,6 @@
                           "status"
                         ]
                       }
-                    },
-                    "calibrations": {
-                      "type": "array",
-                      "items": {
-                        "type": "object",
-                        "properties": {
-                          "id": {
-                            "type": "string",
-                            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
-                          },
-                          "effectiveFrom": {
-                            "type": "string"
-                          },
-                          "effectiveUntil": {
-                            "type": "string",
-                            "nullable": true
-                          },
-                          "method": {
-                            "type": "string",
-                            "enum": [
-                              "race_result",
-                              "threshold_pace"
-                            ]
-                          },
-                          "distanceMetres": {
-                            "type": "number",
-                            "nullable": true
-                          },
-                          "durationSeconds": {
-                            "type": "number",
-                            "nullable": true
-                          },
-                          "secondsPerKilometre": {
-                            "type": "number",
-                            "nullable": true
-                          },
-                          "calculatorVersion": {
-                            "type": "string"
-                          },
-                          "provenance": {
-                            "type": "string",
-                            "enum": [
-                              "user_supplied",
-                              "user_estimate",
-                              "agent_estimate"
-                            ]
-                          },
-                          "estimateBasis": {
-                            "type": "string",
-                            "nullable": true
-                          },
-                          "zones": {
-                            "type": "array",
-                            "items": {
-                              "type": "object",
-                              "properties": {
-                                "key": {
-                                  "type": "string"
-                                },
-                                "fast": {
-                                  "type": "number"
-                                },
-                                "target": {
-                                  "type": "number"
-                                },
-                                "slow": {
-                                  "type": "number"
-                                }
-                              },
-                              "required": [
-                                "key",
-                                "fast",
-                                "target",
-                                "slow"
-                              ]
-                            }
-                          }
-                        },
-                        "required": [
-                          "id",
-                          "effectiveFrom",
-                          "effectiveUntil",
-                          "method",
-                          "distanceMetres",
-                          "durationSeconds",
-                          "secondsPerKilometre",
-                          "calculatorVersion",
-                          "provenance",
-                          "estimateBasis",
-                          "zones"
-                        ]
-                      }
                     }
                   },
                   "required": [
@@ -11059,8 +11094,7 @@
                     "hash",
                     "scheduleReviewRequired",
                     "findings",
-                    "coverage",
-                    "calibrations"
+                    "coverage"
                   ]
                 }
               }
@@ -11146,7 +11180,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Brief and calibration state.",
+            "description": "Brief, confirmation and coverage state.",
             "content": {
               "application/json": {
                 "schema": {
@@ -11183,11 +11217,6 @@
                             "kilometres",
                             "miles"
                           ]
-                        },
-                        "timezone": {
-                          "type": "string",
-                          "minLength": 1,
-                          "maxLength": 100
                         },
                         "weeklyDistance": {
                           "oneOf": [
@@ -11403,7 +11432,6 @@
                       "required": [
                         "goal",
                         "unit",
-                        "timezone",
                         "weeklyDistance",
                         "currentRuns",
                         "longestRun",
@@ -11510,98 +11538,6 @@
                           "status"
                         ]
                       }
-                    },
-                    "calibrations": {
-                      "type": "array",
-                      "items": {
-                        "type": "object",
-                        "properties": {
-                          "id": {
-                            "type": "string",
-                            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
-                          },
-                          "effectiveFrom": {
-                            "type": "string"
-                          },
-                          "effectiveUntil": {
-                            "type": "string",
-                            "nullable": true
-                          },
-                          "method": {
-                            "type": "string",
-                            "enum": [
-                              "race_result",
-                              "threshold_pace"
-                            ]
-                          },
-                          "distanceMetres": {
-                            "type": "number",
-                            "nullable": true
-                          },
-                          "durationSeconds": {
-                            "type": "number",
-                            "nullable": true
-                          },
-                          "secondsPerKilometre": {
-                            "type": "number",
-                            "nullable": true
-                          },
-                          "calculatorVersion": {
-                            "type": "string"
-                          },
-                          "provenance": {
-                            "type": "string",
-                            "enum": [
-                              "user_supplied",
-                              "user_estimate",
-                              "agent_estimate"
-                            ]
-                          },
-                          "estimateBasis": {
-                            "type": "string",
-                            "nullable": true
-                          },
-                          "zones": {
-                            "type": "array",
-                            "items": {
-                              "type": "object",
-                              "properties": {
-                                "key": {
-                                  "type": "string"
-                                },
-                                "fast": {
-                                  "type": "number"
-                                },
-                                "target": {
-                                  "type": "number"
-                                },
-                                "slow": {
-                                  "type": "number"
-                                }
-                              },
-                              "required": [
-                                "key",
-                                "fast",
-                                "target",
-                                "slow"
-                              ]
-                            }
-                          }
-                        },
-                        "required": [
-                          "id",
-                          "effectiveFrom",
-                          "effectiveUntil",
-                          "method",
-                          "distanceMetres",
-                          "durationSeconds",
-                          "secondsPerKilometre",
-                          "calculatorVersion",
-                          "provenance",
-                          "estimateBasis",
-                          "zones"
-                        ]
-                      }
                     }
                   },
                   "required": [
@@ -11615,8 +11551,7 @@
                     "hash",
                     "scheduleReviewRequired",
                     "findings",
-                    "coverage",
-                    "calibrations"
+                    "coverage"
                   ]
                 }
               }
@@ -11693,7 +11628,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Brief and calibration state.",
+            "description": "Brief, confirmation and coverage state.",
             "content": {
               "application/json": {
                 "schema": {
@@ -11730,11 +11665,6 @@
                             "kilometres",
                             "miles"
                           ]
-                        },
-                        "timezone": {
-                          "type": "string",
-                          "minLength": 1,
-                          "maxLength": 100
                         },
                         "weeklyDistance": {
                           "oneOf": [
@@ -11950,7 +11880,6 @@
                       "required": [
                         "goal",
                         "unit",
-                        "timezone",
                         "weeklyDistance",
                         "currentRuns",
                         "longestRun",
@@ -12057,98 +11986,6 @@
                           "status"
                         ]
                       }
-                    },
-                    "calibrations": {
-                      "type": "array",
-                      "items": {
-                        "type": "object",
-                        "properties": {
-                          "id": {
-                            "type": "string",
-                            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
-                          },
-                          "effectiveFrom": {
-                            "type": "string"
-                          },
-                          "effectiveUntil": {
-                            "type": "string",
-                            "nullable": true
-                          },
-                          "method": {
-                            "type": "string",
-                            "enum": [
-                              "race_result",
-                              "threshold_pace"
-                            ]
-                          },
-                          "distanceMetres": {
-                            "type": "number",
-                            "nullable": true
-                          },
-                          "durationSeconds": {
-                            "type": "number",
-                            "nullable": true
-                          },
-                          "secondsPerKilometre": {
-                            "type": "number",
-                            "nullable": true
-                          },
-                          "calculatorVersion": {
-                            "type": "string"
-                          },
-                          "provenance": {
-                            "type": "string",
-                            "enum": [
-                              "user_supplied",
-                              "user_estimate",
-                              "agent_estimate"
-                            ]
-                          },
-                          "estimateBasis": {
-                            "type": "string",
-                            "nullable": true
-                          },
-                          "zones": {
-                            "type": "array",
-                            "items": {
-                              "type": "object",
-                              "properties": {
-                                "key": {
-                                  "type": "string"
-                                },
-                                "fast": {
-                                  "type": "number"
-                                },
-                                "target": {
-                                  "type": "number"
-                                },
-                                "slow": {
-                                  "type": "number"
-                                }
-                              },
-                              "required": [
-                                "key",
-                                "fast",
-                                "target",
-                                "slow"
-                              ]
-                            }
-                          }
-                        },
-                        "required": [
-                          "id",
-                          "effectiveFrom",
-                          "effectiveUntil",
-                          "method",
-                          "distanceMetres",
-                          "durationSeconds",
-                          "secondsPerKilometre",
-                          "calculatorVersion",
-                          "provenance",
-                          "estimateBasis",
-                          "zones"
-                        ]
-                      }
                     }
                   },
                   "required": [
@@ -12162,8 +11999,7 @@
                     "hash",
                     "scheduleReviewRequired",
                     "findings",
-                    "coverage",
-                    "calibrations"
+                    "coverage"
                   ]
                 }
               }
@@ -12282,7 +12118,7 @@
         },
         "responses": {
           "200": {
-            "description": "Brief and calibration state.",
+            "description": "Brief, confirmation and coverage state.",
             "content": {
               "application/json": {
                 "schema": {
@@ -12319,11 +12155,6 @@
                             "kilometres",
                             "miles"
                           ]
-                        },
-                        "timezone": {
-                          "type": "string",
-                          "minLength": 1,
-                          "maxLength": 100
                         },
                         "weeklyDistance": {
                           "oneOf": [
@@ -12539,7 +12370,6 @@
                       "required": [
                         "goal",
                         "unit",
-                        "timezone",
                         "weeklyDistance",
                         "currentRuns",
                         "longestRun",
@@ -12646,98 +12476,6 @@
                           "status"
                         ]
                       }
-                    },
-                    "calibrations": {
-                      "type": "array",
-                      "items": {
-                        "type": "object",
-                        "properties": {
-                          "id": {
-                            "type": "string",
-                            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
-                          },
-                          "effectiveFrom": {
-                            "type": "string"
-                          },
-                          "effectiveUntil": {
-                            "type": "string",
-                            "nullable": true
-                          },
-                          "method": {
-                            "type": "string",
-                            "enum": [
-                              "race_result",
-                              "threshold_pace"
-                            ]
-                          },
-                          "distanceMetres": {
-                            "type": "number",
-                            "nullable": true
-                          },
-                          "durationSeconds": {
-                            "type": "number",
-                            "nullable": true
-                          },
-                          "secondsPerKilometre": {
-                            "type": "number",
-                            "nullable": true
-                          },
-                          "calculatorVersion": {
-                            "type": "string"
-                          },
-                          "provenance": {
-                            "type": "string",
-                            "enum": [
-                              "user_supplied",
-                              "user_estimate",
-                              "agent_estimate"
-                            ]
-                          },
-                          "estimateBasis": {
-                            "type": "string",
-                            "nullable": true
-                          },
-                          "zones": {
-                            "type": "array",
-                            "items": {
-                              "type": "object",
-                              "properties": {
-                                "key": {
-                                  "type": "string"
-                                },
-                                "fast": {
-                                  "type": "number"
-                                },
-                                "target": {
-                                  "type": "number"
-                                },
-                                "slow": {
-                                  "type": "number"
-                                }
-                              },
-                              "required": [
-                                "key",
-                                "fast",
-                                "target",
-                                "slow"
-                              ]
-                            }
-                          }
-                        },
-                        "required": [
-                          "id",
-                          "effectiveFrom",
-                          "effectiveUntil",
-                          "method",
-                          "distanceMetres",
-                          "durationSeconds",
-                          "secondsPerKilometre",
-                          "calculatorVersion",
-                          "provenance",
-                          "estimateBasis",
-                          "zones"
-                        ]
-                      }
                     }
                   },
                   "required": [
@@ -12751,8 +12489,7 @@
                     "hash",
                     "scheduleReviewRequired",
                     "findings",
-                    "coverage",
-                    "calibrations"
+                    "coverage"
                   ]
                 }
               }
@@ -12811,496 +12548,18 @@
         }
       }
     },
-    "/api/v1/plans/{planId}/draft/calibrations": {
+    "/api/v1/performance": {
       "get": {
         "tags": [
-          "Brief"
-        ],
-        "parameters": [
-          {
-            "schema": {
-              "type": "string",
-              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
-            },
-            "required": true,
-            "name": "planId",
-            "in": "path"
-          }
+          "Performance"
         ],
         "responses": {
           "200": {
-            "description": "Brief and calibration state.",
+            "description": "The athlete’s calibration timeline and the entries in effect today.",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "properties": {
-                    "versionId": {
-                      "type": "string",
-                      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
-                    },
-                    "editNumber": {
-                      "type": "number"
-                    },
-                    "startDate": {
-                      "type": "string",
-                      "nullable": true
-                    },
-                    "endDate": {
-                      "type": "string",
-                      "nullable": true
-                    },
-                    "readOnly": {
-                      "type": "boolean"
-                    },
-                    "brief": {
-                      "type": "object",
-                      "properties": {
-                        "goal": {
-                          "type": "string",
-                          "maxLength": 20000
-                        },
-                        "unit": {
-                          "type": "string",
-                          "enum": [
-                            "kilometres",
-                            "miles"
-                          ]
-                        },
-                        "timezone": {
-                          "type": "string",
-                          "minLength": 1,
-                          "maxLength": 100
-                        },
-                        "weeklyDistance": {
-                          "oneOf": [
-                            {
-                              "type": "object",
-                              "properties": {
-                                "status": {
-                                  "type": "string",
-                                  "enum": [
-                                    "unanswered"
-                                  ]
-                                },
-                                "value": {
-                                  "nullable": true
-                                }
-                              },
-                              "required": [
-                                "status",
-                                "value"
-                              ],
-                              "additionalProperties": false
-                            },
-                            {
-                              "type": "object",
-                              "properties": {
-                                "status": {
-                                  "type": "string",
-                                  "enum": [
-                                    "unknown"
-                                  ]
-                                },
-                                "value": {
-                                  "nullable": true
-                                }
-                              },
-                              "required": [
-                                "status",
-                                "value"
-                              ],
-                              "additionalProperties": false
-                            },
-                            {
-                              "type": "object",
-                              "properties": {
-                                "status": {
-                                  "type": "string",
-                                  "enum": [
-                                    "known"
-                                  ]
-                                },
-                                "value": {
-                                  "type": "number",
-                                  "minimum": 0,
-                                  "maximum": 1000000
-                                }
-                              },
-                              "required": [
-                                "status",
-                                "value"
-                              ],
-                              "additionalProperties": false
-                            }
-                          ]
-                        },
-                        "currentRuns": {
-                          "oneOf": [
-                            {
-                              "type": "object",
-                              "properties": {
-                                "status": {
-                                  "type": "string",
-                                  "enum": [
-                                    "unanswered"
-                                  ]
-                                },
-                                "value": {
-                                  "nullable": true
-                                }
-                              },
-                              "required": [
-                                "status",
-                                "value"
-                              ],
-                              "additionalProperties": false
-                            },
-                            {
-                              "type": "object",
-                              "properties": {
-                                "status": {
-                                  "type": "string",
-                                  "enum": [
-                                    "unknown"
-                                  ]
-                                },
-                                "value": {
-                                  "nullable": true
-                                }
-                              },
-                              "required": [
-                                "status",
-                                "value"
-                              ],
-                              "additionalProperties": false
-                            },
-                            {
-                              "type": "object",
-                              "properties": {
-                                "status": {
-                                  "type": "string",
-                                  "enum": [
-                                    "known"
-                                  ]
-                                },
-                                "value": {
-                                  "type": "number",
-                                  "minimum": 0,
-                                  "maximum": 1000000
-                                }
-                              },
-                              "required": [
-                                "status",
-                                "value"
-                              ],
-                              "additionalProperties": false
-                            }
-                          ]
-                        },
-                        "longestRun": {
-                          "oneOf": [
-                            {
-                              "type": "object",
-                              "properties": {
-                                "status": {
-                                  "type": "string",
-                                  "enum": [
-                                    "unanswered"
-                                  ]
-                                },
-                                "value": {
-                                  "nullable": true
-                                }
-                              },
-                              "required": [
-                                "status",
-                                "value"
-                              ],
-                              "additionalProperties": false
-                            },
-                            {
-                              "type": "object",
-                              "properties": {
-                                "status": {
-                                  "type": "string",
-                                  "enum": [
-                                    "unknown"
-                                  ]
-                                },
-                                "value": {
-                                  "nullable": true
-                                }
-                              },
-                              "required": [
-                                "status",
-                                "value"
-                              ],
-                              "additionalProperties": false
-                            },
-                            {
-                              "type": "object",
-                              "properties": {
-                                "status": {
-                                  "type": "string",
-                                  "enum": [
-                                    "known"
-                                  ]
-                                },
-                                "value": {
-                                  "type": "number",
-                                  "minimum": 0,
-                                  "maximum": 1000000
-                                }
-                              },
-                              "required": [
-                                "status",
-                                "value"
-                              ],
-                              "additionalProperties": false
-                            }
-                          ]
-                        },
-                        "desiredRuns": {
-                          "type": "integer",
-                          "nullable": true,
-                          "minimum": 1,
-                          "maximum": 14
-                        },
-                        "weekdays": {
-                          "type": "array",
-                          "items": {
-                            "type": "string",
-                            "enum": [
-                              "available",
-                              "preferred",
-                              "unavailable"
-                            ]
-                          }
-                        },
-                        "context": {
-                          "type": "string",
-                          "maxLength": 20000
-                        }
-                      },
-                      "required": [
-                        "goal",
-                        "unit",
-                        "timezone",
-                        "weeklyDistance",
-                        "currentRuns",
-                        "longestRun",
-                        "desiredRuns",
-                        "weekdays",
-                        "context"
-                      ],
-                      "additionalProperties": false
-                    },
-                    "confirmed": {
-                      "type": "boolean"
-                    },
-                    "hash": {
-                      "type": "string"
-                    },
-                    "scheduleReviewRequired": {
-                      "type": "boolean"
-                    },
-                    "findings": {
-                      "type": "array",
-                      "items": {
-                        "type": "object",
-                        "properties": {
-                          "code": {
-                            "type": "string"
-                          },
-                          "severity": {
-                            "type": "string",
-                            "enum": [
-                              "error",
-                              "warning"
-                            ]
-                          },
-                          "message": {
-                            "type": "string"
-                          },
-                          "path": {
-                            "type": "string"
-                          }
-                        },
-                        "required": [
-                          "code",
-                          "severity",
-                          "message",
-                          "path"
-                        ]
-                      }
-                    },
-                    "coverage": {
-                      "type": "array",
-                      "items": {
-                        "type": "object",
-                        "properties": {
-                          "startDate": {
-                            "type": "string"
-                          },
-                          "endDate": {
-                            "type": "string"
-                          },
-                          "current": {
-                            "type": "boolean"
-                          }
-                        },
-                        "required": [
-                          "startDate",
-                          "endDate",
-                          "current"
-                        ]
-                      }
-                    },
-                    "generations": {
-                      "type": "array",
-                      "items": {
-                        "type": "object",
-                        "properties": {
-                          "runId": {
-                            "type": "string",
-                            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
-                          },
-                          "startDate": {
-                            "type": "string"
-                          },
-                          "endDate": {
-                            "type": "string"
-                          },
-                          "prescribedThrough": {
-                            "type": "string",
-                            "nullable": true
-                          },
-                          "status": {
-                            "type": "string",
-                            "enum": [
-                              "in_progress",
-                              "completed",
-                              "interrupted"
-                            ]
-                          }
-                        },
-                        "required": [
-                          "runId",
-                          "startDate",
-                          "endDate",
-                          "prescribedThrough",
-                          "status"
-                        ]
-                      }
-                    },
-                    "calibrations": {
-                      "type": "array",
-                      "items": {
-                        "type": "object",
-                        "properties": {
-                          "id": {
-                            "type": "string",
-                            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
-                          },
-                          "effectiveFrom": {
-                            "type": "string"
-                          },
-                          "effectiveUntil": {
-                            "type": "string",
-                            "nullable": true
-                          },
-                          "method": {
-                            "type": "string",
-                            "enum": [
-                              "race_result",
-                              "threshold_pace"
-                            ]
-                          },
-                          "distanceMetres": {
-                            "type": "number",
-                            "nullable": true
-                          },
-                          "durationSeconds": {
-                            "type": "number",
-                            "nullable": true
-                          },
-                          "secondsPerKilometre": {
-                            "type": "number",
-                            "nullable": true
-                          },
-                          "calculatorVersion": {
-                            "type": "string"
-                          },
-                          "provenance": {
-                            "type": "string",
-                            "enum": [
-                              "user_supplied",
-                              "user_estimate",
-                              "agent_estimate"
-                            ]
-                          },
-                          "estimateBasis": {
-                            "type": "string",
-                            "nullable": true
-                          },
-                          "zones": {
-                            "type": "array",
-                            "items": {
-                              "type": "object",
-                              "properties": {
-                                "key": {
-                                  "type": "string"
-                                },
-                                "fast": {
-                                  "type": "number"
-                                },
-                                "target": {
-                                  "type": "number"
-                                },
-                                "slow": {
-                                  "type": "number"
-                                }
-                              },
-                              "required": [
-                                "key",
-                                "fast",
-                                "target",
-                                "slow"
-                              ]
-                            }
-                          }
-                        },
-                        "required": [
-                          "id",
-                          "effectiveFrom",
-                          "effectiveUntil",
-                          "method",
-                          "distanceMetres",
-                          "durationSeconds",
-                          "secondsPerKilometre",
-                          "calculatorVersion",
-                          "provenance",
-                          "estimateBasis",
-                          "zones"
-                        ]
-                      }
-                    }
-                  },
-                  "required": [
-                    "versionId",
-                    "editNumber",
-                    "startDate",
-                    "endDate",
-                    "readOnly",
-                    "brief",
-                    "confirmed",
-                    "hash",
-                    "scheduleReviewRequired",
-                    "findings",
-                    "coverage",
-                    "calibrations"
-                  ]
+                  "$ref": "#/components/schemas/PerformanceState"
                 }
               }
             }
@@ -13356,593 +12615,31 @@
             }
           }
         }
-      },
+      }
+    },
+    "/api/v1/performance/calibrations": {
       "post": {
         "tags": [
-          "Brief"
+          "Performance"
         ],
-        "parameters": [
-          {
-            "schema": {
-              "type": "string",
-              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
-            },
-            "required": true,
-            "name": "planId",
-            "in": "path"
-          }
-        ],
+        "description": "Record a race result or test. Pace guides change from today in the athlete’s timezone for every plan; earlier days keep their paces.",
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
               "schema": {
-                "type": "object",
-                "properties": {
-                  "expectedDraftId": {
-                    "type": "string",
-                    "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
-                  },
-                  "expectedEditNumber": {
-                    "type": "integer",
-                    "minimum": 0,
-                    "exclusiveMinimum": true
-                  },
-                  "idempotencyKey": {
-                    "type": "string",
-                    "minLength": 1,
-                    "maxLength": 200
-                  },
-                  "input": {
-                    "oneOf": [
-                      {
-                        "type": "object",
-                        "properties": {
-                          "method": {
-                            "type": "string",
-                            "enum": [
-                              "race_result"
-                            ]
-                          },
-                          "distanceMetres": {
-                            "type": "number",
-                            "minimum": 1609.344,
-                            "maximum": 42195
-                          },
-                          "durationSeconds": {
-                            "type": "integer",
-                            "minimum": 0,
-                            "exclusiveMinimum": true
-                          }
-                        },
-                        "required": [
-                          "method",
-                          "distanceMetres",
-                          "durationSeconds"
-                        ],
-                        "additionalProperties": false
-                      },
-                      {
-                        "type": "object",
-                        "properties": {
-                          "method": {
-                            "type": "string",
-                            "enum": [
-                              "threshold_pace"
-                            ]
-                          },
-                          "secondsPerKilometre": {
-                            "type": "number",
-                            "minimum": 0,
-                            "exclusiveMinimum": true
-                          }
-                        },
-                        "required": [
-                          "method",
-                          "secondsPerKilometre"
-                        ],
-                        "additionalProperties": false
-                      }
-                    ]
-                  },
-                  "provenance": {
-                    "type": "string",
-                    "enum": [
-                      "user_supplied",
-                      "user_estimate",
-                      "agent_estimate"
-                    ]
-                  },
-                  "estimateBasis": {
-                    "type": "string",
-                    "minLength": 1,
-                    "maxLength": 4000
-                  }
-                },
-                "required": [
-                  "expectedDraftId",
-                  "expectedEditNumber",
-                  "input"
-                ],
-                "additionalProperties": false
+                "$ref": "#/components/schemas/RecordCalibration"
               }
             }
           }
         },
         "responses": {
           "200": {
-            "description": "Brief and calibration state.",
+            "description": "The athlete’s calibration timeline and the entries in effect today.",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "properties": {
-                    "versionId": {
-                      "type": "string",
-                      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
-                    },
-                    "editNumber": {
-                      "type": "number"
-                    },
-                    "startDate": {
-                      "type": "string",
-                      "nullable": true
-                    },
-                    "endDate": {
-                      "type": "string",
-                      "nullable": true
-                    },
-                    "readOnly": {
-                      "type": "boolean"
-                    },
-                    "brief": {
-                      "type": "object",
-                      "properties": {
-                        "goal": {
-                          "type": "string",
-                          "maxLength": 20000
-                        },
-                        "unit": {
-                          "type": "string",
-                          "enum": [
-                            "kilometres",
-                            "miles"
-                          ]
-                        },
-                        "timezone": {
-                          "type": "string",
-                          "minLength": 1,
-                          "maxLength": 100
-                        },
-                        "weeklyDistance": {
-                          "oneOf": [
-                            {
-                              "type": "object",
-                              "properties": {
-                                "status": {
-                                  "type": "string",
-                                  "enum": [
-                                    "unanswered"
-                                  ]
-                                },
-                                "value": {
-                                  "nullable": true
-                                }
-                              },
-                              "required": [
-                                "status",
-                                "value"
-                              ],
-                              "additionalProperties": false
-                            },
-                            {
-                              "type": "object",
-                              "properties": {
-                                "status": {
-                                  "type": "string",
-                                  "enum": [
-                                    "unknown"
-                                  ]
-                                },
-                                "value": {
-                                  "nullable": true
-                                }
-                              },
-                              "required": [
-                                "status",
-                                "value"
-                              ],
-                              "additionalProperties": false
-                            },
-                            {
-                              "type": "object",
-                              "properties": {
-                                "status": {
-                                  "type": "string",
-                                  "enum": [
-                                    "known"
-                                  ]
-                                },
-                                "value": {
-                                  "type": "number",
-                                  "minimum": 0,
-                                  "maximum": 1000000
-                                }
-                              },
-                              "required": [
-                                "status",
-                                "value"
-                              ],
-                              "additionalProperties": false
-                            }
-                          ]
-                        },
-                        "currentRuns": {
-                          "oneOf": [
-                            {
-                              "type": "object",
-                              "properties": {
-                                "status": {
-                                  "type": "string",
-                                  "enum": [
-                                    "unanswered"
-                                  ]
-                                },
-                                "value": {
-                                  "nullable": true
-                                }
-                              },
-                              "required": [
-                                "status",
-                                "value"
-                              ],
-                              "additionalProperties": false
-                            },
-                            {
-                              "type": "object",
-                              "properties": {
-                                "status": {
-                                  "type": "string",
-                                  "enum": [
-                                    "unknown"
-                                  ]
-                                },
-                                "value": {
-                                  "nullable": true
-                                }
-                              },
-                              "required": [
-                                "status",
-                                "value"
-                              ],
-                              "additionalProperties": false
-                            },
-                            {
-                              "type": "object",
-                              "properties": {
-                                "status": {
-                                  "type": "string",
-                                  "enum": [
-                                    "known"
-                                  ]
-                                },
-                                "value": {
-                                  "type": "number",
-                                  "minimum": 0,
-                                  "maximum": 1000000
-                                }
-                              },
-                              "required": [
-                                "status",
-                                "value"
-                              ],
-                              "additionalProperties": false
-                            }
-                          ]
-                        },
-                        "longestRun": {
-                          "oneOf": [
-                            {
-                              "type": "object",
-                              "properties": {
-                                "status": {
-                                  "type": "string",
-                                  "enum": [
-                                    "unanswered"
-                                  ]
-                                },
-                                "value": {
-                                  "nullable": true
-                                }
-                              },
-                              "required": [
-                                "status",
-                                "value"
-                              ],
-                              "additionalProperties": false
-                            },
-                            {
-                              "type": "object",
-                              "properties": {
-                                "status": {
-                                  "type": "string",
-                                  "enum": [
-                                    "unknown"
-                                  ]
-                                },
-                                "value": {
-                                  "nullable": true
-                                }
-                              },
-                              "required": [
-                                "status",
-                                "value"
-                              ],
-                              "additionalProperties": false
-                            },
-                            {
-                              "type": "object",
-                              "properties": {
-                                "status": {
-                                  "type": "string",
-                                  "enum": [
-                                    "known"
-                                  ]
-                                },
-                                "value": {
-                                  "type": "number",
-                                  "minimum": 0,
-                                  "maximum": 1000000
-                                }
-                              },
-                              "required": [
-                                "status",
-                                "value"
-                              ],
-                              "additionalProperties": false
-                            }
-                          ]
-                        },
-                        "desiredRuns": {
-                          "type": "integer",
-                          "nullable": true,
-                          "minimum": 1,
-                          "maximum": 14
-                        },
-                        "weekdays": {
-                          "type": "array",
-                          "items": {
-                            "type": "string",
-                            "enum": [
-                              "available",
-                              "preferred",
-                              "unavailable"
-                            ]
-                          }
-                        },
-                        "context": {
-                          "type": "string",
-                          "maxLength": 20000
-                        }
-                      },
-                      "required": [
-                        "goal",
-                        "unit",
-                        "timezone",
-                        "weeklyDistance",
-                        "currentRuns",
-                        "longestRun",
-                        "desiredRuns",
-                        "weekdays",
-                        "context"
-                      ],
-                      "additionalProperties": false
-                    },
-                    "confirmed": {
-                      "type": "boolean"
-                    },
-                    "hash": {
-                      "type": "string"
-                    },
-                    "scheduleReviewRequired": {
-                      "type": "boolean"
-                    },
-                    "findings": {
-                      "type": "array",
-                      "items": {
-                        "type": "object",
-                        "properties": {
-                          "code": {
-                            "type": "string"
-                          },
-                          "severity": {
-                            "type": "string",
-                            "enum": [
-                              "error",
-                              "warning"
-                            ]
-                          },
-                          "message": {
-                            "type": "string"
-                          },
-                          "path": {
-                            "type": "string"
-                          }
-                        },
-                        "required": [
-                          "code",
-                          "severity",
-                          "message",
-                          "path"
-                        ]
-                      }
-                    },
-                    "coverage": {
-                      "type": "array",
-                      "items": {
-                        "type": "object",
-                        "properties": {
-                          "startDate": {
-                            "type": "string"
-                          },
-                          "endDate": {
-                            "type": "string"
-                          },
-                          "current": {
-                            "type": "boolean"
-                          }
-                        },
-                        "required": [
-                          "startDate",
-                          "endDate",
-                          "current"
-                        ]
-                      }
-                    },
-                    "generations": {
-                      "type": "array",
-                      "items": {
-                        "type": "object",
-                        "properties": {
-                          "runId": {
-                            "type": "string",
-                            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
-                          },
-                          "startDate": {
-                            "type": "string"
-                          },
-                          "endDate": {
-                            "type": "string"
-                          },
-                          "prescribedThrough": {
-                            "type": "string",
-                            "nullable": true
-                          },
-                          "status": {
-                            "type": "string",
-                            "enum": [
-                              "in_progress",
-                              "completed",
-                              "interrupted"
-                            ]
-                          }
-                        },
-                        "required": [
-                          "runId",
-                          "startDate",
-                          "endDate",
-                          "prescribedThrough",
-                          "status"
-                        ]
-                      }
-                    },
-                    "calibrations": {
-                      "type": "array",
-                      "items": {
-                        "type": "object",
-                        "properties": {
-                          "id": {
-                            "type": "string",
-                            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
-                          },
-                          "effectiveFrom": {
-                            "type": "string"
-                          },
-                          "effectiveUntil": {
-                            "type": "string",
-                            "nullable": true
-                          },
-                          "method": {
-                            "type": "string",
-                            "enum": [
-                              "race_result",
-                              "threshold_pace"
-                            ]
-                          },
-                          "distanceMetres": {
-                            "type": "number",
-                            "nullable": true
-                          },
-                          "durationSeconds": {
-                            "type": "number",
-                            "nullable": true
-                          },
-                          "secondsPerKilometre": {
-                            "type": "number",
-                            "nullable": true
-                          },
-                          "calculatorVersion": {
-                            "type": "string"
-                          },
-                          "provenance": {
-                            "type": "string",
-                            "enum": [
-                              "user_supplied",
-                              "user_estimate",
-                              "agent_estimate"
-                            ]
-                          },
-                          "estimateBasis": {
-                            "type": "string",
-                            "nullable": true
-                          },
-                          "zones": {
-                            "type": "array",
-                            "items": {
-                              "type": "object",
-                              "properties": {
-                                "key": {
-                                  "type": "string"
-                                },
-                                "fast": {
-                                  "type": "number"
-                                },
-                                "target": {
-                                  "type": "number"
-                                },
-                                "slow": {
-                                  "type": "number"
-                                }
-                              },
-                              "required": [
-                                "key",
-                                "fast",
-                                "target",
-                                "slow"
-                              ]
-                            }
-                          }
-                        },
-                        "required": [
-                          "id",
-                          "effectiveFrom",
-                          "effectiveUntil",
-                          "method",
-                          "distanceMetres",
-                          "durationSeconds",
-                          "secondsPerKilometre",
-                          "calculatorVersion",
-                          "provenance",
-                          "estimateBasis",
-                          "zones"
-                        ]
-                      }
-                    }
-                  },
-                  "required": [
-                    "versionId",
-                    "editNumber",
-                    "startDate",
-                    "endDate",
-                    "readOnly",
-                    "brief",
-                    "confirmed",
-                    "hash",
-                    "scheduleReviewRequired",
-                    "findings",
-                    "coverage",
-                    "calibrations"
-                  ]
+                  "$ref": "#/components/schemas/PerformanceState"
                 }
               }
             }
@@ -14000,21 +12697,93 @@
         }
       }
     },
-    "/api/v1/plans/{planId}/draft/calibrations/{calibrationId}/use-again": {
+    "/api/v1/performance/calibrations/preview": {
       "post": {
         "tags": [
-          "Brief"
+          "Performance"
         ],
-        "parameters": [
-          {
-            "schema": {
-              "type": "string",
-              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
-            },
-            "required": true,
-            "name": "planId",
-            "in": "path"
+        "description": "Calculate zones for an input without recording it.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PreviewCalibration"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Calculated zones beside the entry in effect today.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CalibrationPreview"
+                }
+              }
+            }
           },
+          "400": {
+            "description": "Request rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Request rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Request rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Request rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Request rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/performance/calibrations/{calibrationId}/retract": {
+      "post": {
+        "tags": [
+          "Performance"
+        ],
+        "description": "Withdraw a mistaken entry. The previous entry applies again.",
+        "parameters": [
           {
             "schema": {
               "type": "string",
@@ -14032,503 +12801,24 @@
               "schema": {
                 "type": "object",
                 "properties": {
-                  "expectedDraftId": {
-                    "type": "string",
-                    "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
-                  },
-                  "expectedEditNumber": {
-                    "type": "integer",
-                    "minimum": 0,
-                    "exclusiveMinimum": true
-                  },
                   "idempotencyKey": {
                     "type": "string",
                     "minLength": 1,
                     "maxLength": 200
                   }
                 },
-                "required": [
-                  "expectedDraftId",
-                  "expectedEditNumber"
-                ]
+                "additionalProperties": false
               }
             }
           }
         },
         "responses": {
           "200": {
-            "description": "Brief and calibration state.",
+            "description": "The athlete’s calibration timeline and the entries in effect today.",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "properties": {
-                    "versionId": {
-                      "type": "string",
-                      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
-                    },
-                    "editNumber": {
-                      "type": "number"
-                    },
-                    "startDate": {
-                      "type": "string",
-                      "nullable": true
-                    },
-                    "endDate": {
-                      "type": "string",
-                      "nullable": true
-                    },
-                    "readOnly": {
-                      "type": "boolean"
-                    },
-                    "brief": {
-                      "type": "object",
-                      "properties": {
-                        "goal": {
-                          "type": "string",
-                          "maxLength": 20000
-                        },
-                        "unit": {
-                          "type": "string",
-                          "enum": [
-                            "kilometres",
-                            "miles"
-                          ]
-                        },
-                        "timezone": {
-                          "type": "string",
-                          "minLength": 1,
-                          "maxLength": 100
-                        },
-                        "weeklyDistance": {
-                          "oneOf": [
-                            {
-                              "type": "object",
-                              "properties": {
-                                "status": {
-                                  "type": "string",
-                                  "enum": [
-                                    "unanswered"
-                                  ]
-                                },
-                                "value": {
-                                  "nullable": true
-                                }
-                              },
-                              "required": [
-                                "status",
-                                "value"
-                              ],
-                              "additionalProperties": false
-                            },
-                            {
-                              "type": "object",
-                              "properties": {
-                                "status": {
-                                  "type": "string",
-                                  "enum": [
-                                    "unknown"
-                                  ]
-                                },
-                                "value": {
-                                  "nullable": true
-                                }
-                              },
-                              "required": [
-                                "status",
-                                "value"
-                              ],
-                              "additionalProperties": false
-                            },
-                            {
-                              "type": "object",
-                              "properties": {
-                                "status": {
-                                  "type": "string",
-                                  "enum": [
-                                    "known"
-                                  ]
-                                },
-                                "value": {
-                                  "type": "number",
-                                  "minimum": 0,
-                                  "maximum": 1000000
-                                }
-                              },
-                              "required": [
-                                "status",
-                                "value"
-                              ],
-                              "additionalProperties": false
-                            }
-                          ]
-                        },
-                        "currentRuns": {
-                          "oneOf": [
-                            {
-                              "type": "object",
-                              "properties": {
-                                "status": {
-                                  "type": "string",
-                                  "enum": [
-                                    "unanswered"
-                                  ]
-                                },
-                                "value": {
-                                  "nullable": true
-                                }
-                              },
-                              "required": [
-                                "status",
-                                "value"
-                              ],
-                              "additionalProperties": false
-                            },
-                            {
-                              "type": "object",
-                              "properties": {
-                                "status": {
-                                  "type": "string",
-                                  "enum": [
-                                    "unknown"
-                                  ]
-                                },
-                                "value": {
-                                  "nullable": true
-                                }
-                              },
-                              "required": [
-                                "status",
-                                "value"
-                              ],
-                              "additionalProperties": false
-                            },
-                            {
-                              "type": "object",
-                              "properties": {
-                                "status": {
-                                  "type": "string",
-                                  "enum": [
-                                    "known"
-                                  ]
-                                },
-                                "value": {
-                                  "type": "number",
-                                  "minimum": 0,
-                                  "maximum": 1000000
-                                }
-                              },
-                              "required": [
-                                "status",
-                                "value"
-                              ],
-                              "additionalProperties": false
-                            }
-                          ]
-                        },
-                        "longestRun": {
-                          "oneOf": [
-                            {
-                              "type": "object",
-                              "properties": {
-                                "status": {
-                                  "type": "string",
-                                  "enum": [
-                                    "unanswered"
-                                  ]
-                                },
-                                "value": {
-                                  "nullable": true
-                                }
-                              },
-                              "required": [
-                                "status",
-                                "value"
-                              ],
-                              "additionalProperties": false
-                            },
-                            {
-                              "type": "object",
-                              "properties": {
-                                "status": {
-                                  "type": "string",
-                                  "enum": [
-                                    "unknown"
-                                  ]
-                                },
-                                "value": {
-                                  "nullable": true
-                                }
-                              },
-                              "required": [
-                                "status",
-                                "value"
-                              ],
-                              "additionalProperties": false
-                            },
-                            {
-                              "type": "object",
-                              "properties": {
-                                "status": {
-                                  "type": "string",
-                                  "enum": [
-                                    "known"
-                                  ]
-                                },
-                                "value": {
-                                  "type": "number",
-                                  "minimum": 0,
-                                  "maximum": 1000000
-                                }
-                              },
-                              "required": [
-                                "status",
-                                "value"
-                              ],
-                              "additionalProperties": false
-                            }
-                          ]
-                        },
-                        "desiredRuns": {
-                          "type": "integer",
-                          "nullable": true,
-                          "minimum": 1,
-                          "maximum": 14
-                        },
-                        "weekdays": {
-                          "type": "array",
-                          "items": {
-                            "type": "string",
-                            "enum": [
-                              "available",
-                              "preferred",
-                              "unavailable"
-                            ]
-                          }
-                        },
-                        "context": {
-                          "type": "string",
-                          "maxLength": 20000
-                        }
-                      },
-                      "required": [
-                        "goal",
-                        "unit",
-                        "timezone",
-                        "weeklyDistance",
-                        "currentRuns",
-                        "longestRun",
-                        "desiredRuns",
-                        "weekdays",
-                        "context"
-                      ],
-                      "additionalProperties": false
-                    },
-                    "confirmed": {
-                      "type": "boolean"
-                    },
-                    "hash": {
-                      "type": "string"
-                    },
-                    "scheduleReviewRequired": {
-                      "type": "boolean"
-                    },
-                    "findings": {
-                      "type": "array",
-                      "items": {
-                        "type": "object",
-                        "properties": {
-                          "code": {
-                            "type": "string"
-                          },
-                          "severity": {
-                            "type": "string",
-                            "enum": [
-                              "error",
-                              "warning"
-                            ]
-                          },
-                          "message": {
-                            "type": "string"
-                          },
-                          "path": {
-                            "type": "string"
-                          }
-                        },
-                        "required": [
-                          "code",
-                          "severity",
-                          "message",
-                          "path"
-                        ]
-                      }
-                    },
-                    "coverage": {
-                      "type": "array",
-                      "items": {
-                        "type": "object",
-                        "properties": {
-                          "startDate": {
-                            "type": "string"
-                          },
-                          "endDate": {
-                            "type": "string"
-                          },
-                          "current": {
-                            "type": "boolean"
-                          }
-                        },
-                        "required": [
-                          "startDate",
-                          "endDate",
-                          "current"
-                        ]
-                      }
-                    },
-                    "generations": {
-                      "type": "array",
-                      "items": {
-                        "type": "object",
-                        "properties": {
-                          "runId": {
-                            "type": "string",
-                            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
-                          },
-                          "startDate": {
-                            "type": "string"
-                          },
-                          "endDate": {
-                            "type": "string"
-                          },
-                          "prescribedThrough": {
-                            "type": "string",
-                            "nullable": true
-                          },
-                          "status": {
-                            "type": "string",
-                            "enum": [
-                              "in_progress",
-                              "completed",
-                              "interrupted"
-                            ]
-                          }
-                        },
-                        "required": [
-                          "runId",
-                          "startDate",
-                          "endDate",
-                          "prescribedThrough",
-                          "status"
-                        ]
-                      }
-                    },
-                    "calibrations": {
-                      "type": "array",
-                      "items": {
-                        "type": "object",
-                        "properties": {
-                          "id": {
-                            "type": "string",
-                            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
-                          },
-                          "effectiveFrom": {
-                            "type": "string"
-                          },
-                          "effectiveUntil": {
-                            "type": "string",
-                            "nullable": true
-                          },
-                          "method": {
-                            "type": "string",
-                            "enum": [
-                              "race_result",
-                              "threshold_pace"
-                            ]
-                          },
-                          "distanceMetres": {
-                            "type": "number",
-                            "nullable": true
-                          },
-                          "durationSeconds": {
-                            "type": "number",
-                            "nullable": true
-                          },
-                          "secondsPerKilometre": {
-                            "type": "number",
-                            "nullable": true
-                          },
-                          "calculatorVersion": {
-                            "type": "string"
-                          },
-                          "provenance": {
-                            "type": "string",
-                            "enum": [
-                              "user_supplied",
-                              "user_estimate",
-                              "agent_estimate"
-                            ]
-                          },
-                          "estimateBasis": {
-                            "type": "string",
-                            "nullable": true
-                          },
-                          "zones": {
-                            "type": "array",
-                            "items": {
-                              "type": "object",
-                              "properties": {
-                                "key": {
-                                  "type": "string"
-                                },
-                                "fast": {
-                                  "type": "number"
-                                },
-                                "target": {
-                                  "type": "number"
-                                },
-                                "slow": {
-                                  "type": "number"
-                                }
-                              },
-                              "required": [
-                                "key",
-                                "fast",
-                                "target",
-                                "slow"
-                              ]
-                            }
-                          }
-                        },
-                        "required": [
-                          "id",
-                          "effectiveFrom",
-                          "effectiveUntil",
-                          "method",
-                          "distanceMetres",
-                          "durationSeconds",
-                          "secondsPerKilometre",
-                          "calculatorVersion",
-                          "provenance",
-                          "estimateBasis",
-                          "zones"
-                        ]
-                      }
-                    }
-                  },
-                  "required": [
-                    "versionId",
-                    "editNumber",
-                    "startDate",
-                    "endDate",
-                    "readOnly",
-                    "brief",
-                    "confirmed",
-                    "hash",
-                    "scheduleReviewRequired",
-                    "findings",
-                    "coverage",
-                    "calibrations"
-                  ]
+                  "$ref": "#/components/schemas/PerformanceState"
                 }
               }
             }

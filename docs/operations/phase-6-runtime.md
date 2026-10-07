@@ -59,7 +59,9 @@ uses a 75-second read timeout.
 `GET /api/v1/plans/:planId/draft/changes` compares the current draft with the current
 locked version in one repeatable-read snapshot. Lineage identifies cloned workouts;
 changed prescription and changed date are separate. Removed workouts remain in the
-summary. Assumption and calibration changes are reported separately.
+summary. Assumption and date changes are reported separately. Calibration is not plan
+content: a run that records or retracts athlete fitness reports `performanceChanged` on its
+turn, and the `performance.changed` notification refreshes performance, workout and plan reads.
 
 Each successful mutating tool receipt stores an immutable before/after summary in
 its transaction, with the identity and change of every affected workout and a

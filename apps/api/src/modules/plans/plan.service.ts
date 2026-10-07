@@ -26,16 +26,10 @@ import {
 } from './plan.schemas.js';
 import { validatePlan, VALIDATOR_VERSION } from './plan.validation.js';
 import { briefLockFindings, confirmBriefRows, readBrief } from './brief.service.js';
+import { calibrationBasis, performanceLockFindings } from '../performance/performance.service.js';
+import { PlanError } from './plan.common.js';
 
-export class PlanError extends Error {
-  constructor(
-    public code: string,
-    message: string,
-    public status: 404 | 409 | 422 = 409,
-  ) {
-    super(message);
-  }
-}
+export { PlanError };
 const iso = (value: Date | string | null): string | null =>
   value instanceof Date ? value.toISOString() : value;
 const json = (value: unknown): Json => JSON.parse(JSON.stringify(value)) as Json;
@@ -333,25 +327,6 @@ export async function editDraft(
           await sql`UPDATE plan_briefs SET confirmed_hash = NULL, confirmed_at = NULL,
             schedule_review_required = EXISTS (SELECT 1 FROM workouts WHERE plan_version_id = ${draft.id}::uuid)
             WHERE plan_version_id = ${draft.id}::uuid`.execute(db);
-          // Keep the initial guide covering the plan when its start changes, without moving later updates.
-          if (input.startDate) {
-            const first = await db
-              .selectFrom('plan_calibration_periods')
-              .selectAll()
-              .where('plan_version_id', '=', draft.id)
-              .orderBy('effective_from')
-              .executeTakeFirst();
-            if (
-              first &&
-              (!first.effective_until ||
-                input.startDate < String(first.effective_until).slice(0, 10))
-            )
-              await db
-                .updateTable('plan_calibration_periods')
-                .set({ effective_from: input.startDate })
-                .where('id', '=', first.id)
-                .execute();
-          }
         }
         await db
           .updateTable('plan_versions')
@@ -376,6 +351,7 @@ export async function preview(db: Database, plan: Plan) {
   const findings = [
     ...validatePlan(aggregate.validation),
     ...(await briefLockFindings(db, plan.draft.id)),
+    ...(await performanceLockFindings(db, plan.draft.id)),
   ];
   const headerChanges = ['description', 'startDate', 'endDate'].filter((key) => {
     const field = key as 'description' | 'startDate' | 'endDate';
@@ -470,6 +446,7 @@ export async function lockPlan(athleteId: string, planId: string, input: Command
           ),
         ],
         change_summary: result.summary,
+        calibration_basis: sql<Json>`${JSON.stringify(await calibrationBasis(db, draft.id))}::jsonb`,
         locked_at: new Date(),
         updated_at: new Date(),
       })
@@ -575,6 +552,7 @@ function revisionSummary(row: Awaited<ReturnType<typeof ownedRevision>>) {
     findings: row.validation_findings,
     acknowledgedWarningCodes: row.acknowledged_warning_codes,
     summary: row.change_summary,
+    calibrationBasis: row.calibration_basis ?? [],
   });
 }
 export async function listRevisions(athleteId: string, planId: string) {
@@ -615,7 +593,7 @@ async function restorePreview(db: Database, athleteId: string, plan: Plan, revis
     );
   if (!plan.locked)
     throw new PlanError('LOCKED_VERSION_REQUIRED', 'There is no current locked version.');
-  if (![2, 3].includes(source.content_schema_version))
+  if (source.content_schema_version !== 4)
     throw new PlanError(
       'UNSUPPORTED_CONTENT_SCHEMA',
       'This version needs a content upgrade before restoration.',

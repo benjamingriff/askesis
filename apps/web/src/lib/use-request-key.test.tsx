@@ -26,3 +26,12 @@ it('keeps keys local to each mounted workflow and starts fresh after remounting'
   const remounted = renderHook(useRequestKey);
   expect(remounted.result.current(command)).not.toBe(original);
 });
+
+it('allocates a new key for a settled command while keeping others', () => {
+  const { result } = renderHook(useRequestKey);
+  const first = result.current(['record', 300]);
+  const other = result.current(['record', 290]);
+  result.current.settle(['record', 300]);
+  expect(result.current(['record', 300])).not.toBe(first);
+  expect(result.current(['record', 290])).toBe(other);
+});

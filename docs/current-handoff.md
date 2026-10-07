@@ -1,6 +1,6 @@
 # Current agent handoff
 
-**Updated:** 2026-10-06
+**Updated:** 2026-10-07
 **Current direction:** Continue developing the responsive web app, drawing selected features from the mobile prototype. Native integration is deferred.
 **Delivery status:** Phases 1–7 are implemented. Phase 7 is merged into `main`; local validation and development account policy are verified. Hosted deployment and release walkthrough have not been verified in this documentation update.
 
@@ -11,6 +11,10 @@ The owner will continue improving the web app until happy with it, choosing furt
 The intended friends-and-family experience is the web app, including use in a mobile browser. Native integration has no scheduled next step and is not a prerequisite for sharing the web app with friends. This supersedes the native-first recommendation in earlier delivery records.
 
 Phase 8 remains the release-readiness checklist for invitations: access restrictions, authorization verification, rate and spending controls, backups, privacy/data-removal procedures, and release smoke testing. These checks are not marked complete by the direction change. Phase 9 remains a post-alpha backlog to prioritize from usage. Markdown export remains removed from the product roadmap.
+
+## Recent decisions
+
+- 2026-10-07: fitness calibration moved from plan versions to the athlete ([ADR 0005](./adr/0005-athlete-owned-performance.md)). An account has one athlete; every plan is for them. Results form an append-only timeline per system (`run_pace` today, designed for swim/bike/strength systems next), apply from today in every plan, and are recorded on the web Performance page or by the coach from any chat. The athlete's timezone now follows their device. The migration truncated pre-alpha plan and coaching data.
 
 ## Verified delivery and outstanding checks
 
@@ -24,7 +28,7 @@ Phase 8 remains the release-readiness checklist for invitations: access restrict
 
 - [Documentation index](./README.md): current guides, ADRs and historical records.
 - [V1 product plan](./product/v1-poc-development-plan.md): accepted behavior, release readiness and future scope.
-- [Product contracts](./product/README.md): lifecycle, briefs/calibration, conversations, coaching and review.
+- [Product contracts](./product/README.md): lifecycle, briefs and athlete pace guides, conversations, coaching and review.
 - [Architecture](./architecture/README.md) and [ADRs](./adr/README.md): system boundaries, storage invariants and technical rationale.
 - [Operations](./operations/README.md): local setup, Railway, worker recovery, live delivery, monitoring and backups.
 
@@ -40,9 +44,9 @@ Phase 8 remains the release-readiness checklist for invitations: access restrict
 - The agent worker receives no `DATABASE_URL` or `CLERK_SECRET_KEY`.
 - Chat is the primary plan-editing interface.
 - Agents cannot lock or unlock plans; both require human confirmation.
-- Plan assumptions, calibration, zones, and workouts are versioned as one aggregate.
+- Plan assumptions, coverage and workouts are versioned as one aggregate. Fitness calibration is athlete-owned and append-only; plans reference it by workout date and never copy it.
 - Intended alpha is invitation-only and running-only; invitation restrictions still need release configuration/verification.
-- No user-facing permanent deletion, plan sharing, or global athlete profile during alpha.
+- One athlete per account. No user-facing permanent deletion, plan sharing, or demographic athlete profile during alpha.
 - Do not add development seed data to Railway.
 
 ## Historical evidence

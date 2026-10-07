@@ -27,7 +27,12 @@ it('publishes the fixture with genuine validation and immutable content', async 
     .selectAll()
     .where('id', '=', fixture)
     .executeTakeFirstOrThrow();
-  expect(row.validator_version).toBe(3);
+  expect(row.validator_version).toBe(4);
+  expect(row.content_schema_version).toBe(4);
+  // Locked against the fixture athlete's latest race result.
+  expect(row.calibration_basis).toEqual([
+    expect.objectContaining({ system: 'run_pace', effectiveFrom: '2026-05-21' }),
+  ]);
   expect(row.content_hash).toMatch(/^[a-f0-9]{64}$/);
 });
 

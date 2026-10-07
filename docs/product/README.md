@@ -5,7 +5,7 @@ The owner is continuing development of the responsive web app and will choose fu
 ## Behavior contracts
 
 - [Plan lifecycle](./phase-2-plan-lifecycle-refinement.md): drafts, immutable revisions, activation, archive and human review.
-- [Plan brief and calibration](./phase-3-plan-brief-and-calibration-refinement.md): plan-specific context, confirmation and effective-dated pace guides.
+- [Plan brief and athlete pace guides](./phase-3-plan-brief-and-calibration-refinement.md): plan-specific context, confirmation and athlete-owned, effective-dated pace guides shared by every plan.
 - [Conversations and runs](./phase-4-design.md): ownership, durable messages, cancellation, archive and concurrency.
 - [Coaching and domain tools](./phase-5-design.md): conversational generation, worker permissions and partial planning horizons.
 - [Live coaching and review](./phase-6-design.md): streamed replies, saved changes, human review and interrupted-output recovery.

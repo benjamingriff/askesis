@@ -23,13 +23,14 @@ import {
   LoadingState,
   Notice,
   Pill,
+  SectionHeader,
   Segmented,
   cx,
 } from '../components/ui';
 import { formatShortYear, WEEKDAYS_LONG } from '../lib/format';
 import { result } from '../lib/result';
 import { useRequestKey } from '../lib/use-request-key';
-import type { BriefState } from '../plan-data';
+import { currentRunPace, usePerformance, type BriefState } from '../plan-data';
 import { useUnits } from '../settings';
 
 type State = BriefState;
@@ -82,28 +83,18 @@ export function PlanBriefPage() {
 
 function BriefEditor({ state, planId }: { state: State; planId: string }) {
   const client = useQueryClient();
-  const [brief, setBrief] = useState<Brief>(() =>
-    state.brief.goal || state.calibrations.length
-      ? state.brief
-      : {
-          ...state.brief,
-          timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-        },
-  );
+  const [brief, setBrief] = useState<Brief>(state.brief);
   const [editing, setEditing] = useState(!state.confirmed);
   const [review, setReview] = useState(false);
   const [ack, setAck] = useState<string[]>([]);
-  const [method, setMethod] = useState<'race_result' | 'threshold_pace'>('race_result');
-  const [distance, setDistance] = useState('5000');
-  const [custom, setCustom] = useState('');
-  const [duration, setDuration] = useState('');
-  const [threshold, setThreshold] = useState('');
   const command = { expectedDraftId: state.versionId, expectedEditNumber: state.editNumber };
   const params = { path: { planId } };
   const dirty = JSON.stringify(brief) !== JSON.stringify(state.brief);
   const requestKey = useRequestKey();
   const blocker = useBlocker(dirty);
   const units = useUnits(state.brief.unit);
+  const performance = usePerformance();
+  const latest = currentRunPace(performance.data);
   useBeforeUnload(
     useCallback(
       (event: BeforeUnloadEvent) => {
@@ -116,18 +107,8 @@ function BriefEditor({ state, planId }: { state: State; planId: string }) {
     ),
   );
   const mutation = useMutation({
-    mutationFn: async (action: 'save' | 'confirm' | 'calibrate' | `reuse:${string}`) => {
-      const idempotencyKey = requestKey([
-        action,
-        command,
-        brief,
-        method,
-        distance,
-        custom,
-        duration,
-        threshold,
-        ack,
-      ]);
+    mutationFn: async (action: 'save' | 'confirm') => {
+      const idempotencyKey = requestKey([action, command, brief, ack]);
       const request = { ...command, idempotencyKey };
       if (action === 'save')
         return result(
@@ -136,53 +117,10 @@ function BriefEditor({ state, planId }: { state: State; planId: string }) {
             body: { ...request, brief },
           }),
         );
-      if (action === 'confirm')
-        return result(
-          await api.POST('/api/v1/plans/{planId}/draft/brief/confirm', {
-            params,
-            body: { ...request, expectedHash: state.hash, acknowledgedWarningCodes: ack },
-          }),
-        );
-      if (action.startsWith('reuse:'))
-        return result(
-          await api.POST('/api/v1/plans/{planId}/draft/calibrations/{calibrationId}/use-again', {
-            params: { path: { planId, calibrationId: action.slice(6) } },
-            body: request,
-          }),
-        );
-      const parseTime = (value: string) => {
-        if (!/^\d+:\d{2}(?::\d{2})?$/.test(value))
-          throw new Error('Enter a time as mm:ss or hh:mm:ss.');
-        const parts = value.split(':').map(Number);
-        if (parts.slice(1).some((part) => part >= 60))
-          throw new Error('Seconds and minutes within a time must be below 60.');
-        return parts.reduce((total, part) => total * 60 + part, 0);
-      };
-      const input =
-        method === 'race_result'
-          ? {
-              method,
-              distanceMetres:
-                distance === 'custom'
-                  ? Number(custom) * (brief.unit === 'miles' ? 1609.344 : 1000)
-                  : Number(distance),
-              durationSeconds: parseTime(duration),
-            }
-          : {
-              method,
-              secondsPerKilometre: parseTime(threshold) / (brief.unit === 'miles' ? 1.609344 : 1),
-            };
       return result(
-        await api.POST('/api/v1/plans/{planId}/draft/calibrations', {
+        await api.POST('/api/v1/plans/{planId}/draft/brief/confirm', {
           params,
-          body: {
-            ...request,
-            input,
-            provenance: method === 'threshold_pace' ? 'user_estimate' : 'user_supplied',
-            ...(method === 'threshold_pace'
-              ? { estimateBasis: 'Threshold pace estimated by the user.' }
-              : {}),
-          },
+          body: { ...request, expectedHash: state.hash, acknowledgedWarningCodes: ack },
         }),
       );
     },
@@ -241,7 +179,6 @@ function BriefEditor({ state, planId }: { state: State; planId: string }) {
       </div>
     );
   };
-  const latest = state.calibrations.at(-1);
   const errors = state.findings.filter((f) => f.severity === 'error');
   const warnings = state.findings.filter((f) => f.severity === 'warning');
   return (
@@ -249,7 +186,7 @@ function BriefEditor({ state, planId }: { state: State; planId: string }) {
       <header className="page-header">
         <div className="page-heading">
           <span className="label">Plan brief</span>
-          <h1>Brief &amp; pace guides</h1>
+          <h1>Plan brief</h1>
           <div className="plan-meta">
             {state.readOnly ? (
               <Pill tone="locked" icon={Lock}>
@@ -326,38 +263,16 @@ function BriefEditor({ state, planId }: { state: State; planId: string }) {
                   placeholder="What would you like this plan to help you achieve?"
                 />
               </label>
-              <div className="field-row">
-                <label className="field">
-                  <span>Units</span>
-                  <select
-                    value={brief.unit}
-                    onChange={(e) => patch('unit', e.target.value as Brief['unit'])}
-                  >
-                    <option value="kilometres">Kilometres and min/km</option>
-                    <option value="miles">Miles and min/mile</option>
-                  </select>
-                </label>
-                <label className="field">
-                  <span>Plan timezone</span>
-                  <input
-                    value={brief.timezone}
-                    onChange={(e) => patch('timezone', e.target.value)}
-                    list="timezones"
-                  />
-                  <datalist id="timezones">
-                    {[
-                      'UTC',
-                      'Europe/London',
-                      'Europe/Paris',
-                      'America/New_York',
-                      'America/Los_Angeles',
-                      'Australia/Sydney',
-                    ].map((tz) => (
-                      <option key={tz} value={tz} />
-                    ))}
-                  </datalist>
-                </label>
-              </div>
+              <label className="field narrow">
+                <span>Units</span>
+                <select
+                  value={brief.unit}
+                  onChange={(e) => patch('unit', e.target.value as Brief['unit'])}
+                >
+                  <option value="kilometres">Kilometres and min/km</option>
+                  <option value="miles">Miles and min/mile</option>
+                </select>
+              </label>
             </fieldset>
             <fieldset disabled={disabled} className="card">
               <legend>Running background</legend>
@@ -430,101 +345,32 @@ function BriefEditor({ state, planId }: { state: State; planId: string }) {
               </div>
             ) : null}
           </form>
-
-          {!state.readOnly && editing ? (
-            <form
-              className="card"
-              onSubmit={(e) => {
-                e.preventDefault();
-                mutation.mutate('calibrate');
-              }}
-            >
-              <fieldset disabled={mutation.isPending || dirty} className="form-stack">
-                <legend>Update fitness</legend>
-                <p className="muted">
-                  Use a result that represents your current fitness. Updates apply from today in
-                  your plan timezone.
-                </p>
-                {dirty ? (
-                  <p className="muted">Save your brief changes before updating fitness.</p>
-                ) : null}
-                <label className="field">
-                  <span>Fitness input</span>
-                  <select
-                    value={method}
-                    onChange={(e) => setMethod(e.target.value as typeof method)}
-                  >
-                    <option value="race_result">Recent race result</option>
-                    <option value="threshold_pace">Estimated threshold pace</option>
-                  </select>
-                </label>
-                {method === 'race_result' ? (
-                  <div className="field-row">
-                    <label className="field">
-                      <span>Race distance</span>
-                      <select value={distance} onChange={(e) => setDistance(e.target.value)}>
-                        <option value="5000">5K</option>
-                        <option value="10000">10K</option>
-                        <option value="21097.5">Half marathon</option>
-                        <option value="42195">Marathon</option>
-                        <option value="custom">Custom distance</option>
-                      </select>
-                    </label>
-                    {distance === 'custom' ? (
-                      <label className="field">
-                        <span>Distance in {brief.unit}</span>
-                        <input
-                          required
-                          type="number"
-                          step="any"
-                          min="0"
-                          value={custom}
-                          onChange={(e) => setCustom(e.target.value)}
-                        />
-                      </label>
-                    ) : null}
-                    <label className="field">
-                      <span>Finish time (mm:ss or hh:mm:ss)</span>
-                      <input
-                        required
-                        value={duration}
-                        placeholder="25:00"
-                        onChange={(e) => setDuration(e.target.value)}
-                      />
-                    </label>
-                  </div>
-                ) : (
-                  <label className="field">
-                    <span>Threshold pace (min/{brief.unit === 'miles' ? 'mi' : 'km'})</span>
-                    <input
-                      required
-                      value={threshold}
-                      placeholder="4:30"
-                      onChange={(e) => setThreshold(e.target.value)}
-                    />
-                  </label>
-                )}
-                <div>
-                  <Button variant="primary" type="submit">
-                    Calculate and save pace guides
-                  </Button>
-                </div>
-              </fieldset>
-            </form>
-          ) : null}
         </div>
 
         <aside className="brief-side">
           <Card>
-            <h2 className="card-title">Pace guides</h2>
+            <SectionHeader
+              title="Pace guides"
+              action={
+                <Link className="text-link" to="/performance">
+                  Update
+                </Link>
+              }
+            />
             {latest ? (
               <>
                 <PaceGuides calibration={latest} units={units} />
                 <CalibrationSource calibration={latest} units={units} />
               </>
             ) : (
-              <p className="muted">No fitness input saved yet.</p>
+              <p className="muted">
+                No fitness yet. Add a race result or estimate on the Performance page before
+                locking.
+              </p>
             )}
+            <p className="muted">
+              Pace guides belong to you and apply to every plan, so they are not part of this brief.
+            </p>
           </Card>
           <Card>
             <h2 className="card-title">Brief readiness</h2>
@@ -562,33 +408,6 @@ function BriefEditor({ state, planId }: { state: State; planId: string }) {
           <Card>
             <CoverageSummary state={state} />
           </Card>
-          {state.calibrations.length ? (
-            <Card>
-              <h2 className="card-title">Calibration history</h2>
-              <div className="calibration-history">
-                {[...state.calibrations].reverse().map((c) => (
-                  <details key={`${c.id}:${c.effectiveFrom}`}>
-                    <summary>
-                      {formatShortYear(c.effectiveFrom)} –{' '}
-                      {c.effectiveUntil ? formatShortYear(c.effectiveUntil) : 'onward'} ·{' '}
-                      {c.method.replaceAll('_', ' ')}
-                    </summary>
-                    <CalibrationSource calibration={c} units={units} />
-                    <PaceGuides calibration={c} units={units} compact />
-                    {!state.readOnly && c.id !== latest?.id ? (
-                      <Button
-                        size="sm"
-                        disabled={mutation.isPending || dirty}
-                        onClick={() => mutation.mutate(`reuse:${c.id}`)}
-                      >
-                        Use again from today
-                      </Button>
-                    ) : null}
-                  </details>
-                ))}
-              </div>
-            </Card>
-          ) : null}
         </aside>
       </div>
 
@@ -597,7 +416,7 @@ function BriefEditor({ state, planId }: { state: State; planId: string }) {
         busy={mutation.isPending}
         onClose={() => setReview(false)}
         title="Confirm your planning inputs"
-        description="Review the goal, availability, training background and pace guides. These are the inputs your plan will use. Only you can confirm them."
+        description="Review the goal, availability and training background. These are the inputs your plan will use. Only you can confirm them."
         footer={
           <>
             <Button variant="ghost" disabled={mutation.isPending} onClick={() => setReview(false)}>
@@ -633,7 +452,6 @@ function BriefEditor({ state, planId }: { state: State; planId: string }) {
             <CheckCircle2 size={16} aria-hidden="true" /> No warnings to acknowledge.
           </p>
         )}
-        {latest ? <PaceGuides calibration={latest} units={units} compact /> : null}
       </Dialog>
       <Dialog
         open={blocker.state === 'blocked'}

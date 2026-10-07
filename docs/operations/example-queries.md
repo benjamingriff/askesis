@@ -25,7 +25,7 @@ ORDER BY v.created_at, v.id;
 ## Version-owned brief and weekdays
 
 ```sql
-SELECT goal_text, context, timezone, distance_unit,
+SELECT goal_text, context, distance_unit,
        weekly_distance_status, weekly_distance_metres,
        current_runs_status, current_runs_per_week,
        longest_run_status, longest_run_metres, desired_runs_per_week,
@@ -94,35 +94,41 @@ ORDER BY w.scheduled_date, w.position, w.id, t.sort_path;
 
 Targets are separate ordered rows in `step_targets`; joining all targets to this result can multiply each completion row. Use the API's assembled tree for normal application reads.
 
-## Effective calibration and symbolic zones
+## Athlete calibration and symbolic zones
 
 ```sql
-SELECT p.effective_from, p.effective_until, c.id AS profile_id,
-       c.method, c.calculator_version, c.provenance, c.estimate_basis
-FROM plan_calibration_periods p
-JOIN calibration_profiles c ON c.id = p.profile_id
-WHERE p.plan_version_id = '00000000-0000-0000-0000-000000000050'
-ORDER BY p.effective_from;
+SELECT a.timezone, c.id, c.system, c.method, c.input, c.calculator_version,
+       c.provenance, c.estimate_basis, c.observed_on, c.effective_from,
+       c.recorded_at, c.recorded_by_run_id, c.retracted_at
+FROM athletes a
+JOIN athlete_calibrations c ON c.athlete_id = a.id
+WHERE a.id = '00000000-0000-0000-0000-000000000001'
+ORDER BY c.system, c.effective_from, c.recorded_at;
 
 SELECT w.title, w.scheduled_date, t.zone_key, z.unit,
        z.minimum_value, z.target_value, z.maximum_value,
-       cp.id AS profile_id, cp.calculator_version
+       e.id AS calibration_id, e.effective_from, e.calculator_version
 FROM workouts w
+JOIN plan_versions v ON v.id = w.plan_version_id
+JOIN plans p ON p.id = v.plan_id
 JOIN workout_steps s ON s.workout_id = w.id
 JOIN step_targets t ON t.step_id = s.id AND t.target_type = 'zone'
-LEFT JOIN plan_calibration_periods p
-  ON p.plan_version_id = w.plan_version_id
- AND p.system = t.zone_system
- AND p.effective_from <= w.scheduled_date
- AND (p.effective_until IS NULL OR w.scheduled_date < p.effective_until)
-LEFT JOIN calibration_profiles cp ON cp.id = p.profile_id
-LEFT JOIN calibration_zones z
-  ON z.profile_id = cp.id AND z.zone_key = t.zone_key
+LEFT JOIN LATERAL (
+  SELECT c.* FROM athlete_calibrations c
+  WHERE c.athlete_id = p.owner_id AND c.system = t.zone_system AND c.retracted_at IS NULL
+  ORDER BY (c.effective_from <= w.scheduled_date) DESC,
+           CASE WHEN c.effective_from <= w.scheduled_date THEN c.effective_from END DESC,
+           CASE WHEN c.effective_from <= w.scheduled_date THEN c.recorded_at END DESC,
+           c.effective_from, c.recorded_at
+  LIMIT 1
+) e ON true
+LEFT JOIN athlete_calibration_zones z
+  ON z.calibration_id = e.id AND z.zone_key = t.zone_key
 WHERE w.plan_version_id = '00000000-0000-0000-0000-000000000050'
 ORDER BY w.scheduled_date, w.position, w.id, s.position, t.position;
 ```
 
-Period ends are exclusive. Null joined calibration/zone columns expose unresolved targets instead of silently falling back to another profile. SQL values here are canonical seconds/km; the API's workout projection applies display-unit conversion.
+The lateral join mirrors the API: the latest active entry effective by the workout date, or the athlete's first active entry for earlier dates. Null calibration/zone columns expose unresolved targets. SQL values here are canonical seconds/km; the API's workout projection applies display-unit conversion.
 
 ## Runs and delivery metadata
 

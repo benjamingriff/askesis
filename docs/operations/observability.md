@@ -14,7 +14,7 @@ For an incident, locate the request ID in API logs, then follow run ID through w
 
 ## Liveness and readiness
 
-`/api/health` checks the process without PostgreSQL. `/api/ready` queries Atlas for checkpoint `20261005120000`: a missing checkpoint returns 503; a database query exception is handled as an API error (500). A passing readiness check is not provider availability or proof of all hosted release checks.
+`/api/health` checks the process without PostgreSQL. `/api/ready` queries Atlas for checkpoint `20261007120000`: a missing checkpoint returns 503; a database query exception is handled as an API error (500). A passing readiness check is not provider availability or proof of all hosted release checks.
 
 Signed-in `/api/v1/chat-capabilities` reports compatible worker readiness. The private worker has no public health listener. Dedicated uptime monitoring/paging is not implemented in this repository.
 

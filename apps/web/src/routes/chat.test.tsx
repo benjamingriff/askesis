@@ -6,7 +6,13 @@ import { api } from '../api';
 import { ChatPage } from './chat';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 vi.mock('../api', () => ({ api: { GET: vi.fn(), POST: vi.fn(), PATCH: vi.fn() } }));
-const turnFields = { activity: [], changes: null, legacyChanges: false, replyTruncated: false };
+const turnFields = {
+  activity: [],
+  changes: null,
+  legacyChanges: false,
+  performanceChanged: false,
+  replyTruncated: false,
+};
 const conversation = {
   id: 'c1',
   title: 'Test conversation',
@@ -68,6 +74,7 @@ beforeEach(() => {
         activity: [],
         changes: null,
         legacyChanges: false,
+        performanceChanged: false,
         output: [],
         replyTruncated: false,
       });
@@ -679,6 +686,8 @@ it('fills this chat’s composer from coach shortcuts in the plan panel', async 
         locked: null,
       });
     if (path === '/api/v1/workouts') return response({ workouts: [] });
+    if (path === '/api/v1/performance')
+      return response({ timezone: 'Europe/London', today: '2026-09-01', current: [], entries: [] });
     if (path.endsWith('/draft/changes'))
       return response({
         versionId: 'draft-1',
@@ -696,7 +705,6 @@ it('fills this chat’s composer from coach shortcuts in the plan panel', async 
           },
         ],
         assumptionsChanged: false,
-        paceGuidesChanged: false,
         datesChanged: false,
         counts: { added: 1, changed: 0, moved: 0, removed: 0 },
       });
@@ -711,12 +719,10 @@ it('fills this chat’s composer from coach shortcuts in the plan panel', async 
         hash: 'c'.repeat(64),
         scheduleReviewRequired: false,
         coverage: [{ startDate: '2026-09-01', endDate: '2026-09-07', current: true }],
-        calibrations: [],
         findings: [],
         brief: {
           goal: 'Comfortable 10K',
           unit: 'kilometres',
-          timezone: 'Europe/London',
           weeklyDistance: { status: 'known', value: 20000 },
           currentRuns: { status: 'known', value: 3 },
           longestRun: { status: 'known', value: 8000 },

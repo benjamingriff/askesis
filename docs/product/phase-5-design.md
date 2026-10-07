@@ -26,16 +26,19 @@ Queued work survives restart before deadline. Expired running work fails; provid
 
 ## Context and tools
 
-| Tool                      | Current permission                                                                    |
-| ------------------------- | ------------------------------------------------------------------------------------- |
-| `read_plan_context`       | Read current authorized plan, brief, calibration and coverage                         |
-| `read_schedule`           | Read its version's blocks/weeks/workout trees; optional date filtering of workouts    |
-| `create_plan_draft`       | Create/bind one plan from a standalone run                                            |
-| `update_plan_brief`       | Save collected canonical assumptions/dates with concurrency checks                    |
-| `set_fitness_calibration` | Calculate/store race evidence or labelled threshold estimate                          |
-| `apply_schedule_changes`  | Atomic bounded block/week/workout add/update/move/delete batch; omitted content stays |
-| `replace_schedule_range`  | Atomic replacement inside explicit date bounds with coverage intent                   |
-| `validate_plan`           | Compute current validation/hash/review projection without locking                     |
+| Tool                     | Current permission                                                                    |
+| ------------------------ | ------------------------------------------------------------------------------------- |
+| `read_plan_context`      | Read current authorized plan, brief and coverage                                      |
+| `read_schedule`          | Read its version's blocks/weeks/workout trees; optional date filtering of workouts    |
+| `create_plan_draft`      | Create/bind one plan from a standalone run                                            |
+| `update_plan_brief`      | Save collected canonical assumptions/dates with concurrency checks                    |
+| `read_performance`       | Read the athlete's calibration timeline, today and timezone, with or without a plan   |
+| `preview_performance`    | Calculate zones for a reported result beside current fitness without saving           |
+| `record_performance`     | Record race evidence or a labelled threshold estimate for every plan, from today      |
+| `retract_performance`    | Withdraw a result the user says was wrong; the previous entry applies again           |
+| `apply_schedule_changes` | Atomic bounded block/week/workout add/update/move/delete batch; omitted content stays |
+| `replace_schedule_range` | Atomic replacement inside explicit date bounds with coverage intent                   |
+| `validate_plan`          | Compute current validation/hash/review projection without locking                     |
 
 Schedule reads are not paged bounded chunks: filters limit returned workouts but block/week context remains. Conversation history is bounded separately. Current write batches bound blocks/weeks/workouts/steps and total tools; see [runtime limits](../operations/phase-5-runtime.md).
 
@@ -45,7 +48,7 @@ There are no agent tools for confirmation, lock, unlock, discard, restore, activ
 
 Each schedule batch is atomic. The first batch records intended horizon with its edits; later batches cannot silently shorten it. Contiguous completed coverage includes rest days. Cancellation/failure retains saved work and its incomplete horizon. Version-owned coverage participates in cloning/hashing/restore; run metadata describes execution progress separately.
 
-Human review shows assumptions, calibration estimate provenance, prescribed/unplanned ranges and interrupted generation. Separate confirmation or combined confirmation/lock is available; validation/warnings/concurrency remain server-authoritative. Locking does not require workouts to the plan end. Agents cannot perform lifecycle approval.
+Human review shows assumptions, the athlete's pace guides and estimate provenance, prescribed/unplanned ranges and interrupted generation. Separate confirmation or combined confirmation/lock is available; validation/warnings/concurrency remain server-authoritative. Locking does not require workouts to the plan end. Agents cannot perform lifecycle approval.
 
 Committed changes are visible during work through Phase 6 delivery, not only after final completion. Saved-change cards and interrupted text survive reload. See [live coaching](./phase-6-design.md), [worker operations](../operations/phase-5-runtime.md) and [validation sample](../archive/phase-5/phase-5-validation.md).
 

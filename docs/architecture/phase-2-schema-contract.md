@@ -8,7 +8,7 @@ Current implementation, verified 2026-10-06. This replaces the early proposed Ph
 
 `plan_versions` owns start/end dates, description, state (`draft`/`locked`), edit number, nullable version number, ancestry (`based_on_version_id`, `supersedes_version_id`), schema/hash/validator metadata and lock evidence. Dates can be absent in an initial API draft; lock validation requires valid bounds and a current confirmed brief.
 
-The complete normalized aggregate includes brief, calibration, schedule coverage and workout descendants. Unlock creates new physical UUIDs while preserving lineage. Clone alone leaves semantic content equal. The latest content/hash/validator version is 3; existing locked versions retain their original versions and hashes.
+The complete normalized aggregate includes brief, schedule coverage and workout descendants. Calibration is athlete-owned and outside the aggregate ([ADR 0005](../adr/0005-athlete-owned-performance.md)); a locked version records the calibration entries current at lock in `calibration_basis`, outside its hash. Unlock creates new physical UUIDs while preserving lineage. Clone alone leaves semantic content equal. The content/hash/validator version is 4; the athlete-performance cutover removed earlier versions.
 
 ## Commands and transaction rules
 

@@ -46,12 +46,10 @@ const briefState = {
   hash: 'c'.repeat(64),
   scheduleReviewRequired: false,
   coverage: [{ startDate: '2026-09-01', endDate: '2026-09-07', current: true }],
-  calibrations: [],
   findings: [],
   brief: {
     goal: 'Comfortable 10K',
     unit: 'kilometres',
-    timezone: 'Europe/London',
     weeklyDistance: { status: 'known', value: 20000 },
     currentRuns: { status: 'known', value: 3 },
     longestRun: { status: 'known', value: 8000 },
@@ -110,7 +108,6 @@ beforeEach(() => {
           baselineId: current.locked?.id ?? null,
           workouts: [],
           assumptionsChanged: false,
-          paceGuidesChanged: false,
           datesChanged: false,
         }
       : path === '/api/v1/plans/{planId}'
@@ -124,7 +121,9 @@ beforeEach(() => {
             ? { workouts: [] }
             : path.endsWith('/revisions')
               ? { revisions: [] }
-              : structuredClone(briefState);
+              : path === '/api/v1/performance'
+                ? { timezone: 'Europe/London', today: '2027-01-01', current: [], entries: [] }
+                : structuredClone(briefState);
     return { data, response: new Response() };
   }) as typeof api.GET);
 });

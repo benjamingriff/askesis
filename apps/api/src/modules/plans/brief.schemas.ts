@@ -13,18 +13,6 @@ export const BriefSchema = z
   .object({
     goal: z.string().trim().max(20000),
     unit: z.enum(['kilometres', 'miles']),
-    timezone: z
-      .string()
-      .min(1)
-      .max(100)
-      .refine((value) => {
-        try {
-          new Intl.DateTimeFormat('en', { timeZone: value });
-          return true;
-        } catch {
-          return false;
-        }
-      }, 'Choose a valid timezone.'),
     weeklyDistance: Answer,
     currentRuns: Answer.refine(
       (answer) => answer.value === null || Number.isInteger(answer.value),
@@ -43,42 +31,10 @@ export const BriefCommand = z.object({
   idempotencyKey: z.string().min(1).max(200).optional(),
 });
 export const SaveBriefSchema = BriefCommand.extend({ brief: BriefSchema }).strict();
-export const PaceInputSchema = z.discriminatedUnion('method', [
-  z
-    .object({
-      method: z.literal('race_result'),
-      distanceMetres: z.number().min(1609.344).max(42195),
-      durationSeconds: z.number().int().positive(),
-    })
-    .strict(),
-  z
-    .object({ method: z.literal('threshold_pace'), secondsPerKilometre: z.number().positive() })
-    .strict(),
-]);
-export const CalibrationCommand = BriefCommand.extend({
-  input: PaceInputSchema,
-  provenance: z.enum(['user_supplied', 'user_estimate', 'agent_estimate']).optional(),
-  estimateBasis: z.string().trim().min(1).max(4000).optional(),
-}).strict();
 export const ConfirmBriefSchema = BriefCommand.extend({
   expectedHash: z.string(),
   acknowledgedWarningCodes: z.array(z.string()),
 }).strict();
-export const CalibrationSchema = z.object({
-  id: Id,
-  effectiveFrom: z.string(),
-  effectiveUntil: z.string().nullable(),
-  method: z.enum(['race_result', 'threshold_pace']),
-  distanceMetres: z.number().nullable(),
-  durationSeconds: z.number().nullable(),
-  secondsPerKilometre: z.number().nullable(),
-  calculatorVersion: z.string(),
-  provenance: z.enum(['user_supplied', 'user_estimate', 'agent_estimate']),
-  estimateBasis: z.string().nullable(),
-  zones: z.array(
-    z.object({ key: z.string(), fast: z.number(), target: z.number(), slow: z.number() }),
-  ),
-});
 export const BriefStateSchema = z.object({
   versionId: Id,
   editNumber: z.number(),
@@ -92,13 +48,11 @@ export const BriefStateSchema = z.object({
   findings: z.array(FindingSchema),
   coverage: z.array(z.object({ startDate: z.string(), endDate: z.string(), current: z.boolean() })),
   generations: z.array(GenerationSchema).optional(),
-  calibrations: z.array(CalibrationSchema),
 });
 export type BriefState = z.infer<typeof BriefStateSchema>;
 export const emptyBrief = (): Brief => ({
   goal: '',
   unit: 'kilometres',
-  timezone: 'UTC',
   weeklyDistance: { status: 'unanswered', value: null },
   currentRuns: { status: 'unanswered', value: null },
   longestRun: { status: 'unanswered', value: null },

@@ -15,6 +15,8 @@ export const ContextSchema = z.object({
   historyTruncated: z.boolean(),
   plan: z.unknown(),
   brief: z.unknown(),
+  /** The athlete's calibration timeline, today and timezone; present with or without a plan. */
+  performance: z.unknown(),
   tools: z.array(
     z.object({
       name: z.string(),

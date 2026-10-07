@@ -38,6 +38,7 @@ const context: ExecutionContext = {
   historyTruncated: false,
   plan: null,
   brief: null,
+  performance: null,
   versionId: null,
   editNumber: null,
   tools: [

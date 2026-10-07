@@ -10,14 +10,13 @@ import type { SemanticValue } from '../plans/plan.canonical.js';
 import type { Aggregate } from '../plans/plan.aggregate.js';
 const aggregate = (
   workouts: { lineage: string; date: string; title?: string; week?: string }[],
-  calibrations: SemanticValue[] = [],
+  description: SemanticValue = 'Plan',
 ) =>
   ({
     semantic: {
       brief: [],
       weekdays: [],
-      description: 'Plan',
-      calibrations,
+      description,
       startDate: '2027-01-01',
       endDate: '2027-01-31',
     },
@@ -78,14 +77,14 @@ it('compares lineage, distinguishes moves plus edits and excludes week movement 
     ]),
   );
 });
-it('has no pending highlight after a revert and explains pace changes separately from workouts', () => {
+it('has no pending highlight after a revert and explains assumption changes separately from workouts', () => {
   const before = aggregate([{ lineage: 'a', date: '2027-01-02' }]);
   expect(compareAggregates(before, structuredClone(before), new Map()).workouts).toEqual([]);
-  const after = aggregate([{ lineage: 'a', date: '2027-01-02' }], [{ threshold: 320 }]);
+  const after = aggregate([{ lineage: 'a', date: '2027-01-02' }], 'Revised plan');
   expect(compareAggregates(before, after, new Map())).toMatchObject({
     workouts: [],
-    paceGuidesChanged: true,
-    assumptionsChanged: false,
+    assumptionsChanged: true,
+    datesChanged: false,
   });
   expect(compareAggregates(null, after, new Map()).workouts[0]!.change).toBe('added');
 });
@@ -146,7 +145,6 @@ const summary = (workouts: Partial<ChangeSummary['workouts'][number]>[], flags =
     })),
     counts: { added: 0, changed: 0, moved: 0, removed: 0 },
     assumptionsChanged: false,
-    paceGuidesChanged: false,
     datesChanged: false,
     ...flags,
   }) as ChangeSummary;
@@ -171,7 +169,7 @@ it('combines a run’s operations into its net changes', () => {
         },
         { lineageId: 'gone', change: 'removed', workoutId: null, title: 'Long run' },
       ],
-      { paceGuidesChanged: true },
+      { assumptionsChanged: true },
     ),
   ])!;
   expect(combined.workouts).toEqual([
@@ -186,8 +184,8 @@ it('combines a run’s operations into its net changes', () => {
     }),
   ]);
   expect(combined).toMatchObject({
-    paceGuidesChanged: true,
-    assumptionsChanged: false,
+    assumptionsChanged: true,
+    datesChanged: false,
     omittedWorkouts: 0,
     counts: { added: 1, changed: 0, moved: 1, removed: 1 },
   });
@@ -208,7 +206,6 @@ it('stores every identity, shedding titles before exceeding the summary column b
     workouts,
     counts: { added: 0, changed: 0, moved: 0, removed: 12000 },
     assumptionsChanged: false,
-    paceGuidesChanged: false,
     datesChanged: false,
   });
   expect(stored.workouts).toHaveLength(12000);
@@ -230,7 +227,6 @@ it('never rejects a pathologically large operation, keeping complete counts', ()
     workouts: removed,
     counts: { added: 0, changed: 0, moved: 0, removed: 30000 },
     assumptionsChanged: false,
-    paceGuidesChanged: false,
     datesChanged: false,
   });
   expect(Buffer.byteLength(JSON.stringify(stored), 'utf8')).toBeLessThan(4194304);
@@ -243,7 +239,6 @@ it('never rejects a pathologically large operation, keeping complete counts', ()
     workouts: [{ ...last, workoutId: 'w', change: 'changed' as const, prescriptionChanged: true }],
     counts: { added: 0, changed: 1, moved: 0, removed: 0 },
     assumptionsChanged: false,
-    paceGuidesChanged: false,
     datesChanged: false,
   };
   expect(combineSummaries([storedSummary(edit), stored])).toMatchObject({ approximate: true });

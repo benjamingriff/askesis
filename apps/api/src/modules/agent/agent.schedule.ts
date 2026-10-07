@@ -7,7 +7,8 @@ import { PlanError } from '../plans/plan.service.js';
 import { readBrief, recordDraftChange } from '../plans/brief.service.js';
 import { readAggregate } from '../plans/plan.aggregate.js';
 import { validatePlan } from '../plans/plan.validation.js';
-import { nearestZone, ZONE_KEYS } from '../plans/pace.calculator.js';
+import { nearestZone, ZONE_KEYS } from '../performance/run-pace.calculator.js';
+import { readEntries, resolveCalibration } from '../performance/performance.service.js';
 import type { ScheduleSchema, CoverageSchema } from './agent.schemas.js';
 
 type Tx = Transaction<DB>;
@@ -224,15 +225,15 @@ export async function writeSchedule(
   type Target = Schedule['workouts'][number]['steps'][number]['targets'][number];
   // Explicit paces also get the calibrated zone they fall in, so every client can colour the
   // effort by zone. The coach's pace stays as written; a zone it chose is never replaced.
+  // Zones come from the athlete's fitness on the workout date, as reads resolve them.
+  const calibrations = await readEntries(db, run.owner_id);
   const withZone = (targets: Target[], date: string): Target[] => {
     const pace = targets.find((t) => t.type === 'pace');
     if (!pace || targets.some((t) => t.type === 'zone')) return targets;
-    const calibration = state.calibrations.find(
-      (c) => c.effectiveFrom <= date && (c.effectiveUntil === null || c.effectiveUntil > date),
-    );
+    const calibration = resolveCalibration(calibrations, 'run_pace', date);
     const zones = (calibration?.zones ?? []).flatMap((zone) => {
       const key = ZONE_KEYS.find((k) => k === zone.key);
-      return key ? [{ ...zone, key }] : [];
+      return key ? [{ key, fast: zone.minimum, target: zone.target, slow: zone.maximum }] : [];
     });
     const zone = nearestZone(pace.secondsPerKilometre, zones);
     return zone ? [...targets, { type: 'zone', key: zone.key }] : targets;

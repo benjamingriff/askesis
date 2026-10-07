@@ -2,24 +2,12 @@ import { createRoute, type z, type OpenAPIHono } from '@hono/zod-openapi';
 import type { AppEnvironment } from '../../auth/types.js';
 import { ErrorSchema } from '../workouts/workout.schemas.js';
 import { PlanParams, Id } from './plan.schemas.js';
-import {
-  BriefStateSchema,
-  SaveBriefSchema,
-  ConfirmBriefSchema,
-  CalibrationCommand,
-  BriefCommand,
-} from './brief.schemas.js';
-import {
-  getBrief,
-  saveBrief,
-  confirmBrief,
-  addCalibration,
-  useCalibration,
-} from './brief.service.js';
+import { BriefStateSchema, SaveBriefSchema, ConfirmBriefSchema } from './brief.schemas.js';
+import { getBrief, saveBrief, confirmBrief } from './brief.service.js';
 
 const responses = {
   200: {
-    description: 'Brief and calibration state.',
+    description: 'Brief, confirmation and coverage state.',
     content: { 'application/json': { schema: BriefStateSchema } },
   },
   ...Object.fromEntries(
@@ -100,49 +88,6 @@ export function registerBriefRoutes(app: OpenAPIHono<AppEnvironment>) {
     async (c) =>
       c.json(
         await confirmBrief(c.get('athlete').id, c.req.valid('param').planId, c.req.valid('json')),
-        200,
-      ),
-  );
-  app.openapi(
-    createRoute({
-      method: 'get',
-      path: '/api/v1/plans/{planId}/draft/calibrations',
-      tags: ['Brief'],
-      request: { params: PlanParams },
-      responses,
-    }),
-    async (c) => c.json(await getBrief(c.get('athlete').id, c.req.valid('param').planId), 200),
-  );
-  app.openapi(
-    createRoute({
-      method: 'post',
-      path: '/api/v1/plans/{planId}/draft/calibrations',
-      tags: ['Brief'],
-      request: { params: PlanParams, body: body(CalibrationCommand) },
-      responses,
-    }),
-    async (c) =>
-      c.json(
-        await addCalibration(c.get('athlete').id, c.req.valid('param').planId, c.req.valid('json')),
-        200,
-      ),
-  );
-  app.openapi(
-    createRoute({
-      method: 'post',
-      path: '/api/v1/plans/{planId}/draft/calibrations/{calibrationId}/use-again',
-      tags: ['Brief'],
-      request: { params: PlanParams.extend({ calibrationId: Id }), body: body(BriefCommand) },
-      responses,
-    }),
-    async (c) =>
-      c.json(
-        await useCalibration(
-          c.get('athlete').id,
-          c.req.valid('param').planId,
-          c.req.valid('json'),
-          c.req.valid('param').calibrationId,
-        ),
         200,
       ),
   );

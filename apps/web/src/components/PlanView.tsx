@@ -6,7 +6,8 @@ import { useLocalToday } from '../lib/use-local-today';
 import { useWorkoutSelection } from '../lib/use-workout-selection';
 import {
   knownCoverage,
-  latestCalibration,
+  currentRunPace,
+  usePerformance,
   planVersion,
   useBriefState,
   useDraftChanges,
@@ -87,7 +88,7 @@ export function PlanView({
   const askCoach = onAskCoach ?? ((prompt: string) => chat.mutate(prompt));
   const [historyOpen, setHistoryOpen] = useState(false);
   const progress = planProgress(version?.startDate ?? null, version?.endDate ?? null, today);
-  const calibration = latestCalibration(brief.data);
+  const calibration = currentRunPace(usePerformance().data);
   const goal = brief.data?.brief.goal;
 
   const toolbar = (
@@ -267,15 +268,8 @@ export function PlanView({
             <SectionHeader
               title="Pace guides"
               action={
-                <Link
-                  className="text-link"
-                  to={
-                    view === 'draft'
-                      ? `/plans/${plan.id}/brief`
-                      : `/plans/${plan.id}/versions/${version?.id}/brief`
-                  }
-                >
-                  {view === 'draft' ? 'Edit' : 'Details'}
+                <Link className="text-link" to="/performance">
+                  Update
                 </Link>
               }
             />
@@ -286,7 +280,7 @@ export function PlanView({
               </>
             ) : (
               <p className="muted">
-                No pace guides yet. Share a recent race or an estimate with your coach.
+                No pace guides yet. Add a recent race or an estimate, or share one with your coach.
               </p>
             )}
           </Card>

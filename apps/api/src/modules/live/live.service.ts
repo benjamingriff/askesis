@@ -218,49 +218,57 @@ export async function getTurn(owner: string, id: string) {
 async function turnViews(db: Database, runs: Selectable<AgentRuns>[]) {
   const ids = runs.map((run) => run.id);
   if (!ids.length) return [];
-  const [events, changes, receipts, outputs, truncatedReplies] = await Promise.all([
-    db
-      .selectFrom('agent_run_events')
-      .select(['run_id', 'sequence', 'type', 'metadata'])
-      .where('run_id', 'in', ids)
-      .where('type', 'in', ['tool_started', 'tool_completed', 'tool_failed'])
-      .orderBy('run_id')
-      .orderBy('sequence')
-      .execute(),
-    db
-      .selectFrom('agent_tool_changes as c')
-      .innerJoin('agent_run_events as e', 'e.run_id', 'c.run_id')
-      .select(['c.run_id', 'c.summary'])
-      .where('c.run_id', 'in', ids)
-      .where('e.type', '=', 'tool_completed')
-      .where(sql<boolean>`e.metadata->>'operationId' = c.operation_id`)
-      .orderBy('c.run_id')
-      .orderBy('e.sequence')
-      .execute(),
-    db
-      .selectFrom('agent_tool_receipts')
-      .select('run_id')
-      .distinct()
-      .where('run_id', 'in', ids)
-      .where('tool_name', 'in', MUTATING_TOOLS)
-      .execute(),
-    // The final segment is shown as the durable assistant message, not repeated here.
-    db
-      .selectFrom('agent_run_outputs')
-      .selectAll()
-      .where('run_id', 'in', ids)
-      .where('is_final', '=', false)
-      .orderBy('run_id')
-      .orderBy('position')
-      .execute(),
-    db
-      .selectFrom('agent_run_outputs')
-      .select('run_id')
-      .where('run_id', 'in', ids)
-      .where('is_final', '=', true)
-      .where('truncated', '=', true)
-      .execute(),
-  ]);
+  const [events, changes, receipts, performanceReceipts, outputs, truncatedReplies] =
+    await Promise.all([
+      db
+        .selectFrom('agent_run_events')
+        .select(['run_id', 'sequence', 'type', 'metadata'])
+        .where('run_id', 'in', ids)
+        .where('type', 'in', ['tool_started', 'tool_completed', 'tool_failed'])
+        .orderBy('run_id')
+        .orderBy('sequence')
+        .execute(),
+      db
+        .selectFrom('agent_tool_changes as c')
+        .innerJoin('agent_run_events as e', 'e.run_id', 'c.run_id')
+        .select(['c.run_id', 'c.summary'])
+        .where('c.run_id', 'in', ids)
+        .where('e.type', '=', 'tool_completed')
+        .where(sql<boolean>`e.metadata->>'operationId' = c.operation_id`)
+        .orderBy('c.run_id')
+        .orderBy('e.sequence')
+        .execute(),
+      db
+        .selectFrom('agent_tool_receipts')
+        .select('run_id')
+        .distinct()
+        .where('run_id', 'in', ids)
+        .where('tool_name', 'in', MUTATING_TOOLS)
+        .execute(),
+      db
+        .selectFrom('agent_tool_receipts')
+        .select('run_id')
+        .distinct()
+        .where('run_id', 'in', ids)
+        .where('tool_name', 'in', ['record_performance', 'retract_performance'])
+        .execute(),
+      // The final segment is shown as the durable assistant message, not repeated here.
+      db
+        .selectFrom('agent_run_outputs')
+        .selectAll()
+        .where('run_id', 'in', ids)
+        .where('is_final', '=', false)
+        .orderBy('run_id')
+        .orderBy('position')
+        .execute(),
+      db
+        .selectFrom('agent_run_outputs')
+        .select('run_id')
+        .where('run_id', 'in', ids)
+        .where('is_final', '=', true)
+        .where('truncated', '=', true)
+        .execute(),
+    ]);
   const group = <T extends { run_id: string }>(rows: T[]) => {
     const map = new Map<string, T[]>();
     for (const row of rows) map.set(row.run_id, [...(map.get(row.run_id) ?? []), row]);
@@ -270,6 +278,7 @@ async function turnViews(db: Database, runs: Selectable<AgentRuns>[]) {
     changesByRun = group(changes),
     outputsByRun = group(outputs),
     edited = new Set(receipts.map((r) => r.run_id)),
+    calibrated = new Set(performanceReceipts.map((r) => r.run_id)),
     truncated = new Set(truncatedReplies.map((r) => r.run_id));
   return runs.map((run) => {
     const operations = new Map<string, { operationId: string; name: string; state: string }>();
@@ -288,6 +297,7 @@ async function turnViews(db: Database, runs: Selectable<AgentRuns>[]) {
       activity: [...operations.values()],
       changes: combineSummaries(summaries),
       legacyChanges: !summaries.length && edited.has(run.id),
+      performanceChanged: calibrated.has(run.id),
       replyTruncated: truncated.has(run.id),
       output: (outputsByRun.get(run.id) ?? []).map((item) => ({
         itemId: item.item_id,

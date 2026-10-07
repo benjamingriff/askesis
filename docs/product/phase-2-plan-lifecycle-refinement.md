@@ -16,7 +16,7 @@ The Plan tab is a calendar/workout view of active plans. It remembers account-sc
 
 The library shows every non-archived plan, including inactive/draft-only plans. Library detail uses a workout/week list without a calendar. The separate archive shows archived plans. Today uses locked prescriptions for the selected active plan rather than unpublished coaching edits.
 
-Chat is the primary content-editing interface. Human controls support display name, draft dates/description, structured brief/calibration, organization and lifecycle; there is no complete direct workout editor.
+Chat is the primary content-editing interface. Human controls support display name, draft dates/description, structured brief, athlete pace guides (on the Performance page, shared by every plan), organization and lifecycle; there is no complete direct workout editor.
 
 ## Human confirmation
 
@@ -32,7 +32,7 @@ Each plan can have multiple conversations. Archive makes all linked conversation
 
 Owner checks cover plan, version, brief and workout reads/commands. There is no sharing/membership permission model or user-facing permanent plan/chat deletion. Clerk account self-deletion is controlled externally by the instance/user policy, not by plan lifecycle code. Release policy and an operator data-removal procedure remain Phase 8 work.
 
-Version/lineage identity keeps briefs, calibration/zones/periods, coverage, blocks/weeks, targets and complete workout trees together. Chat/run provenance survives deletion of an unpublished draft; it is not included in the plan content hash.
+Version/lineage identity keeps briefs, coverage, blocks/weeks, targets and complete workout trees together. Fitness calibration is athlete-owned and never part of a version. Chat/run provenance survives deletion of an unpublished draft; it is not included in the plan content hash.
 
 ## Limits and evidence
 

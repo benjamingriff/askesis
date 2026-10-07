@@ -6,6 +6,7 @@ import {
   Check,
   ChevronDown,
   ChevronUp,
+  Gauge,
   Loader2,
   Sparkles,
   TriangleAlert,
@@ -31,6 +32,7 @@ export const emptyTurn = (run: Run): Turn => ({
   activity: [],
   changes: null,
   legacyChanges: false,
+  performanceChanged: false,
   output: [],
   replyTruncated: false,
 });
@@ -92,6 +94,7 @@ export function RunTurn({
     activity: live.data.activity,
     changes: live.data.changes,
     legacyChanges: live.data.legacyChanges,
+    performanceChanged: live.data.performanceChanged,
     output: live.data.output,
     replyTruncated: live.data.replyTruncated,
   };
@@ -155,6 +158,7 @@ export function RunTurn({
       ) : view.legacyChanges ? (
         <PlanUpdateCard onReview={onReview} />
       ) : null}
+      {view.performanceChanged ? <PerformanceUpdateCard /> : null}
     </article>
   );
 }
@@ -236,6 +240,25 @@ function PlanUpdateCard({
   );
 }
 
+/** Fitness recorded from chat changes pace guides in every plan, so it links to Performance. */
+function PerformanceUpdateCard() {
+  return (
+    <Link to="/performance" className="plan-update plan-update-card">
+      <span className="plan-update-head">
+        <span className="callout-icon">
+          <Gauge size={16} aria-hidden="true" />
+        </span>
+        <span>
+          <strong>Pace guides updated</strong>
+          <small>Every plan uses them from today. Earlier workouts keep their paces.</small>
+        </span>
+        <ArrowRight size={16} aria-hidden="true" />
+      </span>
+      <span className="plan-update-cta">View performance</span>
+    </Link>
+  );
+}
+
 const TOOL_LABELS: Record<string, { running: string; done: string }> = {
   read_plan_context: { running: 'Reading your plan', done: 'Read your plan' },
   read_schedule: { running: 'Reading the schedule', done: 'Read the schedule' },
@@ -244,7 +267,10 @@ const TOOL_LABELS: Record<string, { running: string; done: string }> = {
     running: 'Updating planning assumptions',
     done: 'Updated planning assumptions',
   },
-  set_fitness_calibration: { running: 'Setting pace guides', done: 'Set pace guides' },
+  read_performance: { running: 'Reading your fitness', done: 'Read your fitness' },
+  preview_performance: { running: 'Comparing a result', done: 'Compared a result' },
+  record_performance: { running: 'Updating pace guides', done: 'Updated pace guides' },
+  retract_performance: { running: 'Withdrawing a result', done: 'Withdrew a result' },
   apply_schedule_changes: { running: 'Updating workouts', done: 'Updated workouts' },
   replace_schedule_range: { running: 'Writing the schedule', done: 'Wrote the schedule' },
   validate_plan: { running: 'Checking the plan', done: 'Checked the plan' },

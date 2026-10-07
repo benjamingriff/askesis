@@ -105,9 +105,10 @@ describe('intensitySegments', () => {
               resolvedZone:
                 type === 'zone'
                   ? {
-                      profileId: 'calibration',
+                      calibrationId: '00000000-0000-4000-8000-000000000001',
+                      effectiveFrom: '2027-01-01',
+                      calculatorVersion: 'run-pace-v1',
                       method: 'threshold_pace',
-                      fitnessValue: null,
                       metric: 'pace',
                       minimumValue: null,
                       targetValue: pace,

@@ -1,12 +1,8 @@
-import { closeDatabase } from '../database/client.js';
+import { closeDatabase, getDatabase } from '../database/client.js';
 import { getPlan, lockPlan, organizePlan, previewLock } from '../modules/plans/plan.service.js';
-import {
-  addCalibration,
-  confirmBrief,
-  getBrief,
-  saveBrief,
-} from '../modules/plans/brief.service.js';
+import { confirmBrief, getBrief, saveBrief } from '../modules/plans/brief.service.js';
 import { emptyBrief } from '../modules/plans/brief.schemas.js';
+import { getPerformance, recordCalibration } from '../modules/performance/performance.service.js';
 
 // Explicit development operator command, never part of the production startup path.
 async function publish() {
@@ -15,6 +11,31 @@ async function publish() {
   }
   const owner = '00000000-0000-0000-0000-000000000001';
   const planId = '00000000-0000-0000-0000-000000000010';
+  // The synthetic athlete trains in the UK; its race results set its pace guides.
+  await getDatabase()
+    .updateTable('athletes')
+    .set({ timezone: 'Europe/London' })
+    .where('id', '=', owner)
+    .execute();
+  if (!(await getPerformance(owner)).entries.length) {
+    await recordCalibration(
+      owner,
+      {
+        system: 'run_pace',
+        input: { method: 'race_result', distanceMetres: 5000, durationSeconds: 1070 },
+      },
+      new Date('2026-05-11T12:00:00Z'),
+    );
+    await recordCalibration(
+      owner,
+      {
+        system: 'run_pace',
+        input: { method: 'race_result', distanceMetres: 10000, durationSeconds: 2160 },
+        observedOn: '2026-05-20',
+      },
+      new Date('2026-05-21T12:00:00Z'),
+    );
+  }
   let plan = await getPlan(owner, planId);
   if (!plan.locked) {
     if (plan.draft?.id !== '00000000-0000-0000-0000-000000000050')
@@ -30,7 +51,6 @@ async function publish() {
         brief: {
           ...emptyBrief(),
           goal: 'Run Cardiff Half Marathon comfortably and consistently.',
-          timezone: 'Europe/London',
           weeklyDistance: { status: 'known', value: 40000 },
           currentRuns: { status: 'known', value: 5 },
           longestRun: { status: 'known', value: 12000 },
@@ -47,26 +67,6 @@ async function publish() {
           context: 'Keep long runs easy. Strength work may accompany running.',
         },
       });
-    if (!brief.calibrations.length) {
-      brief = await addCalibration(
-        owner,
-        planId,
-        {
-          ...command(),
-          input: { method: 'race_result', distanceMetres: 5000, durationSeconds: 1070 },
-        },
-        new Date('2026-05-11T12:00:00Z'),
-      );
-      brief = await addCalibration(
-        owner,
-        planId,
-        {
-          ...command(),
-          input: { method: 'race_result', distanceMetres: 10000, durationSeconds: 2160 },
-        },
-        new Date('2026-05-21T12:00:00Z'),
-      );
-    }
     await confirmBrief(owner, planId, {
       ...command(),
       expectedHash: brief.hash,

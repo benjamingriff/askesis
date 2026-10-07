@@ -2,6 +2,7 @@ import { useClerk, useUser } from '@clerk/react';
 import {
   Check,
   FileCode2,
+  Gauge,
   Library,
   LogOut,
   Monitor,
@@ -13,7 +14,9 @@ import {
 import { useState, type CSSProperties, type ReactNode } from 'react';
 import { initialsFor } from '../components/AppShell';
 import { Button, ButtonLink, Card, Segmented, cx } from '../components/ui';
-import { useSettings, type ThemeMode, type UnitPreference } from '../settings';
+import { formatPace } from '../lib/format';
+import { currentRunPace, usePerformance } from '../plan-data';
+import { useSettings, useUnits, type ThemeMode, type UnitPreference } from '../settings';
 import { ACCENTS, isValidHex, normalizeHex, THEMES, type ThemeDefinition } from '../theme/palette';
 
 function Row({ label, hint, children }: { label: string; hint?: string; children: ReactNode }) {
@@ -68,6 +71,9 @@ export function SettingsPage() {
   const { user } = useUser();
   const clerk = useClerk();
   const { settings, update, reset } = useSettings();
+  const units = useUnits();
+  const pace = currentRunPace(usePerformance().data);
+  const threshold = pace?.zones.find((zone) => zone.key === 'threshold');
   const [hex, setHex] = useState(settings.accent);
   const displayName = user?.fullName ?? user?.firstName ?? 'Askesis athlete';
   const email = user?.primaryEmailAddress?.emailAddress ?? '';
@@ -98,6 +104,26 @@ export function SettingsPage() {
           Manage account
         </Button>
       </Card>
+
+      <section className="settings-group" aria-labelledby="fitness-heading">
+        <h2 id="fitness-heading" className="label">
+          Fitness
+        </h2>
+        <Card>
+          <Row
+            label="Pace guides"
+            hint={
+              threshold
+                ? `Threshold ${formatPace(threshold.target, units)} · used by every plan`
+                : 'Add a race result or estimate. Every plan uses it.'
+            }
+          >
+            <ButtonLink to="/performance" size="sm" icon={Gauge}>
+              Performance
+            </ButtonLink>
+          </Row>
+        </Card>
+      </section>
 
       <section className="settings-group" aria-labelledby="appearance-heading" id="appearance">
         <h2 id="appearance-heading" className="label">

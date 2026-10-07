@@ -12,10 +12,8 @@ import {
   emptyBrief,
   type SaveBriefSchema,
   type ConfirmBriefSchema,
-  type CalibrationCommand,
   type BriefCommand,
 } from './brief.schemas.js';
-import { calculatePaces, planToday } from './pace.calculator.js';
 import type { ValidationFinding } from './plan.validation.js';
 
 type Row = Record<string, string | number | boolean | Date | null>;
@@ -51,7 +49,6 @@ export async function readBrief(db: Database, versionId: string, readOnly = fals
     ? BriefSchema.parse({
         goal: row.goal_text,
         unit: row.distance_unit,
-        timezone: row.timezone,
         weeklyDistance: answer('weekly_distance_status', 'weekly_distance_metres'),
         currentRuns: answer('current_runs_status', 'current_runs_per_week'),
         longestRun: answer('longest_run_status', 'longest_run_metres'),
@@ -60,45 +57,12 @@ export async function readBrief(db: Database, versionId: string, readOnly = fals
         context: row.context,
       })
     : emptyBrief();
-  const periods =
-    await sql<Row>`SELECT p.*, c.method, c.race_distance_metres, c.race_duration_seconds,
-    c.threshold_seconds_per_kilometre, c.calculator_version, c.provenance, c.estimate_basis FROM plan_calibration_periods p
-    JOIN calibration_profiles c ON c.id = p.profile_id AND c.plan_version_id = p.plan_version_id
-    WHERE p.plan_version_id = ${versionId}::uuid ORDER BY p.effective_from`.execute(db);
-  const zones =
-    await sql<Row>`SELECT * FROM calibration_zones WHERE plan_version_id = ${versionId}::uuid`.execute(
-      db,
-    );
-  const calibrations = periods.rows.map((period) => ({
-    id: String(period.profile_id),
-    effectiveFrom: date(period.effective_from)!,
-    effectiveUntil: date(period.effective_until),
-    method: period.method,
-    distanceMetres: number(period.race_distance_metres),
-    durationSeconds: number(period.race_duration_seconds),
-    secondsPerKilometre: number(period.threshold_seconds_per_kilometre),
-    calculatorVersion: period.calculator_version,
-    provenance: period.provenance,
-    estimateBasis: period.estimate_basis,
-    zones: zones.rows
-      .filter((zone) => zone.profile_id === period.profile_id)
-      .map((zone) => ({
-        key: zone.zone_key,
-        fast: Number(zone.minimum_value),
-        target: Number(zone.target_value),
-        slow: Number(zone.maximum_value),
-      }))
-      .sort((a, b) => a.key!.toString().localeCompare(b.key!.toString())),
-  }));
   const { unit: _unit, ...facts } = brief;
   const hash = contentHash(
     semantic({
       brief: facts,
       startDate: date(version.start_date),
       endDate: date(version.end_date),
-      calibrations: calibrations.map(({ id: _id, provenance, estimateBasis, ...values }) =>
-        version.content_schema_version < 3 ? values : { ...values, provenance, estimateBasis },
-      ),
     }),
   );
   const coverage = await db
@@ -151,8 +115,6 @@ export async function readBrief(db: Database, versionId: string, readOnly = fals
       'brief.desired_frequency_exceeds_capacity',
       'Allow enough days for at most two runs per day.',
     );
-  if (!calibrations.length)
-    add('brief.calibration_required', 'Enter a race result or estimated threshold pace.');
   if (
     brief.longestRun.value !== null &&
     brief.weeklyDistance.value !== null &&
@@ -190,7 +152,6 @@ export async function readBrief(db: Database, versionId: string, readOnly = fals
       current: c.brief_hash === hash,
     })),
     generations,
-    calibrations,
   });
 }
 
@@ -258,7 +219,7 @@ async function mutate(
               'IDEMPOTENCY_CONFLICT',
               'This request key was used for different input.',
             );
-          return BriefStateSchema.parse(upgradeCachedBrief(cached.response_body));
+          return BriefStateSchema.parse(cached.response_body);
         }
       }
       const { plan, version } = await ownedVersion(db, athleteId, planId, undefined, true);
@@ -286,22 +247,6 @@ async function mutate(
           .execute();
       return result;
     });
-}
-// Responses cached before coverage and calibration provenance existed lack those fields.
-function upgradeCachedBrief(body: unknown): unknown {
-  if (!body || typeof body !== 'object' || Array.isArray(body)) return body;
-  const state = body as Record<string, unknown>;
-  return {
-    coverage: [],
-    ...state,
-    calibrations: Array.isArray(state.calibrations)
-      ? state.calibrations.map((c: unknown) =>
-          c && typeof c === 'object'
-            ? { provenance: 'user_supplied', estimateBasis: null, ...c }
-            : c,
-        )
-      : state.calibrations,
-  };
 }
 type DraftChangeEffect =
   'edit-only' | 'invalidate-confirmation' | 'invalidate-confirmation-and-review-schedule';
@@ -339,13 +284,13 @@ export async function saveBriefRows(
   const { unit: _a, ...oldFacts } = state.brief;
   const { unit: _b, ...newFacts } = b;
   const clear = contentHash(semantic(oldFacts)) !== contentHash(semantic(newFacts));
-  await sql`INSERT INTO plan_briefs (plan_version_id, goal_text, distance_unit, timezone,
+  await sql`INSERT INTO plan_briefs (plan_version_id, goal_text, distance_unit,
       weekly_distance_status, weekly_distance_metres, current_runs_status, current_runs_per_week,
       longest_run_status, longest_run_metres, desired_runs_per_week, context)
-      VALUES (${state.versionId}::uuid, ${b.goal}, ${b.unit}, ${b.timezone}, ${b.weeklyDistance.status}, ${b.weeklyDistance.value},
+      VALUES (${state.versionId}::uuid, ${b.goal}, ${b.unit}, ${b.weeklyDistance.status}, ${b.weeklyDistance.value},
       ${b.currentRuns.status}, ${b.currentRuns.value}, ${b.longestRun.status}, ${b.longestRun.value}, ${b.desiredRuns}, ${b.context})
       ON CONFLICT (plan_version_id) DO UPDATE SET goal_text = EXCLUDED.goal_text, distance_unit = EXCLUDED.distance_unit,
-      timezone = EXCLUDED.timezone, weekly_distance_status = EXCLUDED.weekly_distance_status, weekly_distance_metres = EXCLUDED.weekly_distance_metres,
+      weekly_distance_status = EXCLUDED.weekly_distance_status, weekly_distance_metres = EXCLUDED.weekly_distance_metres,
       current_runs_status = EXCLUDED.current_runs_status, current_runs_per_week = EXCLUDED.current_runs_per_week,
       longest_run_status = EXCLUDED.longest_run_status, longest_run_metres = EXCLUDED.longest_run_metres,
       desired_runs_per_week = EXCLUDED.desired_runs_per_week, context = EXCLUDED.context`.execute(
@@ -395,122 +340,6 @@ export async function confirmBriefRows(
     db,
   );
 }
-export async function addCalibration(
-  athleteId: string,
-  planId: string,
-  input: z.infer<typeof CalibrationCommand>,
-  now = new Date(),
-) {
-  return mutate(
-    athleteId,
-    planId,
-    input,
-    async (db, state) => {
-      await addCalibrationRows(db, state, input, now);
-    },
-    'calibrate',
-  );
-}
-export async function addCalibrationRows(
-  db: Database,
-  state: Awaited<ReturnType<typeof readBrief>>,
-  input: Pick<z.infer<typeof CalibrationCommand>, 'input' | 'provenance' | 'estimateBasis'>,
-  now = new Date(),
-) {
-  if (!state.startDate) throw new PlanError('DATES_REQUIRED', 'Set a plan start date first.', 422);
-  if (
-    !(
-      await sql`SELECT 1 FROM plan_briefs WHERE plan_version_id = ${state.versionId}::uuid`.execute(
-        db,
-      )
-    ).rows.length
-  )
-    throw new PlanError('BRIEF_REQUIRED', 'Save the brief before adding calibration.', 422);
-  let calculated;
-  try {
-    calculated = calculatePaces(input.input);
-  } catch (error) {
-    throw new PlanError('CALIBRATION_INVALID', (error as Error).message, 422);
-  }
-  const latest = state.calibrations.at(-1);
-  if (
-    latest?.calculatorVersion === calculated.calculatorVersion &&
-    latest.provenance === (input.provenance ?? 'user_supplied') &&
-    latest.estimateBasis === (input.estimateBasis ?? null) &&
-    latest.method === input.input.method &&
-    (input.input.method === 'race_result'
-      ? latest.distanceMetres === Number(input.input.distanceMetres.toFixed(3)) &&
-        latest.durationSeconds === input.input.durationSeconds
-      : latest.secondsPerKilometre === Number(input.input.secondsPerKilometre.toFixed(6)))
-  )
-    return;
-  const profile = await sql<{
-    id: string;
-  }>`INSERT INTO calibration_profiles (plan_version_id, discipline, system, method, fitness_value,
-      race_distance_metres, race_duration_seconds, threshold_seconds_per_kilometre, calculator_version, provenance, estimate_basis)
-      VALUES (${state.versionId}::uuid,'run','run_pace',${input.input.method},${calculated.fitness},
-      ${input.input.method === 'race_result' ? input.input.distanceMetres : null},
-      ${input.input.method === 'race_result' ? input.input.durationSeconds : null},
-      ${input.input.method === 'threshold_pace' ? input.input.secondsPerKilometre : null},${calculated.calculatorVersion}, ${input.provenance ?? 'user_supplied'}, ${input.estimateBasis ?? null}) RETURNING id`.execute(
-    db,
-  );
-  const id = profile.rows[0]!.id;
-  for (const zone of calculated.zones)
-    await sql`INSERT INTO calibration_zones (plan_version_id,profile_id,zone_key,metric,minimum_value,target_value,maximum_value,unit)
-      VALUES (${state.versionId}::uuid,${id}::uuid,${zone.key},'pace',${zone.fast},${zone.target},${zone.slow},'seconds_per_kilometre')`.execute(
-      db,
-    );
-  await applyProfile(db, state, id, now);
-}
-async function applyProfile(
-  db: Database,
-  state: Awaited<ReturnType<typeof readBrief>>,
-  id: string,
-  now: Date,
-) {
-  const today = planToday(state.brief.timezone, now);
-  const boundary =
-    !state.calibrations.length || today < state.startDate! ? state.startDate! : today;
-  // Replacing today's period also handles a profile inherited by unlocking today.
-  await sql`DELETE FROM plan_calibration_periods WHERE plan_version_id = ${state.versionId}::uuid AND effective_from >= ${boundary}::date`.execute(
-    db,
-  );
-  await sql`UPDATE plan_calibration_periods SET effective_until = ${boundary}::date WHERE plan_version_id = ${state.versionId}::uuid
-    AND effective_from < ${boundary}::date AND (effective_until IS NULL OR effective_until > ${boundary}::date)`.execute(
-    db,
-  );
-  await sql`INSERT INTO plan_calibration_periods (plan_version_id,profile_id,system,effective_from) VALUES (${state.versionId}::uuid,${id}::uuid,'run_pace',${boundary}::date)`.execute(
-    db,
-  );
-  await sql`DELETE FROM calibration_zones z WHERE z.plan_version_id = ${state.versionId}::uuid AND NOT EXISTS (SELECT 1 FROM plan_calibration_periods p WHERE p.profile_id = z.profile_id)`.execute(
-    db,
-  );
-  await sql`DELETE FROM calibration_profiles c WHERE c.plan_version_id = ${state.versionId}::uuid AND NOT EXISTS (SELECT 1 FROM plan_calibration_periods p WHERE p.profile_id = c.id)`.execute(
-    db,
-  );
-  await recordDraftChange(db, state.versionId, 'invalidate-confirmation');
-}
-export async function useCalibration(
-  athleteId: string,
-  planId: string,
-  input: z.infer<typeof BriefCommand>,
-  profileId: string,
-  now = new Date(),
-) {
-  return mutate(
-    athleteId,
-    planId,
-    input,
-    async (db, state) => {
-      if (!state.calibrations.some((c) => c.id === profileId))
-        throw new PlanError('CALIBRATION_NOT_FOUND', 'Calibration not found.', 404);
-      if (state.calibrations.at(-1)?.id === profileId) return;
-      await applyProfile(db, state, profileId, now);
-    },
-    `reuse:${profileId}`,
-  );
-}
-
 export async function briefLockFindings(
   db: Database,
   versionId: string,

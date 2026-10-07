@@ -7,14 +7,15 @@
 - Ten scheduled workouts
 - Nested sequences, repeats, efforts, and recoveries
 - Semantic zone and RPE targets
-- Two stored Askesis run-pace-v1 calibration profiles (immutable after lock)
-- An effective-dated calibration change after a 10k test
+- Semantic zone targets resolved against the synthetic athlete's calibration timeline
+- Two run-pace-v1 race results, recorded by `publish-fixture`: a 5K from 11 May and a 10K test
+  applying from 21 May
 
 The Compose `seed` service runs `seed.sh` after Atlas finishes migrating. The `seed_runs` table makes startup idempotent, so the seed is only loaded into a database volume once.
 
 The current seed key is `cardiff-half-example-v3`. SQL creates a populated draft
 with version ID `00000000-0000-0000-0000-000000000050`. Compose then runs
-`publish-fixture`, which fills/confirms the brief and calibration, validates, hashes, locks Version 1 and activates the plan
+`publish-fixture`, which sets the athlete timezone, records its race results, fills/confirms the brief, validates, hashes, locks Version 1 and activates the plan
 through the real lifecycle service. Repeated publication is safe; edited fixtures
 are rejected rather than overwritten. The fixture belongs to its synthetic athlete.
 Publication refuses production or Railway environments; never seed Railway.

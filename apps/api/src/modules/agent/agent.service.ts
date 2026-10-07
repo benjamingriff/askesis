@@ -18,12 +18,13 @@ import { ContextSchema } from '../chat/chat.schemas.js';
 import { compareVersions, storedSummary } from '../live/live.changes.js';
 import { readAggregate } from '../plans/plan.aggregate.js';
 import { contentHash, type SemanticValue } from '../plans/plan.canonical.js';
+import { recordDraftChange, readBrief, saveBriefRows } from '../plans/brief.service.js';
 import {
-  addCalibrationRows,
-  recordDraftChange,
-  readBrief,
-  saveBriefRows,
-} from '../plans/brief.service.js';
+  previewCalibration,
+  readPerformance,
+  recordCalibrationRows,
+  retractCalibrationRows,
+} from '../performance/performance.service.js';
 import { createPlanRows, detail, PlanError, preview } from '../plans/plan.service.js';
 import {
   ToolSchemas,
@@ -42,9 +43,15 @@ export const LEASE_MS = 90000;
 export const MUTATING_TOOLS: ToolName[] = [
   'create_plan_draft',
   'update_plan_brief',
-  'set_fitness_calibration',
   'apply_schedule_changes',
   'replace_schedule_range',
+];
+/** Tools on the athlete's calibration timeline. They never touch plan content or need a plan. */
+export const PERFORMANCE_TOOLS: ToolName[] = [
+  'read_performance',
+  'preview_performance',
+  'record_performance',
+  'retract_performance',
 ];
 export const READY_MS = 60000;
 const json = (value: unknown): Json => JSON.parse(JSON.stringify(value)) as Json;
@@ -264,6 +271,7 @@ export async function runContext(id: string, token: string) {
         brief: current
           ? await readBrief(db, current.version.id, current.version.state === 'locked')
           : null,
+        performance: await readPerformance(db, run.owner_id),
         tools: toolDefinitions(),
         versionId: run.execution_version_id,
         editNumber: run.execution_edit_number,
@@ -355,27 +363,16 @@ export async function executeTool(
           versionId: created.draftId,
         });
         response = { plan: await detail(db, run.owner_id, created.planId) };
+      } else if (PERFORMANCE_TOOLS.includes(name)) {
+        const conversation = await ownedConversation(db, run.owner_id, run.conversation_id);
+        if (conversation.archived_at) throw rejected();
+        response = await performanceTool(db, run, name, command.input);
       } else {
         const writing = mutating;
         const current = await target(db, run, writing);
         if (!current) response = { plan: null };
         else {
           const versionId = current.version.id;
-          if (writing) {
-            const v = await db
-              .selectFrom('plan_versions')
-              .select('content_schema_version')
-              .where('id', '=', versionId)
-              .executeTakeFirstOrThrow();
-            if (v.content_schema_version < 3) {
-              await db
-                .updateTable('plan_versions')
-                .set({ content_schema_version: 3 })
-                .where('id', '=', versionId)
-                .execute();
-              await recordDraftChange(db, versionId, 'invalidate-confirmation');
-            }
-          }
           if (name === 'read_plan_context')
             response = {
               plan: current.plan,
@@ -486,30 +483,8 @@ export async function executeTool(
                   ? 'invalidate-confirmation-and-review-schedule'
                   : 'edit-only',
               );
-              if (input.startDate && state.startDate !== input.startDate) {
-                const first = await db
-                  .selectFrom('plan_calibration_periods')
-                  .selectAll()
-                  .where('plan_version_id', '=', versionId)
-                  .orderBy('effective_from')
-                  .executeTakeFirst();
-                if (
-                  first &&
-                  (!first.effective_until || input.startDate < String(first.effective_until))
-                )
-                  await db
-                    .updateTable('plan_calibration_periods')
-                    .set({ effective_from: input.startDate })
-                    .where('id', '=', first.id)
-                    .execute();
-              }
             }
             await saveBriefRows(db, await readBrief(db, versionId), input.brief);
-            response = { brief: await readBrief(db, versionId) };
-          }
-          if (name === 'set_fitness_calibration') {
-            const input = ToolSchemas.set_fitness_calibration.parse(command.input);
-            await addCalibrationRows(db, await readBrief(db, versionId), input);
             response = { brief: await readBrief(db, versionId) };
           }
           if (name === 'apply_schedule_changes')
@@ -612,6 +587,34 @@ export async function executeTool(
         );
       throw error;
     });
+}
+async function performanceTool(db: Tx, run: Run, name: ToolName, raw: unknown) {
+  if (name === 'preview_performance')
+    return {
+      preview: await previewCalibration(
+        db,
+        run.owner_id,
+        ToolSchemas.preview_performance.parse(raw),
+      ),
+    };
+  if (name === 'record_performance') {
+    const { observedOn, ...input } = ToolSchemas.record_performance.parse(raw);
+    const entry = await recordCalibrationRows(
+      db,
+      run.owner_id,
+      { ...input, ...(observedOn ? { observedOn } : {}) },
+      { runId: run.id },
+    );
+    return { recorded: entry, performance: await readPerformance(db, run.owner_id) };
+  }
+  if (name === 'retract_performance')
+    await retractCalibrationRows(
+      db,
+      run.owner_id,
+      ToolSchemas.retract_performance.parse(raw).calibrationId,
+      run.id,
+    );
+  return { performance: await readPerformance(db, run.owner_id) };
 }
 export async function finishRun(
   id: string,

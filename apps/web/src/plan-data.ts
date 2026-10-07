@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import type { paths, WorkoutDetail } from '@askesis/api-client';
+import type { CalibrationEntry, paths, PerformanceState, WorkoutDetail } from '@askesis/api-client';
 import { api } from './api';
 import { result } from './lib/result';
 
@@ -8,7 +8,7 @@ export type Plan =
 export type PlanVersion = NonNullable<Plan['draft']>;
 export type BriefState =
   paths['/api/v1/plans/{planId}/draft/brief']['get']['responses'][200]['content']['application/json'];
-export type Calibration = BriefState['calibrations'][number];
+export type Calibration = CalibrationEntry;
 export type Preview =
   paths['/api/v1/plans/{planId}/validate']['post']['responses'][200]['content']['application/json'];
 export type PlanView = 'locked' | 'draft';
@@ -55,7 +55,7 @@ export function useDraftChanges(planId: string, draft: PlanVersion | null) {
   return { ...changes, data: current ? changes.data : undefined };
 }
 
-/** The brief, calibrations and prescribed coverage for one version of a plan. */
+/** The brief and prescribed coverage for one version of a plan. */
 export function useBriefState(planId: string, version: PlanVersion | null) {
   const draft = version?.state === 'draft';
   return useQuery({
@@ -98,7 +98,7 @@ export function useWorkoutDetail(
   version?: Pick<PlanVersion, 'id' | 'editNumber'> | null,
 ) {
   return useQuery<WorkoutDetail>({
-    // Under 'plan-workouts' so coach edits and calibration updates invalidate resolved paces.
+    // Under 'plan-workouts' so coach edits and performance updates invalidate resolved paces.
     queryKey: ['plan-workouts', 'detail', workoutId, ...versionKey(version)],
     enabled: !!workoutId,
     staleTime: 60_000,
@@ -121,14 +121,26 @@ export function knownCoverage(
   return state.coverage.length || state.generations?.length ? state.coverage : null;
 }
 
-export function latestCalibration(state: BriefState | undefined): Calibration | undefined {
-  return state?.calibrations.at(-1);
+/**
+ * The athlete's calibration timeline. It belongs to the athlete, not a plan: every plan's pace
+ * guides follow it, and live performance notifications refresh this key.
+ */
+export function usePerformance() {
+  return useQuery<PerformanceState>({
+    queryKey: ['performance'],
+    queryFn: async () => result(await api.GET('/api/v1/performance')),
+  });
+}
+
+/** Running pace guides in effect today, if the athlete has any. */
+export function currentRunPace(state: PerformanceState | undefined): Calibration | undefined {
+  return state?.current.find((entry) => entry.system === 'run_pace');
 }
 
 export function isEstimate(calibration: Calibration): boolean {
   return (
     calibration.provenance === 'agent_estimate' ||
     calibration.provenance === 'user_estimate' ||
-    calibration.method === 'threshold_pace'
+    calibration.input.method === 'threshold_pace'
   );
 }

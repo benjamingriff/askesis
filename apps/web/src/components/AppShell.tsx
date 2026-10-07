@@ -1,6 +1,7 @@
 import { useUser } from '@clerk/react';
 import {
   CalendarDays,
+  Gauge,
   Library,
   MessageSquarePlus,
   MessagesSquare,
@@ -87,6 +88,10 @@ export function AppShell() {
           <NavLink to="/plans" end={false} title="All plans">
             <Library size={18} aria-hidden="true" />
             <span>All plans</span>
+          </NavLink>
+          <NavLink to="/performance" title="Performance">
+            <Gauge size={18} aria-hidden="true" />
+            <span>Performance</span>
           </NavLink>
         </nav>
 

@@ -21,12 +21,11 @@ import {
 } from '../../src/modules/plans/plan.service.js';
 
 const owner = '00000000-0000-0000-0000-000000000001';
+import { getBrief, saveBrief, confirmBrief } from '../../src/modules/plans/brief.service.js';
 import {
-  getBrief,
-  saveBrief,
-  addCalibration,
-  confirmBrief,
-} from '../../src/modules/plans/brief.service.js';
+  getPerformance,
+  recordCalibration,
+} from '../../src/modules/performance/performance.service.js';
 import { emptyBrief } from '../../src/modules/plans/brief.schemas.js';
 afterAll(closeDatabase);
 
@@ -226,9 +225,9 @@ async function confirmation(id: string) {
         longestRun: { status: 'unknown', value: null },
       },
     });
-  if (!state.calibrations.length)
-    state = await addCalibration(owner, id, {
-      ...command(),
+  if (!(await getPerformance(owner)).current.length)
+    await recordCalibration(owner, {
+      system: 'run_pace',
       input: { method: 'threshold_pace', secondsPerKilometre: 300 },
     });
   if (!state.confirmed)

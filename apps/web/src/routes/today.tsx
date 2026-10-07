@@ -32,7 +32,8 @@ import {
 import { inferKind, isCovered, KIND_META, workoutsOn } from '../lib/workouts';
 import {
   knownCoverage,
-  latestCalibration,
+  currentRunPace,
+  usePerformance,
   planVersion,
   useBriefState,
   useWorkoutDetail,
@@ -119,7 +120,7 @@ function TodayForPlan({ plan, today }: { plan: Plan; today: string }) {
   const end = version?.endDate;
   const progress = planProgress(version?.startDate ?? null, end ?? null, today);
   const daysToEnd = end ? daysBetween(today, end) : null;
-  const calibration = latestCalibration(brief.data);
+  const calibration = currentRunPace(usePerformance().data);
   const outsidePlan =
     (!!version?.startDate && selected < version.startDate) ||
     (!!version?.endDate && selected > version.endDate);
@@ -298,14 +299,7 @@ function TodayForPlan({ plan, today }: { plan: Plan; today: string }) {
               <SectionHeader
                 title="Your pace guides"
                 action={
-                  <Link
-                    className="text-link"
-                    to={
-                      version?.state === 'locked'
-                        ? `/plans/${plan.id}/versions/${version.id}/brief`
-                        : `/plans/${plan.id}/brief`
-                    }
-                  >
+                  <Link className="text-link" to="/performance">
                     Details
                   </Link>
                 }

@@ -144,10 +144,11 @@ For a provider-free development executor, set `CHAT_EXECUTION_MODE=test` on the 
 pnpm check
 pnpm test:db
 pnpm test:live:upgrade
+pnpm test:performance:upgrade
 pnpm smoke
 ```
 
-`check` runs formatting, lint, typecheck, unit/component/worker tests, builds, generated-contract drift, Atlas checksum and `pnpm audit --prod --audit-level=high`. It is not all Docker/database testing. CI also runs the database suite, populated Phase 5→6 upgrade rehearsal and disposable SDK streaming smoke in a separate job.
+`check` runs formatting, lint, typecheck, unit/component/worker tests, builds, generated-contract drift, Atlas checksum and `pnpm audit --prod --audit-level=high`. It is not all Docker/database testing. CI also runs the database suite, populated Phase 5→6 upgrade rehearsal, populated athlete-performance cutover rehearsal and disposable SDK streaming smoke in a separate job.
 
 Docker/database scripts use isolated disposable databases rather than normal development data. Set a distinct `COMPOSE_PROJECT_NAME` and `TEST_DATABASE_PORT` if another local test stack is running. Real-provider smoke is a separate, billed operation; see [worker verification](./phase-5-runtime.md#verification).
 

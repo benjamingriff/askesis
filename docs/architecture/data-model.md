@@ -1,12 +1,12 @@
 # Current domain model
 
-Verified against migrations, generated database types and API services on 2026-10-06. [Storage architecture](./storage-architecture.md) lists the tables; [plan-version invariants](./phase-2-schema-contract.md) describe lifecycle transactions.
+Verified against migrations, generated database types and API services on 2026-10-07. [Storage architecture](./storage-architecture.md) lists the tables; [plan-version invariants](./phase-2-schema-contract.md) describe lifecycle transactions.
 
 ## Ownership and identity
 
-`athletes` supplies the internal UUID. `athlete_identities` maps a Clerk identity to that UUID. Authenticated requests lazily create a missing mapping and update its last-seen time. Clerk profile changes are not continuously synchronized into the athlete row.
+`athletes` supplies the internal UUID and the athlete's timezone. `athlete_identities` maps a Clerk identity to that UUID. Authenticated requests lazily create a missing mapping, update its last-seen time and store the device timezone reported in `X-Askesis-Timezone`. Clerk profile changes are not continuously synchronized into the athlete row.
 
-A plan has one `owner_id`. Public reads and commands derive the athlete from the authenticated session. Alpha has no membership table, sharing roles, global training profile or separate identity for the person a plan describes.
+An account has exactly one athlete, and every plan is for that athlete. A plan has one `owner_id`. Public reads and commands derive the athlete from the authenticated session. Alpha has no membership table, sharing roles, demographic training profile or separate identity for another runner.
 
 ## Logical plans and versions
 
@@ -14,15 +14,17 @@ A plan has one `owner_id`. Public reads and commands derive the athlete from the
 
 A new plan owns an editable draft. Lock promotes that same version row to an immutable numbered version; unlock clones locked content into a new draft. Child rows receive new physical UUIDs and retain lineage IDs. Restoring history copies a supported historical version into a draft; it does not move the current locked pointer backwards.
 
-A version contains its header, brief and weekdays, calibration profiles/zones/effective periods, prescribed schedule coverage, blocks, weeks, week targets, workouts, tags, workout steps, completions and targets. Hashing uses canonical semantic content, not physical row UUIDs or chat history. Current newly created content uses schema/hash/validator version 3. Historical versions preserve their original meaning and hashes.
+A version contains its header, brief and weekdays, prescribed schedule coverage, blocks, weeks, week targets, workouts, tags, workout steps, completions and targets. It does not contain calibration. Hashing uses canonical semantic content, not physical row UUIDs or chat history. Content uses schema/hash/validator version 4; the athlete-performance cutover removed earlier versions. A locked version also records `calibration_basis`, the athlete calibration entries current at lock, as provenance outside its hash.
 
-## Brief and calibration
+## Brief
 
-Each version has at most one `plan_briefs` row. It holds free-text goal/context, weekly distance/current runs/longest-run answers, desired runs, distance unit, timezone and confirmation metadata. Baseline answers distinguish unanswered, explicitly unknown and known. API distances are metres; UI display units are `km` or `mi`. Seven `plan_brief_weekdays` rows express available/preferred/unavailable days.
+Each version has at most one `plan_briefs` row. It holds free-text goal/context, weekly distance/current runs/longest-run answers, desired runs, distance unit and confirmation metadata. Baseline answers distinguish unanswered, explicitly unknown and known. API distances are metres; UI display units are `km` or `mi`. Seven `plan_brief_weekdays` rows express available/preferred/unavailable days.
 
-`calibration_profiles` stores a race result or threshold pace, deterministic calculator output and input provenance. `calibration_zones` holds generic metric/unit/min/target/max values. Running zone keys are `easy`, `marathon`, `threshold`, `interval` and `repetition`. The internal fitness value is not a user-facing score.
+## Athlete calibration
 
-`plan_calibration_periods` assigns a profile to a half-open date range within its version and system. Workout reads resolve symbolic zones using the workout date. Calibration does not rewrite stored symbolic workout targets. Locked profiles and periods are immutable; editing a draft may replace or remove its unused calibration rows.
+Fitness belongs to the athlete ([ADR 0005](../adr/0005-athlete-owned-performance.md)). `athlete_calibrations` is an append-only timeline per athlete and system (`run_pace` today). An entry stores validated input JSON, calculator version, internal fitness value, provenance and estimate basis, the race or test date, the date it applies from (today in the athlete's timezone when recorded), who recorded it (the athlete or a coaching run) and an optional single retraction. `athlete_calibration_zones` holds generic metric/unit/min/target/max values. Running zone keys are `easy`, `marathon`, `threshold`, `interval` and `repetition`. The internal fitness value is not a user-facing score.
+
+Workout reads resolve symbolic zones against the plan owner's timeline using the workout date: the latest active entry effective by then, or the first entry for earlier dates. Calibration never rewrites stored symbolic workout targets or plan content, so one entry updates every plan, including locked versions, from its effective date.
 
 `plan_schedule_coverage` records inclusive prescribed date ranges and their brief basis. It distinguishes intentional rest days/partial planning from an absent schedule. Agent-run generation progress is execution provenance, not a replacement for version-owned coverage.
 
@@ -48,14 +50,14 @@ The database/read contract supports several disciplines and completion/target ty
 
 A conversation belongs to one athlete and may be associated with one logical plan. Messages and runs retain context/version/edit attribution independently of later draft deletion. Runs own credentials, leases, model settings, usage, safe events, receipts, output and timing records. No per-user spending enforcement or monetary cost calculation is implemented.
 
-Live journal rows notify an owner which resources changed. They carry identifiers rather than authoritative plan content or model text. Clients refetch owner-authorized HTTP projections; durable output survives journal pruning.
+Live journal rows notify an owner which resources changed, including `performance.changed` for calibration entries. They carry identifiers rather than authoritative plan content or model text. Clients refetch owner-authorized HTTP projections; durable output survives journal pruning.
 
 ## Removed early concepts
 
-`plan_goals`, `plan_constraints`, `plan_memberships`, `plan_revisions` and a mutable `movements` catalog are not current tables. Typed goals and generic constraints were replaced by the version-owned brief. There is no implemented plan merge lineage, user skill store or performance-log aggregate.
+`plan_goals`, `plan_constraints`, `plan_memberships`, `plan_revisions`, a mutable `movements` catalog and the version-owned `calibration_profiles`, `calibration_zones` and `plan_calibration_periods` are not current tables. Typed goals and generic constraints were replaced by the version-owned brief; plan calibration was replaced by the athlete timeline. There is no implemented plan merge lineage, user skill store or completed-workout log.
 
 ## Implementation evidence
 
 - [Generated database types](../../apps/api/src/database/generated.ts) and [Atlas migrations](../../database/migrations/).
-- [Plan aggregate](../../apps/api/src/modules/plans/plan.aggregate.ts), [canonical content](../../apps/api/src/modules/plans/plan.canonical.ts) and [workout reads](../../apps/api/src/modules/workouts/workout.repository.ts).
+- [Plan aggregate](../../apps/api/src/modules/plans/plan.aggregate.ts), [canonical content](../../apps/api/src/modules/plans/plan.canonical.ts), [performance service](../../apps/api/src/modules/performance/performance.service.ts) and [workout reads](../../apps/api/src/modules/workouts/workout.repository.ts).
 - [Public API contract](../../packages/api-client/openapi.json).

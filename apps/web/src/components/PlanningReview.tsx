@@ -2,14 +2,13 @@ import {
   CalendarDays,
   CalendarRange,
   Flag,
-  Globe2,
   Repeat,
   Route,
   TrendingUp,
   type LucideIcon,
 } from 'lucide-react';
 import { formatDistance, formatRange, formatShortYear, WEEKDAYS_SHORT } from '../lib/format';
-import { latestCalibration, type BriefState } from '../plan-data';
+import { currentRunPace, usePerformance, type BriefState } from '../plan-data';
 import { useUnits } from '../settings';
 import { CalibrationSource, CoverageNote, PaceGuides, coverageGaps } from './PlanWidgets';
 import { Pill } from './ui';
@@ -94,7 +93,7 @@ export function PlanningReview({ state }: { state: BriefState }) {
         ? 'Not answered'
         : 'Unknown';
   const runs = state.brief.currentRuns;
-  const pace = latestCalibration(state);
+  const pace = currentRunPace(usePerformance().data);
   const availability = state.brief.weekdays
     .map((value, index) =>
       value === 'unavailable'
@@ -113,7 +112,6 @@ export function PlanningReview({ state }: { state: BriefState }) {
           label="Dates"
           value={formatRange(state.startDate, state.endDate)}
         />
-        <Assumption icon={Globe2} label="Timezone" value={state.brief.timezone || 'Not set'} />
         <Assumption
           icon={TrendingUp}
           label="Current weekly distance"
@@ -145,7 +143,9 @@ export function PlanningReview({ state }: { state: BriefState }) {
           <PaceGuides calibration={pace} units={units} compact />
         </>
       ) : (
-        <p className="muted">No pace guides saved yet.</p>
+        <p className="muted">
+          No pace guides yet. Add a race result or estimate on the Performance page.
+        </p>
       )}
       <CoverageSummary state={state} />
     </section>
