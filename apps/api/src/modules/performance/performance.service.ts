@@ -77,8 +77,8 @@ export async function readEntries(db: Database, athleteId: string): Promise<Cali
 
 /**
  * The entry in effect for a system on a date: the latest active entry effective by then. Dates
- * before the first entry use the first, so a plan that began before fitness was recorded still
- * resolves its earlier workouts.
+ * before the first entry use that first entry as recorded, so a plan that began before fitness
+ * was recorded still resolves its earlier workouts, and later same-day entries never change them.
  */
 export function resolveCalibration(
   entries: CalibrationEntry[],
@@ -87,8 +87,8 @@ export function resolveCalibration(
 ): CalibrationEntry | null {
   const active = entries.filter((entry) => entry.system === system && !entry.retractedAt);
   if (!active.length) return null;
-  const on = date < active[0]!.effectiveFrom ? active[0]!.effectiveFrom : date;
-  return active.filter((entry) => entry.effectiveFrom <= on).at(-1)!;
+  if (date < active[0]!.effectiveFrom) return active[0]!;
+  return active.filter((entry) => entry.effectiveFrom <= date).at(-1)!;
 }
 
 async function athleteTimezone(db: Database, athleteId: string, lock = false) {
@@ -132,12 +132,13 @@ export async function previewCalibration(
 ) {
   const calculated = calibrate(input);
   const state = await readPerformance(db, athleteId, now);
+  const current = state.current.find((entry) => entry.system === input.system);
   return CalibrationPreviewResultSchema.parse({
     system: input.system,
     method: calculated.method,
     calculatorVersion: calculated.calculatorVersion,
     zones: calculated.zones,
-    current: state.current.find((entry) => entry.system === input.system) ?? null,
+    ...(current ? { current } : {}),
   });
 }
 

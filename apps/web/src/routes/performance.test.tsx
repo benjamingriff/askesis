@@ -93,6 +93,31 @@ it('records a race with its date, applying from today in the device timezone', a
   expect(await screen.findByText(/Race evidence: 21.1 km in 1:38:00/)).toBeInTheDocument();
 });
 
+it('records the same result again after recording a different one', async () => {
+  vi.mocked(api.POST).mockResolvedValue({
+    data: performance,
+    response: new Response(),
+  } as Awaited<ReturnType<typeof api.POST>>);
+  mount();
+  fireEvent.change(await screen.findByLabelText('Fitness input'), {
+    target: { value: 'threshold_pace' },
+  });
+  for (const [index, pace] of ['4:30', '4:20', '4:30'].entries()) {
+    fireEvent.change(screen.getByLabelText('Threshold pace (min/km)'), { target: { value: pace } });
+    fireEvent.click(screen.getByRole('button', { name: 'Calculate and save pace guides' }));
+    await waitFor(() => expect(api.POST).toHaveBeenCalledTimes(index + 1));
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: 'Calculate and save pace guides' })).toBeEnabled(),
+    );
+  }
+  const keys = vi
+    .mocked(api.POST)
+    .mock.calls.map(
+      (call) => (call[1] as { body: { idempotencyKey: string } }).body.idempotencyKey,
+    );
+  expect(new Set(keys).size).toBe(3);
+});
+
 it('converts a miles threshold estimate to canonical seconds per kilometre', async () => {
   localStorage.setItem('askesis.settings.v1', JSON.stringify({ ...DEFAULT_SETTINGS, units: 'mi' }));
   vi.mocked(api.POST).mockResolvedValue({

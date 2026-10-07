@@ -164,11 +164,14 @@ function RecordResultForm({ today, units }: { today: string; units: Units }) {
               estimateBasis: 'Threshold pace estimated by the athlete.',
             }),
       };
-      return result(
+      const state = result(
         await api.POST('/api/v1/performance/calibrations', {
           body: { ...body, idempotencyKey: requestKey(body) },
         }),
       );
+      // The same result may be recorded again later (after a different one, or a withdrawal).
+      requestKey.settle(body);
+      return state;
     },
     onSuccess: async (state) => {
       client.setQueryData(['performance'], state);
@@ -275,13 +278,16 @@ function HistoryCard({ entries, units }: { entries: Calibration[]; units: Units 
   const requestKey = useRequestKey();
   const [withdrawing, setWithdrawing] = useState<Calibration | null>(null);
   const retract = useMutation({
-    mutationFn: async (entry: Calibration) =>
-      result(
+    mutationFn: async (entry: Calibration) => {
+      const state = result(
         await api.POST('/api/v1/performance/calibrations/{calibrationId}/retract', {
           params: { path: { calibrationId: entry.id } },
           body: { idempotencyKey: requestKey(['retract', entry.id]) },
         }),
-      ),
+      );
+      requestKey.settle(['retract', entry.id]);
+      return state;
+    },
     onSuccess: async (state) => {
       client.setQueryData(['performance'], state);
       setWithdrawing(null);

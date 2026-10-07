@@ -98,7 +98,8 @@ it('validates evidence, previews without saving and replays idempotent requests'
     input: { method: 'race_result' as const, distanceMetres: 21097.5, durationSeconds: 5880 },
   };
   const preview = await previewCalibrationFor(owner, race, now);
-  expect(preview).toMatchObject({ system: 'run_pace', method: 'race_result', current: null });
+  expect(preview).toMatchObject({ system: 'run_pace', method: 'race_result' });
+  expect(preview).not.toHaveProperty('current');
   expect((await getPerformance(owner, now)).entries).toEqual([]);
   await expect(
     recordCalibration(owner, { ...race, observedOn: '2026-09-11' }, now),
@@ -157,6 +158,19 @@ it('applies one timeline to every plan by workout date without editing plan cont
   // Another athlete's fitness never resolves this athlete's workouts.
   await recordCalibration(await athlete(), threshold(200), at('2026-05-19T12:00:00Z'));
   expect(await easyPaceOn(owner, a.draft!.id, '2026-05-19')).toBe(secondEasy);
+});
+
+it('keeps the first recorded entry for earlier dates when the first day gains another entry', async () => {
+  const owner = await athlete();
+  const plan = await fixturePlan(owner);
+  const first = await recordCalibration(owner, threshold(300), at('2026-05-15T09:00:00Z'));
+  const firstEasy = first.current[0]!.zones[0]!.target;
+  expect(await easyPaceOn(owner, plan.draft!.id, '2026-05-12')).toBe(firstEasy);
+  const replaced = await recordCalibration(owner, threshold(280), at('2026-05-15T18:00:00Z'));
+  const replacedEasy = replaced.current[0]!.zones[0]!.target;
+  expect(replacedEasy).not.toBe(firstEasy);
+  expect(await easyPaceOn(owner, plan.draft!.id, '2026-05-12')).toBe(firstEasy);
+  expect(await easyPaceOn(owner, plan.draft!.id, '2026-05-15')).toBe(replacedEasy);
 });
 
 it('follows a valid device timezone and protects calibration history in the database', async () => {

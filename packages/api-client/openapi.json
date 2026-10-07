@@ -666,22 +666,14 @@
             }
           },
           "current": {
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/CalibrationEntry"
-              },
-              {
-                "nullable": true
-              }
-            ]
+            "$ref": "#/components/schemas/CalibrationEntry"
           }
         },
         "required": [
           "system",
           "method",
           "calculatorVersion",
-          "zones",
-          "current"
+          "zones"
         ]
       },
       "PreviewCalibration": {

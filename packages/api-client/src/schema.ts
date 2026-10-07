@@ -5758,7 +5758,7 @@ export interface components {
             method: string;
             calculatorVersion: string;
             zones: components["schemas"]["CalibrationZone"][];
-            current: components["schemas"]["CalibrationEntry"] & unknown;
+            current?: components["schemas"]["CalibrationEntry"];
         };
         PreviewCalibration: {
             /** @enum {string} */

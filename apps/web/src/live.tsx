@@ -210,7 +210,7 @@ export function LiveProvider({ enabled, children }: { enabled: boolean; children
   useEffect(() => {
     if (!enabled || state === 'live') return;
     const timer = window.setInterval(() => {
-      for (const key of ['chat', 'plans', 'plan-workouts'])
+      for (const key of ['chat', 'plans', 'plan-workouts', 'performance'])
         void client.invalidateQueries({ queryKey: [key], refetchType: 'active' });
     }, FALLBACK_REFRESH_MS);
     return () => window.clearInterval(timer);

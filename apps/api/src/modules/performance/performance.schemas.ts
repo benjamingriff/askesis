@@ -95,6 +95,10 @@ export const CalibrationPreviewResultSchema = z
     method: z.string(),
     calculatorVersion: z.string(),
     zones: z.array(ZoneSchema),
-    current: CalibrationEntrySchema.nullable(),
+    /**
+     * The entry in effect today; absent before any is recorded. Optional rather than nullable:
+     * a nullable named schema loses its null in the generated client types.
+     */
+    current: CalibrationEntrySchema.optional(),
   })
   .openapi('CalibrationPreview');

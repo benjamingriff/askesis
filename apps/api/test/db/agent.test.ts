@@ -1293,10 +1293,10 @@ it('previews, records and retracts a reported race from a standalone chat withou
     input: { method: 'race_result', distanceMetres: 21097.5, durationSeconds: 5880 },
   };
   const preview = (await tool(claim, 'preview_performance', race)) as {
-    result: { preview: { zones: unknown[]; current: unknown } };
+    result: { preview: { zones: unknown[]; current?: unknown } };
   };
   expect(preview.result.preview.zones).toHaveLength(5);
-  expect(preview.result.preview.current).toEqual(before.current[0] ?? null);
+  expect(preview.result.preview.current).toEqual(before.current[0]);
   expect(await getPerformance(owner)).toEqual(before);
   const report = {
     ...race,
