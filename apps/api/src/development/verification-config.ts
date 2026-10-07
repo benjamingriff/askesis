@@ -42,6 +42,12 @@ export function verificationConfig(environment: NodeJS.ProcessEnv) {
     throw new LocalVerificationError(
       'Local verification requires a loopback Askesis development database.',
     );
+  // pg gives connection-string query options precedence over the URL authority.
+  // Allow only the TLS mode used by local setup so the checked target cannot change.
+  if ([...database.searchParams.keys()].some((key) => key !== 'sslmode'))
+    throw new LocalVerificationError(
+      'Local verification DATABASE_URL supports only the sslmode query parameter.',
+    );
   if (
     web.protocol !== 'http:' ||
     !isLoopback(web.hostname) ||

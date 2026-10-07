@@ -15,6 +15,30 @@ describe('local verification boundaries', () => {
     expect(verificationConfig(local).webOrigin).toBe('http://localhost:5999');
   });
 
+  it('accepts the sslmode option emitted by local setup', () => {
+    expect(
+      verificationConfig({ ...local, DATABASE_URL: `${local.DATABASE_URL}?sslmode=disable` })
+        .webOrigin,
+    ).toBe('http://localhost:5999');
+  });
+
+  it.each([
+    'host=remote.example',
+    'hostaddr=203.0.113.10',
+    'user=another_user',
+    'port=5433',
+    'database=another_database',
+    'db=another_database',
+    'password=secret',
+    '%68ost=remote.example',
+    '%75ser=another_user',
+    'sslmode=disable&host=localhost&host=remote.example',
+  ])('refuses driver query overrides before opening a connection: %s', (query) => {
+    expect(() =>
+      verificationConfig({ ...local, DATABASE_URL: `${local.DATABASE_URL}?${query}` }),
+    ).toThrow('DATABASE_URL supports only the sslmode query parameter.');
+  });
+
   it.each([
     { NODE_ENV: 'production' },
     { RAILWAY_ENVIRONMENT_ID: 'deployment' },
