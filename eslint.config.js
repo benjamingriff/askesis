@@ -10,6 +10,7 @@ export default tseslint.config(
     ignores: [
       '**/dist/**',
       '**/coverage/**',
+      'apps/marketing/.astro/**',
       'apps/mobile/**',
       'apps/api/src/database/generated.ts',
       'packages/api-client/src/schema.ts',
@@ -18,7 +19,14 @@ export default tseslint.config(
   js.configs.recommended,
   ...tseslint.configs.recommended,
   {
+    files: ['apps/marketing/src/**/*.ts'],
+    languageOptions: {
+      globals: globals.browser,
+    },
+  },
+  {
     files: [
+      'apps/marketing/*.{mjs,ts}',
       'apps/api/**/*.ts',
       'apps/agent/**/*.ts',
       'packages/**/*.ts',

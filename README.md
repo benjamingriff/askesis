@@ -79,6 +79,7 @@ apps/
   api/          Hono API and Kysely repositories
   agent/        Private coaching worker using the OpenAI Agents SDK
   web/          React, Vite, and React Router
+  marketing/    Static Astro marketing site
   mobile/       Separate Expo UI reference prototype
 packages/
   api-client/   Generated OpenAPI types and client factory

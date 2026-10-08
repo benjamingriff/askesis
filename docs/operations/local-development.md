@@ -151,6 +151,16 @@ docker compose --profile fixtures run --rm publish-fixture
 
 These historical fixtures belong to their synthetic athlete and do not automatically appear for signed-in accounts. Their publisher remains forbidden in production/Railway. Use `pnpm example:seed --email <verified-email>` for account-owned examples.
 
+## Marketing site
+
+`apps/marketing` is a static Astro site with no API or database dependency:
+
+```bash
+pnpm dev:marketing
+```
+
+It serves on <http://localhost:4321> (or `MARKETING_PORT`). See its [README](../../apps/marketing/README.md) for refreshing the product screenshots.
+
 ## Local simulated chat
 
 For a provider-free development executor, set `CHAT_EXECUTION_MODE=test` on the local API (not its production Docker runtime). Normal test replies are labelled; `/test slow`, `/test fail` and `/test timeout` exercise Stop, failure and timeout. This executor never writes plan content or calls a provider. It remains a testing mode alongside the real worker, not the current coaching implementation.
