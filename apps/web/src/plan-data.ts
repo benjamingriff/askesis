@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import type { CalibrationEntry, paths, PerformanceState, WorkoutDetail } from '@askesis/api-client';
 import { api } from './api';
+import { phasedBlocks } from './lib/blocks';
 import { result } from './lib/result';
 
 export type Plan =
@@ -90,6 +91,23 @@ export function useWorkouts(version: Pick<PlanVersion, 'id' | 'editNumber'> | nu
       result(
         await api.GET('/api/v1/workouts', { params: { query: { planVersionId: version!.id } } }),
       ).workouts,
+  });
+}
+
+/**
+ * A version's labelled training blocks, empty when none names a phase. Under 'plan-workouts' so
+ * schedule edits refresh it.
+ */
+export function useBlocks(version: Pick<PlanVersion, 'id' | 'editNumber'> | null | undefined) {
+  return useQuery({
+    queryKey: ['plan-workouts', 'blocks', ...versionKey(version)],
+    enabled: !!version,
+    placeholderData: (previous, query) =>
+      query?.queryKey.at(-2) === version?.id ? previous : undefined,
+    queryFn: async () =>
+      result(await api.GET('/api/v1/blocks', { params: { query: { planVersionId: version!.id } } }))
+        .blocks,
+    select: phasedBlocks,
   });
 }
 

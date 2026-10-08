@@ -10,10 +10,13 @@ import {
   PowerOff,
   TriangleAlert,
 } from 'lucide-react';
+import { timeline, type PlanBlock } from '../lib/blocks';
 import {
   addDays,
+  daysBetween,
   formatDistance,
   formatDuration,
+  formatRange,
   formatShort,
   formatShortYear,
 } from '../lib/format';
@@ -176,6 +179,92 @@ export function CoverageNote({ state }: { state: BriefState }) {
   );
 }
 
+// ---- Training blocks ---------------------------------------------------------------------------
+
+/**
+ * The plan's shape: blocks end to end, sized by days and coloured by phase, with today marked.
+ * Finished blocks are solid, the current one half-strength and later ones faint.
+ */
+export function BlockTimeline({
+  blocks,
+  startDate,
+  endDate,
+  today,
+}: {
+  blocks: PlanBlock[];
+  startDate: string | null;
+  endDate: string | null;
+  today: string;
+}) {
+  const line = timeline(blocks, startDate, endDate);
+  if (!line) return null;
+  const offset = daysBetween(line.startDate, today);
+  const marker = offset >= 0 && offset < line.days ? ((offset + 0.5) / line.days) * 100 : null;
+  const current = blocks.find((block) => today >= block.startDate && today <= block.endDate);
+  const next = current ? null : blocks.find((block) => block.startDate > today);
+  const focus = current ?? next;
+  return (
+    <div className="block-timeline">
+      <div className="block-track-wrap">
+        <ol className="block-track" aria-label="Training blocks">
+          {line.segments.map((segment) => {
+            if (segment.kind === 'gap')
+              return (
+                <li
+                  key={segment.startDate}
+                  className="block-segment gap"
+                  style={{ flexGrow: segment.days }}
+                  title={`${formatRange(segment.startDate, segment.endDate)} · not organised into blocks yet`}
+                >
+                  <span className="block-bar" aria-hidden="true" />
+                  <span className="sr-only">
+                    {formatRange(segment.startDate, segment.endDate)}: not organised into blocks yet
+                  </span>
+                </li>
+              );
+            const { block } = segment;
+            const state =
+              block.endDate < today ? 'past' : block.startDate > today ? 'future' : 'current';
+            const range = formatRange(block.startDate, block.endDate);
+            return (
+              <li
+                key={block.id}
+                className={cx('block-segment', state)}
+                style={{ flexGrow: segment.days, '--phase': block.color } as CSSProperties}
+                title={`${block.label} · ${block.title}\n${range}${block.description ? `\n${block.description}` : ''}`}
+              >
+                <span className="block-bar" aria-hidden="true" />
+                <span className="block-label" aria-hidden="true">
+                  {block.label}
+                </span>
+                <span className="sr-only">
+                  {block.label}: {block.title}, {range}
+                  {state === 'current' ? ' (current block)' : ''}
+                </span>
+              </li>
+            );
+          })}
+        </ol>
+        {marker !== null ? (
+          <span className="block-today" style={{ left: `${marker}%` }} aria-hidden="true" />
+        ) : null}
+      </div>
+      {focus ? (
+        <p className="block-now" style={{ '--phase': focus.color } as CSSProperties}>
+          <span className="block-now-label">{current ? 'Now' : 'Starts with'}</span>
+          <strong>{focus.label}</strong>
+          <span>{focus.title}</span>
+          <small>
+            {current
+              ? `until ${formatShort(focus.endDate)}`
+              : `from ${formatShort(focus.startDate)}`}
+          </small>
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
 // ---- Weekly volume -----------------------------------------------------------------------------
 
 export function WeekChart({
@@ -185,6 +274,7 @@ export function WeekChart({
   onSelect,
   units,
   measure = 'distance',
+  blockOf,
 }: {
   weeks: WeekSummary[];
   selected: number;
@@ -192,6 +282,8 @@ export function WeekChart({
   onSelect: (week: number) => void;
   units: Units;
   measure?: 'distance' | 'time' | undefined;
+  /** Tints each bar by its block's phase; bars fall back to the accent without one. */
+  blockOf?: ((week: WeekSummary) => PlanBlock | null) | undefined;
 }) {
   const amount = (week: WeekSummary) => (measure === 'time' ? week.seconds : week.metres);
   const max = Math.max(...weeks.map(amount), 1);
@@ -199,6 +291,7 @@ export function WeekChart({
     <div className="week-chart" role="group" aria-label="Weekly volume">
       {weeks.map((week) => {
         const active = week.number === selected;
+        const block = blockOf?.(week) ?? null;
         const height = week.planned ? Math.max(10, (amount(week) / max) * 100) : 26;
         return (
           <button
@@ -206,12 +299,14 @@ export function WeekChart({
             type="button"
             className={cx(
               'week-bar',
+              block && 'phased',
               active && 'active',
               !week.planned && 'unplanned',
               current !== null && week.number < current && 'past',
             )}
+            style={{ '--bar': block?.color } as CSSProperties}
             aria-pressed={active}
-            aria-label={`Week ${week.number}${week.planned ? `, ${measure === 'time' ? formatDuration(week.seconds) : formatDistance(week.metres, units)}` : ', not planned'}`}
+            aria-label={`Week ${week.number}${block ? `, ${block.label}` : ''}${week.planned ? `, ${measure === 'time' ? formatDuration(week.seconds) : formatDistance(week.metres, units)}` : ', not planned'}`}
             onClick={() => onSelect(week.number)}
           >
             <span className="bar-track">

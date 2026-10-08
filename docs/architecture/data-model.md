@@ -14,7 +14,7 @@ An account has exactly one athlete, and every plan is for that athlete. A plan h
 
 A new plan owns an editable draft. Lock promotes that same version row to an immutable numbered version; unlock clones locked content into a new draft. Child rows receive new physical UUIDs and retain lineage IDs. Restoring history copies a supported historical version into a draft; it does not move the current locked pointer backwards.
 
-A version contains its header, brief and weekdays, prescribed schedule coverage, blocks, weeks, week targets, workouts, tags, workout steps, completions and targets. It does not contain calibration. Hashing uses canonical semantic content, not physical row UUIDs or chat history. Content uses schema/hash/validator version 4; the athlete-performance cutover removed earlier versions. A locked version also records `calibration_basis`, the athlete calibration entries current at lock, as provenance outside its hash.
+A version contains its header, brief and weekdays, prescribed schedule coverage, blocks, weeks, week targets, workouts, tags, workout steps, completions and targets. It does not contain calibration. Hashing uses canonical semantic content, not physical row UUIDs or chat history. Locks record the content hash version (currently 6, which adds block phases); every comparison recomputes hashes from current content, so earlier stored hashes remain historical evidence. The athlete-performance cutover removed versions before 4. A locked version also records `calibration_basis`, the athlete calibration entries current at lock, as provenance outside its hash.
 
 ## Brief
 
@@ -37,6 +37,8 @@ plan version → training blocks → training weeks → workouts
                                                    ├── step completions
                                                    └── step targets
 ```
+
+A training block covers whole weeks and names its `phase`: `base`, `build`, `peak`, `taper` or `recovery`. A phase is a purpose rather than a position, so phases may repeat (clients label them Build 1, Build 2). Races and easier cutback weeks sit inside their block. Blocks written before phases existed keep a null phase; clients show no phase strip for plans without any phased block. `GET /api/v1/blocks?planVersionId=` returns a version's blocks.
 
 Steps can be sequences, repeats or efforts. Ordered parent/child links express nested prescriptions; repeat counts apply to descendant completions. The validated tree has one root, but that root need not be a sequence.
 

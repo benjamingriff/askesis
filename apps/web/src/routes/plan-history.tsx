@@ -19,7 +19,7 @@ import { formatDateTime, formatRange, formatShort } from '../lib/format';
 import { useLocalToday } from '../lib/use-local-today';
 import { result } from '../lib/result';
 import { useRequestKey } from '../lib/use-request-key';
-import { knownCoverage, useBriefState, usePlan, useWorkouts } from '../plan-data';
+import { knownCoverage, useBlocks, useBriefState, usePlan, useWorkouts } from '../plan-data';
 import { usePlanPreferences } from '../plan-selection';
 import { useUnits } from '../settings';
 
@@ -95,9 +95,9 @@ function RevisionView({ planId, revisionId }: { planId: string; revisionId: stri
       result(await api.GET('/api/v1/plans/{planId}/revisions/{revisionId}', { params })),
   });
   const revision = detail.data?.revision;
-  const workouts = useWorkouts(
-    revision ? { id: revisionId, editNumber: revision.editNumber } : null,
-  );
+  const revisionKey = revision ? { id: revisionId, editNumber: revision.editNumber } : null;
+  const workouts = useWorkouts(revisionKey);
+  const blocks = useBlocks(revisionKey).data ?? [];
   // The revision brief carries the coverage saved with this version.
   const brief = useBriefState(
     planId,
@@ -321,6 +321,7 @@ function RevisionView({ planId, revisionId }: { planId: string; revisionId: stri
               coverage={knownCoverage(brief.data)}
               units={units}
               today={today}
+              blocks={blocks}
             />
           ) : null}
         </>

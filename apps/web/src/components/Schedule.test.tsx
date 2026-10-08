@@ -2,6 +2,7 @@ import type { WorkoutSummary } from '@askesis/api-client';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { AccountQueryProvider } from '../query-provider';
+import { labelBlocks } from '../lib/blocks';
 import { Schedule } from './Schedule';
 
 const workout: WorkoutSummary = {
@@ -164,4 +165,35 @@ it('constrains library presentation without changing the saved calendar preferen
   mounted.rerender(schedule('interactive'));
   expect(screen.getByRole('radio', { name: 'Calendar' })).toHaveAttribute('aria-checked', 'true');
   expect(screen.getByRole('grid')).toBeInTheDocument();
+});
+
+it('names the selected week’s phase and tints its bar', () => {
+  const blocks = labelBlocks([
+    {
+      id: 'b',
+      position: 1,
+      title: 'Threshold build',
+      description: 'Longer threshold efforts.',
+      phase: 'build',
+      startDate: '2027-01-11',
+      endDate: '2027-01-24',
+    },
+  ]);
+  render(
+    <AccountQueryProvider>
+      <Schedule
+        workouts={[workout]}
+        startDate="2027-01-11"
+        endDate="2027-01-24"
+        coverage={null}
+        units="km"
+        today="2027-01-12"
+        blocks={blocks}
+      />
+    </AccountQueryProvider>,
+  );
+  expect(screen.getByText('Build')).toHaveAttribute('title', 'Longer threshold efforts.');
+  expect(screen.getByText(/· Threshold build/)).toBeInTheDocument();
+  const bar = screen.getByRole('button', { name: /^Week 1, Build/ });
+  expect(bar.style.getPropertyValue('--bar')).toBe('#FBBF24');
 });

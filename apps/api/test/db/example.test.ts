@@ -75,10 +75,11 @@ it('publishes all content through the real lifecycle, preserving fitness and own
   expect(
     await db
       .selectFrom('training_blocks')
-      .select('id')
+      .select('phase')
       .where('plan_version_id', '=', versionId)
+      .orderBy('start_date')
       .execute(),
-  ).toHaveLength(4);
+  ).toEqual(['base', 'build', 'recovery', 'build', 'peak', 'taper'].map((phase) => ({ phase })));
   expect(
     await db
       .selectFrom('training_weeks')

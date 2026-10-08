@@ -31,6 +31,7 @@ import {
   workoutsOn,
   type CoverageRange,
 } from '../lib/workouts';
+import { blockFor, type PlanBlock } from '../lib/blocks';
 import type { Units } from '../settings';
 import { readStorage, writeStorage } from '../lib/storage';
 import type { PlanVersion } from '../plan-data';
@@ -69,6 +70,7 @@ export function Schedule({
   onPlanRest,
   selection,
   presentation = 'interactive',
+  blocks = [],
 }: {
   workouts: WorkoutSummary[];
   version?: Pick<PlanVersion, 'id' | 'editNumber'> | null | undefined;
@@ -84,6 +86,8 @@ export function Schedule({
   selection?: WorkoutSelection | undefined;
   /** Library details retain weekly workout navigation without offering a calendar. */
   presentation?: SchedulePresentation | undefined;
+  /** Labelled, phased blocks; empty for plans without phases. */
+  blocks?: PlanBlock[] | undefined;
 }) {
   const weeks = useMemo(
     () => summarizeWeeks(workouts, startDate, endDate, coverage),
@@ -101,6 +105,8 @@ export function Schedule({
   const ownSelection = useWorkoutSelection(workouts, version?.id);
   const dialog = selection ?? ownSelection;
   const week = weeks.find((w) => w.number === selectedWeek) ?? weeks[0];
+  const blockOf = (range: { startDate: string; endDate: string }) => blockFor(blocks, range);
+  const weekBlock = week ? blockOf(week) : null;
   const dayStatus = (date: string) =>
     (startDate && date < startDate) || (endDate && date > endDate)
       ? ('outside' as const)
@@ -145,15 +151,28 @@ export function Schedule({
               onSelect={setSelectedWeek}
               units={units}
               measure={measure}
+              blockOf={blocks.length ? blockOf : undefined}
             />
           </Card>
           <div className="week-heading">
             <div>
               <h3>
                 Week {week.number}
+                {weekBlock ? (
+                  <span
+                    className="pill phase-pill"
+                    style={{ '--phase': weekBlock.color } as CSSProperties}
+                    title={weekBlock.description ?? undefined}
+                  >
+                    {weekBlock.label}
+                  </span>
+                ) : null}
                 {week.number === current ? <Pill tone="accent">This week</Pill> : null}
               </h3>
-              <span className="muted">{formatRange(week.startDate, week.endDate)}</span>
+              <span className="muted">
+                {formatRange(week.startDate, week.endDate)}
+                {weekBlock && weekBlock.title !== weekBlock.label ? ` · ${weekBlock.title}` : ''}
+              </span>
             </div>
             <div className="week-nav">
               <IconButton

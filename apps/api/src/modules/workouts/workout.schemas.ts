@@ -1,4 +1,5 @@
 import { z } from '@hono/zod-openapi';
+import { BLOCK_PHASES } from '../plans/phases.js';
 
 export const DatabaseIdSchema = z
   .string()
@@ -37,6 +38,27 @@ export const WorkoutListSchema = z
 export const WorkoutListQuerySchema = z.object({
   planVersionId: DatabaseIdSchema,
 });
+
+export const BlockPhaseSchema = z.enum(BLOCK_PHASES);
+
+/** A dated block of whole weeks. Phase is null for blocks written before phases existed. */
+export const TrainingBlockSchema = z
+  .object({
+    id: DatabaseIdSchema,
+    position: z.number().int().positive(),
+    title: z.string(),
+    description: z.string().nullable(),
+    phase: BlockPhaseSchema.nullable(),
+    startDate: z.iso.date(),
+    endDate: z.iso.date(),
+  })
+  .openapi('TrainingBlock');
+
+export const TrainingBlockListSchema = z
+  .object({
+    blocks: z.array(TrainingBlockSchema),
+  })
+  .openapi('TrainingBlockList');
 
 export const StepCompletionSchema = z
   .object({
@@ -157,3 +179,4 @@ export const ErrorSchema = z
 export type WorkoutSummary = z.infer<typeof WorkoutSummarySchema>;
 export type WorkoutDetail = z.infer<typeof WorkoutDetailSchema>;
 export type StepTarget = z.infer<typeof StepTargetSchema>;
+export type TrainingBlock = z.infer<typeof TrainingBlockSchema>;

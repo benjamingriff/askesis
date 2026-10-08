@@ -1,10 +1,11 @@
+import { createHash } from 'node:crypto';
 import type { Insertable } from 'kysely';
 import type { DB } from '../database/generated.js';
 import { localDate } from '../modules/athletes/timezone.js';
 import { emptyBrief, type Brief } from '../modules/plans/brief.schemas.js';
 import type { StepDiscipline, WorkoutDiscipline } from '../modules/plans/disciplines.js';
+import type { BlockPhase } from '../modules/plans/phases.js';
 
-export const BLUEPRINT_REVISION = 'multisport-showcase-v2';
 export const EXAMPLE_NAME = 'Multisport example · 8 weeks';
 export type Completion = Omit<Insertable<DB['step_completions']>, 'step_id' | 'plan_version_id'>;
 export type Target = Omit<
@@ -486,36 +487,100 @@ export const exampleBrief = (): Brief => ({
     'Software showcase, not an individual coaching recommendation. Friday is a rest day. Up to two sessions per day. Some prescriptions demonstrate storage fields beyond the coaching writer. Existing athlete fitness is preserved; any missing calibration is explicitly marked as an example estimate.',
 });
 
+/**
+ * Every phase appears, and build repeats, so clients show Build 1 and Build 2. Recovery and taper
+ * weeks carry reduced weekly targets.
+ */
+const PHASE_PLAN: { phase: BlockPhase; weeks: number; title: string; description: string }[] = [
+  {
+    phase: 'base',
+    weeks: 2,
+    title: 'Aerobic foundation',
+    description: 'Mostly easy volume across every sport, with technique and supporting strength.',
+  },
+  {
+    phase: 'build',
+    weeks: 2,
+    title: 'Threshold build',
+    description: 'Longer threshold efforts in each sport while total volume holds steady.',
+  },
+  {
+    phase: 'recovery',
+    weeks: 1,
+    title: 'Absorb and consolidate',
+    description: 'A lighter week so the first build block is absorbed before the next.',
+  },
+  {
+    phase: 'build',
+    weeks: 1,
+    title: 'Race-specific build',
+    description: 'Bricks, transitions and Hyrox stations at event intensity.',
+  },
+  {
+    phase: 'peak',
+    weeks: 1,
+    title: 'Sharpen',
+    description: 'The most event-like week: full rehearsals at target effort.',
+  },
+  {
+    phase: 'taper',
+    weeks: 1,
+    title: 'Taper and event rehearsal',
+    description: 'Volume comes down and intensity stays, arriving fresh for the event.',
+  },
+];
+
 export function buildExample(anchor: string) {
   const endDate = shiftDay(anchor, 55);
-  const blocks = [
-    'Foundation',
-    'Build',
-    'Recovery and consolidation',
-    'Taper and event rehearsal',
-  ].map((title, index) => ({
-    title,
-    startDate: shiftDay(anchor, index * 14),
-    endDate: shiftDay(anchor, index * 14 + 13),
-  }));
-  const weeks = Array.from({ length: 8 }, (_, index) => ({
-    index,
-    title: `Week ${index + 1} · ${blocks[Math.floor(index / 2)]!.title}`,
-    startDate: shiftDay(anchor, index * 7),
-    endDate: shiftDay(anchor, index * 7 + 6),
-    sessions: [
-      { day: 0, session: swimming(index) },
-      { day: 0, session: strength(index) },
-      { day: 1, session: cycling(index) },
-      { day: 2, session: running(index) },
-      { day: 3, session: conditioning(index) },
-      { day: 5, session: brick(index) },
-      { day: 6, session: hyrox() },
-      { day: 6, session: swimming(index + 1) },
-    ],
-  }));
+  let firstWeek = 0;
+  const blocks = PHASE_PLAN.map(({ weeks, ...block }) => {
+    const start = firstWeek;
+    firstWeek += weeks;
+    return {
+      ...block,
+      firstWeek: start,
+      weekCount: weeks,
+      startDate: shiftDay(anchor, start * 7),
+      endDate: shiftDay(anchor, firstWeek * 7 - 1),
+    };
+  });
+  const weeks = Array.from({ length: 8 }, (_, index) => {
+    const blockIndex = blocks.findIndex(
+      (b) => index >= b.firstWeek && index < b.firstWeek + b.weekCount,
+    );
+    const block = blocks[blockIndex]!;
+    return {
+      index,
+      blockIndex,
+      position: index - block.firstWeek + 1,
+      volume: block.phase === 'recovery' || block.phase === 'taper' ? 0.75 : 1,
+      title: `Week ${index + 1} · ${block.title}`,
+      startDate: shiftDay(anchor, index * 7),
+      endDate: shiftDay(anchor, index * 7 + 6),
+      sessions: [
+        { day: 0, session: swimming(index) },
+        { day: 0, session: strength(index) },
+        { day: 1, session: cycling(index) },
+        { day: 2, session: running(index) },
+        { day: 3, session: conditioning(index) },
+        { day: 5, session: brick(index) },
+        { day: 6, session: hyrox() },
+        { day: 6, session: swimming(index + 1) },
+      ],
+    };
+  });
   return { anchor, endDate, blocks, weeks, brief: exampleBrief() };
 }
+
+/**
+ * Publication identity. The fingerprint changes whenever the blueprint's content does, so a
+ * deploy with edited example data publishes a new edition and archives the untouched old one.
+ * Bump the prefix for changes outside the blueprint, such as the writer or publication steps.
+ */
+export const BLUEPRINT_REVISION = `multisport-showcase-v3-${createHash('sha256')
+  .update(JSON.stringify(buildExample('2000-01-03')))
+  .digest('hex')
+  .slice(0, 12)}`;
 
 /** Exhaustive storage vocabulary: additions require a deliberate fixture decision. */
 export const exampleCoverage = {

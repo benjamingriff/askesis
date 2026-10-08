@@ -80,6 +80,95 @@
 .plan-progress strong {
   white-space: nowrap;
 }
+
+/* Training blocks: the plan's phases end to end, as in the mobile prototype */
+.block-timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.block-track-wrap {
+  position: relative;
+}
+.block-track {
+  display: flex;
+  gap: 3px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.block-segment {
+  --phase: var(--text-muted);
+  flex: 1 1 0;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  min-width: 0;
+}
+.block-bar {
+  height: 8px;
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--phase) 36%, var(--surface-raised));
+}
+.block-segment.current .block-bar {
+  background: color-mix(in srgb, var(--phase) 65%, var(--surface-raised));
+}
+.block-segment.past .block-bar {
+  background: var(--phase);
+}
+.block-segment.gap .block-bar {
+  background: transparent;
+  border: 1.5px dashed var(--border);
+}
+.block-label {
+  overflow: hidden;
+  color: var(--text-muted);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.block-segment.current .block-label {
+  color: color-mix(in srgb, var(--phase) 78%, var(--text));
+}
+.block-today {
+  position: absolute;
+  top: -4px;
+  width: 4px;
+  height: 16px;
+  margin-left: -2px;
+  border-radius: 2px;
+  background: var(--text);
+  box-shadow: 0 0 0 2px var(--surface);
+}
+.block-now {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 8px;
+  font-size: 13px;
+}
+.block-now-label {
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.block-now strong {
+  color: color-mix(in srgb, var(--phase) 78%, var(--text));
+}
+.block-now small {
+  color: var(--text-muted);
+}
+.phase-pill {
+  --phase: var(--text-dim);
+  color: color-mix(in srgb, var(--phase) 78%, var(--text));
+  background: color-mix(in srgb, var(--phase) 16%, transparent);
+  border-color: color-mix(in srgb, var(--phase) 30%, transparent);
+}
 .plan-description {
   color: var(--text-dim);
   font-size: 14px;
@@ -228,6 +317,19 @@
 }
 .week-bar:hover .bar-fill {
   background: color-mix(in srgb, var(--accent) 75%, var(--surface-raised));
+}
+/* Phased plans tint each week by its block; strong enough that warm hues stay clean. */
+.week-bar.phased .bar-fill {
+  background: color-mix(in srgb, var(--bar) 55%, var(--surface-raised));
+}
+.week-bar.phased.past .bar-fill {
+  background: color-mix(in srgb, var(--bar) 85%, var(--surface-raised));
+}
+.week-bar.phased:hover .bar-fill {
+  background: color-mix(in srgb, var(--bar) 92%, var(--surface-raised));
+}
+.week-bar.phased.active .bar-fill {
+  background: var(--accent);
 }
 .week-bar.active .bar-fill {
   background: var(--accent);

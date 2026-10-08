@@ -3,10 +3,12 @@ import { getDatabase } from '../../database/client.js';
 import type { Workouts } from '../../database/generated.js';
 import { readEntries, resolveCalibration } from '../performance/performance.service.js';
 import {
+  BlockPhaseSchema,
   StepCompletionSchema,
   StepTargetSchema,
   WorkoutPrioritySchema,
   WorkoutStepKindSchema,
+  type TrainingBlock,
   type WorkoutDetail,
   type WorkoutStep,
   type WorkoutSummary,
@@ -94,6 +96,39 @@ export async function listWorkouts(
     .execute();
 
   return rows.map(toWorkoutSummary);
+}
+
+export async function listBlocks(
+  athleteId: string,
+  planVersionId: string,
+): Promise<TrainingBlock[]> {
+  const rows = await getDatabase()
+    .selectFrom('training_blocks')
+    .innerJoin('plan_versions', 'plan_versions.id', 'training_blocks.plan_version_id')
+    .innerJoin('plans', 'plans.id', 'plan_versions.plan_id')
+    .select([
+      'training_blocks.id',
+      'training_blocks.position',
+      'training_blocks.title',
+      'training_blocks.description',
+      'training_blocks.phase',
+      'training_blocks.start_date',
+      'training_blocks.end_date',
+    ])
+    .where('plans.owner_id', '=', athleteId)
+    .where('training_blocks.plan_version_id', '=', planVersionId)
+    .orderBy('training_blocks.start_date', 'asc')
+    .orderBy('training_blocks.position', 'asc')
+    .execute();
+  return rows.map((row) => ({
+    id: row.id,
+    position: row.position,
+    title: row.title,
+    description: row.description,
+    phase: row.phase === null ? null : BlockPhaseSchema.parse(row.phase),
+    startDate: formatDate(row.start_date),
+    endDate: formatDate(row.end_date),
+  }));
 }
 
 function optionalNumber(value: string | null): number | null {

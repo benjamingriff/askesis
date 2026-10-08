@@ -181,6 +181,7 @@ export async function writeSchedule(
     const id = b.id ?? randomUUID();
     const values = {
       title: b.title,
+      phase: b.phase,
       description: b.description,
       start_date: b.startDate,
       end_date: b.endDate,

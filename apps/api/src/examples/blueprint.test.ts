@@ -1,12 +1,20 @@
 import { describe, expect, it } from 'vitest';
 import { WORKOUT_DISCIPLINES, STEP_DISCIPLINES } from '../modules/plans/disciplines.js';
+import { BLOCK_PHASES } from '../modules/plans/phases.js';
 import { CALIBRATORS } from '../modules/performance/performance.calibrators.js';
 import {
   StepCompletionSchema,
   StepTargetSchema,
   WorkoutStepKindSchema,
 } from '../modules/workouts/workout.schemas.js';
-import { buildExample, exampleAnchor, exampleCoverage, type Step } from './blueprint.js';
+import {
+  BLUEPRINT_REVISION,
+  buildExample,
+  exampleAnchor,
+  exampleCoverage,
+  shiftDay,
+  type Step,
+} from './blueprint.js';
 
 const flatten = (steps: Step[]): Step[] =>
   steps.flatMap((step) => [step, ...flatten(step.steps ?? [])]);
@@ -60,7 +68,6 @@ describe('complete multisport blueprint', () => {
   it('fills eight complete weeks with rest days and no more than two daily sessions', () => {
     const plan = buildExample('2026-09-28');
     expect(plan.endDate).toBe('2026-11-22');
-    expect(plan.blocks).toHaveLength(4);
     expect(plan.weeks).toHaveLength(8);
     for (const week of plan.weeks) {
       expect(week.sessions).toHaveLength(8);
@@ -70,6 +77,32 @@ describe('complete multisport blueprint', () => {
         expect(count === 0).toBe(day === 4);
       }
     }
+  });
+
+  it('covers every phase in contiguous blocks of whole weeks, with build repeated', () => {
+    const plan = buildExample('2026-09-28');
+    expect(plan.blocks.map((b) => b.phase)).toEqual([
+      'base',
+      'build',
+      'recovery',
+      'build',
+      'peak',
+      'taper',
+    ]);
+    expect([...new Set(plan.blocks.map((b) => b.phase))].sort()).toEqual([...BLOCK_PHASES].sort());
+    expect(plan.blocks[0]!.startDate).toBe(plan.anchor);
+    expect(plan.blocks.at(-1)!.endDate).toBe(plan.endDate);
+    for (const [index, block] of plan.blocks.entries()) {
+      if (index) expect(block.startDate).toBe(shiftDay(plan.blocks[index - 1]!.endDate, 1));
+      const weeks = plan.weeks.filter((w) => w.blockIndex === index);
+      expect(weeks[0]!.startDate).toBe(block.startDate);
+      expect(weeks.at(-1)!.endDate).toBe(block.endDate);
+      expect(weeks.map((w) => w.position)).toEqual(weeks.map((_, i) => i + 1));
+    }
+  });
+
+  it('derives the publication revision from the blueprint content', () => {
+    expect(BLUEPRINT_REVISION).toMatch(/^multisport-showcase-v3-[0-9a-f]{12}$/);
   });
 
   it('anchors by local calendar week through midnight and DST boundaries', () => {

@@ -1,4 +1,4 @@
-h1:bnET3cIYZNmH1DD2pCCBdKvbPZdcApe4BpyTizdJn7I=
+h1:jHzYnVjoYcmRPhcf3k0bGxZ5BCZQhO4U3Y+pLkQMMT0=
 20260318120000_initial_schema.sql h1:MbXNJ0M+x3PLnNTdaTG8cvpU2rBCnNk0xWUovu3fgUQ=
 20260722153000_auth_identities.sql h1:19sniiRUiZhRCTgVPObJFlC/QWk+jrhMoDVnq6p8riY=
 20260907120000_plan_versions.sql h1:y0idcRC1x5Umd86vNv9EHRqqZkGdkZQmG4js/z68Ty4=
@@ -11,3 +11,4 @@ h1:bnET3cIYZNmH1DD2pCCBdKvbPZdcApe4BpyTizdJn7I=
 20261007120000_athlete_performance.sql h1:pZP9xOjxqQxVlFssp98u4GcIC3xJdmwuzELGWnbThl0=
 20261008120000_multisport.sql h1:qmcZTs3o9rVyfq2IfVqzzd6seDKYVORRUbbjk5uj0Aw=
 20261008160000_example_plan_editions.sql h1:Cf+elJz1VwBh8G+HBXLOkc2PsH5eOriJlIXEOQosx6g=
+20261008180000_training_block_phases.sql h1:IkCnFdku9deqk45B6R+lL8lExDSY+zzeHDy4HR2JyPY=

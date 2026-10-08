@@ -375,6 +375,7 @@ export interface TrainingBlocks {
   end_date: Timestamp;
   id: Generated<string>;
   lineage_id: Generated<string>;
+  phase: string | null;
   plan_version_id: string;
   position: number;
   start_date: Timestamp;

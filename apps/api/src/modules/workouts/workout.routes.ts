@@ -1,9 +1,10 @@
 import { createRoute, z, type OpenAPIHono } from '@hono/zod-openapi';
 import type { AppEnvironment } from '../../auth/types.js';
-import { getWorkoutDetail, listWorkouts } from './workout.repository.js';
+import { getWorkoutDetail, listBlocks, listWorkouts } from './workout.repository.js';
 import {
   DatabaseIdSchema,
   ErrorSchema,
+  TrainingBlockListSchema,
   WorkoutDetailSchema,
   WorkoutListQuerySchema,
   WorkoutListSchema,
@@ -21,6 +22,29 @@ const listWorkoutsRoute = createRoute({
       content: {
         'application/json': {
           schema: WorkoutListSchema,
+        },
+      },
+    },
+    401: {
+      description: 'Authentication is required.',
+      content: { 'application/json': { schema: ErrorSchema } },
+    },
+  },
+  tags: ['Workouts'],
+});
+
+const listBlocksRoute = createRoute({
+  method: 'get',
+  path: '/api/v1/blocks',
+  request: {
+    query: WorkoutListQuerySchema,
+  },
+  responses: {
+    200: {
+      description: 'Training blocks of one plan version in chronological order, with their phases.',
+      content: {
+        'application/json': {
+          schema: TrainingBlockListSchema,
         },
       },
     },
@@ -60,6 +84,12 @@ export function registerWorkoutRoutes(app: OpenAPIHono<AppEnvironment>): void {
     const { planVersionId } = context.req.valid('query');
     const workouts = await listWorkouts(context.get('athlete').id, planVersionId);
     return context.json({ workouts }, 200);
+  });
+
+  app.openapi(listBlocksRoute, async (context) => {
+    const { planVersionId } = context.req.valid('query');
+    const blocks = await listBlocks(context.get('athlete').id, planVersionId);
+    return context.json({ blocks }, 200);
   });
 
   app.openapi(getWorkoutRoute, async (context) => {

@@ -132,6 +132,71 @@
           "high"
         ]
       },
+      "TrainingBlockList": {
+        "type": "object",
+        "properties": {
+          "blocks": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TrainingBlock"
+            }
+          }
+        },
+        "required": [
+          "blocks"
+        ]
+      },
+      "TrainingBlock": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i"
+          },
+          "position": {
+            "type": "integer",
+            "minimum": 0,
+            "exclusiveMinimum": true
+          },
+          "title": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string",
+            "nullable": true
+          },
+          "phase": {
+            "type": "string",
+            "nullable": true,
+            "enum": [
+              "base",
+              "build",
+              "peak",
+              "taper",
+              "recovery",
+              null
+            ]
+          },
+          "startDate": {
+            "type": "string",
+            "format": "date"
+          },
+          "endDate": {
+            "type": "string",
+            "format": "date"
+          }
+        },
+        "required": [
+          "id",
+          "position",
+          "title",
+          "description",
+          "phase",
+          "startDate",
+          "endDate"
+        ]
+      },
       "WorkoutDetail": {
         "type": "object",
         "properties": {
@@ -3097,6 +3162,47 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/WorkoutList"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication is required.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/blocks": {
+      "get": {
+        "tags": [
+          "Workouts"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i"
+            },
+            "required": true,
+            "name": "planVersionId",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Training blocks of one plan version in chronological order, with their phases.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TrainingBlockList"
                 }
               }
             }

@@ -64,7 +64,7 @@ async function worker() {
     provider: 'openai',
     model: 'gpt-6.1-sol',
     reasoning: 'medium',
-    promptVersion: 'multisport-coach-v1',
+    promptVersion: 'multisport-coach-v2',
     ready: true,
   });
   return id;
@@ -130,6 +130,7 @@ const batch: z.infer<typeof ScheduleSchema> = {
     {
       key: 'foundation',
       title: 'Foundation',
+      phase: 'base',
       description: null,
       startDate: '2027-01-01',
       endDate: '2027-01-28',
@@ -762,6 +763,14 @@ it('extends an unlocked partial horizon into a second immutable revision while p
       .where('plan_version_id', '=', second.locked!.id)
       .execute(),
   ).toHaveLength(2);
+  // The coach's phase survives unlocking into a new draft and locking again.
+  expect(
+    await db
+      .selectFrom('training_blocks')
+      .select('phase')
+      .where('plan_version_id', '=', second.locked!.id)
+      .execute(),
+  ).toEqual([{ phase: 'base' }]);
 });
 it('swaps dated workouts in one coherent transaction without intermediate uniqueness failures', async () => {
   const { claim, p } = await planning();
@@ -1251,7 +1260,7 @@ it('requires the current prompt contract before a worker contributes readiness o
     provider: 'openai',
     model: 'gpt-6.1-sol',
     reasoning: 'medium',
-    promptVersion: 'multisport-coach-v1',
+    promptVersion: 'multisport-coach-v2',
     ready: true,
   });
   expect((await chatCapabilities()).executionAvailable).toBe(true);

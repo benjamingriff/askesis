@@ -10,6 +10,7 @@ import {
   stridesRun,
   tempoRun,
 } from './builders';
+import { PHASE_COLORS } from '../theme/palette';
 import type { Phase, PlanMeta, Workout } from './types';
 
 export const TOTAL_WEEKS = 12;
@@ -29,23 +30,29 @@ export const PHASES: Phase[] = [
     fromWeek: 1,
     toWeek: 4,
     blurb: 'Aerobic foundation and routine',
-    color: '#60A5FA',
+    color: PHASE_COLORS.base,
   },
   {
     name: 'Build',
     fromWeek: 5,
     toWeek: 8,
     blurb: 'Raise the threshold, extend the long run',
-    color: '#FBBF24',
+    color: PHASE_COLORS.build,
   },
   {
     name: 'Peak',
     fromWeek: 9,
     toWeek: 11,
     blurb: 'Race-specific work at goal pace',
-    color: '#F87171',
+    color: PHASE_COLORS.peak,
   },
-  { name: 'Taper', fromWeek: 12, toWeek: 12, blurb: 'Shed fatigue, stay sharp', color: '#34D399' },
+  {
+    name: 'Taper',
+    fromWeek: 12,
+    toWeek: 12,
+    blurb: 'Shed fatigue, stay sharp',
+    color: PHASE_COLORS.taper,
+  },
 ];
 
 export function phaseForWeek(week: number): Phase {
