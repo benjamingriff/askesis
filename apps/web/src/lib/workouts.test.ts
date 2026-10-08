@@ -1,7 +1,14 @@
 import type { WorkoutStep, WorkoutSummary } from '@askesis/api-client';
 import { describe, expect, it } from 'vitest';
 import { METRES_PER_MILE, formatDistance, formatPace, formatRange, startOfWeek } from './format';
-import { inferKind, intensitySegments, summarizeWeeks, topRace, volumeMeasure } from './workouts';
+import {
+  inferKind,
+  intensitySegments,
+  summarizeWeeks,
+  topRace,
+  volumeMeasure,
+  workoutLook,
+} from './workouts';
 
 const workout = (date: string, metres: number, title = 'Easy run'): WorkoutSummary => ({
   id: date,
@@ -216,6 +223,7 @@ describe('intensitySegments', () => {
     });
     expect(segments).toHaveLength(6);
     expect(segments[0]!.level).toBeGreaterThan(segments[1]!.level);
+    expect(segments.slice(0, 2).map((segment) => segment.effort)).toEqual(['hard', 'easy']);
   });
 });
 
@@ -237,13 +245,30 @@ describe('multi-sport presentation', () => {
     racePriority: null,
   });
   it.each([
-    ['swim', 'CSS intervals', 'swim'],
-    ['cycle', 'Sweet spot 3 x 12', 'ride'],
-    ['strength', 'Lower body', 'strength'],
-    ['mixed', 'Bike to run brick', 'mixed'],
-    ['cycle', 'FTP ramp test', 'test'],
-  ])('classifies a %s workout “%s” as %s', (discipline, title, kind) => {
+    ['swim', 'CSS intervals', 'tempo', 'Threshold swim', 'threshold'],
+    ['cycle', 'Sweet spot 3 x 12', 'tempo', 'Threshold ride', 'threshold'],
+    ['cycle', 'Tempo ride', 'steady', 'Tempo ride', 'steady'],
+    ['run', 'Tempo run', 'tempo', 'Tempo', 'threshold'],
+    ['cycle', '5 x 4 min VO2', 'intervals', 'Bike intervals', 'hard'],
+    ['cycle', 'Long endurance ride', 'long', 'Long ride', 'easy'],
+    ['strength', 'Lower body', 'strength', 'Strength', 'steady'],
+    ['strength', 'Heavy lower body', 'strength', 'Strength', 'hard'],
+    ['strength', 'Mobility flow', 'mobility', 'Mobility', 'recovery'],
+    ['mixed', 'Bike to run brick', 'brick', 'Brick', 'steady'],
+    ['cycle', 'FTP ramp test', 'test', 'FTP test', 'max'],
+    ['row', 'Steady row', 'steady', 'Row · Steady', 'steady'],
+  ])('reads a %s workout “%s” as %s (%s, %s effort)', (discipline, title, kind, label, effort) => {
     expect(inferKind(summary(discipline, title))).toBe(kind);
+    const look = workoutLook(summary(discipline, title));
+    expect([look.label, look.effort]).toEqual([label, effort]);
+  });
+  it('shows the sport with its icon and the effort with its colour', () => {
+    const swim = workoutLook(summary('swim', 'Easy aerobic swim'));
+    const run = workoutLook(summary('run', 'Easy run'));
+    expect(swim.icon).not.toBe(run.icon);
+    expect(swim.color).toBe(run.color);
+    expect(swim.color).toBe('var(--effort-easy)');
+    expect(workoutLook(summary('run', 'Rest day')).effort).toBeNull();
   });
   it('measures weekly volume by time once a plan trains more than running', () => {
     expect(volumeMeasure([{ discipline: 'run' }, { discipline: 'run' }])).toBe('distance');
@@ -299,5 +324,7 @@ describe('multi-sport presentation', () => {
     )[0]!;
     expect(squat.seconds).toBe(24);
     expect(squat.level).toBeCloseTo(4, 5);
+    // One rep in reserve is hard work, whatever the sport.
+    expect(squat.effort).toBe('hard');
   });
 });

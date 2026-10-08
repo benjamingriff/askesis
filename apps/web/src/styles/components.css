@@ -41,7 +41,7 @@
   width: 100%;
 }
 .btn-primary {
-  background: var(--accent);
+  background: var(--accent-fill);
   color: var(--on-accent);
 }
 .btn-primary:hover:not(:disabled) {
@@ -109,11 +109,11 @@
   background: var(--border);
 }
 .icon-btn-accent {
-  background: var(--accent);
+  background: var(--accent-fill);
   color: var(--on-accent);
 }
 .icon-btn-accent:hover:not(:disabled) {
-  background: var(--accent);
+  background: var(--accent-fill);
   filter: brightness(1.06);
 }
 
@@ -193,7 +193,7 @@
   display: block;
   height: 100%;
   border-radius: inherit;
-  background: var(--accent);
+  background: var(--accent-fill);
   transition: width 0.7s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
@@ -443,8 +443,8 @@ fieldset:disabled {
   color: var(--on-accent);
 }
 .check-row.checked .check-box {
-  background: var(--accent);
-  border-color: var(--accent);
+  background: var(--accent-fill);
+  border-color: transparent;
 }
 .check-copy {
   display: flex;
@@ -492,7 +492,7 @@ fieldset:disabled {
   transition: transform 0.2s ease;
 }
 .switch input:checked + span[aria-hidden] {
-  background: var(--accent);
+  background: var(--accent-fill);
 }
 .switch input:checked + span[aria-hidden]::after {
   transform: translateX(20px);

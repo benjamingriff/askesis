@@ -9,7 +9,7 @@ import {
   Save,
   TriangleAlert,
 } from 'lucide-react';
-import { useCallback, useState, type CSSProperties } from 'react';
+import { useCallback, useState } from 'react';
 import { Link, useBeforeUnload, useBlocker, useParams } from 'react-router';
 import { api } from '../api';
 import { PlanZones, zonesTitle } from '../components/PlanWidgets';
@@ -376,7 +376,6 @@ function BriefEditor({ state, planId }: { state: State; planId: string }) {
                       type="button"
                       className={cx('sport-chip', selected && 'selected')}
                       aria-pressed={selected}
-                      style={{ '--kind': meta.color } as CSSProperties}
                       onClick={() => setSport(sport, selected ? null : emptyBaseline(sport))}
                     >
                       <meta.icon size={16} aria-hidden="true" />

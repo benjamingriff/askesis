@@ -197,7 +197,7 @@ it('names the selected week’s phase and tints its bar', () => {
   expect(screen.getByText('Build')).toHaveAttribute('title', 'Longer threshold efforts.');
   expect(screen.getByText(/· Threshold build/)).toBeInTheDocument();
   const bar = screen.getByRole('button', { name: /^Week 1, Build/ });
-  expect(bar.style.getPropertyValue('--bar')).toBe('#FBBF24');
+  expect(bar.style.getPropertyValue('--bar')).toBe('var(--effort-threshold)');
 });
 
 it('marks cutback weeks and races on the chart, with the trophy on the goal race', () => {

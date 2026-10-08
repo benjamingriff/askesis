@@ -153,7 +153,7 @@
   height: 8px;
   margin-left: -4px;
   border-radius: 50%;
-  background: var(--race);
+  background: var(--accent-fill);
   box-shadow: 0 0 0 2px var(--surface);
   transform: translateY(-50%);
 }
@@ -161,7 +161,7 @@
   width: 20px;
   height: 20px;
   margin-left: -10px;
-  color: var(--surface);
+  color: var(--on-accent);
 }
 .block-now {
   display: flex;
@@ -331,7 +331,8 @@
   background-color: color-mix(in srgb, var(--accent) 38%, var(--surface-raised));
   transition:
     height 0.5s cubic-bezier(0.22, 1, 0.36, 1),
-    background 0.15s ease;
+    background 0.15s ease,
+    box-shadow 0.15s ease;
 }
 .week-bar.past .bar-fill {
   background-color: color-mix(in srgb, var(--accent) 62%, var(--surface-raised));
@@ -349,15 +350,20 @@
 .week-bar.phased:hover .bar-fill {
   background-color: color-mix(in srgb, var(--bar) 92%, var(--surface-raised));
 }
-.week-bar.phased.active .bar-fill {
-  background-color: var(--accent);
-}
 .week-bar.active .bar-fill {
   background-color: var(--accent);
+}
+/* The selected week keeps its block's colour; the accent ring marks the selection. */
+.week-bar.phased.active .bar-fill {
+  background-color: var(--bar);
+  box-shadow:
+    0 0 0 2px var(--bg),
+    0 0 0 3.5px var(--accent);
 }
 .week-bar.unplanned .bar-fill {
   background-color: transparent;
   border: 1.5px dashed var(--border);
+  box-shadow: none;
 }
 .week-bar.unplanned.active .bar-fill {
   border-color: var(--accent);
@@ -370,7 +376,8 @@
     color-mix(in srgb, var(--surface) 45%, transparent) 5px 8px
   );
 }
-/* A race badge sits above its week's bar: filled for A, outlined for B, muted for C. */
+/* A race badge sits above its week's bar: filled for A, outlined for B, muted for C. Races are
+   the athlete's goals, so they wear the accent rather than an effort colour. */
 .bar-race {
   position: absolute;
   bottom: calc(100% + 4px);
@@ -381,17 +388,18 @@
   height: 16px;
   padding: 0 3px;
   border-radius: 8px;
-  border: 1.5px solid var(--race);
-  background: var(--race);
-  color: var(--surface);
+  border: 1.5px solid transparent;
+  background: var(--accent-fill);
+  color: var(--on-accent);
   font-size: 10px;
   font-weight: 800;
   line-height: 1;
   transform: translateX(-50%);
 }
 .bar-race.race-b {
+  border-color: var(--accent);
   background: var(--surface);
-  color: color-mix(in srgb, var(--race) 80%, var(--text));
+  color: var(--accent-text);
 }
 .bar-race.race-c {
   border-color: var(--border);
@@ -484,7 +492,7 @@
   color: var(--accent-text);
 }
 .day-row.today .day-gutter strong {
-  background: var(--accent);
+  background: var(--accent-fill);
   color: var(--on-accent);
 }
 .day-row.past .day-gutter strong {
@@ -567,8 +575,8 @@
   font-size: 10px;
 }
 .workout-card-kind em.race-badge {
-  background: color-mix(in srgb, var(--kind) 18%, transparent);
-  color: color-mix(in srgb, var(--kind) 80%, var(--text));
+  background: var(--accent-fill);
+  color: var(--on-accent);
 }
 .workout-card-copy strong {
   font-size: 16px;
@@ -638,7 +646,7 @@
   box-shadow: inset 0 0 0 1.5px var(--accent-border);
 }
 .calendar-day.selected {
-  background: var(--accent);
+  background: var(--accent-fill);
   color: var(--on-accent);
 }
 .calendar-dots {
@@ -654,7 +662,8 @@
   background: var(--kind);
 }
 .calendar-day.selected .calendar-dots i {
-  background: var(--on-accent);
+  /* Keep the effort colour; a rim in the on-accent colour lifts it off the accent fill. */
+  box-shadow: 0 0 0 1.5px var(--on-accent);
 }
 .calendar-legend {
   display: flex;
@@ -771,21 +780,6 @@
   border-radius: 16px;
   background: var(--surface);
   border: 1px solid var(--border);
-}
-.step[data-zone='easy'] {
-  --zone: #34d399;
-}
-.step[data-zone='marathon'] {
-  --zone: #a3e635;
-}
-.step[data-zone='threshold'] {
-  --zone: #fbbf24;
-}
-.step[data-zone='interval'] {
-  --zone: #fb923c;
-}
-.step[data-zone='repetition'] {
-  --zone: #f87171;
 }
 .step-marker {
   flex: none;
@@ -1279,8 +1273,8 @@
   border-color: var(--accent-border);
 }
 .strip-day.selected {
-  background: var(--accent);
-  border-color: var(--accent);
+  background: var(--accent-fill);
+  border-color: transparent;
   color: var(--on-accent);
 }
 .strip-day.selected .label {
@@ -1288,7 +1282,7 @@
   opacity: 0.7;
 }
 .strip-day.selected i {
-  background: var(--on-accent);
+  box-shadow: 0 0 0 1.5px var(--on-accent);
 }
 .today-grid {
   display: grid;
@@ -1404,7 +1398,7 @@
   width: 38px;
   height: 38px;
   border-radius: 50%;
-  background: var(--accent);
+  background: var(--accent-fill);
   color: var(--on-accent);
 }
 .week-summary {
@@ -1501,5 +1495,5 @@
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  color: var(--kind);
+  color: var(--text-dim);
 }

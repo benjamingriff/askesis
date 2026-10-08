@@ -18,7 +18,10 @@
   width: var(--sidebar-width);
   padding: 14px 12px 12px;
   border-right: 1px solid var(--border);
-  background: var(--surface);
+  /* Slack-style: the accent tints the top of the sidebar and fades out. */
+  background:
+    linear-gradient(175deg, var(--glow-a), transparent 38%),
+    linear-gradient(195deg, var(--glow-b), transparent 30%), var(--surface);
 }
 .sidebar-brand {
   display: flex;
@@ -44,7 +47,7 @@
   width: 30px;
   height: 30px;
   border-radius: 10px;
-  background: var(--accent);
+  background: var(--accent-fill);
   color: var(--on-accent);
   font-weight: 900;
   font-size: 15px;

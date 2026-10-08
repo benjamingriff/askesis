@@ -1,5 +1,5 @@
 import type { BlockPhase, TrainingBlock, TrainingWeek } from '@askesis/api-client';
-import { KIND_COLORS, PHASE_COLORS } from '../theme/palette';
+import { phaseColor } from '../theme/palette';
 import { addDays, daysBetween } from './format';
 
 export const PHASE_META: Record<BlockPhase, { label: string; description: string }> = {
@@ -22,14 +22,14 @@ export function labelBlocks(blocks: TrainingBlock[]): PlanBlock[] {
     if (block.phase) totals.set(block.phase, (totals.get(block.phase) ?? 0) + 1);
   const seen = new Map<BlockPhase, number>();
   return blocks.map((block) => {
-    if (!block.phase) return { ...block, label: block.title, color: KIND_COLORS.rest };
+    if (!block.phase) return { ...block, label: block.title, color: phaseColor(null) };
     const ordinal = (seen.get(block.phase) ?? 0) + 1;
     seen.set(block.phase, ordinal);
     const name = PHASE_META[block.phase].label;
     return {
       ...block,
       label: totals.get(block.phase)! > 1 ? `${name} ${ordinal}` : name,
-      color: PHASE_COLORS[block.phase],
+      color: phaseColor(block.phase),
     };
   });
 }

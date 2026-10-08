@@ -1,6 +1,6 @@
 import type { TrainingBlock } from '@askesis/api-client';
 import { expect, it } from 'vitest';
-import { PHASE_COLORS } from '../theme/palette';
+import { phaseColor } from '../theme/palette';
 import {
   coveringRange,
   isCutback,
@@ -35,10 +35,10 @@ const plan = [
 
 it('numbers repeated phases and colours blocks by phase', () => {
   expect(labelBlocks(plan).map((b) => [b.label, b.color])).toEqual([
-    ['Base', PHASE_COLORS.base],
-    ['Build 1', PHASE_COLORS.build],
-    ['Build 2', PHASE_COLORS.build],
-    ['Taper', PHASE_COLORS.taper],
+    ['Base', phaseColor('base')],
+    ['Build 1', phaseColor('build')],
+    ['Build 2', phaseColor('build')],
+    ['Taper', phaseColor('taper')],
   ]);
 });
 

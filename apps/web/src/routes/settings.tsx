@@ -5,10 +5,8 @@ import {
   Gauge,
   Library,
   LogOut,
-  Monitor,
-  Moon,
   RotateCcw,
-  Sun,
+  TriangleAlert,
   UserRound,
 } from 'lucide-react';
 import { useState, type CSSProperties, type ReactNode } from 'react';
@@ -22,10 +20,23 @@ import {
   useUnits,
   type LoadUnits,
   type PoolUnits,
-  type ThemeMode,
   type UnitPreference,
 } from '../settings';
-import { ACCENTS, isValidHex, normalizeHex, THEMES, type ThemeDefinition } from '../theme/palette';
+import {
+  ACCENT_BY_ID,
+  accentClash,
+  accentFill,
+  accentStops,
+  ACCENTS,
+  EFFORT_META,
+  EFFORTS,
+  isValidHex,
+  onFill,
+  normalizeHex,
+  THEMES,
+  type AccentOption,
+  type ThemeDefinition,
+} from '../theme/palette';
 
 function Row({ label, hint, children }: { label: string; hint?: string; children: ReactNode }) {
   return (
@@ -60,16 +71,49 @@ function ThemeSwatch({
         {
           '--swatch-bg': theme.colors.bg,
           '--swatch-surface': theme.colors.surface,
-          '--swatch-text': theme.colors.text,
-          '--swatch-accent': accent,
+          '--swatch-border': theme.colors.border,
+          '--swatch-accent': accentFill(accentStops(accent, theme.mode)),
         } as CSSProperties
       }
     >
       <span className="swatch-preview" aria-hidden="true">
-        <i />
+        <i>
+          {EFFORTS.map((effort) => (
+            <em key={effort} style={{ background: EFFORT_META[effort][theme.mode] }} />
+          ))}
+        </i>
         <b />
       </span>
       <span>{theme.name}</span>
+    </button>
+  );
+}
+
+function AccentDot({
+  accent,
+  mode,
+  selected,
+  onSelect,
+}: {
+  accent: AccentOption;
+  mode: 'dark' | 'light';
+  selected: boolean;
+  onSelect: () => void;
+}) {
+  const stops = accentStops(accent.id, mode);
+  const onDot = onFill(stops);
+  return (
+    <button
+      type="button"
+      role="radio"
+      aria-checked={selected}
+      aria-label={accent.name}
+      title={accent.name}
+      className={cx('accent-dot', selected && 'selected')}
+      style={{ '--dot': accentFill(stops), '--on-dot': onDot } as CSSProperties}
+      onClick={onSelect}
+    >
+      {selected ? <Check size={14} aria-hidden="true" /> : null}
     </button>
   );
 }
@@ -78,7 +122,7 @@ function ThemeSwatch({
 export function SettingsPage() {
   const { user } = useUser();
   const clerk = useClerk();
-  const { settings, update, reset } = useSettings();
+  const { settings, theme, update, reset } = useSettings();
   const units = useUnits();
   const performance = usePerformance().data;
   const { pool } = settings;
@@ -92,12 +136,29 @@ export function SettingsPage() {
     if (system === 'cycle_power') return [`FTP ${formatPower(threshold.target)}`];
     return [`CSS ${formatSwimPace(threshold.target, pool)}`];
   });
-  const [hex, setHex] = useState(settings.accent);
+  const mode = theme.isDark ? 'dark' : 'light';
+  const matchDevice = settings.mode === 'system';
+  const preset = ACCENT_BY_ID[settings.accent];
+  const [hex, setHex] = useState(preset ? '' : settings.accent);
+  const clash = accentClash(hex);
   const displayName = user?.fullName ?? user?.firstName ?? 'Askesis athlete';
   const email = user?.primaryEmailAddress?.emailAddress ?? '';
-  const customAccent = !ACCENTS.some(
-    (a) => a.color.toUpperCase() === settings.accent.toUpperCase(),
-  );
+  const solids = ACCENTS.filter((accent) => accent.stops.length === 1);
+  const blends = ACCENTS.filter((accent) => accent.stops.length > 1);
+  const pickAccent = (accent: AccentOption) => {
+    update({ accent: accent.id });
+    setHex('');
+  };
+  /** Without Match device a swatch is the theme; with it, a swatch fills its own slot. */
+  const pickTheme = (next: ThemeDefinition) =>
+    update({
+      [next.mode === 'dark' ? 'darkTheme' : 'lightTheme']: next.id,
+      ...(matchDevice ? {} : { mode: next.mode }),
+    });
+  const themeSelected = (option: ThemeDefinition) =>
+    matchDevice
+      ? option.id === settings.darkTheme || option.id === settings.lightTheme
+      : option.id === theme.themeId;
 
   return (
     <div className="page settings-page">
@@ -148,95 +209,115 @@ export function SettingsPage() {
           Appearance
         </h2>
         <Card>
-          <Row label="Mode" hint="Follow your device, or always use dark or light.">
-            <Segmented<ThemeMode>
-              label="Colour mode"
-              value={settings.mode}
-              onChange={(mode) => update({ mode })}
-              options={[
-                { value: 'system', label: 'System', icon: Monitor },
-                { value: 'dark', label: 'Dark', icon: Moon },
-                { value: 'light', label: 'Light', icon: Sun },
-              ]}
-            />
-          </Row>
-          <Row label="Dark theme">
-            <div className="swatch-row">
-              {THEMES.filter((t) => t.mode === 'dark').map((theme) => (
-                <ThemeSwatch
-                  key={theme.id}
-                  theme={theme}
-                  accent={settings.accent}
-                  selected={settings.darkTheme === theme.id}
-                  onSelect={() =>
-                    update({
-                      darkTheme: theme.id,
-                      mode: settings.mode === 'light' ? 'dark' : settings.mode,
-                    })
-                  }
-                />
+          <Row
+            label="Theme"
+            hint={
+              matchDevice
+                ? 'Pick one dark and one light theme; your device chooses between them.'
+                : 'Choose any theme, dark or light.'
+            }
+          >
+            <div className="theme-picker">
+              {(['dark', 'light'] as const).map((group) => (
+                <div className="swatch-group" key={group}>
+                  <span className="label">{group === 'dark' ? 'Dark' : 'Light'}</span>
+                  <div className="swatch-row">
+                    {THEMES.filter((option) => option.mode === group).map((option) => (
+                      <ThemeSwatch
+                        key={option.id}
+                        theme={option}
+                        accent={settings.accent}
+                        selected={themeSelected(option)}
+                        onSelect={() => pickTheme(option)}
+                      />
+                    ))}
+                  </div>
+                </div>
               ))}
             </div>
           </Row>
-          <Row label="Light theme">
-            <div className="swatch-row">
-              {THEMES.filter((t) => t.mode === 'light').map((theme) => (
-                <ThemeSwatch
-                  key={theme.id}
-                  theme={theme}
-                  accent={settings.accent}
-                  selected={settings.lightTheme === theme.id}
-                  onSelect={() =>
-                    update({
-                      lightTheme: theme.id,
-                      mode: settings.mode === 'dark' ? 'light' : settings.mode,
-                    })
-                  }
-                />
-              ))}
-            </div>
+          <Row
+            label="Match device"
+            hint="Switch between your dark and light theme with your device."
+          >
+            <label className="switch">
+              <input
+                type="checkbox"
+                checked={matchDevice}
+                onChange={(event) => update({ mode: event.target.checked ? 'system' : mode })}
+              />
+              <span aria-hidden="true" />
+              <span className="sr-only">Match device</span>
+            </label>
           </Row>
-          <Row label="Accent" hint="Text using the accent is adjusted automatically for contrast.">
-            <div className="accent-row" role="radiogroup" aria-label="Accent colour">
-              {ACCENTS.map((accent) => {
-                const selected = accent.color.toUpperCase() === settings.accent.toUpperCase();
-                return (
-                  <button
+          <Row
+            label="Accent"
+            hint="The app’s own colour, for buttons and selection. Workout colours are kept for effort."
+          >
+            <div className="accent-picker">
+              <div className="accent-row" role="radiogroup" aria-label="Accent colour">
+                {solids.map((accent) => (
+                  <AccentDot
                     key={accent.id}
-                    type="button"
-                    role="radio"
-                    aria-checked={selected}
-                    aria-label={accent.name}
-                    title={accent.name}
-                    className={cx('accent-dot', selected && 'selected')}
-                    style={{ '--dot': accent.color } as CSSProperties}
-                    onClick={() => {
-                      update({ accent: accent.color });
-                      setHex(accent.color);
-                    }}
-                  >
-                    {selected ? <Check size={14} aria-hidden="true" /> : null}
-                  </button>
-                );
-              })}
-              <form
-                className={cx('hex-input', customAccent && 'selected')}
-                onSubmit={(event) => {
-                  event.preventDefault();
-                  if (isValidHex(hex)) update({ accent: normalizeHex(hex) });
-                }}
-              >
-                <label>
-                  <span className="sr-only">Custom accent hex</span>
-                  <input
-                    value={hex}
-                    maxLength={7}
-                    onChange={(event) => setHex(event.target.value)}
-                    onBlur={() => isValidHex(hex) && update({ accent: normalizeHex(hex) })}
-                    aria-invalid={!isValidHex(hex)}
+                    accent={accent}
+                    mode={mode}
+                    selected={settings.accent === accent.id}
+                    onSelect={() => pickAccent(accent)}
                   />
-                </label>
-              </form>
+                ))}
+                <span className="accent-divider" aria-hidden="true" />
+                {blends.map((accent) => (
+                  <AccentDot
+                    key={accent.id}
+                    accent={accent}
+                    mode={mode}
+                    selected={settings.accent === accent.id}
+                    onSelect={() => pickAccent(accent)}
+                  />
+                ))}
+                <form
+                  className={cx('hex-input', !preset && 'selected')}
+                  onSubmit={(event) => {
+                    event.preventDefault();
+                    if (isValidHex(hex)) update({ accent: normalizeHex(hex) });
+                  }}
+                >
+                  <label>
+                    <span className="sr-only">Custom accent hex</span>
+                    <input
+                      value={hex}
+                      placeholder="#Custom"
+                      maxLength={7}
+                      onChange={(event) => setHex(event.target.value)}
+                      onBlur={() => isValidHex(hex) && update({ accent: normalizeHex(hex) })}
+                      aria-invalid={hex !== '' && !isValidHex(hex)}
+                    />
+                  </label>
+                </form>
+              </div>
+              <small className="accent-name">
+                {preset ? `${preset.name}${preset.stops.length > 1 ? ' · blend' : ''}` : 'Custom'}
+              </small>
+              {clash ? (
+                <small className="accent-warning" role="status">
+                  <TriangleAlert size={13} aria-hidden="true" /> Close to the{' '}
+                  {EFFORT_META[clash].label.toLowerCase()} effort colour, so it may blend into your
+                  workouts.
+                </small>
+              ) : null}
+            </div>
+          </Row>
+          <Row
+            label="Workout colours"
+            hint="Colour shows effort, from recovery to max. Icons show the sport."
+          >
+            <div className="effort-key" aria-label="Effort colours, easiest to hardest">
+              {EFFORTS.map((effort) => (
+                <span key={effort} style={{ '--zone': EFFORT_META[effort][mode] } as CSSProperties}>
+                  <i />
+                  {EFFORT_META[effort].label}
+                </span>
+              ))}
             </div>
           </Row>
         </Card>

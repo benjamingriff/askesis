@@ -1,64 +1,157 @@
 import type { RacePriority, WorkoutStep, WorkoutSummary } from '@askesis/api-client';
-import {
-  Bike,
-  Dumbbell,
-  Flag,
-  Footprints,
-  Gauge,
-  Layers,
-  Leaf,
-  Moon,
-  Signpost,
-  Trophy,
-  Waves,
-  Zap,
-  type LucideIcon,
-} from 'lucide-react';
-import { KIND_COLORS, ZONE_COLORS } from '../theme/palette';
+import { Moon, PersonStanding, Trophy, type LucideIcon } from 'lucide-react';
+import { effortColor, zoneEffort, type Effort } from '../theme/palette';
 import { METRES_PER_MILE, addDays, daysBetween, startOfWeek } from './format';
+import { SPORT_META, type Sport } from './sports';
 
-export type WorkoutKind = keyof typeof KIND_COLORS | 'test';
+/** What a session is for, independent of sport. Its effort sets its colour. */
+export type WorkoutKind =
+  | 'recovery'
+  | 'easy'
+  | 'long'
+  | 'steady'
+  | 'tempo'
+  | 'intervals'
+  | 'speed'
+  | 'strength'
+  | 'mobility'
+  | 'brick'
+  | 'race'
+  | 'test'
+  | 'rest';
 
-export const KIND_META: Record<WorkoutKind, { label: string; icon: LucideIcon; color: string }> = {
-  easy: { label: 'Easy run', icon: Footprints, color: KIND_COLORS.easy },
-  recovery: { label: 'Recovery', icon: Leaf, color: KIND_COLORS.recovery },
-  long: { label: 'Long run', icon: Signpost, color: KIND_COLORS.long },
-  tempo: { label: 'Tempo', icon: Gauge, color: KIND_COLORS.tempo },
-  intervals: { label: 'Intervals', icon: Zap, color: KIND_COLORS.intervals },
-  strength: { label: 'Strength', icon: Dumbbell, color: KIND_COLORS.strength },
-  race: { label: 'Race', icon: Trophy, color: KIND_COLORS.race },
-  test: { label: 'Time trial', icon: Flag, color: KIND_COLORS.race },
-  rest: { label: 'Rest', icon: Moon, color: KIND_COLORS.rest },
-  swim: { label: 'Swim', icon: Waves, color: KIND_COLORS.swim },
-  ride: { label: 'Ride', icon: Bike, color: KIND_COLORS.ride },
-  mixed: { label: 'Multisport', icon: Layers, color: KIND_COLORS.mixed },
+export const KIND_META: Record<WorkoutKind, { label: string; effort: Effort | null }> = {
+  recovery: { label: 'Recovery', effort: 'recovery' },
+  easy: { label: 'Easy', effort: 'easy' },
+  long: { label: 'Long', effort: 'easy' },
+  steady: { label: 'Steady', effort: 'steady' },
+  tempo: { label: 'Threshold', effort: 'threshold' },
+  intervals: { label: 'Intervals', effort: 'hard' },
+  speed: { label: 'Speed', effort: 'max' },
+  strength: { label: 'Strength', effort: 'steady' },
+  mobility: { label: 'Mobility', effort: 'recovery' },
+  brick: { label: 'Brick', effort: 'steady' },
+  race: { label: 'Race', effort: 'max' },
+  test: { label: 'Test', effort: 'max' },
+  rest: { label: 'Rest', effort: null },
+};
+
+/** Natural names for the common sport and session pairs; others read "Ride · Speed". */
+const NAMES: Partial<Record<Sport, Partial<Record<WorkoutKind, string>>>> = {
+  run: {
+    recovery: 'Recovery run',
+    easy: 'Easy run',
+    long: 'Long run',
+    steady: 'Steady run',
+    tempo: 'Tempo',
+    intervals: 'Intervals',
+    speed: 'Speed',
+    test: 'Time trial',
+  },
+  cycle: {
+    recovery: 'Recovery ride',
+    easy: 'Endurance ride',
+    long: 'Long ride',
+    steady: 'Tempo ride',
+    tempo: 'Threshold ride',
+    intervals: 'Bike intervals',
+    speed: 'Sprints',
+    test: 'FTP test',
+  },
+  swim: {
+    recovery: 'Recovery swim',
+    easy: 'Aerobic swim',
+    long: 'Long swim',
+    steady: 'Steady swim',
+    tempo: 'Threshold swim',
+    intervals: 'Swim intervals',
+    speed: 'Sprint swim',
+    test: 'CSS test',
+  },
 };
 
 /**
- * The API classifies workouts by sport, and races by an explicit race priority, so infer a
- * presentation kind for runs from the coach's wording. A title never makes a workout a race. This
- * only drives colour and iconography; it never changes the prescription.
+ * The API classifies workouts by sport, and races by an explicit race priority, so infer the
+ * session from the coach's wording. A title never makes a workout a race. This only drives labels
+ * and colour; it never changes the prescription.
  */
 export function inferKind(
   workout: Pick<WorkoutSummary, 'title' | 'purpose' | 'discipline' | 'racePriority'>,
 ): WorkoutKind {
-  const text = `${workout.title} ${workout.purpose ?? ''}`.toLowerCase();
   const title = workout.title.toLowerCase();
+  const sport = workout.discipline;
   if (workout.racePriority) return 'race';
   if (/time trial|\btest\b|benchmark/.test(title)) return 'test';
-  if (workout.discipline === 'swim') return 'swim';
-  if (workout.discipline === 'cycle') return 'ride';
-  if (workout.discipline === 'strength') return 'strength';
-  if (workout.discipline === 'mixed') return 'mixed';
-  if (workout.discipline !== 'run' && /strength|gym|mobility|core/.test(text)) return 'strength';
-  if (/long run|long easy|\blong\b/.test(title)) return 'long';
-  if (/interval|repetition|\breps?\b|\d+\s?[x×]\s?\d|vo2|track|hill/.test(title))
-    return 'intervals';
-  if (/tempo|threshold|cruise|progression|marathon pace|steady/.test(title)) return 'tempo';
+  if (/^rest\b|rest day/.test(title)) return 'rest';
+  if (/mobility|yoga|stretch|flexibility/.test(title)) return 'mobility';
+  if (sport === 'strength') return 'strength';
+  if (!['run', 'cycle', 'swim', 'mixed'].includes(sport) && /strength|gym|core/.test(title))
+    return 'strength';
+  if (/brick|hyrox|simulation/.test(title)) return 'brick';
   if (/recovery|shake ?out/.test(title)) return 'recovery';
-  if (/strength|gym|mobility/.test(title)) return 'strength';
-  if (/rest/.test(title)) return 'rest';
+  if (/long run|long ride|long swim|long easy|\blong\b/.test(title)) return 'long';
+  if (/sprint|repetition|anaerobic|neuromuscular|\bspeed\b|all[- ]out/.test(title)) return 'speed';
+  if (/threshold|cruise|sweet ?spot|\bcss\b|lactate/.test(title)) return 'tempo';
+  // A running tempo is threshold work; on the bike or in the pool tempo sits just below it.
+  if (/tempo/.test(title)) return sport === 'run' ? 'tempo' : 'steady';
+  if (/interval|vo2|track|hill|fartlek|repeats?\b|\d+\s?[x×]\s?\d/.test(title)) return 'intervals';
+  if (/steady|marathon pace|progression|moderate|race pace/.test(title)) return 'steady';
   return 'easy';
+}
+
+export type WorkoutLook = {
+  kind: WorkoutKind;
+  sport: Sport;
+  /** Session name for this sport, such as "Long ride" or "Swim intervals". */
+  label: string;
+  /** Sport icon, except for milestones and rest. */
+  icon: LucideIcon;
+  effort: Effort | null;
+  /** The effort colour as a CSS value; rest days fall back to a quiet neutral. */
+  color: string;
+};
+
+/** Sessions that read the same in any sport keep their own name. */
+const SPORTLESS: WorkoutKind[] = ['strength', 'mobility', 'brick', 'race', 'rest'];
+
+function lookLabel(kind: WorkoutKind, sport: Sport): string {
+  const named = NAMES[sport]?.[kind];
+  if (named) return named;
+  if (SPORTLESS.includes(kind)) return KIND_META[kind].label;
+  return `${SPORT_META[sport].label} · ${KIND_META[kind].label}`;
+}
+
+function strengthEffort(title: string): Effort {
+  if (/heavy|power|max|plyo|explosive/.test(title)) return 'hard';
+  if (/light|activation|prehab|technique/.test(title)) return 'easy';
+  return 'steady';
+}
+
+/** How a workout presents: the icon names the sport and the colour says how hard it is. */
+export function workoutLook(
+  workout: Pick<WorkoutSummary, 'title' | 'purpose' | 'discipline' | 'racePriority'>,
+): WorkoutLook {
+  const kind = inferKind(workout);
+  const sport = (workout.discipline in SPORT_META ? workout.discipline : 'other') as Sport;
+  const effort =
+    kind === 'strength' ? strengthEffort(workout.title.toLowerCase()) : KIND_META[kind].effort;
+  const label = lookLabel(kind, sport);
+  const icon =
+    kind === 'race'
+      ? Trophy
+      : kind === 'rest'
+        ? Moon
+        : kind === 'mobility'
+          ? PersonStanding
+          : SPORT_META[sport].icon;
+  return {
+    kind,
+    sport,
+    label,
+    icon,
+    effort,
+    color: effort ? effortColor(effort) : 'var(--text-muted)',
+  };
 }
 
 // ---- Races -------------------------------------------------------------------------------------
@@ -93,7 +186,13 @@ const ZONE_LEVEL: Record<string, number> = {
   anaerobic: 5,
 };
 
-export type Segment = { seconds: number; level: number; color: string; label: string };
+export type Segment = {
+  seconds: number;
+  level: number;
+  effort: Effort;
+  color: string;
+  label: string;
+};
 
 /** Typical speeds (seconds per km) when a step has a distance but no pace to time it by. */
 const DEFAULT_SECONDS_PER_KM: Record<string, number> = {
@@ -147,6 +246,31 @@ function unzonedLevel(step: WorkoutStep, restful: boolean): number {
   return step.discipline === 'strength' ? 3.2 : 1.4;
 }
 
+/** The effort step an unzoned level falls in, cut at the same points as the zone levels. */
+function levelEffort(level: number): Effort {
+  if (level < 1.2) return 'recovery';
+  if (level < 2) return 'easy';
+  if (level < 2.7) return 'steady';
+  if (level < 3.7) return 'threshold';
+  if (level < 4.5) return 'hard';
+  return 'max';
+}
+
+/** One step's effort and chart height: its zone if it has one, else RPE, reps in reserve or role. */
+export function stepEffort(step: WorkoutStep): { effort: Effort; level: number } {
+  const key = step.targets.find((target) => target.type === 'zone')?.zoneKey ?? null;
+  const restful = step.role === 'recovery' || step.role === 'warmup' || step.role === 'cooldown';
+  if (key) {
+    const effort = zoneEffort(key);
+    const level =
+      restful && (effort === 'easy' || effort === 'recovery') ? 1 : (ZONE_LEVEL[key] ?? 1.4);
+    return { effort, level };
+  }
+  const level = unzonedLevel(step, restful);
+  if (restful) return { effort: step.role === 'recovery' ? 'recovery' : 'easy', level };
+  return { effort: levelEffort(level), level };
+}
+
 /** Flattens a prescription tree into timed segments for the effort profile chart. */
 export function intensitySegments(step: WorkoutStep): Segment[] {
   if (step.kind === 'sequence') return step.steps.flatMap(intensitySegments);
@@ -155,23 +279,17 @@ export function intensitySegments(step: WorkoutStep): Segment[] {
     return Array.from({ length: step.repeatCount ?? 1 }, () => inner).flat();
   }
   const zone = step.targets.find((target) => target.type === 'zone');
-  const key = zone?.zoneKey ?? null;
-  const restful = step.role === 'recovery' || step.role === 'warmup' || step.role === 'cooldown';
-  const level = key ? (ZONE_LEVEL[key] ?? 1.4) : unzonedLevel(step, restful);
   const pace = step.targets.find((target) => target.type === 'pace');
   const secondsPerKm =
     paceSecondsPerKm(pace?.targetValue, pace?.unit) ??
     paceSecondsPerKm(zone?.resolvedZone?.targetValue, zone?.resolvedZone?.unit);
-  const color = key
-    ? (ZONE_COLORS[key] ?? ZONE_COLORS.easy!)
-    : step.discipline === 'strength' && !restful
-      ? KIND_COLORS.strength
-      : ZONE_COLORS.easy!;
+  const { effort, level } = stepEffort(step);
   return [
     {
       seconds: Math.max(stepSeconds(step, secondsPerKm), 20),
-      level: restful && (key === 'easy' || key === 'recovery') ? 1 : level,
-      color,
+      level,
+      effort,
+      color: effortColor(effort),
       label: step.label ?? step.role ?? 'Effort',
     },
   ];

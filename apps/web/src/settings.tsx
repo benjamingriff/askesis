@@ -8,12 +8,19 @@ import {
   type ReactNode,
 } from 'react';
 import {
+  ACCENT_BY_ID,
+  accentFill,
+  accentStops,
   alpha,
   DEFAULT_ACCENT,
+  EFFORT_META,
+  EFFORTS,
   isValidHex,
-  luminance,
+  onFill,
+  mix,
   normalizeHex,
   readableOn,
+  RETIRED_ACCENTS,
   STATUS_COLORS,
   THEME_BY_ID,
   type ThemeColors,
@@ -32,6 +39,7 @@ export type Settings = {
   mode: ThemeMode;
   darkTheme: ThemeId;
   lightTheme: ThemeId;
+  /** A preset accent id (see ACCENTS) or a custom hex colour. */
   accent: string;
   units: UnitPreference;
   /** Swim paces and distances: per 100 metres or per 100 yards. */
@@ -53,13 +61,20 @@ export const DEFAULT_SETTINGS: Settings = {
 };
 
 const STORAGE_KEY = 'askesis.settings.v1';
+/** Saved settings without this version predate accent presets: their accent is always a hex. */
+const SETTINGS_VERSION = 2;
 
 export type Theme = {
   isDark: boolean;
   themeId: ThemeId;
   colors: ThemeColors;
+  /** The accent as one colour: a blend's midpoint. Used for rings, borders and outlines. */
   accent: string;
-  /** Text/icon colour placed on a solid accent fill. */
+  /** Background for accent-filled controls: a gradient for blends. */
+  accentFill: string;
+  /** The accent's stops, so a blend can wash the page backdrop with both ends. */
+  accentStops: string[];
+  /** Text/icon colour placed on an accent fill. */
   onAccent: string;
   /** Accent adjusted so it stays legible as text on the page background. */
   accentText: string;
@@ -71,24 +86,39 @@ export function buildTheme(settings: Settings, systemScheme: 'light' | 'dark'): 
   const effective = settings.mode === 'system' ? systemScheme : settings.mode;
   const themeId = effective === 'dark' ? settings.darkTheme : settings.lightTheme;
   const def = THEME_BY_ID[themeId];
-  const accent = settings.accent;
+  const stops = accentStops(settings.accent, def.mode);
+  const accent = stops.length > 1 ? mix(stops[0]!, stops[1]!, 0.5) : stops[0]!;
   return {
     isDark: def.mode === 'dark',
     themeId,
     colors: def.colors,
     accent,
-    onAccent: luminance(accent) > 0.38 ? '#0A0A0B' : '#FFFFFF',
+    accentFill: accentFill(stops),
+    accentStops: stops,
+    onAccent: onFill(stops),
     accentText: readableOn(accent, def.colors.bg),
     accentSoft: alpha(accent, def.mode === 'dark' ? 0.14 : 0.16),
     accentBorder: alpha(accent, def.mode === 'dark' ? 0.35 : 0.5),
   };
 }
 
+/**
+ * A saved accent as a preset id or custom hex. Retired presets in legacy settings move to their
+ * closest successor; a custom hex saved since then is kept even when it matches one.
+ */
+export function readAccent(value: unknown, legacy = false): string {
+  if (typeof value !== 'string') return DEFAULT_ACCENT;
+  if (ACCENT_BY_ID[value]) return value;
+  if (!isValidHex(value)) return DEFAULT_ACCENT;
+  const hex = normalizeHex(value);
+  return (legacy && RETIRED_ACCENTS[hex]) || hex;
+}
+
 function readSettings(): Settings {
   try {
     const raw: unknown = JSON.parse(readStorage(STORAGE_KEY) ?? 'null');
     if (!raw || typeof raw !== 'object') return DEFAULT_SETTINGS;
-    const value = raw as Partial<Settings>;
+    const value = raw as Partial<Settings> & { version?: unknown };
     return {
       mode: ['system', 'dark', 'light'].includes(value.mode as string)
         ? (value.mode as ThemeMode)
@@ -101,10 +131,7 @@ function readSettings(): Settings {
         value.lightTheme && THEME_BY_ID[value.lightTheme]?.mode === 'light'
           ? value.lightTheme
           : DEFAULT_SETTINGS.lightTheme,
-      accent:
-        typeof value.accent === 'string' && isValidHex(value.accent)
-          ? normalizeHex(value.accent)
-          : DEFAULT_SETTINGS.accent,
+      accent: readAccent(value.accent, value.version !== SETTINGS_VERSION),
       units: ['plan', 'km', 'mi'].includes(value.units as string)
         ? (value.units as UnitPreference)
         : DEFAULT_SETTINGS.units,
@@ -137,10 +164,14 @@ export function applyTheme(theme: Theme, root: HTMLElement = document.documentEl
     '--text-muted': c.textMuted,
     '--overlay': c.overlay,
     '--accent': theme.accent,
+    '--accent-fill': theme.accentFill,
     '--on-accent': theme.onAccent,
     '--accent-text': theme.accentText,
     '--accent-soft': theme.accentSoft,
     '--accent-border': theme.accentBorder,
+    // A faint wash of the accent behind the app, from both ends of a blend.
+    '--glow-a': alpha(theme.accentStops[0]!, theme.isDark ? 0.075 : 0.1),
+    '--glow-b': alpha(theme.accentStops.at(-1)!, theme.isDark ? 0.055 : 0.08),
     '--locked': readableOn(STATUS_COLORS.locked, c.bg),
     '--locked-soft': alpha(STATUS_COLORS.locked, 0.14),
     '--locked-border': alpha(STATUS_COLORS.locked, 0.35),
@@ -158,6 +189,8 @@ export function applyTheme(theme: Theme, root: HTMLElement = document.documentEl
       ? 'inset 0 1px 0 rgba(255, 255, 255, 0.12), 0 -10px 30px -12px rgba(0, 0, 0, 0.6)'
       : 'inset 0 1px 0 rgba(255, 255, 255, 0.7), 0 -10px 30px -12px rgba(0, 0, 0, 0.16)',
   };
+  for (const effort of EFFORTS)
+    vars[`--effort-${effort}`] = EFFORT_META[effort][theme.isDark ? 'dark' : 'light'];
   for (const [key, value] of Object.entries(vars)) root.style.setProperty(key, value);
   root.style.colorScheme = theme.isDark ? 'dark' : 'light';
   root.dataset.theme = theme.themeId;
@@ -192,7 +225,10 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const theme = useMemo(() => buildTheme(settings, scheme), [settings, scheme]);
   useEffect(() => applyTheme(theme), [theme]);
 
-  useEffect(() => writeStorage(STORAGE_KEY, JSON.stringify(settings)), [settings]);
+  useEffect(
+    () => writeStorage(STORAGE_KEY, JSON.stringify({ ...settings, version: SETTINGS_VERSION })),
+    [settings],
+  );
 
   const update = useCallback(
     (patch: Partial<Settings>) => setSettings((current) => ({ ...current, ...patch })),

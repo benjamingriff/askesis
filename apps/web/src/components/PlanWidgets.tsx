@@ -30,7 +30,7 @@ import {
   SYSTEM_META,
   systemsForSports,
 } from '../lib/sports';
-import { RACE_META, topRace, type WeekSummary } from '../lib/workouts';
+import { RACE_META, topRace, workoutLook, type WeekSummary } from '../lib/workouts';
 import {
   knownCoverage,
   usePerformance,
@@ -39,7 +39,7 @@ import {
   type Plan,
 } from '../plan-data';
 import { useSportUnits, type Units } from '../settings';
-import { KIND_COLORS, ZONE_COLORS } from '../theme/palette';
+import { EFFORT_META, EFFORTS, effortColor, zoneEffort } from '../theme/palette';
 import { Pill, cx } from './ui';
 
 // ---- Plan state --------------------------------------------------------------------------------
@@ -213,7 +213,7 @@ export function BlockTimeline({
   const next = current ? null : blocks.find((block) => block.startDate > today);
   const focus = current ?? next;
   return (
-    <div className="block-timeline" style={{ '--race': KIND_COLORS.race } as CSSProperties}>
+    <div className="block-timeline">
       <div className="block-track-wrap">
         <ol className="block-track" aria-label="Training blocks">
           {line.segments.map((segment) => {
@@ -319,12 +319,7 @@ export function WeekChart({
   // Leave headroom for race badges above the tallest bars.
   const room = weeks.some((week) => topRace(week.workouts)) ? 82 : 100;
   return (
-    <div
-      className="week-chart"
-      role="group"
-      aria-label="Weekly volume"
-      style={{ '--race': KIND_COLORS.race } as CSSProperties}
-    >
+    <div className="week-chart" role="group" aria-label="Weekly volume">
       {weeks.map((week) => {
         const active = week.number === selected;
         const block = blockOf?.(week) ?? null;
@@ -363,6 +358,26 @@ export function WeekChart({
           </button>
         );
       })}
+    </div>
+  );
+}
+
+/** Key to the effort colours, limited to the efforts these workouts use. */
+export function EffortLegend({
+  workouts,
+}: {
+  workouts: Pick<WorkoutSummary, 'title' | 'purpose' | 'discipline' | 'racePriority'>[];
+}) {
+  const present = new Set(workouts.map((workout) => workoutLook(workout).effort));
+  const efforts = EFFORTS.filter((effort) => present.has(effort));
+  if (!efforts.length) return null;
+  return (
+    <div className="calendar-legend" aria-label="Effort colours">
+      {efforts.map((effort) => (
+        <span key={effort} style={{ '--kind': effortColor(effort) } as CSSProperties}>
+          <i /> {EFFORT_META[effort].label}
+        </span>
+      ))}
     </div>
   );
 }
@@ -420,7 +435,7 @@ export function ZoneGuides({
           <div
             className="pace-card"
             key={zone.key}
-            style={{ '--zone': ZONE_COLORS[zone.key] ?? ZONE_COLORS.easy } as CSSProperties}
+            style={{ '--zone': effortColor(zoneEffort(zone.key)) } as CSSProperties}
           >
             <span className="zone-swatch" aria-hidden="true" />
             <span className="label">
