@@ -1,4 +1,4 @@
-import type { BlockPhase, TrainingBlock } from '@askesis/api-client';
+import type { BlockPhase, TrainingBlock, TrainingWeek } from '@askesis/api-client';
 import { KIND_COLORS, PHASE_COLORS } from '../theme/palette';
 import { addDays, daysBetween } from './format';
 
@@ -39,8 +39,29 @@ export function phasedBlocks(blocks: TrainingBlock[]): PlanBlock[] {
   return blocks.some((block) => block.phase) ? labelBlocks(blocks) : [];
 }
 
-/** The block covering most of a range's days (a calendar week), or null when none overlaps. */
-export function blockFor<T extends TrainingBlock>(
+export type PlanStructure = { blocks: PlanBlock[]; weeks: TrainingWeek[] };
+
+/** A version's phased blocks and all its stored weeks, whose cutback flags apply with or without phases. */
+export function planStructure(blocks: TrainingBlock[]): PlanStructure {
+  return { blocks: phasedBlocks(blocks), weeks: blocks.flatMap((block) => block.weeks) };
+}
+
+/**
+ * Whether a displayed week is a cutback: the stored week covering most of it is flagged. Stored
+ * weeks may start midweek, so a neighbouring cutback must not claim a mostly normal week.
+ */
+export function isCutback(
+  weeks: readonly TrainingWeek[],
+  range: { startDate: string; endDate: string },
+) {
+  return coveringRange(weeks, range)?.cutback ?? false;
+}
+
+/**
+ * The block or stored week covering most of a range's days (a calendar week), or null when none
+ * overlaps.
+ */
+export function coveringRange<T extends { startDate: string; endDate: string }>(
   blocks: readonly T[],
   range: { startDate: string; endDate: string },
 ): T | null {

@@ -1,5 +1,5 @@
 import { z } from '@hono/zod-openapi';
-import { BLOCK_PHASES } from '../plans/phases.js';
+import { BLOCK_PHASES, RACE_PRIORITIES } from '../plans/periodization.js';
 
 export const DatabaseIdSchema = z
   .string()
@@ -10,6 +10,8 @@ export const WorkoutPrioritySchema = z.enum(['low', 'medium', 'high']).openapi('
 export const WorkoutStepKindSchema = z
   .enum(['sequence', 'repeat', 'effort'])
   .openapi('WorkoutStepKind');
+export const BlockPhaseSchema = z.enum(BLOCK_PHASES);
+export const RacePrioritySchema = z.enum(RACE_PRIORITIES);
 
 export const WorkoutSummarySchema = z
   .object({
@@ -24,6 +26,8 @@ export const WorkoutSummarySchema = z
     purpose: z.string().nullable(),
     discipline: z.string(),
     priority: WorkoutPrioritySchema,
+    /** A goal race, B tune-up, C raced as training; null when the workout is not a race. */
+    racePriority: RacePrioritySchema.nullable(),
     estimatedDurationSeconds: z.number().int().positive().nullable(),
     estimatedDistanceMetres: z.number().positive().nullable(),
   })
@@ -39,7 +43,15 @@ export const WorkoutListQuerySchema = z.object({
   planVersionId: DatabaseIdSchema,
 });
 
-export const BlockPhaseSchema = z.enum(BLOCK_PHASES);
+export const TrainingWeekSchema = z
+  .object({
+    weekNumber: z.number().int().positive(),
+    startDate: z.iso.date(),
+    endDate: z.iso.date(),
+    /** Deliberately lighter than the weeks around it. */
+    cutback: z.boolean(),
+  })
+  .openapi('TrainingWeek');
 
 /** A dated block of whole weeks. Phase is null for blocks written before phases existed. */
 export const TrainingBlockSchema = z
@@ -51,6 +63,7 @@ export const TrainingBlockSchema = z
     phase: BlockPhaseSchema.nullable(),
     startDate: z.iso.date(),
     endDate: z.iso.date(),
+    weeks: z.array(TrainingWeekSchema),
   })
   .openapi('TrainingBlock');
 

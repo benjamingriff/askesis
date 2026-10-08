@@ -384,6 +384,7 @@ export interface TrainingBlocks {
 
 export interface TrainingWeeks {
   block_id: string;
+  cutback: Generated<boolean>;
   description: string | null;
   end_date: Timestamp;
   id: Generated<string>;
@@ -443,6 +444,7 @@ export interface Workouts {
   primary_discipline: string;
   priority: Generated<string>;
   purpose: string | null;
+  race_priority: string | null;
   scheduled_date: Timestamp;
   title: string;
   updated_at: Generated<Timestamp>;

@@ -17,6 +17,7 @@ const workout: WorkoutSummary = {
   purpose: null,
   discipline: 'running',
   priority: 'medium',
+  racePriority: null,
   estimatedDurationSeconds: 2400,
   estimatedDistanceMetres: 6000,
 };
@@ -177,6 +178,7 @@ it('names the selected week’s phase and tints its bar', () => {
       phase: 'build',
       startDate: '2027-01-11',
       endDate: '2027-01-24',
+      weeks: [],
     },
   ]);
   render(
@@ -196,4 +198,75 @@ it('names the selected week’s phase and tints its bar', () => {
   expect(screen.getByText(/· Threshold build/)).toBeInTheDocument();
   const bar = screen.getByRole('button', { name: /^Week 1, Build/ });
   expect(bar.style.getPropertyValue('--bar')).toBe('#FBBF24');
+});
+
+it('marks cutback weeks and races on the chart, with the trophy on the goal race', () => {
+  const race = {
+    ...workout,
+    id: 'race',
+    scheduledDate: '2027-01-16',
+    title: 'Tune-up 10K',
+    racePriority: 'B' as const,
+  };
+  const goal = {
+    ...workout,
+    id: 'goal',
+    scheduledDate: '2027-01-23',
+    title: 'Half marathon',
+    racePriority: 'A' as const,
+  };
+  render(
+    <AccountQueryProvider>
+      <Schedule
+        workouts={[workout, race, goal]}
+        startDate="2027-01-11"
+        endDate="2027-01-31"
+        coverage={null}
+        units="km"
+        today="2027-01-12"
+        storedWeeks={[
+          { weekNumber: 1, startDate: '2027-01-11', endDate: '2027-01-17', cutback: true },
+          { weekNumber: 2, startDate: '2027-01-18', endDate: '2027-01-24', cutback: false },
+        ]}
+      />
+    </AccountQueryProvider>,
+  );
+  expect(screen.getByRole('button', { name: /^Week 1, cutback week, B race/ })).toHaveClass(
+    'cutback',
+  );
+  expect(screen.getByRole('button', { name: /^Week 2, A race/ })).not.toHaveClass('cutback');
+  expect(screen.getByText('Cutback')).toBeInTheDocument();
+  expect(screen.getByText('B race')).toHaveAttribute(
+    'title',
+    'Important tune-up, with a few easier days before it.',
+  );
+  fireEvent.click(screen.getByRole('radio', { name: 'Calendar' }));
+  const trophyDays = screen
+    .getAllByRole('gridcell')
+    .filter((cell) => cell.querySelector('.lucide-trophy'))
+    .map((cell) => cell.getAttribute('aria-label'));
+  expect(trophyDays).toEqual([expect.stringMatching(/^Saturday 23 January/)]);
+});
+
+it('shows no trophy without a goal race, even on the end date', () => {
+  const tuneUp = { ...workout, id: 'tune', title: 'Tune-up 5K', racePriority: 'B' as const };
+  const view = (workouts: (typeof workout)[]) => (
+    <AccountQueryProvider>
+      <Schedule
+        workouts={workouts}
+        startDate="2027-01-11"
+        endDate="2027-01-24"
+        coverage={null}
+        units="km"
+        today="2027-01-12"
+      />
+    </AccountQueryProvider>
+  );
+  const trophies = () =>
+    screen.getAllByRole('gridcell').filter((cell) => cell.querySelector('.lucide-trophy'));
+  const mounted = render(view([workout]));
+  fireEvent.click(screen.getByRole('radio', { name: 'Calendar' }));
+  expect(trophies()).toHaveLength(0);
+  mounted.rerender(view([tuneUp]));
+  expect(trophies()).toHaveLength(0);
 });

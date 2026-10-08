@@ -37,7 +37,7 @@ describe('workout repository authorization', () => {
     expect(workouts[0]?.planId).toBe(fixturePlanId);
   });
 
-  it('lists blocks for the plan owner, leaving blocks written before phases unclassified', async () => {
+  it('lists blocks and their weeks for the plan owner, leaving older blocks unclassified', async () => {
     await expect(listBlocks(fixtureOwnerId, fixtureVersionId)).resolves.toEqual([
       {
         id: '00000000-0000-0000-0000-000000000020',
@@ -47,6 +47,10 @@ describe('workout repository authorization', () => {
         phase: null,
         startDate: '2026-05-11',
         endDate: '2026-06-07',
+        weeks: [
+          { weekNumber: 1, startDate: '2026-05-11', endDate: '2026-05-17', cutback: false },
+          { weekNumber: 2, startDate: '2026-05-18', endDate: '2026-05-24', cutback: false },
+        ],
       },
     ]);
   });

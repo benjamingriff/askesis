@@ -5408,6 +5408,8 @@ export interface components {
             purpose: string | null;
             discipline: string;
             priority: components["schemas"]["WorkoutPriority"];
+            /** @enum {string|null} */
+            racePriority: "A" | "B" | "C" | null;
             estimatedDurationSeconds: number | null;
             estimatedDistanceMetres: number | null;
         };
@@ -5428,6 +5430,15 @@ export interface components {
             startDate: string;
             /** Format: date */
             endDate: string;
+            weeks: components["schemas"]["TrainingWeek"][];
+        };
+        TrainingWeek: {
+            weekNumber: number;
+            /** Format: date */
+            startDate: string;
+            /** Format: date */
+            endDate: string;
+            cutback: boolean;
         };
         WorkoutDetail: {
             workout: components["schemas"]["WorkoutSummary"];

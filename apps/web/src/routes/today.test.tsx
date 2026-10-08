@@ -262,6 +262,7 @@ it('closes a superseded workout after locking a new version without resetting th
     purpose: null,
     discipline: 'running',
     priority: 'medium',
+    racePriority: null,
     estimatedDurationSeconds: 1800,
     estimatedDistanceMetres: 5000,
   };
@@ -333,4 +334,39 @@ it('closes a superseded workout after locking a new version without resetting th
   expect(oldDetailCalls()).toBe(1);
   fireEvent.click(screen.getByRole('button', { name: /Replacement session/ }));
   await screen.findByRole('dialog', { name: /Replacement session/ });
+});
+
+it('counts down to the next goal race rather than the plan’s end', async () => {
+  const race = (id: string, scheduledDate: string, racePriority: 'A' | 'B') => ({
+    id,
+    planId: plan.id,
+    planVersionId: locked.id,
+    planTitle: plan.displayName,
+    weekNumber: 1,
+    scheduledDate,
+    title: `${racePriority} race ${id}`,
+    description: null,
+    purpose: null,
+    discipline: 'run',
+    priority: 'high',
+    racePriority,
+    estimatedDurationSeconds: 3600,
+    estimatedDistanceMetres: 10000,
+  });
+  const fallback = mocks.get.getMockImplementation()!;
+  mocks.get.mockImplementation(async (path: string, init: unknown) =>
+    path === '/api/v1/workouts'
+      ? {
+          data: {
+            workouts: [
+              race('past', '2027-01-05', 'A'),
+              race('tune-up', '2027-01-16', 'B'),
+              race('goal', '2027-01-24', 'A'),
+            ],
+          },
+        }
+      : fallback(path, init),
+  );
+  mount();
+  expect(await screen.findByText('12 days to go · A race goal')).toBeInTheDocument();
 });

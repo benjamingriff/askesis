@@ -5,7 +5,9 @@ Clerk account. It contains 64 scheduled sessions: running, cycling, swimming,
 triathlon bricks and transitions, strength, Hyrox stations and gym conditioning.
 Every week is populated, Friday is explicitly covered as a rest day, and double
 sessions have consecutive positions. Briefs, all four sport baselines, phased blocks
-(base, two builds, recovery, peak and taper), weekly targets, tags, nested prescriptions, calibration and two genuine locked
+(base with a cutback third week, two builds, recovery, peak and taper), an A, B and C
+race (a B tune-up closes Build 1, a C race sits in Build 2 and the A race is the last
+day), weekly targets, tags, nested prescriptions, calibration and two genuine locked
 revisions are included.
 
 The committed blueprint and coverage manifest live in
