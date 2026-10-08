@@ -144,6 +144,18 @@ export const KIND_COLORS = {
   rest: '#6B7280',
 } as const;
 
+/**
+ * Training-block phases. Base is calm, build and peak warm towards race intensity, taper eases
+ * off. Plans written before phases existed show their blocks in the neutral rest hue.
+ */
+export const PHASE_COLORS = {
+  base: '#60A5FA',
+  build: '#FBBF24',
+  peak: '#F87171',
+  taper: '#34D399',
+  recovery: '#A78BFA',
+} as const;
+
 export const ZONE_COLORS = {
   recovery: '#7DD3FC',
   easy: '#34D399',

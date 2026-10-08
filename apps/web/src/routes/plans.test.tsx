@@ -122,19 +122,21 @@ beforeEach(() => {
               plans:
                 options?.params?.query?.collection === 'active' ? [structuredClone(current)] : [],
             }
-          : path === '/api/v1/workouts'
-            ? { workouts: [] }
-            : path.endsWith('/revisions')
-              ? { revisions: [] }
-              : path === '/api/v1/performance'
-                ? {
-                    timezone: 'Europe/London',
-                    today: '2027-01-01',
-                    current: [],
-                    entries: [],
-                    usedByPlans: [],
-                  }
-                : structuredClone(briefState);
+          : path === '/api/v1/blocks'
+            ? { blocks: [] }
+            : path === '/api/v1/workouts'
+              ? { workouts: [] }
+              : path.endsWith('/revisions')
+                ? { revisions: [] }
+                : path === '/api/v1/performance'
+                  ? {
+                      timezone: 'Europe/London',
+                      today: '2027-01-01',
+                      current: [],
+                      entries: [],
+                      usedByPlans: [],
+                    }
+                  : structuredClone(briefState);
     return { data, response: new Response() };
   }) as typeof api.GET);
 });

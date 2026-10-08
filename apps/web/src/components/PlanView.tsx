@@ -7,6 +7,7 @@ import { useWorkoutSelection } from '../lib/use-workout-selection';
 import {
   knownCoverage,
   planVersion,
+  useBlocks,
   useBriefState,
   useDraftChanges,
   useWorkouts,
@@ -17,7 +18,7 @@ import { PlanHistory } from '../routes/plan-history';
 import { useUnits } from '../settings';
 import { useOpenPlanChat, PlanChatError, PlanToolbar } from './PlanLifecycle';
 import { PlanChanges, WorkoutChangesContext } from './PlanChanges';
-import { CoverageNote, PlanStatus, PlanZones, zonesTitle } from './PlanWidgets';
+import { BlockTimeline, CoverageNote, PlanStatus, PlanZones, zonesTitle } from './PlanWidgets';
 import { planSports } from '../lib/sports';
 import { Schedule, type SchedulePresentation } from './Schedule';
 import {
@@ -80,6 +81,9 @@ export function PlanView({
   const version = planVersion(plan, view);
   const brief = useBriefState(plan.id, version);
   const workouts = useWorkouts(version);
+  const blockQuery = useBlocks(version);
+  const blocks = blockQuery.data?.blocks ?? [];
+  const weeks = blockQuery.data?.weeks ?? [];
   const changes = useDraftChanges(plan.id, view === 'draft' ? plan.draft : null);
   const selection = useWorkoutSelection(workouts.data ?? [], version?.id);
   const units = useUnits(brief.data?.brief.unit);
@@ -169,6 +173,21 @@ export function PlanView({
                 <Flag size={14} aria-hidden="true" /> {goal}
               </p>
             ) : null}
+            {blocks.length ? (
+              <BlockTimeline
+                blocks={blocks}
+                startDate={version?.startDate ?? null}
+                endDate={version?.endDate ?? null}
+                today={today}
+                races={workouts.data?.filter((workout) => workout.racePriority)}
+              />
+            ) : null}
+            {blockQuery.error ? (
+              <ErrorState
+                message="Couldn’t load this plan’s training blocks."
+                onRetry={() => void blockQuery.refetch()}
+              />
+            ) : null}
             {progress ? (
               <div className="plan-progress">
                 <ProgressBar value={progress.value} label="Plan progress" />
@@ -250,6 +269,8 @@ export function PlanView({
                 units={units}
                 today={today}
                 selection={selection}
+                blocks={blocks}
+                storedWeeks={weeks}
                 onAskCoach={
                   plan.archived
                     ? undefined

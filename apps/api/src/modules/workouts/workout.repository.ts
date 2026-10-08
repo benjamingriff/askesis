@@ -3,10 +3,13 @@ import { getDatabase } from '../../database/client.js';
 import type { Workouts } from '../../database/generated.js';
 import { readEntries, resolveCalibration } from '../performance/performance.service.js';
 import {
+  BlockPhaseSchema,
+  RacePrioritySchema,
   StepCompletionSchema,
   StepTargetSchema,
   WorkoutPrioritySchema,
   WorkoutStepKindSchema,
+  type TrainingBlock,
   type WorkoutDetail,
   type WorkoutStep,
   type WorkoutSummary,
@@ -33,6 +36,7 @@ type WorkoutRow = Pick<
   | 'purpose'
   | 'primary_discipline'
   | 'priority'
+  | 'race_priority'
   | 'estimated_duration_seconds'
   | 'estimated_distance_metres'
 > & {
@@ -54,6 +58,7 @@ function toWorkoutSummary(row: WorkoutRow): WorkoutSummary {
     purpose: row.purpose,
     discipline: row.primary_discipline,
     priority: WorkoutPrioritySchema.parse(row.priority),
+    racePriority: row.race_priority === null ? null : RacePrioritySchema.parse(row.race_priority),
     estimatedDurationSeconds: row.estimated_duration_seconds,
     estimatedDistanceMetres:
       row.estimated_distance_metres === null ? null : Number(row.estimated_distance_metres),
@@ -80,6 +85,7 @@ export async function listWorkouts(
       'workouts.purpose',
       'workouts.primary_discipline',
       'workouts.priority',
+      'workouts.race_priority',
       'workouts.estimated_duration_seconds',
       'workouts.estimated_distance_metres',
       'plans.display_name as plan_title',
@@ -94,6 +100,55 @@ export async function listWorkouts(
     .execute();
 
   return rows.map(toWorkoutSummary);
+}
+
+export async function listBlocks(
+  athleteId: string,
+  planVersionId: string,
+): Promise<TrainingBlock[]> {
+  const rows = await getDatabase()
+    .selectFrom('training_blocks')
+    .innerJoin('plan_versions', 'plan_versions.id', 'training_blocks.plan_version_id')
+    .innerJoin('plans', 'plans.id', 'plan_versions.plan_id')
+    .select([
+      'training_blocks.id',
+      'training_blocks.position',
+      'training_blocks.title',
+      'training_blocks.description',
+      'training_blocks.phase',
+      'training_blocks.start_date',
+      'training_blocks.end_date',
+    ])
+    .where('plans.owner_id', '=', athleteId)
+    .where('training_blocks.plan_version_id', '=', planVersionId)
+    .orderBy('training_blocks.start_date', 'asc')
+    .orderBy('training_blocks.position', 'asc')
+    .execute();
+  const weeks = rows.length
+    ? await getDatabase()
+        .selectFrom('training_weeks')
+        .select(['block_id', 'week_number', 'start_date', 'end_date', 'cutback'])
+        .where('plan_version_id', '=', planVersionId)
+        .orderBy('start_date', 'asc')
+        .execute()
+    : [];
+  return rows.map((row) => ({
+    id: row.id,
+    position: row.position,
+    title: row.title,
+    description: row.description,
+    phase: row.phase === null ? null : BlockPhaseSchema.parse(row.phase),
+    startDate: formatDate(row.start_date),
+    endDate: formatDate(row.end_date),
+    weeks: weeks
+      .filter((week) => week.block_id === row.id)
+      .map((week) => ({
+        weekNumber: week.week_number,
+        startDate: formatDate(week.start_date),
+        endDate: formatDate(week.end_date),
+        cutback: week.cutback,
+      })),
+  }));
 }
 
 function optionalNumber(value: string | null): number | null {
@@ -120,6 +175,7 @@ export async function getWorkoutDetail(
       'workouts.purpose',
       'workouts.primary_discipline',
       'workouts.priority',
+      'workouts.race_priority',
       'workouts.estimated_duration_seconds',
       'workouts.estimated_distance_metres',
       'plans.display_name as plan_title',

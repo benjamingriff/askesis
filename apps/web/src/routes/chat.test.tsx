@@ -686,6 +686,7 @@ it('fills this chat’s composer from coach shortcuts in the plan panel', async 
         locked: null,
       });
     if (path === '/api/v1/workouts') return response({ workouts: [] });
+    if (path === '/api/v1/blocks') return response({ blocks: [] });
     if (path === '/api/v1/performance')
       return response({
         timezone: 'Europe/London',

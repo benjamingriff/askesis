@@ -18,7 +18,8 @@ export async function writeExample(db: Transaction<DB>, versionId: string, ancho
         plan_version_id: versionId,
         position: index + 1,
         title: block.title,
-        description: `${block.title}: two complete weeks of multisport training examples.`,
+        phase: block.phase,
+        description: block.description,
         start_date: block.startDate,
         end_date: block.endDate,
       })
@@ -31,9 +32,10 @@ export async function writeExample(db: Transaction<DB>, versionId: string, ancho
       .values({
         id: weekId,
         plan_version_id: versionId,
-        block_id: blockIds[Math.floor(week.index / 2)]!,
+        block_id: blockIds[week.blockIndex]!,
         week_number: week.index + 1,
-        position: (week.index % 2) + 1,
+        position: week.position,
+        cutback: week.cutback,
         title: week.title,
         description:
           'Friday is a prescribed rest day. Monday and Sunday demonstrate ordered double sessions.',
@@ -41,7 +43,7 @@ export async function writeExample(db: Transaction<DB>, versionId: string, ancho
         end_date: week.endDate,
       })
       .execute();
-    const scale = week.index === 4 || week.index === 7 ? 0.75 : 1;
+    const scale = week.volume;
     const targets = [
       { metric: 'distance', discipline: 'run', target: 25000 * scale, unit: 'metres' },
       { metric: 'distance', discipline: 'swim', target: 3600, unit: 'metres' },
@@ -86,7 +88,8 @@ export async function writeExample(db: Transaction<DB>, versionId: string, ancho
             'Committed multisport software example. Suggested values illustrate the model; adapt prescriptions before training.',
           purpose: session.purpose,
           primary_discipline: session.sport,
-          priority: day === 5 ? 'high' : day === 0 ? 'low' : 'medium',
+          race_priority: session.race ?? null,
+          priority: session.race || day === 5 ? 'high' : day === 0 ? 'low' : 'medium',
           estimated_duration_seconds: session.minutes * 60,
           estimated_distance_metres: session.metres ?? null,
         })

@@ -6,7 +6,11 @@ import { ensureAthlete } from '../../src/auth/athlete-provisioning.js';
 import { closeDatabase, getDatabase } from '../../src/database/client.js';
 
 const database = getDatabase();
-import { getWorkoutDetail, listWorkouts } from '../../src/modules/workouts/workout.repository.js';
+import {
+  getWorkoutDetail,
+  listBlocks,
+  listWorkouts,
+} from '../../src/modules/workouts/workout.repository.js';
 
 const fixtureOwnerId = '00000000-0000-0000-0000-000000000001';
 const fixturePlanId = '00000000-0000-0000-0000-000000000010';
@@ -33,8 +37,27 @@ describe('workout repository authorization', () => {
     expect(workouts[0]?.planId).toBe(fixturePlanId);
   });
 
+  it('lists blocks and their weeks for the plan owner, leaving older blocks unclassified', async () => {
+    await expect(listBlocks(fixtureOwnerId, fixtureVersionId)).resolves.toEqual([
+      {
+        id: '00000000-0000-0000-0000-000000000020',
+        position: 1,
+        title: 'Foundation',
+        description: 'Establish the weekly routine, build the aerobic base, and introduce hills.',
+        phase: null,
+        startDate: '2026-05-11',
+        endDate: '2026-06-07',
+        weeks: [
+          { weekNumber: 1, startDate: '2026-05-11', endDate: '2026-05-17', cutback: false },
+          { weekNumber: 2, startDate: '2026-05-18', endDate: '2026-05-24', cutback: false },
+        ],
+      },
+    ]);
+  });
+
   it('hides workouts from an unrelated athlete', async () => {
     await expect(listWorkouts(randomUUID(), fixtureVersionId)).resolves.toEqual([]);
+    await expect(listBlocks(randomUUID(), fixtureVersionId)).resolves.toEqual([]);
     await expect(getWorkoutDetail(randomUUID(), hillWorkoutId)).resolves.toBeNull();
   });
 
@@ -45,6 +68,7 @@ describe('workout repository authorization', () => {
       .values({ id: athleteId, display_name: 'Member' })
       .execute();
     await expect(listWorkouts(athleteId, fixtureVersionId)).resolves.toEqual([]);
+    await expect(listBlocks(athleteId, fixtureVersionId)).resolves.toEqual([]);
     await expect(getWorkoutDetail(athleteId, hillWorkoutId)).resolves.toBeNull();
   });
 });

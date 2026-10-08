@@ -4,8 +4,10 @@ The API can publish an eight-week **Multisport example** for one existing, verif
 Clerk account. It contains 64 scheduled sessions: running, cycling, swimming,
 triathlon bricks and transitions, strength, Hyrox stations and gym conditioning.
 Every week is populated, Friday is explicitly covered as a rest day, and double
-sessions have consecutive positions. Briefs, all four sport baselines, blocks,
-weekly targets, tags, nested prescriptions, calibration and two genuine locked
+sessions have consecutive positions. Briefs, all four sport baselines, phased blocks
+(base with a cutback third week, two builds, recovery, peak and taper), an A, B and C
+race (a B tune-up closes Build 1, a C race sits in Build 2 and the A race is the last
+day), weekly targets, tags, nested prescriptions, calibration and two genuine locked
 revisions are included.
 
 The committed blueprint and coverage manifest live in
@@ -86,8 +88,11 @@ Dates begin on the previous Monday in the athlete's timezone: one past week and
 seven current/future weeks. The anchor stays stable within the calendar week.
 The registry key is athlete + blueprint revision + anchor; redeploys/restarts in
 that week do not duplicate content. Dates move only when the command runs, including
-after a deploy in a new week. Update `BLUEPRINT_REVISION` when changing prescriptions
-so an existing immutable edition is replaced deliberately.
+after a deploy in a new week. `BLUEPRINT_REVISION` ends with a fingerprint of the
+blueprint's content, so editing example data (sessions, blocks, phases, the brief)
+publishes a new edition on the next deploy or command run and archives the untouched
+previous one. Changes outside the blueprint, such as the writer or the publication
+steps, still need the revision's version prefix bumped deliberately.
 
 Publication uses one PostgreSQL transaction and an owner advisory lock. Draft
 creation, prescriptions, brief confirmation, real validation/hashes, two locks,

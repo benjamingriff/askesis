@@ -15,6 +15,7 @@ const workout: WorkoutSummary = {
   purpose: null,
   discipline: 'running',
   priority: 'medium',
+  racePriority: null,
   estimatedDurationSeconds: 1800,
   estimatedDistanceMetres: 5000,
 };

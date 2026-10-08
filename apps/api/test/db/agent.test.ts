@@ -64,7 +64,7 @@ async function worker() {
     provider: 'openai',
     model: 'gpt-6.1-sol',
     reasoning: 'medium',
-    promptVersion: 'multisport-coach-v1',
+    promptVersion: 'multisport-coach-v3',
     ready: true,
   });
   return id;
@@ -130,6 +130,7 @@ const batch: z.infer<typeof ScheduleSchema> = {
     {
       key: 'foundation',
       title: 'Foundation',
+      phase: 'base',
       description: null,
       startDate: '2027-01-01',
       endDate: '2027-01-28',
@@ -142,6 +143,7 @@ const batch: z.infer<typeof ScheduleSchema> = {
       blockKey: 'foundation',
       weekNumber: 1,
       position: 1,
+      cutback: false,
       title: 'First week',
       description: null,
       startDate: '2027-01-01',
@@ -159,6 +161,7 @@ const batch: z.infer<typeof ScheduleSchema> = {
       description: null,
       purpose: 'Build consistency',
       priority: 'medium',
+      racePriority: null,
       estimatedDurationSeconds: 1800,
       estimatedDistanceMetres: null,
       tags: ['easy'],
@@ -762,6 +765,30 @@ it('extends an unlocked partial horizon into a second immutable revision while p
       .where('plan_version_id', '=', second.locked!.id)
       .execute(),
   ).toHaveLength(2);
+  // The coach's phase survives unlocking into a new draft and locking again.
+  expect(
+    await db
+      .selectFrom('training_blocks')
+      .select('phase')
+      .where('plan_version_id', '=', second.locked!.id)
+      .execute(),
+  ).toEqual([{ phase: 'base' }]);
+});
+it('stores the race priorities and cutback weeks the coach writes', async () => {
+  const { claim } = await planning();
+  await tool(claim, 'apply_schedule_changes', {
+    ...batch,
+    weeks: [{ ...batch.weeks[0]!, cutback: true }],
+    workouts: [{ ...batch.workouts[0]!, title: 'Tune-up 10K', racePriority: 'B' }],
+  });
+  const schedule = (await tool(claim, 'read_schedule', { startDate: null, endDate: null })) as {
+    result: {
+      training_weeks: { cutback: boolean }[];
+      workouts: { race_priority: string | null }[];
+    };
+  };
+  expect(schedule.result.training_weeks.map((w) => w.cutback)).toEqual([true]);
+  expect(schedule.result.workouts.map((w) => w.race_priority)).toEqual(['B']);
 });
 it('swaps dated workouts in one coherent transaction without intermediate uniqueness failures', async () => {
   const { claim, p } = await planning();
@@ -1251,7 +1278,7 @@ it('requires the current prompt contract before a worker contributes readiness o
     provider: 'openai',
     model: 'gpt-6.1-sol',
     reasoning: 'medium',
-    promptVersion: 'multisport-coach-v1',
+    promptVersion: 'multisport-coach-v3',
     ready: true,
   });
   expect((await chatCapabilities()).executionAvailable).toBe(true);

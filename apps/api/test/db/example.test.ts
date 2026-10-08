@@ -75,10 +75,19 @@ it('publishes all content through the real lifecycle, preserving fitness and own
   expect(
     await db
       .selectFrom('training_blocks')
-      .select('id')
+      .select('phase')
       .where('plan_version_id', '=', versionId)
+      .orderBy('start_date')
       .execute(),
-  ).toHaveLength(4);
+  ).toEqual(['base', 'build', 'recovery', 'build', 'peak', 'taper'].map((phase) => ({ phase })));
+  expect(
+    await db
+      .selectFrom('training_weeks')
+      .select('week_number')
+      .where('plan_version_id', '=', versionId)
+      .where('cutback', '=', true)
+      .execute(),
+  ).toEqual([{ week_number: 3 }]);
   expect(
     await db
       .selectFrom('training_weeks')
@@ -119,6 +128,17 @@ it('publishes all content through the real lifecycle, preserving fitness and own
   expect(metrics.map((t) => t.metric).sort()).toEqual([...exampleCoverage.weekMetrics].sort());
   const workouts = await listWorkouts(owner, versionId);
   expect(workouts).toHaveLength(64);
+  expect(workouts.filter((w) => w.racePriority).map((w) => [w.title, w.racePriority])).toEqual([
+    ['Sprint duathlon tune-up', 'B'],
+    ['5K club race', 'C'],
+    ['Hyrox event', 'A'],
+  ]);
+  // The cutback week's published sessions are lighter than the week before it.
+  const weekSeconds = (week: number) =>
+    workouts
+      .filter((w) => w.weekNumber === week)
+      .reduce((sum, w) => sum + (w.estimatedDurationSeconds ?? 0), 0);
+  expect(weekSeconds(3)).toBeLessThan(weekSeconds(2) * 0.8);
   expect(await listWorkouts(await athlete(), versionId)).toEqual([]);
   for (const workout of workouts) {
     const detail = await getWorkoutDetail(owner, workout.id);

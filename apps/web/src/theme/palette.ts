@@ -151,6 +151,18 @@ export const KIND_COLORS = {
 } as const;
 
 /**
+ * Training-block phases. Base is calm, build and peak warm towards race intensity, taper eases
+ * off. Plans written before phases existed show their blocks in the neutral rest hue.
+ */
+export const PHASE_COLORS = {
+  base: '#60A5FA',
+  build: '#FBBF24',
+  peak: '#F87171',
+  taper: '#34D399',
+  recovery: '#A78BFA',
+} as const;
+
+/**
  * Zone hues shared by every system, easiest to hardest. Keys used by more than one system (for
  * example threshold) mean a comparable effort, so they share a colour.
  */

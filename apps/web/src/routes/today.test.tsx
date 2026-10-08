@@ -123,11 +123,13 @@ beforeEach(() => {
     data:
       path === '/api/v1/plans'
         ? { plans: [plan] }
-        : path === '/api/v1/workouts'
-          ? { workouts: [] }
-          : path === '/api/v1/performance'
-            ? performance
-            : brief,
+        : path === '/api/v1/blocks'
+          ? { blocks: [] }
+          : path === '/api/v1/workouts'
+            ? { workouts: [] }
+            : path === '/api/v1/performance'
+              ? performance
+              : brief,
   }));
 });
 afterEach(() => {
@@ -216,11 +218,13 @@ it('does not declare a rest day when coverage could not be loaded', async () => 
   mocks.get.mockImplementation(async (path: string) =>
     path === '/api/v1/plans'
       ? { data: { plans: [plan] } }
-      : path === '/api/v1/workouts'
-        ? { data: { workouts: [] } }
-        : path === '/api/v1/performance'
-          ? { data: performance }
-          : { error: { error: { message: 'Brief unavailable' } } },
+      : path === '/api/v1/blocks'
+        ? { blocks: [] }
+        : path === '/api/v1/workouts'
+          ? { data: { workouts: [] } }
+          : path === '/api/v1/performance'
+            ? { data: performance }
+            : { error: { error: { message: 'Brief unavailable' } } },
   );
   mount();
   expect(await screen.findByText(/Couldn’t load this plan’s coverage/)).toBeInTheDocument();
@@ -258,6 +262,7 @@ it('closes a superseded workout after locking a new version without resetting th
     purpose: null,
     discipline: 'running',
     priority: 'medium',
+    racePriority: null,
     estimatedDurationSeconds: 1800,
     estimatedDistanceMetres: 5000,
   };
@@ -276,26 +281,28 @@ it('closes a superseded workout after locking a new version without resetting th
       data:
         path === '/api/v1/plans'
           ? { plans: [currentPlan] }
-          : path === '/api/v1/workouts'
-            ? {
-                workouts: [
-                  options?.params?.query?.planVersionId === locked.id
-                    ? originalWorkout
-                    : replacement,
-                ],
-              }
-            : path === '/api/v1/workouts/{workoutId}'
+          : path === '/api/v1/blocks'
+            ? { blocks: [] }
+            : path === '/api/v1/workouts'
               ? {
-                  workout:
-                    options?.params?.path?.workoutId === originalWorkout.id
+                  workouts: [
+                    options?.params?.query?.planVersionId === locked.id
                       ? originalWorkout
                       : replacement,
-                  tags: [],
-                  prescription: { kind: 'sequence', steps: [] },
+                  ],
                 }
-              : path === '/api/v1/performance'
-                ? performance
-                : brief,
+              : path === '/api/v1/workouts/{workoutId}'
+                ? {
+                    workout:
+                      options?.params?.path?.workoutId === originalWorkout.id
+                        ? originalWorkout
+                        : replacement,
+                    tags: [],
+                    prescription: { kind: 'sequence', steps: [] },
+                  }
+                : path === '/api/v1/performance'
+                  ? performance
+                  : brief,
     }),
   );
   mount();
@@ -327,4 +334,39 @@ it('closes a superseded workout after locking a new version without resetting th
   expect(oldDetailCalls()).toBe(1);
   fireEvent.click(screen.getByRole('button', { name: /Replacement session/ }));
   await screen.findByRole('dialog', { name: /Replacement session/ });
+});
+
+it('counts down to the next goal race rather than the plan’s end', async () => {
+  const race = (id: string, scheduledDate: string, racePriority: 'A' | 'B') => ({
+    id,
+    planId: plan.id,
+    planVersionId: locked.id,
+    planTitle: plan.displayName,
+    weekNumber: 1,
+    scheduledDate,
+    title: `${racePriority} race ${id}`,
+    description: null,
+    purpose: null,
+    discipline: 'run',
+    priority: 'high',
+    racePriority,
+    estimatedDurationSeconds: 3600,
+    estimatedDistanceMetres: 10000,
+  });
+  const fallback = mocks.get.getMockImplementation()!;
+  mocks.get.mockImplementation(async (path: string, init: unknown) =>
+    path === '/api/v1/workouts'
+      ? {
+          data: {
+            workouts: [
+              race('past', '2027-01-05', 'A'),
+              race('tune-up', '2027-01-16', 'B'),
+              race('goal', '2027-01-24', 'A'),
+            ],
+          },
+        }
+      : fallback(path, init),
+  );
+  mount();
+  expect(await screen.findByText('12 days to go · A race goal')).toBeInTheDocument();
 });
