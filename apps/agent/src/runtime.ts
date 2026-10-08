@@ -32,6 +32,7 @@ export type CoachingRuntime = {
     claim: Claim,
     api: AgentApi,
     signal: AbortSignal,
+    hardStopSignal: AbortSignal,
   ): Promise<RuntimeResult>;
 };
 export class SdkRuntime implements CoachingRuntime {
@@ -60,16 +61,17 @@ export class SdkRuntime implements CoachingRuntime {
     claim: Claim,
     api: AgentApi,
     signal: AbortSignal,
+    hardStopSignal: AbortSignal,
   ): Promise<RuntimeResult> {
     const cancellation = new AbortController();
-    const providerSignal = AbortSignal.any([signal, cancellation.signal]);
+    const providerSignal = AbortSignal.any([signal, hardStopSignal, cancellation.signal]);
     const delegate = this.modelOverride ?? (await this.provider.getModel(this.config.AGENT_MODEL));
     const progress = new ProgressReporter(
       api,
       claim,
       (reason) => cancellation.abort(reason),
-      // Cancellation still permits a final text flush; anything else ends delivery.
-      () => signal.aborted && signal.reason !== 'CANCELLED',
+      // User cancellation still permits a prefix flush; later hard stops remain observable.
+      hardStopSignal,
     );
     const measuredModel: Model = {
       ...(delegate.supportsPromptModelSelection === undefined
