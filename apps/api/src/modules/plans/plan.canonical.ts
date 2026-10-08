@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto';
 
 export type SemanticValue =
   null | boolean | string | number | SemanticValue[] | { [key: string]: SemanticValue };
-export const CONTENT_HASH_VERSION = 4;
+export const CONTENT_HASH_VERSION = 5;
 
 /** The aggregate assembler supplies semantic fields only, with ordered arrays. */
 export function canonicalJson(value: SemanticValue): string {

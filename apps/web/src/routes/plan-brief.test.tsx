@@ -28,10 +28,15 @@ beforeEach(() => {
     brief: {
       goal: 'Run a comfortable half marathon',
       unit: 'kilometres',
-      weeklyDistance: { status: 'known', value: 30000 },
-      currentRuns: { status: 'known', value: 4 },
-      longestRun: { status: 'unknown', value: null },
-      desiredRuns: 4,
+      sports: [
+        {
+          sport: 'run',
+          currentSessions: { status: 'known', value: 4 },
+          desiredSessions: 4,
+          weeklyDistance: { status: 'known', value: 30000 },
+          longestDistance: { status: 'unknown', value: null },
+        },
+      ],
       weekdays: [
         'available',
         'available',
@@ -44,7 +49,13 @@ beforeEach(() => {
       context: '',
     },
   };
-  performance = { timezone: 'Europe/London', today: '2026-09-01', current: [], entries: [] };
+  performance = {
+    timezone: 'Europe/London',
+    today: '2026-09-01',
+    current: [],
+    entries: [],
+    usedByPlans: [],
+  };
   vi.mocked(api.GET).mockImplementation(
     async (path) =>
       ({
@@ -107,7 +118,9 @@ it('switches display units without changing the saved baseline distance', async 
         body: expect.objectContaining({
           brief: expect.objectContaining({
             unit: 'miles',
-            weeklyDistance: { status: 'known', value: 30000 },
+            sports: [
+              expect.objectContaining({ weeklyDistance: { status: 'known', value: 30000 } }),
+            ],
           }),
         }),
       }),
@@ -246,7 +259,7 @@ it('shows a partial prescribed horizon, the unplanned remainder and the athleteâ
   expect(screen.getAllByText(/Coach estimate: Reported comfortable pace/).length).toBeGreaterThan(
     0,
   );
-  expect(screen.getAllByText(/These paces are estimates/).length).toBeGreaterThan(0);
+  expect(screen.getAllByText(/These are estimates/).length).toBeGreaterThan(0);
 });
 
 it('links fitness to the Performance page instead of editing it in the brief', async () => {
@@ -257,4 +270,36 @@ it('links fitness to the Performance page instead of editing it in the brief', a
   );
   expect(screen.queryByLabelText('Fitness input')).not.toBeInTheDocument();
   expect(screen.queryByLabelText('Plan timezone')).not.toBeInTheDocument();
+});
+
+it('adds sports with their own baselines and saves them in sport order', async () => {
+  mount();
+  fireEvent.click(await screen.findByRole('button', { name: 'Swim' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Strength' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Ride' }));
+  expect(screen.getByText('Swimming background')).toBeInTheDocument();
+  expect(screen.getByText('Cycling background')).toBeInTheDocument();
+  expect(screen.queryByLabelText('Longest recent strength session')).not.toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: 'Ride' }));
+  expect(screen.queryByText('Cycling background')).not.toBeInTheDocument();
+  vi.mocked(api.PUT).mockResolvedValue({ data: state, response: new Response() });
+  fireEvent.click(screen.getByRole('button', { name: 'Save changes' }));
+  await waitFor(() => expect(api.PUT).toHaveBeenCalled());
+  const body = (vi.mocked(api.PUT).mock.calls[0]![1] as { body: { brief: { sports: object[] } } })
+    .body;
+  expect(body.brief.sports).toEqual([
+    expect.objectContaining({ sport: 'run' }),
+    {
+      sport: 'swim',
+      currentSessions: { status: 'unanswered', value: null },
+      desiredSessions: null,
+      weeklyDistance: { status: 'unanswered', value: null },
+      longestDistance: { status: 'unanswered', value: null },
+    },
+    {
+      sport: 'strength',
+      currentSessions: { status: 'unanswered', value: null },
+      desiredSessions: null,
+    },
+  ]);
 });

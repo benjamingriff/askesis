@@ -63,5 +63,7 @@ jobs:
         run: pnpm test:live:upgrade
       - name: Populated athlete-performance cutover
         run: pnpm test:performance:upgrade
+      - name: Populated multi-sport brief migration
+        run: pnpm test:multisport:upgrade
       - name: Disposable streaming worker and public proxy smoke
         run: pnpm smoke

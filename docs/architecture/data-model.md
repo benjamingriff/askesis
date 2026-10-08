@@ -18,11 +18,11 @@ A version contains its header, brief and weekdays, prescribed schedule coverage,
 
 ## Brief
 
-Each version has at most one `plan_briefs` row. It holds free-text goal/context, weekly distance/current runs/longest-run answers, desired runs, distance unit and confirmation metadata. Baseline answers distinguish unanswered, explicitly unknown and known. API distances are metres; UI display units are `km` or `mi`. Seven `plan_brief_weekdays` rows express available/preferred/unavailable days.
+Each version has at most one `plan_briefs` row. It holds free-text goal/context, distance unit and confirmation metadata. `plan_brief_sports` holds one baseline per sport the plan trains (`run`, `cycle`, `swim`, `strength`): current and desired sessions, and for all but strength a weekly volume and longest session (metres for run and swim, seconds for cycle). Baseline answers distinguish unanswered, explicitly unknown and known. API distances are metres; UI display units are `km` or `mi`, with swim distances per 100 m or yd. Seven `plan_brief_weekdays` rows express available/preferred/unavailable days.
 
 ## Athlete calibration
 
-Fitness belongs to the athlete ([ADR 0005](../adr/0005-athlete-owned-performance.md)). `athlete_calibrations` is an append-only timeline per athlete and system (`run_pace` today). An entry stores validated input JSON, calculator version, internal fitness value, provenance and estimate basis, the race or test date, the date it applies from (today in the athlete's timezone when recorded), who recorded it (the athlete or a coaching run) and an optional single retraction. `athlete_calibration_zones` holds generic metric/unit/min/target/max values. Running zone keys are `easy`, `marathon`, `threshold`, `interval` and `repetition`. The internal fitness value is not a user-facing score.
+Fitness belongs to the athlete ([ADR 0005](../adr/0005-athlete-owned-performance.md)). `athlete_calibrations` is an append-only timeline per athlete and system (`run_pace`, `cycle_power` and `swim_pace`; [ADR 0006](../adr/0006-multisport-plans.md)). An entry stores validated input JSON, calculator version, internal fitness value, provenance and estimate basis, the race or test date, the date it applies from (today in the athlete's timezone when recorded), who recorded it (the athlete or a coaching run) and an optional single retraction. `athlete_calibration_zones` holds generic metric/unit/min/target/max values. Running zone keys are `easy`, `marathon`, `threshold`, `interval` and `repetition`; cycling zones are watts and swim zones seconds per 100 metres. Strength has no calibration. The internal fitness value is not a user-facing score.
 
 Workout reads resolve symbolic zones against the plan owner's timeline using the workout date: the latest active entry effective by then, or the first entry for earlier dates. Calibration never rewrites stored symbolic workout targets or plan content, so one entry updates every plan, including locked versions, from its effective date.
 
@@ -40,9 +40,9 @@ plan version → training blocks → training weeks → workouts
 
 Steps can be sequences, repeats or efforts. Ordered parent/child links express nested prescriptions; repeat counts apply to descendant completions. The validated tree has one root, but that root need not be a sequence.
 
-The database/read contract supports several disciplines and completion/target types. Current coaching tools prescribe running only: duration in seconds, distance in metres or open completion, with zone, absolute pace, RPE or instruction targets. Broader storage support does not imply cycling/strength coaching, workout logging or completed-performance tracking is delivered.
+A workout's sport is `run`, `cycle`, `swim`, `strength` or `mixed`; an effort's is `run`, `cycle`, `swim`, `strength`, `row`, `ski_erg` or `other`, inherited from the workout unless the workout is mixed ([ADR 0006](../adr/0006-multisport-plans.md)). Coaching tools prescribe duration, distance, repetition or open completions with zone, run pace, swim pace, power, RPE, reps-in-reserve, suggested load (kilograms) or instruction targets. Zones are stored in the system of the effort's sport. Workout logging and completed-performance tracking are not delivered.
 
-`movement_definitions` is an immutable vocabulary referenced by steps. It replaces the early `movements` proposal. `week_targets` provides optional prescribed weekly targets; current agent tools do not author these targets.
+`movement_definitions` is an immutable vocabulary that steps can reference. It replaces the early `movements` proposal; coaching currently names exercises with step labels instead. `week_targets` provides optional prescribed weekly targets; current agent tools do not author these targets.
 
 `workout_prescription_totals` derives explicit distance/duration through nested repeats. `weekly_plan_summary` aggregates prescribed workout estimates. These views do not estimate completion from zone pace or calculate actual training load.
 

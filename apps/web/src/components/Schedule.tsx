@@ -24,6 +24,7 @@ import {
 } from '../lib/format';
 import {
   inferKind,
+  volumeMeasure,
   isCovered,
   KIND_META,
   summarizeWeeks,
@@ -45,6 +46,17 @@ export type SchedulePresentation = 'interactive' | 'week-list';
 const MODE_KEY = 'askesis-schedule-mode';
 
 /** Runna-style schedule: weekly volume, a week at a time, or a month calendar. */
+/** Calendar legend: the run kinds for running plans, plus each other sport present. */
+function legendKinds(workouts: WorkoutSummary[]) {
+  const present = new Set(workouts.map((workout) => inferKind(workout)));
+  const base = ['easy', 'long', 'tempo', 'intervals', 'test'] as const;
+  const extra = (['ride', 'swim', 'strength', 'mixed'] as const).filter((kind) =>
+    present.has(kind),
+  );
+  const runs = workouts.some((workout) => workout.discipline === 'run');
+  return [...(runs || !extra.length ? base : (['test'] as const)), ...extra];
+}
+
 export function Schedule({
   workouts,
   version,
@@ -77,6 +89,7 @@ export function Schedule({
     () => summarizeWeeks(workouts, startDate, endDate, coverage),
     [workouts, startDate, endDate, coverage],
   );
+  const measure = volumeMeasure(workouts);
   const current = weeks.find((w) => today >= w.startDate && today <= w.endDate)?.number ?? null;
   const firstUpcoming =
     current ?? weeks.find((w) => w.endDate >= today)?.number ?? weeks.at(-1)?.number ?? 1;
@@ -131,6 +144,7 @@ export function Schedule({
               current={current}
               onSelect={setSelectedWeek}
               units={units}
+              measure={measure}
             />
           </Card>
           <div className="week-heading">
@@ -161,11 +175,13 @@ export function Schedule({
           {week.planned ? (
             <>
               <Card className="week-stats">
-                <Stat
-                  label="Distance"
-                  value={formatDistance(week.metres, units, false)}
-                  unit={units}
-                />
+                {measure === 'distance' ? (
+                  <Stat
+                    label="Distance"
+                    value={formatDistance(week.metres, units, false)}
+                    unit={units}
+                  />
+                ) : null}
                 <Stat label="Time" value={formatDuration(week.seconds)} />
                 <Stat label="Sessions" value={String(week.workouts.length)} />
               </Card>
@@ -328,7 +344,7 @@ function CalendarView({
         })}
       </div>
       <div className="calendar-legend">
-        {(['easy', 'long', 'tempo', 'intervals', 'test'] as const).map((key) => (
+        {legendKinds(workouts).map((key) => (
           <span key={key} style={{ '--kind': KIND_META[key].color } as CSSProperties}>
             <i /> {KIND_META[key].label}
           </span>

@@ -186,7 +186,7 @@ export class SdkRuntime implements CoachingRuntime {
       }),
     );
     const agent = new Agent({
-      name: 'Askesis running coach',
+      name: 'Askesis coach',
       instructions: COACHING_PROMPT,
       model: measuredModel,
       tools,

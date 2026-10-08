@@ -15,7 +15,45 @@ export const PaceInputSchema = z
       .strict(),
   ])
   .openapi('PaceInput');
-export const PerformanceSystemSchema = z.enum(['run_pace']).openapi('PerformanceSystem');
+/** Cycling power: a known FTP, a 20-minute test (× 0.95) or a ramp test's best minute (× 0.75). */
+export const PowerInputSchema = z
+  .discriminatedUnion('method', [
+    z.object({ method: z.literal('ftp'), watts: z.number().positive().max(2000) }).strict(),
+    z
+      .object({
+        method: z.literal('twenty_minute_test'),
+        averageWatts: z.number().positive().max(2000),
+      })
+      .strict(),
+    z
+      .object({ method: z.literal('ramp_test'), bestMinuteWatts: z.number().positive().max(3000) })
+      .strict(),
+  ])
+  .openapi('PowerInput');
+/** Swimming: an all-out 400 and 200 (critical swim speed test), or a known CSS pace per 100 m. */
+export const SwimInputSchema = z
+  .discriminatedUnion('method', [
+    z
+      .object({
+        method: z.literal('css_test'),
+        t400Seconds: z.number().positive().max(3600),
+        t200Seconds: z.number().positive().max(1800),
+      })
+      .strict(),
+    z
+      .object({
+        method: z.literal('css_pace'),
+        secondsPer100Metres: z.number().positive().max(600),
+      })
+      .strict(),
+  ])
+  .openapi('SwimInput');
+export const CalibrationMethodInputSchema = z
+  .union([PaceInputSchema, PowerInputSchema, SwimInputSchema])
+  .openapi('CalibrationMethodInput');
+export const PerformanceSystemSchema = z
+  .enum(['run_pace', 'cycle_power', 'swim_pace'])
+  .openapi('PerformanceSystem');
 export type PerformanceSystem = z.infer<typeof PerformanceSystemSchema>;
 export const ProvenanceSchema = z.enum(['user_supplied', 'user_estimate', 'agent_estimate']);
 const evidence = {
@@ -27,6 +65,8 @@ const evidence = {
 /** One variant per system; each system's input is validated by its own calculator. */
 export const CalibrationInputSchema = z.discriminatedUnion('system', [
   z.object({ system: z.literal('run_pace'), input: PaceInputSchema, ...evidence }).strict(),
+  z.object({ system: z.literal('cycle_power'), input: PowerInputSchema, ...evidence }).strict(),
+  z.object({ system: z.literal('swim_pace'), input: SwimInputSchema, ...evidence }).strict(),
 ]);
 export type CalibrationInput = z.infer<typeof CalibrationInputSchema>;
 const idempotencyKey = z.string().min(1).max(200).optional();
@@ -40,12 +80,30 @@ export const RecordCalibrationSchema = z
         idempotencyKey,
       })
       .strict(),
+    z
+      .object({
+        system: z.literal('cycle_power'),
+        input: PowerInputSchema,
+        ...evidence,
+        idempotencyKey,
+      })
+      .strict(),
+    z
+      .object({
+        system: z.literal('swim_pace'),
+        input: SwimInputSchema,
+        ...evidence,
+        idempotencyKey,
+      })
+      .strict(),
   ])
   .openapi('RecordCalibration');
 export const RetractCalibrationSchema = z.object({ idempotencyKey }).strict();
 export const PreviewCalibrationSchema = z
   .discriminatedUnion('system', [
     z.object({ system: z.literal('run_pace'), input: PaceInputSchema }).strict(),
+    z.object({ system: z.literal('cycle_power'), input: PowerInputSchema }).strict(),
+    z.object({ system: z.literal('swim_pace'), input: SwimInputSchema }).strict(),
   ])
   .openapi('PreviewCalibration');
 
@@ -64,7 +122,7 @@ export const CalibrationEntrySchema = z
     id: Id,
     system: PerformanceSystemSchema,
     method: z.string(),
-    input: PaceInputSchema,
+    input: CalibrationMethodInputSchema,
     calculatorVersion: z.string(),
     provenance: ProvenanceSchema,
     estimateBasis: z.string().nullable(),
@@ -86,6 +144,11 @@ export const PerformanceStateSchema = z
     current: z.array(CalibrationEntrySchema),
     /** Every entry, newest first, including retracted ones. */
     entries: z.array(CalibrationEntrySchema),
+    /**
+     * Systems whose sport appears in one of the athlete's unarchived plans (its brief or its
+     * workouts), calibrated or not. Other sports can still be added but need not be shown.
+     */
+    usedByPlans: z.array(PerformanceSystemSchema),
   })
   .openapi('PerformanceState');
 export type PerformanceState = z.infer<typeof PerformanceStateSchema>;

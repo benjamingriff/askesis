@@ -26,12 +26,16 @@ ORDER BY v.created_at, v.id;
 
 ```sql
 SELECT goal_text, context, distance_unit,
-       weekly_distance_status, weekly_distance_metres,
-       current_runs_status, current_runs_per_week,
-       longest_run_status, longest_run_metres, desired_runs_per_week,
        confirmed_at, confirmed_hash, schedule_review_required
 FROM plan_briefs
 WHERE plan_version_id = '00000000-0000-0000-0000-000000000050';
+
+-- One baseline per sport; volume is metres (run, swim) or seconds (cycle).
+SELECT sport, current_sessions_status, current_sessions_per_week, desired_sessions_per_week,
+       weekly_volume_status, weekly_volume, longest_session_status, longest_session
+FROM plan_brief_sports
+WHERE plan_version_id = '00000000-0000-0000-0000-000000000050'
+ORDER BY sport;
 
 SELECT weekday, availability
 FROM plan_brief_weekdays

@@ -35,6 +35,7 @@ import {
   type ToolName,
 } from './agent.schemas.js';
 import { writeSchedule } from './agent.schedule.js';
+import { CalibrationInputSchema } from '../performance/performance.schemas.js';
 
 type Tx = Transaction<DB>;
 type Run = Selectable<DB['agent_runs']>;
@@ -588,21 +589,33 @@ export async function executeTool(
       throw error;
     });
 }
+/** Each system accepts only its own input; the tool schema alone allows any pairing. */
+function matchingInput<Input extends { system: string; input: unknown }>(raw: Input) {
+  const parsed = CalibrationInputSchema.safeParse({ system: raw.system, input: raw.input });
+  if (!parsed.success)
+    throw new PlanError(
+      'CALIBRATION_INVALID',
+      `This input does not match the ${raw.system} system.`,
+      422,
+    );
+  return parsed.data;
+}
 async function performanceTool(db: Tx, run: Run, name: ToolName, raw: unknown) {
   if (name === 'preview_performance')
     return {
       preview: await previewCalibration(
         db,
         run.owner_id,
-        ToolSchemas.preview_performance.parse(raw),
+        matchingInput(ToolSchemas.preview_performance.parse(raw)),
       ),
     };
   if (name === 'record_performance') {
-    const { observedOn, ...input } = ToolSchemas.record_performance.parse(raw);
+    const { observedOn, provenance, estimateBasis, ...input } =
+      ToolSchemas.record_performance.parse(raw);
     const entry = await recordCalibrationRows(
       db,
       run.owner_id,
-      { ...input, ...(observedOn ? { observedOn } : {}) },
+      { ...matchingInput(input), provenance, estimateBasis, ...(observedOn ? { observedOn } : {}) },
       { runId: run.id },
     );
     return { recorded: entry, performance: await readPerformance(db, run.owner_id) };

@@ -14,9 +14,17 @@ import {
 import { useState, type CSSProperties, type ReactNode } from 'react';
 import { initialsFor } from '../components/AppShell';
 import { Button, ButtonLink, Card, Segmented, cx } from '../components/ui';
-import { formatPace } from '../lib/format';
-import { currentRunPace, usePerformance } from '../plan-data';
-import { useSettings, useUnits, type ThemeMode, type UnitPreference } from '../settings';
+import { formatPace, formatPower, formatSwimPace } from '../lib/format';
+import { usePerformance } from '../plan-data';
+import { currentEntry, SYSTEM_META, SYSTEMS } from '../lib/sports';
+import {
+  useSettings,
+  useUnits,
+  type LoadUnits,
+  type PoolUnits,
+  type ThemeMode,
+  type UnitPreference,
+} from '../settings';
 import { ACCENTS, isValidHex, normalizeHex, THEMES, type ThemeDefinition } from '../theme/palette';
 
 function Row({ label, hint, children }: { label: string; hint?: string; children: ReactNode }) {
@@ -72,8 +80,18 @@ export function SettingsPage() {
   const clerk = useClerk();
   const { settings, update, reset } = useSettings();
   const units = useUnits();
-  const pace = currentRunPace(usePerformance().data);
-  const threshold = pace?.zones.find((zone) => zone.key === 'threshold');
+  const performance = usePerformance().data;
+  const { pool } = settings;
+  /** The headline number of each calibrated system: threshold pace, FTP or CSS. */
+  const fitness = SYSTEMS.flatMap((system) => {
+    const threshold = currentEntry(performance, system)?.zones.find(
+      (zone) => zone.key === 'threshold',
+    );
+    if (!threshold) return [];
+    if (system === 'run_pace') return [`Threshold ${formatPace(threshold.target, units)}`];
+    if (system === 'cycle_power') return [`FTP ${formatPower(threshold.target)}`];
+    return [`CSS ${formatSwimPace(threshold.target, pool)}`];
+  });
   const [hex, setHex] = useState(settings.accent);
   const displayName = user?.fullName ?? user?.firstName ?? 'Askesis athlete';
   const email = user?.primaryEmailAddress?.emailAddress ?? '';
@@ -111,11 +129,11 @@ export function SettingsPage() {
         </h2>
         <Card>
           <Row
-            label="Pace guides"
+            label="Training zones"
             hint={
-              threshold
-                ? `Threshold ${formatPace(threshold.target, units)} · used by every plan`
-                : 'Add a race result or estimate. Every plan uses it.'
+              fitness.length
+                ? `${fitness.join(' · ')} · used by every plan`
+                : `Add ${SYSTEMS.map((system) => SYSTEM_META[system].noun).join(', ')} for the sports you train. Every plan uses them.`
             }
           >
             <ButtonLink to="/performance" size="sm" icon={Gauge}>
@@ -238,6 +256,28 @@ export function SettingsPage() {
                 { value: 'plan', label: 'Plan default' },
                 { value: 'km', label: 'km' },
                 { value: 'mi', label: 'mi' },
+              ]}
+            />
+          </Row>
+          <Row label="Swimming" hint="Pool length for swim paces and distances.">
+            <Segmented<PoolUnits>
+              label="Pool units"
+              value={settings.pool}
+              onChange={(next) => update({ pool: next })}
+              options={[
+                { value: 'm', label: 'Metres' },
+                { value: 'yd', label: 'Yards' },
+              ]}
+            />
+          </Row>
+          <Row label="Strength loads" hint="Units for suggested weights.">
+            <Segmented<LoadUnits>
+              label="Load units"
+              value={settings.load}
+              onChange={(load) => update({ load })}
+              options={[
+                { value: 'kg', label: 'kg' },
+                { value: 'lb', label: 'lb' },
               ]}
             />
           </Row>

@@ -6,8 +6,6 @@ import { useLocalToday } from '../lib/use-local-today';
 import { useWorkoutSelection } from '../lib/use-workout-selection';
 import {
   knownCoverage,
-  currentRunPace,
-  usePerformance,
   planVersion,
   useBriefState,
   useDraftChanges,
@@ -19,7 +17,8 @@ import { PlanHistory } from '../routes/plan-history';
 import { useUnits } from '../settings';
 import { useOpenPlanChat, PlanChatError, PlanToolbar } from './PlanLifecycle';
 import { PlanChanges, WorkoutChangesContext } from './PlanChanges';
-import { CalibrationSource, CoverageNote, PaceGuides, PlanStatus } from './PlanWidgets';
+import { CoverageNote, PlanStatus, PlanZones, zonesTitle } from './PlanWidgets';
+import { planSports } from '../lib/sports';
 import { Schedule, type SchedulePresentation } from './Schedule';
 import {
   Card,
@@ -88,7 +87,7 @@ export function PlanView({
   const askCoach = onAskCoach ?? ((prompt: string) => chat.mutate(prompt));
   const [historyOpen, setHistoryOpen] = useState(false);
   const progress = planProgress(version?.startDate ?? null, version?.endDate ?? null, today);
-  const calibration = currentRunPace(usePerformance().data);
+  const sports = planSports(brief.data?.brief, workouts.data);
   const goal = brief.data?.brief.goal;
 
   const toolbar = (
@@ -266,23 +265,14 @@ export function PlanView({
         <aside className="plan-side">
           <Card>
             <SectionHeader
-              title="Pace guides"
+              title={zonesTitle(sports)}
               action={
                 <Link className="text-link" to="/performance">
                   Update
                 </Link>
               }
             />
-            {calibration ? (
-              <>
-                <PaceGuides calibration={calibration} units={units} compact />
-                <CalibrationSource calibration={calibration} units={units} />
-              </>
-            ) : (
-              <p className="muted">
-                No pace guides yet. Add a recent race or an estimate, or share one with your coach.
-              </p>
-            )}
+            <PlanZones sports={sports} units={units} compact />
           </Card>
           <Card>
             <SectionHeader

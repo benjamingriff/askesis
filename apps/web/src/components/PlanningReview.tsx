@@ -1,16 +1,16 @@
+import { CalendarDays, CalendarRange, Flag, Repeat, type LucideIcon } from 'lucide-react';
 import {
-  CalendarDays,
-  CalendarRange,
-  Flag,
-  Repeat,
-  Route,
-  TrendingUp,
-  type LucideIcon,
-} from 'lucide-react';
-import { formatDistance, formatRange, formatShortYear, WEEKDAYS_SHORT } from '../lib/format';
-import { currentRunPace, usePerformance, type BriefState } from '../plan-data';
-import { useUnits } from '../settings';
-import { CalibrationSource, CoverageNote, PaceGuides, coverageGaps } from './PlanWidgets';
+  formatDistance,
+  formatDuration,
+  formatRange,
+  formatShortYear,
+  formatSwimDistance,
+  WEEKDAYS_SHORT,
+} from '../lib/format';
+import { SPORT_META, type BriefSport } from '../lib/sports';
+import { type BriefState } from '../plan-data';
+import { useSportUnits, useUnits } from '../settings';
+import { CoverageNote, PlanZones, coverageGaps } from './PlanWidgets';
 import { Pill } from './ui';
 
 /** Detailed coverage: intended generation horizons, prescribed ranges and remaining gaps. */
@@ -83,17 +83,38 @@ function Assumption({
   );
 }
 
+type Answer = { status: 'unanswered' | 'unknown' | 'known'; value: unknown };
+type Baseline = BriefState['brief']['sports'][number];
+
+/** One sport's baseline in a sentence: sessions now and planned, weekly volume, longest. */
+export function useBaselineSummary() {
+  const { pool } = useSportUnits();
+  return (baseline: Baseline, units: ReturnType<typeof useUnits>) => {
+    const show = (answer: Answer, format: (value: number) => string) =>
+      answer.status === 'known'
+        ? format(answer.value as number)
+        : answer.status === 'unanswered'
+          ? 'not answered'
+          : 'unknown';
+    const distance = (value: number) =>
+      baseline.sport === 'swim' ? formatSwimDistance(value, pool) : formatDistance(value, units);
+    const sessions = `${show(baseline.currentSessions, String)} → ${baseline.desiredSessions ?? 'not set'} sessions a week`;
+    if (baseline.sport === 'strength') return sessions;
+    const [weekly, longest] =
+      baseline.sport === 'cycle'
+        ? [
+            show(baseline.weeklyDuration, formatDuration),
+            show(baseline.longestDuration, formatDuration),
+          ]
+        : [show(baseline.weeklyDistance, distance), show(baseline.longestDistance, distance)];
+    return `${sessions} · ${weekly} weekly · longest ${longest}`;
+  };
+}
+
 /** The brief as the coach will use it: what the human confirms before locking. */
 export function PlanningReview({ state }: { state: BriefState }) {
   const units = useUnits(state.brief.unit);
-  const answer = (a: BriefState['brief']['weeklyDistance']) =>
-    a.status === 'known'
-      ? formatDistance(a.value, units)
-      : a.status === 'unanswered'
-        ? 'Not answered'
-        : 'Unknown';
-  const runs = state.brief.currentRuns;
-  const pace = currentRunPace(usePerformance().data);
+  const summary = useBaselineSummary();
   const availability = state.brief.weekdays
     .map((value, index) =>
       value === 'unavailable'
@@ -102,6 +123,7 @@ export function PlanningReview({ state }: { state: BriefState }) {
     )
     .filter(Boolean)
     .join(' · ');
+  const sports = state.brief.sports.map((baseline) => baseline.sport);
   return (
     <section className="review-block" aria-label="Planning assumptions">
       <h3>Planning assumptions</h3>
@@ -112,21 +134,21 @@ export function PlanningReview({ state }: { state: BriefState }) {
           label="Dates"
           value={formatRange(state.startDate, state.endDate)}
         />
-        <Assumption
-          icon={TrendingUp}
-          label="Current weekly distance"
-          value={answer(state.brief.weeklyDistance)}
-        />
-        <Assumption
-          icon={Route}
-          label="Longest recent run"
-          value={answer(state.brief.longestRun)}
-        />
-        <Assumption
-          icon={Repeat}
-          label="Runs per week"
-          value={`${runs.status === 'known' ? runs.value : runs.status === 'unanswered' ? 'Not answered' : 'Unknown'} now → ${state.brief.desiredRuns ?? 'not set'} planned`}
-        />
+        {state.brief.sports.length ? (
+          state.brief.sports.map((baseline) => {
+            const meta = SPORT_META[baseline.sport as BriefSport];
+            return (
+              <Assumption
+                key={baseline.sport}
+                icon={meta.icon}
+                label={meta.label}
+                value={summary(baseline, units)}
+              />
+            );
+          })
+        ) : (
+          <Assumption icon={Repeat} label="Sports" value="None chosen" />
+        )}
         <Assumption icon={CalendarDays} label="Available days" value={availability || 'None'} />
       </dl>
       {state.brief.context ? (
@@ -137,16 +159,7 @@ export function PlanningReview({ state }: { state: BriefState }) {
           <p>{state.brief.context}</p>
         </div>
       ) : null}
-      {pace ? (
-        <>
-          <CalibrationSource calibration={pace} units={units} />
-          <PaceGuides calibration={pace} units={units} compact />
-        </>
-      ) : (
-        <p className="muted">
-          No pace guides yet. Add a race result or estimate on the Performance page.
-        </p>
-      )}
+      <PlanZones sports={sports} units={units} compact />
       <CoverageSummary state={state} />
     </section>
   );

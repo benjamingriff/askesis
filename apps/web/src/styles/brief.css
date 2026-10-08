@@ -197,3 +197,63 @@ form.card legend {
     display: none;
   }
 }
+
+/* Sports a plan trains, and the sports on the Performance page. */
+.sport-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.sport-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--surface-raised);
+  color: var(--text-dim);
+  font-weight: 600;
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease;
+}
+.sport-chip svg {
+  color: var(--kind);
+}
+.sport-chip.selected {
+  border-color: var(--kind);
+  background: color-mix(in srgb, var(--kind) 16%, transparent);
+  color: var(--text);
+}
+.sport-chip:disabled {
+  cursor: default;
+}
+.system-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.system-title svg {
+  color: var(--kind);
+}
+.result-form {
+  border-top: 1px solid var(--border);
+  padding-top: 16px;
+}
+.result-form legend {
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+.check-field {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  align-self: end;
+  min-height: 44px;
+  color: var(--text-dim);
+}
+.add-sport .sport-chips {
+  margin-top: 4px;
+}

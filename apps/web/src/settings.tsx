@@ -20,11 +20,13 @@ import {
   type ThemeId,
 } from './theme/palette';
 import { readStorage, writeStorage } from './lib/storage';
+import type { LoadUnits, PoolUnits } from './lib/format';
 
 export type ThemeMode = 'system' | 'dark' | 'light';
 /** `plan` follows the unit chosen in each plan's brief. */
 export type UnitPreference = 'plan' | 'km' | 'mi';
 export type Units = 'km' | 'mi';
+export type { LoadUnits, PoolUnits } from './lib/format';
 
 export type Settings = {
   mode: ThemeMode;
@@ -32,6 +34,10 @@ export type Settings = {
   lightTheme: ThemeId;
   accent: string;
   units: UnitPreference;
+  /** Swim paces and distances: per 100 metres or per 100 yards. */
+  pool: PoolUnits;
+  /** Suggested strength loads. */
+  load: LoadUnits;
   showActivity: boolean;
 };
 
@@ -41,6 +47,8 @@ export const DEFAULT_SETTINGS: Settings = {
   lightTheme: 'paper',
   accent: DEFAULT_ACCENT,
   units: 'plan',
+  pool: 'm',
+  load: 'kg',
   showActivity: true,
 };
 
@@ -100,6 +108,8 @@ function readSettings(): Settings {
       units: ['plan', 'km', 'mi'].includes(value.units as string)
         ? (value.units as UnitPreference)
         : DEFAULT_SETTINGS.units,
+      pool: value.pool === 'yd' ? 'yd' : 'm',
+      load: value.load === 'lb' ? 'lb' : 'kg',
       showActivity:
         typeof value.showActivity === 'boolean'
           ? value.showActivity
@@ -203,6 +213,12 @@ export function useSettings() {
 
 export function useTheme() {
   return useContext(SettingsContext).theme;
+}
+
+/** Pool and strength-load display units, chosen in settings. */
+export function useSportUnits(): { pool: PoolUnits; load: LoadUnits } {
+  const { settings } = useSettings();
+  return { pool: settings.pool, load: settings.load };
 }
 
 /** Display units: the user's override, otherwise the plan brief's unit, otherwise kilometres. */

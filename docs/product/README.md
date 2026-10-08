@@ -5,7 +5,7 @@ The owner is continuing development of the responsive web app and will choose fu
 ## Behavior contracts
 
 - [Plan lifecycle](./phase-2-plan-lifecycle-refinement.md): drafts, immutable revisions, activation, archive and human review.
-- [Plan brief and athlete pace guides](./phase-3-plan-brief-and-calibration-refinement.md): plan-specific context, confirmation and athlete-owned, effective-dated pace guides shared by every plan.
+- [Plan brief and athlete training zones](./phase-3-plan-brief-and-calibration-refinement.md): plan-specific context and per-sport baselines, confirmation and athlete-owned, effective-dated zones for running, cycling and swimming shared by every plan.
 - [Conversations and runs](./phase-4-design.md): ownership, durable messages, cancellation, archive and concurrency.
 - [Coaching and domain tools](./phase-5-design.md): conversational generation, worker permissions and partial planning horizons.
 - [Live coaching and review](./phase-6-design.md): streamed replies, saved changes, human review and interrupted-output recovery.
@@ -17,6 +17,8 @@ These guides describe implemented behavior and were reconciled against code on 2
 
 - [Web design system](./web-design-system.md): themes, components, navigation and review patterns.
 - [Running pace calculation](./run-pace-v1.md): equations, coefficients and range policy.
+- [Cycling power zones](./cycle-power-v1.md): FTP protocols and Coggan zones.
+- [Swim pace zones](./swim-css-v1.md): the critical swim speed test and zone bands.
 - [Mobile reference prototype](../../apps/mobile/README.md): the dummy app used as a source of web feature and interaction ideas.
 
 Completed delivery plans and test evidence live in the [archive](../archive/README.md). Runtime limits and recovery procedures live in [operations](../operations/README.md).

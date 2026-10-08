@@ -5,8 +5,8 @@ import { Link, useNavigate } from 'react-router';
 import { IntensityChart } from '../components/IntensityChart';
 import { useOpenPlanChat, PlanChatError } from '../components/PlanLifecycle';
 import { planProgress } from '../components/PlanView';
-import { PaceGuides, Stat } from '../components/PlanWidgets';
-import { WorkoutDialog } from '../components/Workout';
+import { PlanZones, Stat, zonesTitle } from '../components/PlanWidgets';
+import { WorkoutDialog, workoutStats } from '../components/Workout';
 import {
   Button,
   ButtonLink,
@@ -24,15 +24,15 @@ import {
   formatDistance,
   formatDuration,
   formatLong,
-  formatPace,
   greeting,
   startOfWeek,
   WEEKDAYS_SHORT,
 } from '../lib/format';
-import { inferKind, isCovered, KIND_META, workoutsOn } from '../lib/workouts';
+import { planSports, systemsForSports } from '../lib/sports';
+import { inferKind, isCovered, KIND_META, volumeMeasure, workoutsOn } from '../lib/workouts';
 import {
+  currentEntry,
   knownCoverage,
-  currentRunPace,
   usePerformance,
   planVersion,
   useBriefState,
@@ -42,7 +42,7 @@ import {
   type PlanVersion,
 } from '../plan-data';
 import { usePlanPreferences } from '../plan-selection';
-import { useUnits, type Units } from '../settings';
+import { useSportUnits, useUnits, type Units } from '../settings';
 import { useActivePlans } from './active-plans';
 import { useFollowingState } from '../lib/use-following-state';
 import { useLocalToday } from '../lib/use-local-today';
@@ -106,21 +106,27 @@ function TodayForPlan({ plan, today }: { plan: Plan; today: string }) {
   const all = workouts.data ?? [];
   const dialog = useWorkoutSelection(all, version?.id);
   const week = all.filter((w) => w.scheduledDate >= days[0]! && w.scheduledDate <= days[6]!);
-  const weekMetres = week.reduce((sum, w) => sum + (w.estimatedDistanceMetres ?? 0), 0);
+  // Distance for running-only plans; time once other sports join, as their distances don't add.
+  const measure = volumeMeasure(all);
+  const amount = (w: WorkoutSummary) =>
+    (measure === 'time' ? w.estimatedDurationSeconds : w.estimatedDistanceMetres) ?? 0;
+  const formatAmount = (value: number, withUnit = true) =>
+    measure === 'time' ? formatDuration(value) : formatDistance(value, units, withUnit);
+  const weekAmount = week.reduce((sum, w) => sum + amount(w), 0);
   const plannedSoFar = week
     .filter((w) => w.scheduledDate < today)
-    .reduce((sum, w) => sum + (w.estimatedDistanceMetres ?? 0), 0);
+    .reduce((sum, w) => sum + amount(w), 0);
   const maxDay = Math.max(
-    ...days.map((d) =>
-      workoutsOn(week, d).reduce((sum, w) => sum + (w.estimatedDistanceMetres ?? 0), 0),
-    ),
+    ...days.map((d) => workoutsOn(week, d).reduce((sum, w) => sum + amount(w), 0)),
     1,
   );
   const selectedWorkouts = workoutsOn(all, selected);
   const end = version?.endDate;
   const progress = planProgress(version?.startDate ?? null, end ?? null, today);
   const daysToEnd = end ? daysBetween(today, end) : null;
-  const calibration = currentRunPace(usePerformance().data);
+  const performance = usePerformance().data;
+  const sports = planSports(brief.data?.brief, all);
+  const calibrated = systemsForSports(sports).some((system) => currentEntry(performance, system));
   const outsidePlan =
     (!!version?.startDate && selected < version.startDate) ||
     (!!version?.endDate && selected > version.endDate);
@@ -262,10 +268,10 @@ function TodayForPlan({ plan, today }: { plan: Plan; today: string }) {
             />
             <div className="week-summary">
               <Stat
-                label="Planned distance"
-                value={formatDistance(weekMetres, units, false)}
-                unit={units}
-                sub={`${formatDistance(weekMetres - plannedSoFar, units)} to go from today`}
+                label={measure === 'time' ? 'Planned time' : 'Planned distance'}
+                value={formatAmount(weekAmount, false)}
+                unit={measure === 'time' ? undefined : units}
+                sub={`${formatAmount(weekAmount - plannedSoFar)} to go from today`}
                 large
               />
               <Stat label="Sessions" value={String(week.length)} large />
@@ -273,7 +279,7 @@ function TodayForPlan({ plan, today }: { plan: Plan; today: string }) {
             <div className="day-bars" aria-hidden="true">
               {days.map((date, index) => {
                 const items = workoutsOn(week, date);
-                const metres = items.reduce((sum, w) => sum + (w.estimatedDistanceMetres ?? 0), 0);
+                const metres = items.reduce((sum, w) => sum + amount(w), 0);
                 const kind = items[0] ? KIND_META[inferKind(items[0])] : null;
                 return (
                   <span
@@ -294,17 +300,17 @@ function TodayForPlan({ plan, today }: { plan: Plan; today: string }) {
               })}
             </div>
           </Card>
-          {calibration ? (
+          {calibrated ? (
             <Card>
               <SectionHeader
-                title="Your pace guides"
+                title={`Your ${zonesTitle(sports).toLowerCase()}`}
                 action={
                   <Link className="text-link" to="/performance">
                     Details
                   </Link>
                 }
               />
-              <PaceGuides calibration={calibration} units={units} compact />
+              <PlanZones sports={sports} units={units} compact showSource={false} />
             </Card>
           ) : null}
         </div>
@@ -336,7 +342,7 @@ function HeroWorkout({
 }) {
   const kind = KIND_META[inferKind(workout)];
   const detail = useWorkoutDetail(workout.id, version);
-  const { estimatedDistanceMetres: metres, estimatedDurationSeconds: seconds } = workout;
+  const { pool } = useSportUnits();
   return (
     <button
       type="button"
@@ -350,18 +356,9 @@ function HeroWorkout({
       <strong className="hero-title">{workout.title}</strong>
       {workout.purpose ? <span className="hero-purpose">{workout.purpose}</span> : null}
       <span className="hero-stats">
-        {metres !== null ? (
-          <Stat label="Distance" value={formatDistance(metres, units, false)} unit={units} large />
-        ) : null}
-        {seconds !== null ? <Stat label="Time" value={formatDuration(seconds)} large /> : null}
-        {metres && seconds ? (
-          <Stat
-            label="Avg pace"
-            value={formatPace((seconds / metres) * 1000, units, false)}
-            unit={`/${units}`}
-            large
-          />
-        ) : null}
+        {workoutStats(workout, units, pool).map((stat) => (
+          <Stat key={stat.label} label={stat.label} value={stat.value} unit={stat.unit} large />
+        ))}
       </span>
       {detail.data ? <IntensityChart prescription={detail.data.prescription} height={56} /> : null}
       <span className="hero-cta">

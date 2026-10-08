@@ -23,7 +23,7 @@ pnpm dev:local
 
 `dev:setup` reads only the Clerk development keys from the main checkout's ignored `.env`, writes a private ignored worktree `.env`, and chooses worktree-specific API/web/database ports and a Compose project. It does not copy provider credentials. If the keys live elsewhere, use `pnpm dev:setup /absolute/path/to/.env`. Existing worktree configuration is retained; occupied initial ports fail with a diagnostic. Change the corresponding ports, URLs and authorized origins together when overriding them.
 
-Setup starts PostgreSQL, applies migrations, seeds/publishes the sample plan, and creates or reuses `askesis-verification+clerk_test@example.com` in the configured Clerk development instance. It links that account to the **local synthetic athlete**, so authenticated screens have sample data. It refuses production/Railway, live Clerk keys, remote/non-Askesis database URLs and conflicting identity mappings. Database URL query parameters are restricted to `sslmode`, preventing driver options from overriding the checked connection target. Re-running setup keeps data; an edited fixture is rejected by the existing publisher. Use a fresh worktree database for destructive lifecycle experiments.
+Setup starts PostgreSQL, applies migrations, seeds/publishes the sample plans (Cardiff half marathon, an Olympic triathlon and a Hyrox plan, with running, cycling and swimming calibration), and creates or reuses `askesis-verification+clerk_test@example.com` in the configured Clerk development instance. It links that account to the **local synthetic athlete**, so authenticated screens have sample data. It refuses production/Railway, live Clerk keys, remote/non-Askesis database URLs and conflicting identity mappings. Database URL query parameters are restricted to `sslmode`, preventing driver options from overriding the checked connection target. Re-running setup keeps data; an edited fixture is rejected by the existing publisher. Use a fresh worktree database for destructive lifecycle experiments.
 
 `dev:local` starts the API and Vite together. Ctrl+C stops both process groups. The Vite URL printed on startup is the browser address; `LOCAL_WEB_URL` in `.env` records the same origin. Simulated chat is enabled for newly generated verification environments. This can validate conversation, streaming and failure UI; real coaching/plan edits still require the separately configured worker/provider.
 
@@ -71,7 +71,7 @@ pnpm --silent dev:login
 
 The final JSON contains `url`, `agentTaskId` and `webOrigin`. Open `url` in the browser being used for verification. Clerk establishes a real session and redirects to `/plan`; its maximum duration is 30 minutes. Generate another link when needed. Confirm the active account is `askesis-verification+clerk_test@example.com` before making changes; a shared browser can have an existing development session. If another account remains active, sign out in Settings and open a fresh login link. Treat the login URL as a credential: do not include it, handshake query strings or session tokens in screenshots, recordings, issue text or commits. Start recordings after the redirect settles on the clean local app URL.
 
-The sample's workouts are dated **11–23 May 2026**. Navigate to those weeks in the Plan view to inspect populated schedules and workout details; Today may be empty outside those dates. This workflow deliberately preserves the published fixture's immutable content.
+The samples' workouts are dated **11–24 May 2026**; the triathlon and Hyrox plans cover every sport. Navigate to those weeks in the Plan view to inspect populated schedules and workout details; Today may be empty outside those dates. This workflow deliberately preserves the published fixture's immutable content.
 
 For agents in T3 Code:
 
@@ -145,10 +145,11 @@ pnpm check
 pnpm test:db
 pnpm test:live:upgrade
 pnpm test:performance:upgrade
+pnpm test:multisport:upgrade
 pnpm smoke
 ```
 
-`check` runs formatting, lint, typecheck, unit/component/worker tests, builds, generated-contract drift, Atlas checksum and `pnpm audit --prod --audit-level=high`. It is not all Docker/database testing. CI also runs the database suite, populated Phase 5→6 upgrade rehearsal, populated athlete-performance cutover rehearsal and disposable SDK streaming smoke in a separate job.
+`check` runs formatting, lint, typecheck, unit/component/worker tests, builds, generated-contract drift, Atlas checksum and `pnpm audit --prod --audit-level=high`. It is not all Docker/database testing. CI also runs the database suite, populated Phase 5→6 upgrade rehearsal, populated athlete-performance cutover rehearsal, populated multi-sport brief migration rehearsal and disposable SDK streaming smoke in a separate job.
 
 Docker/database scripts use isolated disposable databases rather than normal development data. Set a distinct `COMPOSE_PROJECT_NAME` and `TEST_DATABASE_PORT` if another local test stack is running. Real-provider smoke is a separate, billed operation; see [worker verification](./phase-5-runtime.md#verification).
 

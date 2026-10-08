@@ -45,7 +45,7 @@ it.each(['draft', 'locked', 'inspection'])(
       scheduleReviewRequired: false,
       coverage: [{ startDate: '2027-01-11', endDate: '2027-01-12', current: true }],
       findings: [],
-      brief: { unit: 'kilometres', goal: 'Training' },
+      brief: { unit: 'kilometres', goal: 'Training', sports: [] },
     };
     const workouts = [
       {
@@ -79,7 +79,13 @@ it.each(['draft', 'locked', 'inspection'])(
             : path.endsWith('/revisions')
               ? { revisions: [] }
               : path === '/api/v1/performance'
-                ? { timezone: 'Europe/London', today: '2027-01-01', current: [], entries: [] }
+                ? {
+                    timezone: 'Europe/London',
+                    today: '2027-01-01',
+                    current: [],
+                    entries: [],
+                    usedByPlans: [],
+                  }
                 : plan,
       };
     });

@@ -252,20 +252,27 @@ export interface PlanBriefs {
   confirmed_edit_number: number | null;
   confirmed_hash: string | null;
   context: Generated<string>;
-  current_runs_per_week: number | null;
-  current_runs_status: Generated<string>;
-  desired_runs_per_week: number | null;
   distance_unit: Generated<string>;
   goal_text: Generated<string>;
   id: Generated<string>;
   lineage_id: Generated<string>;
-  longest_run_metres: Numeric | null;
-  longest_run_status: Generated<string>;
   plan_version_id: string;
   schedule_review_required: Generated<boolean>;
   validator_version: number | null;
-  weekly_distance_metres: Numeric | null;
-  weekly_distance_status: Generated<string>;
+}
+
+export interface PlanBriefSports {
+  current_sessions_per_week: number | null;
+  current_sessions_status: Generated<string>;
+  desired_sessions_per_week: number | null;
+  id: Generated<string>;
+  lineage_id: Generated<string>;
+  longest_session: Numeric | null;
+  longest_session_status: string | null;
+  plan_version_id: string;
+  sport: string;
+  weekly_volume: Numeric | null;
+  weekly_volume_status: string | null;
 }
 
 export interface PlanBriefWeekdays {
@@ -474,6 +481,7 @@ export interface DB {
   live_event_heads: LiveEventHeads;
   live_events: LiveEvents;
   movement_definitions: MovementDefinitions;
+  plan_brief_sports: PlanBriefSports;
   plan_brief_weekdays: PlanBriefWeekdays;
   plan_briefs: PlanBriefs;
   plan_schedule_coverage: PlanScheduleCoverage;

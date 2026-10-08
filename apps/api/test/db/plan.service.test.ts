@@ -219,10 +219,15 @@ async function confirmation(id: string) {
       brief: {
         ...emptyBrief(),
         goal: 'Run consistently',
-        desiredRuns: 3,
-        weeklyDistance: { status: 'unknown', value: null },
-        currentRuns: { status: 'unknown', value: null },
-        longestRun: { status: 'unknown', value: null },
+        sports: [
+          {
+            sport: 'run',
+            currentSessions: { status: 'unknown', value: null },
+            desiredSessions: 3,
+            weeklyDistance: { status: 'unknown', value: null },
+            longestDistance: { status: 'unknown', value: null },
+          },
+        ],
       },
     });
   if (!(await getPerformance(owner)).current.length)

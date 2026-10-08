@@ -132,15 +132,4 @@ export function usePerformance() {
   });
 }
 
-/** Running pace guides in effect today, if the athlete has any. */
-export function currentRunPace(state: PerformanceState | undefined): Calibration | undefined {
-  return state?.current.find((entry) => entry.system === 'run_pace');
-}
-
-export function isEstimate(calibration: Calibration): boolean {
-  return (
-    calibration.provenance === 'agent_estimate' ||
-    calibration.provenance === 'user_estimate' ||
-    calibration.input.method === 'threshold_pace'
-  );
-}
+export { currentEntry, isEstimate } from './lib/sports';

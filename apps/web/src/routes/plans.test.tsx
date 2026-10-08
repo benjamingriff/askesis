@@ -50,10 +50,15 @@ const briefState = {
   brief: {
     goal: 'Comfortable 10K',
     unit: 'kilometres',
-    weeklyDistance: { status: 'known', value: 20000 },
-    currentRuns: { status: 'known', value: 3 },
-    longestRun: { status: 'known', value: 8000 },
-    desiredRuns: 3,
+    sports: [
+      {
+        sport: 'run',
+        currentSessions: { status: 'known', value: 3 },
+        desiredSessions: 3,
+        weeklyDistance: { status: 'known', value: 20000 },
+        longestDistance: { status: 'known', value: 8000 },
+      },
+    ],
     weekdays: Array(7).fill('available'),
     context: '',
   },
@@ -122,7 +127,13 @@ beforeEach(() => {
             : path.endsWith('/revisions')
               ? { revisions: [] }
               : path === '/api/v1/performance'
-                ? { timezone: 'Europe/London', today: '2027-01-01', current: [], entries: [] }
+                ? {
+                    timezone: 'Europe/London',
+                    today: '2027-01-01',
+                    current: [],
+                    entries: [],
+                    usedByPlans: [],
+                  }
                 : structuredClone(briefState);
     return { data, response: new Response() };
   }) as typeof api.GET);

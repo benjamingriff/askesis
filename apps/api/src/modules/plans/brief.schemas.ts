@@ -9,17 +9,50 @@ const Answer = z.discriminatedUnion('status', [
     .object({ status: z.literal('known'), value: z.number().finite().nonnegative().max(1000000) })
     .strict(),
 ]);
+const Sessions = Answer.refine(
+  (answer) => answer.value === null || Number.isInteger(answer.value),
+  'Session count must be a whole number.',
+);
+const desiredSessions = z.number().int().min(1).max(14).nullable();
+/** Running and swimming baselines are distances in metres. */
+const DistanceBaseline = {
+  currentSessions: Sessions,
+  desiredSessions,
+  weeklyDistance: Answer,
+  longestDistance: Answer,
+};
+/** One sport's current training and desired frequency. Strength records sessions only. */
+export const SportBaselineSchema = z
+  .discriminatedUnion('sport', [
+    z.object({ sport: z.literal('run'), ...DistanceBaseline }).strict(),
+    z.object({ sport: z.literal('swim'), ...DistanceBaseline }).strict(),
+    z
+      .object({
+        sport: z.literal('cycle'),
+        currentSessions: Sessions,
+        desiredSessions,
+        /** Seconds. */
+        weeklyDuration: Answer,
+        /** Seconds. */
+        longestDuration: Answer,
+      })
+      .strict(),
+    z.object({ sport: z.literal('strength'), currentSessions: Sessions, desiredSessions }).strict(),
+  ])
+  .openapi('SportBaseline');
+export type SportBaseline = z.infer<typeof SportBaselineSchema>;
 export const BriefSchema = z
   .object({
     goal: z.string().trim().max(20000),
     unit: z.enum(['kilometres', 'miles']),
-    weeklyDistance: Answer,
-    currentRuns: Answer.refine(
-      (answer) => answer.value === null || Number.isInteger(answer.value),
-      'Run count must be a whole number.',
-    ),
-    longestRun: Answer,
-    desiredRuns: z.number().int().min(1).max(14).nullable(),
+    /** Each sport the plan trains, at most once, in run, cycle, swim, strength order. */
+    sports: z
+      .array(SportBaselineSchema)
+      .max(4)
+      .refine(
+        (sports) => new Set(sports.map((sport) => sport.sport)).size === sports.length,
+        'List each sport once.',
+      ),
     weekdays: z.array(z.enum(['available', 'preferred', 'unavailable'])).length(7),
     context: z.string().trim().max(20000),
   })
@@ -50,13 +83,19 @@ export const BriefStateSchema = z.object({
   generations: z.array(GenerationSchema).optional(),
 });
 export type BriefState = z.infer<typeof BriefStateSchema>;
+const unanswered = { status: 'unanswered', value: null } as const;
+/** A sport's baseline before any question is answered. */
+export function emptySport(sport: SportBaseline['sport']): SportBaseline {
+  const common = { currentSessions: unanswered, desiredSessions: null };
+  if (sport === 'strength') return { sport, ...common };
+  if (sport === 'cycle')
+    return { sport, ...common, weeklyDuration: unanswered, longestDuration: unanswered };
+  return { sport, ...common, weeklyDistance: unanswered, longestDistance: unanswered };
+}
 export const emptyBrief = (): Brief => ({
   goal: '',
   unit: 'kilometres',
-  weeklyDistance: { status: 'unanswered', value: null },
-  currentRuns: { status: 'unanswered', value: null },
-  longestRun: { status: 'unanswered', value: null },
-  desiredRuns: null,
+  sports: [],
   weekdays: [
     'available',
     'available',

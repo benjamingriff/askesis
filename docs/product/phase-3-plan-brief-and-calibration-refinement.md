@@ -6,13 +6,17 @@ Current behavior verified on 2026-10-07 against the brief and performance servic
 
 Every plan is for the signed-in athlete; an account cannot plan for another person or a hypothetical runner. Alpha still collects no demographic training profile.
 
-A plan's versioned brief has one free-text goal, optional context, weekly distance/current frequency/longest-run baselines, desired runs, recurring weekday availability and display units. Plan start/end are the only structured goal dates. The athlete's timezone is not a brief fact: it follows the device they use.
+A plan's versioned brief has one free-text goal, optional context, the sports it trains with a baseline for each, recurring weekday availability and display units. Running and swimming baselines are current and desired sessions per week, weekly distance and longest recent session; cycling uses weekly riding time and longest ride; strength records sessions only ([ADR 0006](../adr/0006-multisport-plans.md)). Plan start/end are the only structured goal dates. The athlete's timezone is not a brief fact: it follows the device they use.
 
-Each baseline can be explicitly unknown; unanswered is distinct. Up to two runs are allowed per available/preferred day. Confirmation requires a feasible desired frequency and usable recurring schedule; it does not mechanically require every generated week to match the desired run count exactly.
+At least one sport is required. Each baseline answer can be explicitly unknown; unanswered is distinct. Up to two sessions of any sport are allowed per available/preferred day, and the desired sessions of every sport together must fit. Confirmation requires a feasible desired frequency and usable recurring schedule; it does not mechanically require every generated week to match the desired counts exactly.
 
-Chat tools collect these facts. The structured editor remains available to humans. The browser converts display distance/pace input to canonical metres/seconds-per-kilometre before API submission.
+Chat tools collect these facts. The structured editor remains available to humans. The browser converts display distance/pace input to canonical metres/seconds-per-kilometre (seconds for riding time, metres for yard pools) before API submission.
 
-## Pace guides belong to the athlete
+## Training zones belong to the athlete
+
+The same rules apply to every sport's zones: running pace guides below, cycling power zones from an FTP or power test ([cycle-power-v1](./cycle-power-v1.md)) and swim paces from a CSS test ([swim-css-v1](./swim-css-v1.md)). Strength has no calibration: lifts are prescribed with reps in reserve and an optional suggested weight. The Performance page shows each sport that has a result or that one of the athlete's plans trains; other sports can be added but are never required until a plan that uses them is locked. The coach records evidence or a labelled estimate when a plan needs one and schedules a test to replace an estimate.
+
+### Running pace guides
 
 Fitness is recorded once and every plan uses it. An athlete records a race result (one mile through marathon, with its date) or an estimated threshold pace on the Performance page, or tells the coach in any chat. The deterministic [run-pace-v1 calculator](./run-pace-v1.md) produces Easy, Marathon, Threshold, Interval and Repetition guidance with explicit approximation bands. It is not an official proprietary V.O2 table implementation; the repository does not establish a live official-calculator comparison.
 
@@ -26,7 +30,7 @@ When the athlete reports a race in chat, the coach works out its date, compares 
 
 The human confirms current brief facts. Goal/date/baseline/availability changes invalidate that confirmation. Unit-only changes and description-only header edits preserve it. Schedule-only worker edits also preserve it. Relevant brief/date changes with workouts can require schedule review. Fitness changes never affect confirmation or review.
 
-Generation can begin before human confirmation. Lock requires current confirmation, valid aggregate structure, running fitness for a plan with runs, resolvable zone targets and acknowledgement of all warnings. Empty/partial planning remains possible; explicit coverage distinguishes prescribed rest days from dates not yet planned, and interrupted generation is explained separately.
+Generation can begin before human confirmation. Lock requires current confirmation, valid aggregate structure, fitness for every calibrated sport its workouts or effort steps use (running, cycling, swimming), resolvable zone targets and acknowledgement of all warnings. Empty/partial planning remains possible; explicit coverage distinguishes prescribed rest days from dates not yet planned, and interrupted generation is explained separately.
 
 Brief facts, confirmation, coverage and workouts clone, hash, lock and restore together. A locked version records which fitness entries were current when it was locked. The API returns resolved pace guidance with display units; consumers must not convert an already-converted pace twice.
 

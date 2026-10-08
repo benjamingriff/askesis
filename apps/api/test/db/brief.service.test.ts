@@ -9,7 +9,7 @@ import {
   unlockPlan,
 } from '../../src/modules/plans/plan.service.js';
 import { saveBrief, getBrief, confirmBrief } from '../../src/modules/plans/brief.service.js';
-import { emptyBrief, type BriefState } from '../../src/modules/plans/brief.schemas.js';
+import { BriefSchema, emptyBrief, type BriefState } from '../../src/modules/plans/brief.schemas.js';
 const owner = '00000000-0000-0000-0000-000000000001';
 const cmd = (s: BriefState) => ({ expectedDraftId: s.versionId, expectedEditNumber: s.editNumber });
 async function prepared(startDate = '2026-05-01') {
@@ -23,10 +23,15 @@ async function prepared(startDate = '2026-05-01') {
     brief: {
       ...emptyBrief(),
       goal: 'Run consistently',
-      desiredRuns: 6,
-      weeklyDistance: { status: 'unknown', value: null },
-      currentRuns: { status: 'known', value: 5 },
-      longestRun: { status: 'unknown', value: null },
+      sports: [
+        {
+          sport: 'run',
+          currentSessions: { status: 'known', value: 5 },
+          desiredSessions: 6,
+          weeklyDistance: { status: 'unknown', value: null },
+          longestDistance: { status: 'unknown', value: null },
+        },
+      ],
       weekdays: [
         'preferred',
         'available',
@@ -63,7 +68,10 @@ it('requires human confirmation, preserves it across unit conversion, and clears
   expect(s.confirmed).toBe(true);
   expect(s.hash).toBe(hash);
   expect(s.editNumber).toBe(editNumber + 1);
-  s = await saveBrief(owner, plan.id, { ...cmd(s), brief: { ...s.brief, desiredRuns: 7 } });
+  s = await saveBrief(owner, plan.id, {
+    ...cmd(s),
+    brief: { ...s.brief, sports: [{ ...s.brief.sports[0]!, desiredSessions: 7 }] },
+  });
   expect(s.confirmed).toBe(false);
   expect(s.editNumber).toBe(editNumber + 2);
   expect(s.scheduleReviewRequired).toBe(false);
@@ -105,4 +113,82 @@ it('clones confirmed briefs while locked rows reject edits', async () => {
   await expect(
     saveBrief(owner, plan.id, { ...cmd(state), brief: state.brief }),
   ).rejects.toMatchObject({ code: 'STALE_DRAFT' });
+});
+it('holds one baseline per sport, validates each and keeps lineage across saves and versions', async () => {
+  const { plan, state } = await prepared();
+  const triathlon = {
+    ...state.brief,
+    goal: 'Finish an Olympic triathlon',
+    weekdays: [
+      'available',
+      'available',
+      'available',
+      'available',
+      'available',
+      'preferred',
+      'preferred',
+    ] as BriefState['brief']['weekdays'],
+    sports: [
+      {
+        sport: 'strength' as const,
+        currentSessions: { status: 'known' as const, value: 0 },
+        desiredSessions: 1,
+      },
+      {
+        sport: 'swim' as const,
+        currentSessions: { status: 'known' as const, value: 1 },
+        desiredSessions: 2,
+        weeklyDistance: { status: 'known' as const, value: 2000 },
+        longestDistance: { status: 'known' as const, value: 2500 },
+      },
+      {
+        sport: 'cycle' as const,
+        currentSessions: { status: 'unanswered' as const, value: null },
+        desiredSessions: 3,
+        weeklyDuration: { status: 'known' as const, value: 10800 },
+        longestDuration: { status: 'known' as const, value: 5400 },
+      },
+      state.brief.sports[0]!,
+    ],
+  };
+  let s = await saveBrief(owner, plan.id, { ...cmd(state), brief: triathlon });
+  // Stored and returned in run, cycle, swim, strength order.
+  expect(s.brief.sports.map((sport) => sport.sport)).toEqual(['run', 'cycle', 'swim', 'strength']);
+  const codes = s.findings.map((f) => f.code);
+  expect(codes).toContain('brief.cycle.current_sessions_unanswered');
+  expect(codes).toContain('brief.swim.longest_exceeds_weekly');
+  expect(codes).not.toContain('brief.strength.weekly_volume_unanswered');
+  // 6 + 3 + 2 + 1 desired sessions fit two per day across seven days.
+  expect(codes).not.toContain('brief.desired_frequency_exceeds_capacity');
+  const lineage = async () =>
+    (
+      await sql<{
+        sport: string;
+        lineage_id: string;
+      }>`SELECT sport, lineage_id FROM plan_brief_sports
+        WHERE plan_version_id = ${s.versionId}::uuid ORDER BY sport`.execute(getDatabase())
+    ).rows;
+  const before = await lineage();
+  s = await saveBrief(owner, plan.id, {
+    ...cmd(s),
+    brief: {
+      ...s.brief,
+      sports: s.brief.sports
+        .filter((sport) => sport.sport !== 'strength')
+        .map((sport) =>
+          sport.sport === 'cycle'
+            ? { ...sport, currentSessions: { status: 'known' as const, value: 2 } }
+            : sport,
+        ),
+    },
+  });
+  expect(s.brief.sports.map((sport) => sport.sport)).toEqual(['run', 'cycle', 'swim']);
+  const after = await lineage();
+  expect(after).toEqual(before.filter((row) => row.sport !== 'strength'));
+  const empty = await saveBrief(owner, plan.id, { ...cmd(s), brief: { ...s.brief, sports: [] } });
+  expect(empty.findings.map((f) => f.code)).toContain('brief.sport_required');
+  expect(
+    BriefSchema.safeParse({ ...empty.brief, sports: [s.brief.sports[0], s.brief.sports[0]] })
+      .success,
+  ).toBe(false);
 });
