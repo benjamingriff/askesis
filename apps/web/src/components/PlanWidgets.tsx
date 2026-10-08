@@ -30,7 +30,7 @@ import {
   SYSTEM_META,
   systemsForSports,
 } from '../lib/sports';
-import { effortMix, RACE_META, topRace, workoutLook, type WeekSummary } from '../lib/workouts';
+import { RACE_META, topRace, workoutLook, type WeekSummary } from '../lib/workouts';
 import {
   knownCoverage,
   usePerformance,
@@ -309,21 +309,20 @@ export function WeekChart({
   onSelect: (week: number) => void;
   units: Units;
   measure?: 'distance' | 'time' | undefined;
-  /** Runs a rail in each block's phase colour beneath its weeks. */
+  /** Tints each bar by its block's phase; bars fall back to the accent without one. */
   blockOf?: ((week: WeekSummary) => PlanBlock | null) | undefined;
   /** Hatches deliberately lighter weeks. */
   isCutback?: ((week: WeekSummary) => boolean) | undefined;
 }) {
   const amount = (week: WeekSummary) => (measure === 'time' ? week.seconds : week.metres);
   const max = Math.max(...weeks.map(amount), 1);
-  const blocks = weeks.map((week) => blockOf?.(week) ?? null);
   // Leave headroom for race badges above the tallest bars.
   const room = weeks.some((week) => topRace(week.workouts)) ? 82 : 100;
   return (
     <div className="week-chart" role="group" aria-label="Weekly volume">
-      {weeks.map((week, index) => {
+      {weeks.map((week) => {
         const active = week.number === selected;
-        const block = blocks[index] ?? null;
+        const block = blockOf?.(week) ?? null;
         const cutback = isCutback?.(week) ?? false;
         const race = topRace(week.workouts);
         const height = week.planned ? Math.max(10, (amount(week) / max) * room) : 26;
@@ -339,22 +338,13 @@ export function WeekChart({
               !week.planned && 'unplanned',
               current !== null && week.number < current && 'past',
             )}
+            style={{ '--bar': block?.color } as CSSProperties}
             aria-pressed={active}
             aria-label={`Week ${week.number}${block ? `, ${block.label}` : ''}${cutback ? ', cutback week' : ''}${race ? `, ${RACE_META[race].label}` : ''}${week.planned ? `, ${measure === 'time' ? formatDuration(week.seconds) : formatDistance(week.metres, units)}` : ', not planned'}`}
             onClick={() => onSelect(week.number)}
           >
             <span className="bar-track">
               <span className="bar-fill" style={{ height: `${height}%` }}>
-                <span className="bar-stack">
-                  {week.planned
-                    ? effortMix(week.workouts, measure).map(({ effort, amount: part }) => (
-                        <i
-                          key={effort}
-                          style={{ flexGrow: part, background: effortColor(effort) }}
-                        />
-                      ))
-                    : null}
-                </span>
                 {race ? (
                   <span className={cx('bar-race', `race-${race.toLowerCase()}`)} aria-hidden="true">
                     {race}
@@ -362,17 +352,6 @@ export function WeekChart({
                 ) : null}
               </span>
             </span>
-            {blockOf ? (
-              <span
-                className={cx(
-                  'bar-phase',
-                  blocks[index - 1] !== block && 'first',
-                  blocks[index + 1] !== block && 'last',
-                )}
-                style={{ '--phase': block?.color ?? 'transparent' } as CSSProperties}
-                aria-hidden="true"
-              />
-            ) : null}
             <span className={cx('bar-label', week.number === current && 'current')}>
               {week.number}
             </span>

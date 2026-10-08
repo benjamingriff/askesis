@@ -2,7 +2,6 @@ import type { WorkoutStep, WorkoutSummary } from '@askesis/api-client';
 import { describe, expect, it } from 'vitest';
 import { METRES_PER_MILE, formatDistance, formatPace, formatRange, startOfWeek } from './format';
 import {
-  effortMix,
   inferKind,
   intensitySegments,
   summarizeWeeks,
@@ -270,17 +269,6 @@ describe('multi-sport presentation', () => {
     expect(swim.color).toBe(run.color);
     expect(swim.color).toBe('var(--effort-easy)');
     expect(workoutLook(summary('run', 'Rest day')).effort).toBeNull();
-  });
-  it('splits a week by effort, easiest first', () => {
-    const week = [
-      { ...workout('2027-01-04', 0, '6 x 800 m'), estimatedDurationSeconds: 3000 },
-      { ...workout('2027-01-05', 0, 'Easy run'), estimatedDurationSeconds: 2400 },
-      { ...workout('2027-01-06', 0, 'Long run'), estimatedDurationSeconds: 5400 },
-    ];
-    expect(effortMix(week, 'time')).toEqual([
-      { effort: 'easy', amount: 7800 },
-      { effort: 'hard', amount: 3000 },
-    ]);
   });
   it('measures weekly volume by time once a plan trains more than running', () => {
     expect(volumeMeasure([{ discipline: 'run' }, { discipline: 'run' }])).toBe('distance');

@@ -168,7 +168,7 @@ it('constrains library presentation without changing the saved calendar preferen
   expect(screen.getByRole('grid')).toBeInTheDocument();
 });
 
-it('names the selected week’s phase and runs its rail under the bar', () => {
+it('names the selected week’s phase and tints its bar', () => {
   const blocks = labelBlocks([
     {
       id: 'b',
@@ -197,8 +197,7 @@ it('names the selected week’s phase and runs its rail under the bar', () => {
   expect(screen.getByText('Build')).toHaveAttribute('title', 'Longer threshold efforts.');
   expect(screen.getByText(/· Threshold build/)).toBeInTheDocument();
   const bar = screen.getByRole('button', { name: /^Week 1, Build/ });
-  const rail = bar.querySelector<HTMLElement>('.bar-phase')!;
-  expect(rail.style.getPropertyValue('--phase')).toBe('var(--effort-threshold)');
+  expect(bar.style.getPropertyValue('--bar')).toBe('var(--effort-threshold)');
 });
 
 it('marks cutback weeks and races on the chart, with the trophy on the goal race', () => {

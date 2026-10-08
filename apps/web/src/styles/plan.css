@@ -326,54 +326,50 @@
 }
 .bar-fill {
   position: relative;
-  display: flex;
   width: 100%;
-  transition: height 0.5s cubic-bezier(0.22, 1, 0.36, 1);
-}
-/* Each week stacks its volume by effort, easiest at the bottom. */
-.bar-stack {
-  position: relative;
-  flex: 1;
-  display: flex;
-  flex-direction: column-reverse;
-  gap: 2px;
   border-radius: 8px;
-  overflow: hidden;
-  background: var(--surface-raised);
-  opacity: 0.5;
+  background-color: color-mix(in srgb, var(--accent) 38%, var(--surface-raised));
   transition:
-    opacity 0.15s ease,
+    height 0.5s cubic-bezier(0.22, 1, 0.36, 1),
+    background 0.15s ease,
     box-shadow 0.15s ease;
 }
-.bar-stack i {
-  flex: 1 1 0;
-  min-height: 3px;
+.week-bar.past .bar-fill {
+  background-color: color-mix(in srgb, var(--accent) 62%, var(--surface-raised));
 }
-.week-bar.past .bar-stack {
-  opacity: 0.72;
+.week-bar:hover .bar-fill {
+  background-color: color-mix(in srgb, var(--accent) 75%, var(--surface-raised));
 }
-.week-bar:hover .bar-stack {
-  opacity: 0.88;
+/* Phased plans tint each week by its block; strong enough that warm hues stay clean. */
+.week-bar.phased .bar-fill {
+  background-color: color-mix(in srgb, var(--bar) 55%, var(--surface-raised));
 }
-.week-bar.active .bar-stack {
-  opacity: 1;
+.week-bar.phased.past .bar-fill {
+  background-color: color-mix(in srgb, var(--bar) 85%, var(--surface-raised));
+}
+.week-bar.phased:hover .bar-fill {
+  background-color: color-mix(in srgb, var(--bar) 92%, var(--surface-raised));
+}
+.week-bar.active .bar-fill {
+  background-color: var(--accent);
+}
+/* The selected week keeps its block's colour; the accent ring marks the selection. */
+.week-bar.phased.active .bar-fill {
+  background-color: var(--bar);
   box-shadow:
     0 0 0 2px var(--bg),
     0 0 0 3.5px var(--accent);
 }
-.week-bar.unplanned .bar-stack {
-  background: transparent;
+.week-bar.unplanned .bar-fill {
+  background-color: transparent;
   border: 1.5px dashed var(--border);
-}
-.week-bar.unplanned.active .bar-stack {
-  border-color: var(--accent);
   box-shadow: none;
 }
+.week-bar.unplanned.active .bar-fill {
+  border-color: var(--accent);
+}
 /* Cutback weeks are hatched: lighter by design, not missing work. */
-.week-bar.cutback .bar-stack::after {
-  content: '';
-  position: absolute;
-  inset: 0;
+.week-bar.cutback .bar-fill {
   background-image: repeating-linear-gradient(
     135deg,
     transparent 0 5px,
@@ -409,24 +405,6 @@
   border-color: var(--border);
   background: var(--surface);
   color: var(--text-muted);
-}
-/* The week's phase runs beneath the bars as a rail, joined across the weeks of one block. */
-.bar-phase {
-  align-self: stretch;
-  height: 3px;
-  margin: 0 -2.5px;
-  background: var(--phase);
-  opacity: 0.8;
-}
-.bar-phase.first {
-  margin-left: 0;
-  border-top-left-radius: 2px;
-  border-bottom-left-radius: 2px;
-}
-.bar-phase.last {
-  margin-right: 0;
-  border-top-right-radius: 2px;
-  border-bottom-right-radius: 2px;
 }
 .bar-label {
   color: var(--text-muted);

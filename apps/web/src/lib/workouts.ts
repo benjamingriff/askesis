@@ -1,6 +1,6 @@
 import type { RacePriority, WorkoutStep, WorkoutSummary } from '@askesis/api-client';
 import { Moon, PersonStanding, Trophy, type LucideIcon } from 'lucide-react';
-import { effortColor, EFFORTS, zoneEffort, type Effort } from '../theme/palette';
+import { effortColor, zoneEffort, type Effort } from '../theme/palette';
 import { METRES_PER_MILE, addDays, daysBetween, startOfWeek } from './format';
 import { SPORT_META, type Sport } from './sports';
 
@@ -293,25 +293,6 @@ export function intensitySegments(step: WorkoutStep): Segment[] {
       label: step.label ?? step.role ?? 'Effort',
     },
   ];
-}
-
-/** A set of workouts' volume split by effort, easiest first, for stacked load bars. */
-export function effortMix(
-  workouts: WorkoutSummary[],
-  measure: 'distance' | 'time',
-): { effort: Effort; amount: number }[] {
-  const totals = new Map<Effort, number>();
-  for (const workout of workouts) {
-    const { effort } = workoutLook(workout);
-    const amount =
-      (measure === 'time' ? workout.estimatedDurationSeconds : workout.estimatedDistanceMetres) ??
-      0;
-    if (effort && amount > 0) totals.set(effort, (totals.get(effort) ?? 0) + amount);
-  }
-  return EFFORTS.filter((effort) => totals.has(effort)).map((effort) => ({
-    effort,
-    amount: totals.get(effort)!,
-  }));
 }
 
 // ---- Weeks -------------------------------------------------------------------------------------
