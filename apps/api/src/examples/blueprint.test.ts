@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { WORKOUT_DISCIPLINES, STEP_DISCIPLINES } from '../modules/plans/disciplines.js';
-import { BLOCK_PHASES } from '../modules/plans/phases.js';
+import { BLOCK_PHASES, RACE_PRIORITIES } from '../modules/plans/periodization.js';
 import { CALIBRATORS } from '../modules/performance/performance.calibrators.js';
 import {
   StepCompletionSchema,
@@ -99,6 +99,27 @@ describe('complete multisport blueprint', () => {
       expect(weeks.at(-1)!.endDate).toBe(block.endDate);
       expect(weeks.map((w) => w.position)).toEqual(weeks.map((_, i) => i + 1));
     }
+  });
+
+  it('races each priority once and lightens the cutback week inside its block', () => {
+    const plan = buildExample('2026-09-28');
+    expect(sorted(exampleCoverage.racePriorities)).toEqual(sorted(RACE_PRIORITIES));
+    const races = plan.weeks.flatMap((week) =>
+      week.sessions
+        .filter(({ session }) => session.race)
+        .map(({ session }) => [week.index, session.race]),
+    );
+    expect(races).toEqual([
+      [3, 'B'],
+      [5, 'C'],
+      [7, 'A'],
+    ]);
+    // The A race is the plan's last training day, at the end of the taper.
+    expect(plan.blocks[plan.weeks[7]!.blockIndex]!.phase).toBe('taper');
+    expect(plan.weeks.filter((w) => w.cutback).map((w) => w.index)).toEqual([2]);
+    const cutback = plan.weeks[2]!;
+    expect(plan.blocks[cutback.blockIndex]!.phase).toBe('base');
+    expect(cutback.volume).toBeLessThan(plan.weeks[1]!.volume);
   });
 
   it('derives the publication revision from the blueprint content', () => {

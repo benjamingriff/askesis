@@ -124,6 +124,8 @@ function TodayForPlan({ plan, today }: { plan: Plan; today: string }) {
   const end = version?.endDate;
   const progress = planProgress(version?.startDate ?? null, end ?? null, today);
   const daysToEnd = end ? daysBetween(today, end) : null;
+  // Count down to the next goal race when the coach marked one, else to the plan's end.
+  const goal = all.find((w) => w.racePriority === 'A' && w.scheduledDate >= today);
   const performance = usePerformance().data;
   const sports = planSports(brief.data?.brief, all);
   const calibrated = systemsForSports(sports).some((system) => currentEntry(performance, system));
@@ -141,9 +143,11 @@ function TodayForPlan({ plan, today }: { plan: Plan; today: string }) {
           {progress?.text ?? plan.displayName}
         </Pill>
         <span className="muted">
-          {daysToEnd !== null && daysToEnd >= 0
-            ? `${daysToEnd} days to go · ${plan.displayName}`
-            : plan.displayName}
+          {goal
+            ? `${countdown(daysBetween(today, goal.scheduledDate))} · ${goal.title}`
+            : daysToEnd !== null && daysToEnd >= 0
+              ? `${daysToEnd} days to go · ${plan.displayName}`
+              : plan.displayName}
         </span>
       </Link>
 
@@ -366,4 +370,8 @@ function HeroWorkout({
       </span>
     </button>
   );
+}
+
+function countdown(days: number) {
+  return days === 0 ? 'Race day' : days === 1 ? '1 day to go' : `${days} days to go`;
 }

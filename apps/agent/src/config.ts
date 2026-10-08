@@ -1,5 +1,5 @@
 import { z } from 'zod';
-export const PROMPT_VERSION = 'multisport-coach-v2';
+export const PROMPT_VERSION = 'multisport-coach-v3';
 const schema = z.object({
   AGENT_API_URL: z.string().url().default('http://localhost:3000'),
   AGENT_BOOTSTRAP_TOKEN: z.string().min(32).max(200),

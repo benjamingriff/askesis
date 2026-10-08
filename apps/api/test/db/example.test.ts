@@ -83,6 +83,14 @@ it('publishes all content through the real lifecycle, preserving fitness and own
   expect(
     await db
       .selectFrom('training_weeks')
+      .select('week_number')
+      .where('plan_version_id', '=', versionId)
+      .where('cutback', '=', true)
+      .execute(),
+  ).toEqual([{ week_number: 3 }]);
+  expect(
+    await db
+      .selectFrom('training_weeks')
       .select('id')
       .where('plan_version_id', '=', versionId)
       .execute(),
@@ -120,6 +128,11 @@ it('publishes all content through the real lifecycle, preserving fitness and own
   expect(metrics.map((t) => t.metric).sort()).toEqual([...exampleCoverage.weekMetrics].sort());
   const workouts = await listWorkouts(owner, versionId);
   expect(workouts).toHaveLength(64);
+  expect(workouts.filter((w) => w.racePriority).map((w) => [w.title, w.racePriority])).toEqual([
+    ['Sprint duathlon tune-up', 'B'],
+    ['5K club race', 'C'],
+    ['Hyrox event', 'A'],
+  ]);
   expect(await listWorkouts(await athlete(), versionId)).toEqual([]);
   for (const workout of workouts) {
     const detail = await getWorkoutDetail(owner, workout.id);

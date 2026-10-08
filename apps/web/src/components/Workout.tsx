@@ -17,7 +17,7 @@ import {
   type PoolUnits,
 } from '../lib/format';
 import { formatZoneValue, SPORT_META, zoneLabel, type Sport } from '../lib/sports';
-import { inferKind, KIND_META } from '../lib/workouts';
+import { inferKind, KIND_META, RACE_META } from '../lib/workouts';
 import { useWorkoutDetail, type PlanVersion } from '../plan-data';
 import { useSportUnits, type Units } from '../settings';
 import { WorkoutChangeBadge } from './PlanChanges';
@@ -140,7 +140,13 @@ export function WorkoutCard({
       <span className="workout-card-copy">
         <span className="workout-card-kind">
           {kind.label}
-          {workout.priority === 'high' ? <em>Key session</em> : null}
+          {workout.racePriority ? (
+            <em className="race-badge" title={RACE_META[workout.racePriority].description}>
+              {RACE_META[workout.racePriority].label}
+            </em>
+          ) : workout.priority === 'high' ? (
+            <em>Key session</em>
+          ) : null}
           <WorkoutChangeBadge id={workout.id} />
         </span>
         <strong>{workout.title}</strong>
@@ -342,6 +348,7 @@ export function WorkoutDialog({
         <span className="workout-title">
           <span className="workout-kind-label">
             <kind.icon size={15} aria-hidden="true" /> {kind.label}
+            {workout.racePriority ? ` · ${RACE_META[workout.racePriority].label}` : ''}
           </span>
           {workout.title}
         </span>

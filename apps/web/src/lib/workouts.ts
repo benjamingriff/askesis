@@ -1,4 +1,4 @@
-import type { WorkoutStep, WorkoutSummary } from '@askesis/api-client';
+import type { RacePriority, WorkoutStep, WorkoutSummary } from '@askesis/api-client';
 import {
   Bike,
   Dumbbell,
@@ -35,14 +35,18 @@ export const KIND_META: Record<WorkoutKind, { label: string; icon: LucideIcon; c
 };
 
 /**
- * The API classifies workouts by sport only, so infer a presentation kind for runs from the
- * coach's wording. This only drives colour and iconography; it never changes the prescription.
+ * The API classifies workouts by sport, plus race priority, so infer a presentation kind for runs
+ * from the coach's wording. Workouts written before race priorities existed are recognised as
+ * races by title. This only drives colour and iconography; it never changes the prescription.
  */
 export function inferKind(
-  workout: Pick<WorkoutSummary, 'title' | 'purpose' | 'discipline'>,
+  workout: Pick<WorkoutSummary, 'title' | 'purpose' | 'discipline'> & {
+    racePriority?: RacePriority | null | undefined;
+  },
 ): WorkoutKind {
   const text = `${workout.title} ${workout.purpose ?? ''}`.toLowerCase();
   const title = workout.title.toLowerCase();
+  if (workout.racePriority) return 'race';
   if (/\brace\b|parkrun/.test(title)) return 'race';
   if (/time trial|\btest\b|benchmark/.test(title)) return 'test';
   if (workout.discipline === 'swim') return 'swim';
@@ -58,6 +62,21 @@ export function inferKind(
   if (/strength|gym|mobility/.test(title)) return 'strength';
   if (/rest/.test(title)) return 'rest';
   return 'easy';
+}
+
+// ---- Races -------------------------------------------------------------------------------------
+
+export const RACE_META: Record<RacePriority, { label: string; description: string }> = {
+  A: { label: 'A race', description: 'Goal race, reached through a taper.' },
+  B: { label: 'B race', description: 'Important tune-up, with a few easier days before it.' },
+  C: { label: 'C race', description: 'Raced hard as training, without a taper.' },
+};
+
+/** The most important race among some workouts, if any. */
+export function topRace(
+  workouts: readonly Pick<WorkoutSummary, 'racePriority'>[],
+): RacePriority | null {
+  return (['A', 'B', 'C'] as const).find((p) => workouts.some((w) => w.racePriority === p)) ?? null;
 }
 
 // ---- Intensity profile -------------------------------------------------------------------------

@@ -1,7 +1,7 @@
 import type { WorkoutStep, WorkoutSummary } from '@askesis/api-client';
 import { describe, expect, it } from 'vitest';
 import { METRES_PER_MILE, formatDistance, formatPace, formatRange, startOfWeek } from './format';
-import { inferKind, intensitySegments, summarizeWeeks, volumeMeasure } from './workouts';
+import { inferKind, intensitySegments, summarizeWeeks, topRace, volumeMeasure } from './workouts';
 
 const workout = (date: string, metres: number, title = 'Easy run'): WorkoutSummary => ({
   id: date,
@@ -15,6 +15,7 @@ const workout = (date: string, metres: number, title = 'Easy run'): WorkoutSumma
   purpose: null,
   discipline: 'run',
   priority: 'medium',
+  racePriority: null,
   estimatedDurationSeconds: 1800,
   estimatedDistanceMetres: metres,
 });
@@ -29,6 +30,22 @@ describe('inferKind', () => {
     ['Recovery jog', 'recovery'],
   ])('classifies “%s” as %s', (title, kind) => {
     expect(inferKind({ title, purpose: null, discipline: 'run' })).toBe(kind);
+  });
+});
+
+describe('races', () => {
+  it('treats any workout with a race priority as a race, whatever its title', () => {
+    expect(
+      inferKind({ title: 'Cardiff Half', purpose: null, discipline: 'run', racePriority: 'A' }),
+    ).toBe('race');
+    // Plans written before race priorities still recognise races by title.
+    expect(inferKind({ title: 'Saturday parkrun', purpose: null, discipline: 'run' })).toBe('race');
+  });
+
+  it('picks the most important race among workouts', () => {
+    const race = (racePriority: WorkoutSummary['racePriority']) => ({ racePriority });
+    expect(topRace([race(null), race('C'), race('B')])).toBe('B');
+    expect(topRace([race(null)])).toBeNull();
   });
 });
 

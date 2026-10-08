@@ -35,6 +35,7 @@ export async function writeExample(db: Transaction<DB>, versionId: string, ancho
         block_id: blockIds[week.blockIndex]!,
         week_number: week.index + 1,
         position: week.position,
+        cutback: week.cutback,
         title: week.title,
         description:
           'Friday is a prescribed rest day. Monday and Sunday demonstrate ordered double sessions.',
@@ -87,7 +88,8 @@ export async function writeExample(db: Transaction<DB>, versionId: string, ancho
             'Committed multisport software example. Suggested values illustrate the model; adapt prescriptions before training.',
           purpose: session.purpose,
           primary_discipline: session.sport,
-          priority: day === 5 ? 'high' : day === 0 ? 'low' : 'medium',
+          race_priority: session.race ?? null,
+          priority: session.race || day === 5 ? 'high' : day === 0 ? 'low' : 'medium',
           estimated_duration_seconds: session.minutes * 60,
           estimated_distance_metres: session.metres ?? null,
         })

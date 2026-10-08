@@ -95,6 +95,16 @@
           "priority": {
             "$ref": "#/components/schemas/WorkoutPriority"
           },
+          "racePriority": {
+            "type": "string",
+            "nullable": true,
+            "enum": [
+              "A",
+              "B",
+              "C",
+              null
+            ]
+          },
           "estimatedDurationSeconds": {
             "type": "integer",
             "nullable": true,
@@ -120,6 +130,7 @@
           "purpose",
           "discipline",
           "priority",
+          "racePriority",
           "estimatedDurationSeconds",
           "estimatedDistanceMetres"
         ]
@@ -185,6 +196,12 @@
           "endDate": {
             "type": "string",
             "format": "date"
+          },
+          "weeks": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TrainingWeek"
+            }
           }
         },
         "required": [
@@ -194,7 +211,35 @@
           "description",
           "phase",
           "startDate",
-          "endDate"
+          "endDate",
+          "weeks"
+        ]
+      },
+      "TrainingWeek": {
+        "type": "object",
+        "properties": {
+          "weekNumber": {
+            "type": "integer",
+            "minimum": 0,
+            "exclusiveMinimum": true
+          },
+          "startDate": {
+            "type": "string",
+            "format": "date"
+          },
+          "endDate": {
+            "type": "string",
+            "format": "date"
+          },
+          "cutback": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "weekNumber",
+          "startDate",
+          "endDate",
+          "cutback"
         ]
       },
       "WorkoutDetail": {

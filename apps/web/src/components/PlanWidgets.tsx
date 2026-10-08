@@ -1,3 +1,4 @@
+import type { WorkoutSummary } from '@askesis/api-client';
 import type { CSSProperties } from 'react';
 import {
   Archive,
@@ -9,6 +10,7 @@ import {
   Power,
   PowerOff,
   TriangleAlert,
+  Trophy,
 } from 'lucide-react';
 import { timeline, type PlanBlock } from '../lib/blocks';
 import {
@@ -28,7 +30,7 @@ import {
   SYSTEM_META,
   systemsForSports,
 } from '../lib/sports';
-import type { WeekSummary } from '../lib/workouts';
+import { RACE_META, topRace, type WeekSummary } from '../lib/workouts';
 import {
   knownCoverage,
   usePerformance,
@@ -37,7 +39,7 @@ import {
   type Plan,
 } from '../plan-data';
 import { useSportUnits, type Units } from '../settings';
-import { ZONE_COLORS } from '../theme/palette';
+import { KIND_COLORS, ZONE_COLORS } from '../theme/palette';
 import { Pill, cx } from './ui';
 
 // ---- Plan state --------------------------------------------------------------------------------
@@ -190,21 +192,28 @@ export function BlockTimeline({
   startDate,
   endDate,
   today,
+  races = [],
 }: {
   blocks: PlanBlock[];
   startDate: string | null;
   endDate: string | null;
   today: string;
+  /** A and B races are marked on the line; C races are training and stay off it. */
+  races?: Pick<WorkoutSummary, 'id' | 'title' | 'scheduledDate' | 'racePriority'>[] | undefined;
 }) {
   const line = timeline(blocks, startDate, endDate);
   if (!line) return null;
-  const offset = daysBetween(line.startDate, today);
-  const marker = offset >= 0 && offset < line.days ? ((offset + 0.5) / line.days) * 100 : null;
+  const at = (date: string) => {
+    const offset = daysBetween(line.startDate, date);
+    return offset >= 0 && offset < line.days ? ((offset + 0.5) / line.days) * 100 : null;
+  };
+  const marker = at(today);
+  const marked = races.filter((race) => race.racePriority === 'A' || race.racePriority === 'B');
   const current = blocks.find((block) => today >= block.startDate && today <= block.endDate);
   const next = current ? null : blocks.find((block) => block.startDate > today);
   const focus = current ?? next;
   return (
-    <div className="block-timeline">
+    <div className="block-timeline" style={{ '--race': KIND_COLORS.race } as CSSProperties}>
       <div className="block-track-wrap">
         <ol className="block-track" aria-label="Training blocks">
           {line.segments.map((segment) => {
@@ -248,6 +257,23 @@ export function BlockTimeline({
         {marker !== null ? (
           <span className="block-today" style={{ left: `${marker}%` }} aria-hidden="true" />
         ) : null}
+        {marked.map((race) => {
+          const left = at(race.scheduledDate);
+          return left === null ? null : (
+            <span
+              key={race.id}
+              className={cx('block-race', `race-${race.racePriority!.toLowerCase()}`)}
+              style={{ left: `${left}%` }}
+              title={`${RACE_META[race.racePriority!].label}: ${race.title}, ${formatShort(race.scheduledDate)}`}
+            >
+              {race.racePriority === 'A' ? <Trophy size={11} aria-hidden="true" /> : null}
+              <span className="sr-only">
+                {RACE_META[race.racePriority!].label}: {race.title},{' '}
+                {formatShort(race.scheduledDate)}
+              </span>
+            </span>
+          );
+        })}
       </div>
       {focus ? (
         <p className="block-now" style={{ '--phase': focus.color } as CSSProperties}>
@@ -275,6 +301,7 @@ export function WeekChart({
   units,
   measure = 'distance',
   blockOf,
+  isCutback,
 }: {
   weeks: WeekSummary[];
   selected: number;
@@ -284,15 +311,26 @@ export function WeekChart({
   measure?: 'distance' | 'time' | undefined;
   /** Tints each bar by its block's phase; bars fall back to the accent without one. */
   blockOf?: ((week: WeekSummary) => PlanBlock | null) | undefined;
+  /** Hatches deliberately lighter weeks. */
+  isCutback?: ((week: WeekSummary) => boolean) | undefined;
 }) {
   const amount = (week: WeekSummary) => (measure === 'time' ? week.seconds : week.metres);
   const max = Math.max(...weeks.map(amount), 1);
+  // Leave headroom for race badges above the tallest bars.
+  const room = weeks.some((week) => topRace(week.workouts)) ? 82 : 100;
   return (
-    <div className="week-chart" role="group" aria-label="Weekly volume">
+    <div
+      className="week-chart"
+      role="group"
+      aria-label="Weekly volume"
+      style={{ '--race': KIND_COLORS.race } as CSSProperties}
+    >
       {weeks.map((week) => {
         const active = week.number === selected;
         const block = blockOf?.(week) ?? null;
-        const height = week.planned ? Math.max(10, (amount(week) / max) * 100) : 26;
+        const cutback = isCutback?.(week) ?? false;
+        const race = topRace(week.workouts);
+        const height = week.planned ? Math.max(10, (amount(week) / max) * room) : 26;
         return (
           <button
             key={week.number}
@@ -300,17 +338,24 @@ export function WeekChart({
             className={cx(
               'week-bar',
               block && 'phased',
+              cutback && 'cutback',
               active && 'active',
               !week.planned && 'unplanned',
               current !== null && week.number < current && 'past',
             )}
             style={{ '--bar': block?.color } as CSSProperties}
             aria-pressed={active}
-            aria-label={`Week ${week.number}${block ? `, ${block.label}` : ''}${week.planned ? `, ${measure === 'time' ? formatDuration(week.seconds) : formatDistance(week.metres, units)}` : ', not planned'}`}
+            aria-label={`Week ${week.number}${block ? `, ${block.label}` : ''}${cutback ? ', cutback week' : ''}${race ? `, ${RACE_META[race].label}` : ''}${week.planned ? `, ${measure === 'time' ? formatDuration(week.seconds) : formatDistance(week.metres, units)}` : ', not planned'}`}
             onClick={() => onSelect(week.number)}
           >
             <span className="bar-track">
-              <span className="bar-fill" style={{ height: `${height}%` }} />
+              <span className="bar-fill" style={{ height: `${height}%` }}>
+                {race ? (
+                  <span className={cx('bar-race', `race-${race.toLowerCase()}`)} aria-hidden="true">
+                    {race}
+                  </span>
+                ) : null}
+              </span>
             </span>
             <span className={cx('bar-label', week.number === current && 'current')}>
               {week.number}

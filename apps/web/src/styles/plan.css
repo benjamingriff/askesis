@@ -143,6 +143,26 @@
   background: var(--text);
   box-shadow: 0 0 0 2px var(--surface);
 }
+/* A races carry a trophy on the line; B races a dot. */
+.block-race {
+  position: absolute;
+  top: 4px;
+  display: grid;
+  place-items: center;
+  width: 8px;
+  height: 8px;
+  margin-left: -4px;
+  border-radius: 50%;
+  background: var(--race);
+  box-shadow: 0 0 0 2px var(--surface);
+  transform: translateY(-50%);
+}
+.block-race.race-a {
+  width: 20px;
+  height: 20px;
+  margin-left: -10px;
+  color: var(--surface);
+}
 .block-now {
   display: flex;
   flex-wrap: wrap;
@@ -341,6 +361,45 @@
 .week-bar.unplanned.active .bar-fill {
   border-color: var(--accent);
 }
+/* Cutback weeks are hatched: lighter by design, not missing work. */
+.week-bar.cutback .bar-fill {
+  background-image: repeating-linear-gradient(
+    135deg,
+    transparent 0 5px,
+    color-mix(in srgb, var(--surface) 45%, transparent) 5px 8px
+  );
+}
+.bar-fill {
+  position: relative;
+}
+/* A race badge sits above its week's bar: filled for A, outlined for B, muted for C. */
+.bar-race {
+  position: absolute;
+  bottom: calc(100% + 4px);
+  left: 50%;
+  display: grid;
+  place-items: center;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 3px;
+  border-radius: 8px;
+  border: 1.5px solid var(--race);
+  background: var(--race);
+  color: var(--surface);
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 1;
+  transform: translateX(-50%);
+}
+.bar-race.race-b {
+  background: var(--surface);
+  color: color-mix(in srgb, var(--race) 80%, var(--text));
+}
+.bar-race.race-c {
+  border-color: var(--border);
+  background: var(--surface);
+  color: var(--text-muted);
+}
 .bar-label {
   color: var(--text-muted);
   font-size: 10px;
@@ -508,6 +567,10 @@
   color: var(--accent-text);
   font-style: normal;
   font-size: 10px;
+}
+.workout-card-kind em.race-badge {
+  background: color-mix(in srgb, var(--kind) 18%, transparent);
+  color: color-mix(in srgb, var(--kind) 80%, var(--text));
 }
 .workout-card-copy strong {
   font-size: 16px;

@@ -1,4 +1,4 @@
-import type { BlockPhase, TrainingBlock } from '@askesis/api-client';
+import type { BlockPhase, TrainingBlock, TrainingWeek } from '@askesis/api-client';
 import { KIND_COLORS, PHASE_COLORS } from '../theme/palette';
 import { addDays, daysBetween } from './format';
 
@@ -39,8 +39,21 @@ export function phasedBlocks(blocks: TrainingBlock[]): PlanBlock[] {
   return blocks.some((block) => block.phase) ? labelBlocks(blocks) : [];
 }
 
-/** The block covering most of a range's days (a calendar week), or null when none overlaps. */
-export function blockFor<T extends TrainingBlock>(
+export type PlanStructure = { blocks: PlanBlock[]; cutbacks: TrainingWeek[] };
+
+/** A version's phased blocks and its deliberately lighter weeks, which apply with or without phases. */
+export function planStructure(blocks: TrainingBlock[]): PlanStructure {
+  return {
+    blocks: phasedBlocks(blocks),
+    cutbacks: blocks.flatMap((block) => block.weeks.filter((week) => week.cutback)),
+  };
+}
+
+/**
+ * The block or stored week covering most of a range's days (a calendar week), or null when none
+ * overlaps.
+ */
+export function coveringRange<T extends { startDate: string; endDate: string }>(
   blocks: readonly T[],
   range: { startDate: string; endDate: string },
 ): T | null {

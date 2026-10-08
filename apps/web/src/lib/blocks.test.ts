@@ -1,7 +1,7 @@
 import type { TrainingBlock } from '@askesis/api-client';
 import { expect, it } from 'vitest';
 import { PHASE_COLORS } from '../theme/palette';
-import { blockFor, labelBlocks, phasedBlocks, timeline } from './blocks';
+import { coveringRange, labelBlocks, phasedBlocks, planStructure, timeline } from './blocks';
 
 const block = (
   id: string,
@@ -16,6 +16,7 @@ const block = (
   phase,
   startDate,
   endDate,
+  weeks: [],
 });
 
 const plan = [
@@ -45,8 +46,8 @@ it('assigns a week to the block covering most of its days', () => {
     block('a', 'base', '2027-01-04', '2027-01-12'),
     block('b', 'build', '2027-01-13', '2027-01-31'),
   ];
-  expect(blockFor(blocks, { startDate: '2027-01-11', endDate: '2027-01-17' })?.id).toBe('b');
-  expect(blockFor(blocks, { startDate: '2027-03-01', endDate: '2027-03-07' })).toBeNull();
+  expect(coveringRange(blocks, { startDate: '2027-01-11', endDate: '2027-01-17' })?.id).toBe('b');
+  expect(coveringRange(blocks, { startDate: '2027-03-01', endDate: '2027-03-07' })).toBeNull();
 });
 
 it('lays blocks end to end and marks plan dates without blocks as gaps', () => {
@@ -57,4 +58,17 @@ it('lays blocks end to end and marks plan dates without blocks as gaps', () => {
     ['block', 14],
     ['gap', 14],
   ]);
+});
+
+it('keeps cutback weeks even when no block names a phase', () => {
+  const legacy = {
+    ...block('a', null, '2027-01-04', '2027-01-17'),
+    weeks: [
+      { weekNumber: 1, startDate: '2027-01-04', endDate: '2027-01-10', cutback: false },
+      { weekNumber: 2, startDate: '2027-01-11', endDate: '2027-01-17', cutback: true },
+    ],
+  };
+  const structure = planStructure([legacy]);
+  expect(structure.blocks).toEqual([]);
+  expect(structure.cutbacks.map((w) => w.weekNumber)).toEqual([2]);
 });

@@ -4,7 +4,7 @@ import type { DB } from '../database/generated.js';
 import { localDate } from '../modules/athletes/timezone.js';
 import { emptyBrief, type Brief } from '../modules/plans/brief.schemas.js';
 import type { StepDiscipline, WorkoutDiscipline } from '../modules/plans/disciplines.js';
-import type { BlockPhase } from '../modules/plans/phases.js';
+import type { BlockPhase, RacePriority } from '../modules/plans/periodization.js';
 
 export const EXAMPLE_NAME = 'Multisport example · 8 weeks';
 export type Completion = Omit<Insertable<DB['step_completions']>, 'step_id' | 'plan_version_id'>;
@@ -32,6 +32,7 @@ export type Session = {
   metres?: number;
   tags: string[];
   steps: Step[];
+  race?: RacePriority;
 };
 
 export const shiftDay = (date: string, days: number) =>
@@ -488,33 +489,36 @@ export const exampleBrief = (): Brief => ({
 });
 
 /**
- * Every phase appears, and build repeats, so clients show Build 1 and Build 2. Recovery and taper
- * weeks carry reduced weekly targets.
+ * Every phase appears, and build repeats, so clients show Build 1 and Build 2. Base ends with a
+ * cutback week; a B race closes Build 1 and recovery follows it; Build 2 holds a C race and the
+ * taper leads to the A race on the last day. Cutback, recovery and taper weeks carry reduced
+ * weekly targets.
  */
 const PHASE_PLAN: { phase: BlockPhase; weeks: number; title: string; description: string }[] = [
   {
     phase: 'base',
-    weeks: 2,
+    weeks: 3,
     title: 'Aerobic foundation',
-    description: 'Mostly easy volume across every sport, with technique and supporting strength.',
+    description:
+      'Mostly easy volume across every sport, with technique and supporting strength. The third week is a cutback.',
   },
   {
     phase: 'build',
-    weeks: 2,
+    weeks: 1,
     title: 'Threshold build',
-    description: 'Longer threshold efforts in each sport while total volume holds steady.',
+    description: 'Longer threshold efforts in each sport, closing with a B-race tune-up.',
   },
   {
     phase: 'recovery',
     weeks: 1,
-    title: 'Absorb and consolidate',
-    description: 'A lighter week so the first build block is absorbed before the next.',
+    title: 'Absorb the tune-up',
+    description: 'An easy week after the B race so the first build is absorbed.',
   },
   {
     phase: 'build',
     weeks: 1,
     title: 'Race-specific build',
-    description: 'Bricks, transitions and Hyrox stations at event intensity.',
+    description: 'Bricks, transitions and Hyrox stations at event intensity, with a C race.',
   },
   {
     phase: 'peak',
@@ -525,10 +529,45 @@ const PHASE_PLAN: { phase: BlockPhase; weeks: number; title: string; description
   {
     phase: 'taper',
     weeks: 1,
-    title: 'Taper and event rehearsal',
-    description: 'Volume comes down and intensity stays, arriving fresh for the event.',
+    title: 'Taper to the event',
+    description: 'Volume comes down and intensity stays, arriving fresh for the A race.',
   },
 ];
+const CUTBACK_WEEKS = new Set([2]);
+
+/** Races by week index and weekday, replacing that day's session. */
+const RACES: Record<number, { day: number; race: (session: Session) => Session }> = {
+  3: {
+    day: 5,
+    race: (session) => ({
+      ...session,
+      title: 'Sprint duathlon tune-up',
+      purpose: 'B race: an important tune-up at event effort, with easier days before it.',
+      tags: [...session.tags, 'race'],
+      race: 'B',
+    }),
+  },
+  5: {
+    day: 2,
+    race: (session) => ({
+      ...session,
+      title: '5K club race',
+      purpose: 'C race: raced hard as training, without a taper.',
+      tags: [...session.tags, 'race'],
+      race: 'C',
+    }),
+  },
+  7: {
+    day: 6,
+    race: (session) => ({
+      ...session,
+      title: 'Hyrox event',
+      purpose: 'A race: the goal event, reached through the taper.',
+      tags: [...session.tags, 'race'],
+      race: 'A',
+    }),
+  },
+};
 
 export function buildExample(anchor: string) {
   const endDate = shiftDay(anchor, 55);
@@ -553,7 +592,11 @@ export function buildExample(anchor: string) {
       index,
       blockIndex,
       position: index - block.firstWeek + 1,
-      volume: block.phase === 'recovery' || block.phase === 'taper' ? 0.75 : 1,
+      cutback: CUTBACK_WEEKS.has(index),
+      volume:
+        CUTBACK_WEEKS.has(index) || block.phase === 'recovery' || block.phase === 'taper'
+          ? 0.75
+          : 1,
       title: `Week ${index + 1} · ${block.title}`,
       startDate: shiftDay(anchor, index * 7),
       endDate: shiftDay(anchor, index * 7 + 6),
@@ -565,8 +608,16 @@ export function buildExample(anchor: string) {
         { day: 3, session: conditioning(index) },
         { day: 5, session: brick(index) },
         { day: 6, session: hyrox() },
-        { day: 6, session: swimming(index + 1) },
-      ],
+        // After the A race, the plan's last session is an easy technique swim, not a test.
+        { day: 6, session: swimming(index === 7 ? 7 : index + 1) },
+      ].map(({ day, session }, position, all) => ({
+        day,
+        // The first session on the race day becomes the race.
+        session:
+          RACES[index]?.day === day && all.findIndex((s) => s.day === day) === position
+            ? RACES[index].race(session)
+            : session,
+      })),
     };
   });
   return { anchor, endDate, blocks, weeks, brief: exampleBrief() };
@@ -608,6 +659,7 @@ export const exampleCoverage = {
     'instruction',
   ],
   stepRoles: ['warmup', 'work', 'recovery', 'cooldown', 'transition', 'main', 'other'],
+  racePriorities: ['A', 'B', 'C'],
   weekMetrics: [
     'distance',
     'duration',

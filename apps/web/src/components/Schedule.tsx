@@ -31,7 +31,7 @@ import {
   workoutsOn,
   type CoverageRange,
 } from '../lib/workouts';
-import { blockFor, type PlanBlock } from '../lib/blocks';
+import { coveringRange, type PlanBlock } from '../lib/blocks';
 import type { Units } from '../settings';
 import { readStorage, writeStorage } from '../lib/storage';
 import type { PlanVersion } from '../plan-data';
@@ -71,6 +71,7 @@ export function Schedule({
   selection,
   presentation = 'interactive',
   blocks = [],
+  cutbacks = [],
 }: {
   workouts: WorkoutSummary[];
   version?: Pick<PlanVersion, 'id' | 'editNumber'> | null | undefined;
@@ -88,6 +89,8 @@ export function Schedule({
   presentation?: SchedulePresentation | undefined;
   /** Labelled, phased blocks; empty for plans without phases. */
   blocks?: PlanBlock[] | undefined;
+  /** Stored weeks the coach made deliberately lighter. */
+  cutbacks?: { startDate: string; endDate: string }[] | undefined;
 }) {
   const weeks = useMemo(
     () => summarizeWeeks(workouts, startDate, endDate, coverage),
@@ -105,7 +108,9 @@ export function Schedule({
   const ownSelection = useWorkoutSelection(workouts, version?.id);
   const dialog = selection ?? ownSelection;
   const week = weeks.find((w) => w.number === selectedWeek) ?? weeks[0];
-  const blockOf = (range: { startDate: string; endDate: string }) => blockFor(blocks, range);
+  const blockOf = (range: { startDate: string; endDate: string }) => coveringRange(blocks, range);
+  const isCutback = (range: { startDate: string; endDate: string }) =>
+    !!coveringRange(cutbacks, range);
   const weekBlock = week ? blockOf(week) : null;
   const dayStatus = (date: string) =>
     (startDate && date < startDate) || (endDate && date > endDate)
@@ -152,6 +157,7 @@ export function Schedule({
               units={units}
               measure={measure}
               blockOf={blocks.length ? blockOf : undefined}
+              isCutback={cutbacks.length ? isCutback : undefined}
             />
           </Card>
           <div className="week-heading">
@@ -166,6 +172,14 @@ export function Schedule({
                   >
                     {weekBlock.label}
                   </span>
+                ) : null}
+                {isCutback(week) ? (
+                  <Pill
+                    tone="neutral"
+                    title="Deliberately lighter, so the training before it is absorbed."
+                  >
+                    Cutback
+                  </Pill>
                 ) : null}
                 {week.number === current ? <Pill tone="accent">This week</Pill> : null}
               </h3>
@@ -299,6 +313,7 @@ function CalendarView({
   const inPlan = (date: string) =>
     (!startDate || date >= startDate) && (!endDate || date <= endDate);
   const selectedWorkouts = workoutsOn(workouts, selected);
+  const goalRaces = workouts.some((workout) => workout.racePriority === 'A');
   const changes = useContext(WorkoutChangesContext);
   const changed = (workout: WorkoutSummary) =>
     changes.some((change) => change.workoutId === workout.id);
@@ -330,7 +345,8 @@ function CalendarView({
         {grid.flat().map((date) => {
           const items = workoutsOn(workouts, date);
           const outside = date.slice(0, 7) !== month.slice(0, 7);
-          const isEnd = date === endDate;
+          // Goal races carry the trophy; plans without race priorities mark their end date.
+          const isGoal = goalRaces ? items.some((w) => w.racePriority === 'A') : date === endDate;
           return (
             <button
               type="button"
@@ -349,7 +365,7 @@ function CalendarView({
             >
               <span>{dayNumber(date)}</span>
               <span className="calendar-dots">
-                {isEnd ? <Trophy size={11} aria-hidden="true" /> : null}
+                {isGoal ? <Trophy size={11} aria-hidden="true" /> : null}
                 {items.map((workout) => (
                   <i
                     key={workout.id}
