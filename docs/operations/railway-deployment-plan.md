@@ -6,7 +6,7 @@ Repository configuration verified 2026-10-06. This is the supported deployment p
 
 Use PostgreSQL, a private Hono API, a private coaching worker and a public nginx web service. Only web needs a public domain. Browser calls use same-origin `/api/*`; nginx rejects `/internal/*`. Machine authentication remains mandatory even on a private network. Only API/operator migration jobs receive database credentials; only worker receives the provider key.
 
-Build from the repository root using `apps/api/Dockerfile`, `apps/web/Dockerfile` and `apps/agent/Dockerfile`. Runtime images use Node 24 for API/worker and nginx for web. There is no committed Railway service manifest; service variables, pre-deploy commands, replicas and domains must be configured/verified in Railway. Do not run local seed/reset/publication jobs on Railway.
+Build from the repository root using `apps/api/Dockerfile`, `apps/web/Dockerfile` and `apps/agent/Dockerfile`. Runtime images use Node 24 for API/worker and nginx for web. There is no committed Railway service manifest; service variables, pre-deploy commands, replicas and domains must be configured/verified in Railway. Do not run historical local seed/reset/publication jobs on Railway. The image startup wrapper separately ensures the [account-owned multisport example](./example-plan.md) for the configured owner after migrations.
 
 ## API service
 
@@ -32,7 +32,7 @@ sh -c 'atlas migrate apply --dir file:///app/database/migrations --url "${DATABA
 
 That command assumes a base URL without query parameters and the earlier private connection's disabled-TLS configuration. Verify current connection settings; use `&` rather than another `?` if adding a parameter to a URL with a query. The explicit shell expands the environment variable. Repository `atlas.hcl` defines only the `local` environment, so there is no `--env railway` target.
 
-Check `/api/ready` for current checkpoint `20261007120000`; `/api/health` is process-only. Migrations are append-only. Backup/rehearse difficult changes before rollout. Do not roll back by dropping durable run/live/version tables.
+The image start command publishes the configured example before opening the API listener; leave the service start-command override empty. Set `EXAMPLE_PLAN_ENABLED=false` to disable it. Check `/api/ready` for the athlete-performance checkpoint `20261007120000`; `/api/health` is process-only. Migrations are append-only. Backup/rehearse difficult changes before rollout. Do not roll back by dropping durable run/live/version tables.
 
 Public Swagger/OpenAPI paths are always registered in the current application. There is no configuration switch that disables them. A private API behind nginx avoids a separate public API entry point.
 

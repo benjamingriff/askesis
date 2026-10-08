@@ -151,39 +151,46 @@ export async function organizePlan(
 ) {
   return getDatabase()
     .transaction()
-    .execute(async (db) => {
-      await ownerPlan(db, athleteId, planId, true);
-      const plan = await detail(db, athleteId, planId);
-      if ((action === 'archive' && plan.archived) || (action === 'unarchive' && !plan.archived))
-        return plan;
-      if (action === 'activate' || action === 'deactivate') {
-        editable(plan);
-        if (plan.active === (action === 'activate')) return plan;
-        if (action === 'activate' && !plan.locked)
-          throw new PlanError(
-            'LOCKED_VERSION_REQUIRED',
-            'Lock a version before activating this plan.',
-          );
-      }
-      stateMatches(plan, expectedStateVersion);
-      // One UPDATE: archived rows only permit the unarchive transition.
-      if (action === 'archive') await assertPlanIdle(db, planId);
-      await db
-        .updateTable('plans')
-        .set({
-          ...(action === 'archive'
-            ? { archived_at: new Date(), activated_at: null }
-            : action === 'unarchive'
-              ? { archived_at: null, activated_at: null }
-              : { activated_at: action === 'activate' ? new Date() : null }),
-          state_version: sql`state_version + 1`,
-          updated_at: new Date(),
-        })
-        .where('id', '=', planId)
-        .execute();
-      return detail(db, athleteId, planId);
-    });
+    .execute((db) => organizePlanRows(db, athleteId, planId, action, expectedStateVersion));
 }
+
+/** Same lifecycle operation inside an operator-owned atomic transaction. */
+export async function organizePlanRows(
+  db: Transaction<DB>,
+  athleteId: string,
+  planId: string,
+  action: 'activate' | 'deactivate' | 'archive' | 'unarchive',
+  expectedStateVersion: number,
+) {
+  await ownerPlan(db, athleteId, planId, true);
+  const plan = await detail(db, athleteId, planId);
+  if ((action === 'archive' && plan.archived) || (action === 'unarchive' && !plan.archived))
+    return plan;
+  if (action === 'activate' || action === 'deactivate') {
+    editable(plan);
+    if (plan.active === (action === 'activate')) return plan;
+    if (action === 'activate' && !plan.locked)
+      throw new PlanError('LOCKED_VERSION_REQUIRED', 'Lock a version before activating this plan.');
+  }
+  stateMatches(plan, expectedStateVersion);
+  // One UPDATE: archived rows only permit the unarchive transition.
+  if (action === 'archive') await assertPlanIdle(db, planId);
+  await db
+    .updateTable('plans')
+    .set({
+      ...(action === 'archive'
+        ? { archived_at: new Date(), activated_at: null }
+        : action === 'unarchive'
+          ? { archived_at: null, activated_at: null }
+          : { activated_at: action === 'activate' ? new Date() : null }),
+      state_version: sql`state_version + 1`,
+      updated_at: new Date(),
+    })
+    .where('id', '=', planId)
+    .execute();
+  return detail(db, athleteId, planId);
+}
+
 function editable(plan: Plan) {
   if (plan.archived)
     throw new PlanError('PLAN_ARCHIVED', 'Unarchive this plan before making changes.');
@@ -382,125 +389,144 @@ export async function previewLock(athleteId: string, planId: string) {
     .execute(async (db) => preview(db, await detail(db, athleteId, planId)));
 }
 export async function lockPlan(athleteId: string, planId: string, input: Command, key: string) {
-  return idempotent(athleteId, 'plan.lock', key, { planId, ...input }, async (db) => {
-    await ownerPlan(db, athleteId, planId, true);
-    await assertPlanIdle(db, planId);
-    const plan = await detail(db, athleteId, planId);
-    editable(plan);
-    stateMatches(plan, input.expectedStateVersion);
-    const draft = draftMatches(plan, input.expectedDraftId, input.expectedEditNumber);
-    let result = await preview(db, plan);
-    if (
-      result.contentHash !== input.expectedContentHash ||
-      result.validationDigest !== input.expectedValidationDigest
-    )
-      throw new PlanError('STALE_VALIDATION', 'Validate the current draft again before locking.');
-    if (input.confirmBriefHash) {
-      await confirmBriefRows(db, await readBrief(db, draft.id), {
-        expectedHash: input.confirmBriefHash,
-        acknowledgedWarningCodes: input.acknowledgedWarningCodes ?? [],
-      });
-      result = await preview(db, plan);
-    }
-    if (result.findings.some((finding) => finding.severity === 'error'))
-      throw new PlanError('PLAN_INVALID', 'Resolve validation errors before locking.', 422);
-    if (
-      result.findings.some(
-        (finding) =>
-          finding.severity === 'warning' && !input.acknowledgedWarningCodes?.includes(finding.code),
-      )
-    )
-      throw new PlanError(
-        'WARNINGS_UNACKNOWLEDGED',
-        'Acknowledge every warning before locking.',
-        422,
-      );
-    if (!result.hasChanges)
-      throw new PlanError(
-        'NO_CHANGES',
-        'The draft matches the current version. Edit it or discard it.',
-      );
-    const count = await db
-      .selectFrom('plan_versions')
-      .select(({ fn }) => fn.max<number>('version_number').as('latest'))
-      .where('plan_id', '=', planId)
-      .executeTakeFirstOrThrow();
-    await sql`UPDATE plan_briefs SET schedule_review_required = false WHERE plan_version_id = ${draft.id}::uuid`.execute(
-      db,
-    );
-    await db
-      .updateTable('plan_versions')
-      .set({
-        state: 'locked',
-        version_number: (count.latest ?? 0) + 1,
-        supersedes_version_id: plan.locked?.id ?? null,
-        content_hash: result.contentHash,
-        content_hash_version: CONTENT_HASH_VERSION,
-        validator_version: VALIDATOR_VERSION,
-        validation_findings: sql<Json>`${JSON.stringify(result.findings)}::jsonb`,
-        acknowledged_warning_codes: [
-          ...new Set(
-            result.findings
-              .filter((finding) => finding.severity === 'warning')
-              .map((finding) => finding.code),
-          ),
-        ],
-        change_summary: result.summary,
-        calibration_basis: sql<Json>`${JSON.stringify(await calibrationBasis(db, draft.id))}::jsonb`,
-        locked_at: new Date(),
-        updated_at: new Date(),
-      })
-      .where('id', '=', draft.id)
-      .execute();
-    await db
-      .updateTable('plans')
-      .set({ current_locked_version_id: draft.id, current_draft_version_id: null })
-      .where('id', '=', planId)
-      .execute();
-    await bump(db, planId);
-    return detail(db, athleteId, planId);
-  });
+  return idempotent(athleteId, 'plan.lock', key, { planId, ...input }, (db) =>
+    lockPlanRows(db, athleteId, planId, input),
+  );
 }
+
+/** Uses the real validator, content hash and immutable publication guards. */
+export async function lockPlanRows(
+  db: Transaction<DB>,
+  athleteId: string,
+  planId: string,
+  input: Command,
+) {
+  await ownerPlan(db, athleteId, planId, true);
+  await assertPlanIdle(db, planId);
+  const plan = await detail(db, athleteId, planId);
+  editable(plan);
+  stateMatches(plan, input.expectedStateVersion);
+  const draft = draftMatches(plan, input.expectedDraftId, input.expectedEditNumber);
+  let result = await preview(db, plan);
+  if (
+    result.contentHash !== input.expectedContentHash ||
+    result.validationDigest !== input.expectedValidationDigest
+  )
+    throw new PlanError('STALE_VALIDATION', 'Validate the current draft again before locking.');
+  if (input.confirmBriefHash) {
+    await confirmBriefRows(db, await readBrief(db, draft.id), {
+      expectedHash: input.confirmBriefHash,
+      acknowledgedWarningCodes: input.acknowledgedWarningCodes ?? [],
+    });
+    result = await preview(db, plan);
+  }
+  if (result.findings.some((finding) => finding.severity === 'error'))
+    throw new PlanError('PLAN_INVALID', 'Resolve validation errors before locking.', 422);
+  if (
+    result.findings.some(
+      (finding) =>
+        finding.severity === 'warning' && !input.acknowledgedWarningCodes?.includes(finding.code),
+    )
+  )
+    throw new PlanError(
+      'WARNINGS_UNACKNOWLEDGED',
+      'Acknowledge every warning before locking.',
+      422,
+    );
+  if (!result.hasChanges)
+    throw new PlanError(
+      'NO_CHANGES',
+      'The draft matches the current version. Edit it or discard it.',
+    );
+  const count = await db
+    .selectFrom('plan_versions')
+    .select(({ fn }) => fn.max<number>('version_number').as('latest'))
+    .where('plan_id', '=', planId)
+    .executeTakeFirstOrThrow();
+  await sql`UPDATE plan_briefs SET schedule_review_required = false WHERE plan_version_id = ${draft.id}::uuid`.execute(
+    db,
+  );
+  await db
+    .updateTable('plan_versions')
+    .set({
+      state: 'locked',
+      version_number: (count.latest ?? 0) + 1,
+      supersedes_version_id: plan.locked?.id ?? null,
+      content_hash: result.contentHash,
+      content_hash_version: CONTENT_HASH_VERSION,
+      validator_version: VALIDATOR_VERSION,
+      validation_findings: sql<Json>`${JSON.stringify(result.findings)}::jsonb`,
+      acknowledged_warning_codes: [
+        ...new Set(
+          result.findings
+            .filter((finding) => finding.severity === 'warning')
+            .map((finding) => finding.code),
+        ),
+      ],
+      change_summary: result.summary,
+      calibration_basis: sql<Json>`${JSON.stringify(await calibrationBasis(db, draft.id))}::jsonb`,
+      locked_at: new Date(),
+      updated_at: new Date(),
+    })
+    .where('id', '=', draft.id)
+    .execute();
+  await db
+    .updateTable('plans')
+    .set({ current_locked_version_id: draft.id, current_draft_version_id: null })
+    .where('id', '=', planId)
+    .execute();
+  await bump(db, planId);
+  return detail(db, athleteId, planId);
+}
+
 export async function unlockPlan(athleteId: string, planId: string, expectedStateVersion: number) {
   return getDatabase()
     .transaction()
-    .execute(async (db) => {
-      await ownerPlan(db, athleteId, planId, true);
-      await assertPlanIdle(db, planId);
-      const plan = await detail(db, athleteId, planId);
-      editable(plan);
-      if (plan.draft !== null) return plan;
-      stateMatches(plan, expectedStateVersion);
-      if (plan.locked === null)
-        throw new PlanError('LOCKED_VERSION_REQUIRED', 'There is no locked version to unlock.');
-      const source = await db
-        .selectFrom('plan_versions')
-        .selectAll()
-        .where('id', '=', plan.locked.id)
-        .executeTakeFirstOrThrow();
-      const draftId = randomUUID();
-      await db
-        .insertInto('plan_versions')
-        .values({
-          id: draftId,
-          plan_id: planId,
-          description: source.description,
-          start_date: source.start_date,
-          end_date: source.end_date,
-          based_on_version_id: source.id,
-          content_schema_version: source.content_schema_version,
-        })
-        .execute();
-      await cloneContent(db, source.id, draftId);
-      await db
-        .updateTable('plans')
-        .set({ current_draft_version_id: draftId })
-        .where('id', '=', planId)
-        .execute();
-      await bump(db, planId);
-      return detail(db, athleteId, planId);
-    });
+    .execute((db) => unlockPlanRows(db, athleteId, planId, expectedStateVersion));
 }
+
+export async function unlockPlanRows(
+  db: Transaction<DB>,
+  athleteId: string,
+  planId: string,
+  expectedStateVersion: number,
+) {
+  await ownerPlan(db, athleteId, planId, true);
+  await assertPlanIdle(db, planId);
+  const plan = await detail(db, athleteId, planId);
+  editable(plan);
+  if (plan.draft !== null) return plan;
+  stateMatches(plan, expectedStateVersion);
+  if (plan.locked === null)
+    throw new PlanError('LOCKED_VERSION_REQUIRED', 'There is no locked version to unlock.');
+  const source = await db
+    .selectFrom('plan_versions')
+    .selectAll()
+    .where('id', '=', plan.locked.id)
+    .executeTakeFirstOrThrow();
+  const draftId = randomUUID();
+  await db
+    .insertInto('plan_versions')
+    .values({
+      id: draftId,
+      plan_id: planId,
+      description: source.description,
+      start_date: source.start_date,
+      end_date: source.end_date,
+      based_on_version_id: source.id,
+      content_schema_version: source.content_schema_version,
+    })
+    .execute();
+  await cloneContent(db, source.id, draftId);
+  await db
+    .updateTable('plans')
+    .set({ current_draft_version_id: draftId })
+    .where('id', '=', planId)
+    .execute();
+  await bump(db, planId);
+  return detail(db, athleteId, planId);
+}
+
 export async function discardDraft(athleteId: string, planId: string, input: Command, key: string) {
   return idempotent(athleteId, 'plan.discard', key, { planId, ...input }, async (db) => {
     await ownerPlan(db, athleteId, planId, true);

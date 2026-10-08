@@ -81,8 +81,6 @@ try {
   run('pnpm', ['--filter', '@askesis/api', 'verification:check']);
   run('docker', ['compose', 'up', '-d', 'postgres']);
   run('docker', ['compose', 'run', '--rm', 'migrate']);
-  run('docker', ['compose', 'run', '--rm', '--no-deps', 'seed']);
-  run('pnpm', ['--filter', '@askesis/api', 'fixture:publish']);
   run('pnpm', ['--filter', '@askesis/api', 'verification:prepare']);
   console.log('Ready. Run pnpm dev:local, then pnpm dev:login in another terminal.');
 } catch (error) {

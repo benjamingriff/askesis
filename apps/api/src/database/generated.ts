@@ -219,6 +219,16 @@ export interface Conversations {
   title: string;
 }
 
+export interface ExamplePlanEditions {
+  anchor_date: Timestamp;
+  blueprint_revision: string;
+  created_at: Generated<Timestamp>;
+  owner_id: string;
+  plan_id: string;
+  published_content_hash: string;
+  published_state_version: number;
+}
+
 export interface LiveEventHeads {
   owner_id: string;
   sequence: Generated<Int8>;
@@ -478,6 +488,7 @@ export interface DB {
   "atlas_schema_revisions.atlas_schema_revisions": AtlasSchemaRevisionsAtlasSchemaRevisions;
   conversation_messages: ConversationMessages;
   conversations: Conversations;
+  example_plan_editions: ExamplePlanEditions;
   live_event_heads: LiveEventHeads;
   live_events: LiveEvents;
   movement_definitions: MovementDefinitions;

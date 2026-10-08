@@ -12,7 +12,7 @@ docker compose ps -a
 docker compose logs migrate seed publish-fixture api web
 ```
 
-PostgreSQL is version 17. Migrate, seed and publish-fixture should exit successfully before API/web start. Defaults are localhost:5432, database/user/password `askesis`; override them for local use with the Compose environment variables. Atlas and `psql` run in containers.
+PostgreSQL is version 17. Migrate should exit successfully before API/web start. Historical seed/publication jobs are optional in the `fixtures` profile; account-owned examples use [manual seeding](./example-plan.md). Defaults are localhost:5432, database/user/password `askesis`; override them for local use with the Compose environment variables. Atlas and `psql` run in containers.
 
 ```bash
 docker compose exec postgres psql -U askesis -d askesis
@@ -42,7 +42,7 @@ Never modify deployed/shared migrations; add another migration. The current API 
 
 `seed_runs` guards key `cardiff-half-example-v3`. SQL creates a populated draft with version UUID `00000000-0000-0000-0000-000000000050` owned by the synthetic athlete. The separate publisher fills/validates the brief and calibration, confirms, promotes the draft to locked version 1 and activates the logical plan. It uses lifecycle services rather than bypassing immutable-content triggers. Repeated publication accepts an untouched fixture; edited fixtures are rejected rather than overwritten.
 
-The fixture does not belong to an arbitrary signed-in Clerk user. Never seed or run fixture publication on Railway; publication rejects production/Railway configuration.
+The fixture does not belong to an arbitrary signed-in Clerk user. Never run these historical seed/publication jobs on Railway; they reject production/Railway configuration. The separate [account-owned example](./example-plan.md) supports hosted deployment.
 
 To remove and reload only the fixed example plan:
 

@@ -1,5 +1,4 @@
 export const verificationEmail = 'askesis-verification+clerk_test@example.com';
-export const fixtureOwner = '00000000-0000-0000-0000-000000000001';
 export class LocalVerificationError extends Error {}
 
 export function verificationConfig(environment: NodeJS.ProcessEnv) {
