@@ -338,6 +338,12 @@ export function contrastRatio(a: string, b: string): number {
   return (Math.max(la, lb) + 0.05) / (Math.min(la, lb) + 0.05);
 }
 
+/** Ink or white for content on a fill: whichever keeps more contrast at the fill's weakest stop. */
+export function onFill(stops: string[]): string {
+  const worst = (ink: string) => Math.min(...stops.map((stop) => contrastRatio(ink, stop)));
+  return worst('#0A0A0B') >= worst('#FFFFFF') ? '#0A0A0B' : '#FFFFFF';
+}
+
 export function mix(a: string, b: string, t: number): string {
   const [ar, ag, ab] = hexToRgb(a);
   const [br, bg, bb] = hexToRgb(b);

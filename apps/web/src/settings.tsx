@@ -16,7 +16,7 @@ import {
   EFFORT_META,
   EFFORTS,
   isValidHex,
-  luminance,
+  onFill,
   mix,
   normalizeHex,
   readableOn,
@@ -61,6 +61,8 @@ export const DEFAULT_SETTINGS: Settings = {
 };
 
 const STORAGE_KEY = 'askesis.settings.v1';
+/** Saved settings without this version predate accent presets: their accent is always a hex. */
+const SETTINGS_VERSION = 2;
 
 export type Theme = {
   isDark: boolean;
@@ -86,8 +88,6 @@ export function buildTheme(settings: Settings, systemScheme: 'light' | 'dark'): 
   const def = THEME_BY_ID[themeId];
   const stops = accentStops(settings.accent, def.mode);
   const accent = stops.length > 1 ? mix(stops[0]!, stops[1]!, 0.5) : stops[0]!;
-  // Text has to read across the whole fill, so the darker end of a blend decides.
-  const darkest = Math.min(...stops.map(luminance));
   return {
     isDark: def.mode === 'dark',
     themeId,
@@ -95,27 +95,30 @@ export function buildTheme(settings: Settings, systemScheme: 'light' | 'dark'): 
     accent,
     accentFill: accentFill(stops),
     accentStops: stops,
-    onAccent: darkest > 0.3 ? '#0A0A0B' : '#FFFFFF',
+    onAccent: onFill(stops),
     accentText: readableOn(accent, def.colors.bg),
     accentSoft: alpha(accent, def.mode === 'dark' ? 0.14 : 0.16),
     accentBorder: alpha(accent, def.mode === 'dark' ? 0.35 : 0.5),
   };
 }
 
-/** A saved accent as a preset id or custom hex; retired presets move to their closest successor. */
-export function readAccent(value: unknown): string {
+/**
+ * A saved accent as a preset id or custom hex. Retired presets in legacy settings move to their
+ * closest successor; a custom hex saved since then is kept even when it matches one.
+ */
+export function readAccent(value: unknown, legacy = false): string {
   if (typeof value !== 'string') return DEFAULT_ACCENT;
   if (ACCENT_BY_ID[value]) return value;
   if (!isValidHex(value)) return DEFAULT_ACCENT;
   const hex = normalizeHex(value);
-  return RETIRED_ACCENTS[hex] ?? hex;
+  return (legacy && RETIRED_ACCENTS[hex]) || hex;
 }
 
 function readSettings(): Settings {
   try {
     const raw: unknown = JSON.parse(readStorage(STORAGE_KEY) ?? 'null');
     if (!raw || typeof raw !== 'object') return DEFAULT_SETTINGS;
-    const value = raw as Partial<Settings>;
+    const value = raw as Partial<Settings> & { version?: unknown };
     return {
       mode: ['system', 'dark', 'light'].includes(value.mode as string)
         ? (value.mode as ThemeMode)
@@ -128,7 +131,7 @@ function readSettings(): Settings {
         value.lightTheme && THEME_BY_ID[value.lightTheme]?.mode === 'light'
           ? value.lightTheme
           : DEFAULT_SETTINGS.lightTheme,
-      accent: readAccent(value.accent),
+      accent: readAccent(value.accent, value.version !== SETTINGS_VERSION),
       units: ['plan', 'km', 'mi'].includes(value.units as string)
         ? (value.units as UnitPreference)
         : DEFAULT_SETTINGS.units,
@@ -222,7 +225,10 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const theme = useMemo(() => buildTheme(settings, scheme), [settings, scheme]);
   useEffect(() => applyTheme(theme), [theme]);
 
-  useEffect(() => writeStorage(STORAGE_KEY, JSON.stringify(settings)), [settings]);
+  useEffect(
+    () => writeStorage(STORAGE_KEY, JSON.stringify({ ...settings, version: SETTINGS_VERSION })),
+    [settings],
+  );
 
   const update = useCallback(
     (patch: Partial<Settings>) => setSettings((current) => ({ ...current, ...patch })),

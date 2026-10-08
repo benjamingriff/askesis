@@ -31,7 +31,7 @@ import {
   EFFORT_META,
   EFFORTS,
   isValidHex,
-  luminance,
+  onFill,
   normalizeHex,
   THEMES,
   type AccentOption,
@@ -101,7 +101,7 @@ function AccentDot({
   onSelect: () => void;
 }) {
   const stops = accentStops(accent.id, mode);
-  const onDot = Math.min(...stops.map(luminance)) > 0.3 ? '#0A0A0B' : '#FFFFFF';
+  const onDot = onFill(stops);
   return (
     <button
       type="button"
