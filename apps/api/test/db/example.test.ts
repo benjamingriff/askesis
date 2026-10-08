@@ -133,6 +133,12 @@ it('publishes all content through the real lifecycle, preserving fitness and own
     ['5K club race', 'C'],
     ['Hyrox event', 'A'],
   ]);
+  // The cutback week's published sessions are lighter than the week before it.
+  const weekSeconds = (week: number) =>
+    workouts
+      .filter((w) => w.weekNumber === week)
+      .reduce((sum, w) => sum + (w.estimatedDurationSeconds ?? 0), 0);
+  expect(weekSeconds(3)).toBeLessThan(weekSeconds(2) * 0.8);
   expect(await listWorkouts(await athlete(), versionId)).toEqual([]);
   for (const workout of workouts) {
     const detail = await getWorkoutDetail(owner, workout.id);

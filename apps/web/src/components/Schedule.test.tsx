@@ -224,7 +224,10 @@ it('marks cutback weeks and races on the chart, with the trophy on the goal race
         coverage={null}
         units="km"
         today="2027-01-12"
-        cutbacks={[{ startDate: '2027-01-11', endDate: '2027-01-17' }]}
+        storedWeeks={[
+          { weekNumber: 1, startDate: '2027-01-11', endDate: '2027-01-17', cutback: true },
+          { weekNumber: 2, startDate: '2027-01-18', endDate: '2027-01-24', cutback: false },
+        ]}
       />
     </AccountQueryProvider>,
   );
@@ -243,4 +246,28 @@ it('marks cutback weeks and races on the chart, with the trophy on the goal race
     .filter((cell) => cell.querySelector('.lucide-trophy'))
     .map((cell) => cell.getAttribute('aria-label'));
   expect(trophyDays).toEqual([expect.stringMatching(/^Saturday 23 January/)]);
+});
+
+it('keeps the end-date trophy for plans whose races have no goal', () => {
+  const tuneUp = { ...workout, id: 'tune', title: 'Tune-up 5K', racePriority: 'B' as const };
+  const view = (workouts: (typeof workout)[]) => (
+    <AccountQueryProvider>
+      <Schedule
+        workouts={workouts}
+        startDate="2027-01-11"
+        endDate="2027-01-24"
+        coverage={null}
+        units="km"
+        today="2027-01-12"
+      />
+    </AccountQueryProvider>
+  );
+  const trophies = () =>
+    screen.getAllByRole('gridcell').filter((cell) => cell.querySelector('.lucide-trophy'));
+  const mounted = render(view([workout]));
+  fireEvent.click(screen.getByRole('radio', { name: 'Calendar' }));
+  // Unclassified plans mark their end date, as before race priorities existed.
+  expect(trophies()).toHaveLength(1);
+  mounted.rerender(view([tuneUp]));
+  expect(trophies()).toHaveLength(0);
 });

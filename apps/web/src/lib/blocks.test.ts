@@ -1,7 +1,14 @@
 import type { TrainingBlock } from '@askesis/api-client';
 import { expect, it } from 'vitest';
 import { PHASE_COLORS } from '../theme/palette';
-import { coveringRange, labelBlocks, phasedBlocks, planStructure, timeline } from './blocks';
+import {
+  coveringRange,
+  isCutback,
+  labelBlocks,
+  phasedBlocks,
+  planStructure,
+  timeline,
+} from './blocks';
 
 const block = (
   id: string,
@@ -70,5 +77,18 @@ it('keeps cutback weeks even when no block names a phase', () => {
   };
   const structure = planStructure([legacy]);
   expect(structure.blocks).toEqual([]);
-  expect(structure.cutbacks.map((w) => w.weekNumber)).toEqual([2]);
+  expect(isCutback(structure.weeks, { startDate: '2027-01-11', endDate: '2027-01-17' })).toBe(true);
+  expect(isCutback(structure.weeks, { startDate: '2027-01-04', endDate: '2027-01-10' })).toBe(
+    false,
+  );
+});
+
+it('flags only the displayed week mostly covered by a stored cutback week', () => {
+  // Stored weeks run Friday to Thursday; the cutback covers 8–14 January.
+  const weeks = [
+    { weekNumber: 1, startDate: '2027-01-01', endDate: '2027-01-07', cutback: false },
+    { weekNumber: 2, startDate: '2027-01-08', endDate: '2027-01-14', cutback: true },
+  ];
+  expect(isCutback(weeks, { startDate: '2027-01-04', endDate: '2027-01-10' })).toBe(false);
+  expect(isCutback(weeks, { startDate: '2027-01-11', endDate: '2027-01-17' })).toBe(true);
 });

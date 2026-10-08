@@ -99,7 +99,7 @@ function RevisionView({ planId, revisionId }: { planId: string; revisionId: stri
   const workouts = useWorkouts(revisionKey);
   const blockQuery = useBlocks(revisionKey);
   const blocks = blockQuery.data?.blocks ?? [];
-  const cutbacks = blockQuery.data?.cutbacks ?? [];
+  const weeks = blockQuery.data?.weeks ?? [];
   // The revision brief carries the coverage saved with this version.
   const brief = useBriefState(
     planId,
@@ -330,7 +330,7 @@ function RevisionView({ planId, revisionId }: { planId: string; revisionId: stri
               units={units}
               today={today}
               blocks={blocks}
-              cutbacks={cutbacks}
+              storedWeeks={weeks}
             />
           ) : null}
         </>

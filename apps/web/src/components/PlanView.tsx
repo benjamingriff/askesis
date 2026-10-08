@@ -83,7 +83,7 @@ export function PlanView({
   const workouts = useWorkouts(version);
   const blockQuery = useBlocks(version);
   const blocks = blockQuery.data?.blocks ?? [];
-  const cutbacks = blockQuery.data?.cutbacks ?? [];
+  const weeks = blockQuery.data?.weeks ?? [];
   const changes = useDraftChanges(plan.id, view === 'draft' ? plan.draft : null);
   const selection = useWorkoutSelection(workouts.data ?? [], version?.id);
   const units = useUnits(brief.data?.brief.unit);
@@ -270,7 +270,7 @@ export function PlanView({
                 today={today}
                 selection={selection}
                 blocks={blocks}
-                cutbacks={cutbacks}
+                storedWeeks={weeks}
                 onAskCoach={
                   plan.archived
                     ? undefined

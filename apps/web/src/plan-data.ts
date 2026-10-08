@@ -95,7 +95,7 @@ export function useWorkouts(version: Pick<PlanVersion, 'id' | 'editNumber'> | nu
 }
 
 /**
- * A version's labelled training blocks (empty when none names a phase) and its cutback weeks.
+ * A version's labelled training blocks (empty when none names a phase) and its stored weeks.
  * Under 'plan-workouts' so schedule edits refresh it.
  */
 export function useBlocks(version: Pick<PlanVersion, 'id' | 'editNumber'> | null | undefined) {

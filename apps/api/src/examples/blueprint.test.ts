@@ -119,7 +119,25 @@ describe('complete multisport blueprint', () => {
     expect(plan.weeks.filter((w) => w.cutback).map((w) => w.index)).toEqual([2]);
     const cutback = plan.weeks[2]!;
     expect(plan.blocks[cutback.blockIndex]!.phase).toBe('base');
-    expect(cutback.volume).toBeLessThan(plan.weeks[1]!.volume);
+    // The sessions themselves are lighter, so the weekly totals clients chart drop too.
+    const total = (index: number, key: 'minutes' | 'metres') =>
+      plan.weeks[index]!.sessions.reduce((sum, { session }) => sum + (session[key] ?? 0), 0);
+    expect(total(2, 'minutes')).toBeLessThanOrEqual(total(1, 'minutes') * 0.8);
+    expect(total(2, 'metres')).toBeLessThanOrEqual(total(1, 'metres') * 0.8);
+    const longest = (index: number) =>
+      Math.max(
+        ...plan.weeks[index]!.sessions.flatMap(({ session }) =>
+          flatten(session.steps).map((step) =>
+            step.completion?.completion_type === 'duration'
+              ? Number(step.completion.numeric_value)
+              : 0,
+          ),
+        ),
+      );
+    expect(longest(2)).toBeLessThan(longest(1));
+    // Recovery and taper weeks are lighter than the training weeks before them too.
+    expect(total(4, 'minutes')).toBeLessThan(total(3, 'minutes') * 0.8);
+    expect(total(7, 'minutes')).toBeLessThan(total(6, 'minutes') * 0.85);
   });
 
   it('derives the publication revision from the blueprint content', () => {

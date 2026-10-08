@@ -534,6 +534,41 @@ const PHASE_PLAN: { phase: BlockPhase; weeks: number; title: string; description
   },
 ];
 const CUTBACK_WEEKS = new Set([2]);
+const LIGHT_WEEK_FACTOR = 0.75;
+
+/** A lighter session for a light week: the same structure with shorter efforts and estimates. */
+function lighten(session: Session, factor: number): Session {
+  const scale = (step: Step): Step => {
+    const completion = step.completion;
+    const unit =
+      completion?.completion_type === 'duration'
+        ? 30
+        : completion?.completion_type === 'distance'
+          ? 50
+          : null;
+    return {
+      ...step,
+      ...(completion && unit
+        ? {
+            completion: {
+              ...completion,
+              numeric_value: Math.max(
+                unit,
+                Math.round((Number(completion.numeric_value) * factor) / unit) * unit,
+              ),
+            },
+          }
+        : {}),
+      ...(step.steps ? { steps: step.steps.map(scale) } : {}),
+    };
+  };
+  return {
+    ...session,
+    minutes: Math.round(session.minutes * factor),
+    ...(session.metres ? { metres: Math.round((session.metres * factor) / 100) * 100 } : {}),
+    steps: session.steps.map(scale),
+  };
+}
 
 /** Races by week index and weekday, replacing that day's session. */
 const RACES: Record<number, { day: number; race: (session: Session) => Session }> = {
@@ -588,15 +623,16 @@ export function buildExample(anchor: string) {
       (b) => index >= b.firstWeek && index < b.firstWeek + b.weekCount,
     );
     const block = blocks[blockIndex]!;
+    const volume =
+      CUTBACK_WEEKS.has(index) || block.phase === 'recovery' || block.phase === 'taper'
+        ? LIGHT_WEEK_FACTOR
+        : 1;
     return {
       index,
       blockIndex,
       position: index - block.firstWeek + 1,
       cutback: CUTBACK_WEEKS.has(index),
-      volume:
-        CUTBACK_WEEKS.has(index) || block.phase === 'recovery' || block.phase === 'taper'
-          ? 0.75
-          : 1,
+      volume,
       title: `Week ${index + 1} · ${block.title}`,
       startDate: shiftDay(anchor, index * 7),
       endDate: shiftDay(anchor, index * 7 + 6),
@@ -612,11 +648,14 @@ export function buildExample(anchor: string) {
         { day: 6, session: swimming(index === 7 ? 7 : index + 1) },
       ].map(({ day, session }, position, all) => ({
         day,
-        // The first session on the race day becomes the race.
+        // The first session on the race day becomes the race. Other sessions in cutback,
+        // recovery and taper weeks shrink, so their published totals match the lighter targets.
         session:
           RACES[index]?.day === day && all.findIndex((s) => s.day === day) === position
             ? RACES[index].race(session)
-            : session,
+            : volume < 1
+              ? lighten(session, volume)
+              : session,
       })),
     };
   });

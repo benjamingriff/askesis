@@ -31,7 +31,8 @@ import {
   workoutsOn,
   type CoverageRange,
 } from '../lib/workouts';
-import { coveringRange, type PlanBlock } from '../lib/blocks';
+import { coveringRange, isCutback as cutbackIn, type PlanBlock } from '../lib/blocks';
+import type { TrainingWeek } from '@askesis/api-client';
 import type { Units } from '../settings';
 import { readStorage, writeStorage } from '../lib/storage';
 import type { PlanVersion } from '../plan-data';
@@ -71,7 +72,7 @@ export function Schedule({
   selection,
   presentation = 'interactive',
   blocks = [],
-  cutbacks = [],
+  storedWeeks = [],
 }: {
   workouts: WorkoutSummary[];
   version?: Pick<PlanVersion, 'id' | 'editNumber'> | null | undefined;
@@ -89,8 +90,8 @@ export function Schedule({
   presentation?: SchedulePresentation | undefined;
   /** Labelled, phased blocks; empty for plans without phases. */
   blocks?: PlanBlock[] | undefined;
-  /** Stored weeks the coach made deliberately lighter. */
-  cutbacks?: { startDate: string; endDate: string }[] | undefined;
+  /** The version's stored weeks, carrying the coach's cutback flags. */
+  storedWeeks?: TrainingWeek[] | undefined;
 }) {
   const weeks = useMemo(
     () => summarizeWeeks(workouts, startDate, endDate, coverage),
@@ -110,7 +111,7 @@ export function Schedule({
   const week = weeks.find((w) => w.number === selectedWeek) ?? weeks[0];
   const blockOf = (range: { startDate: string; endDate: string }) => coveringRange(blocks, range);
   const isCutback = (range: { startDate: string; endDate: string }) =>
-    !!coveringRange(cutbacks, range);
+    cutbackIn(storedWeeks, range);
   const weekBlock = week ? blockOf(week) : null;
   const dayStatus = (date: string) =>
     (startDate && date < startDate) || (endDate && date > endDate)
@@ -157,7 +158,7 @@ export function Schedule({
               units={units}
               measure={measure}
               blockOf={blocks.length ? blockOf : undefined}
-              isCutback={cutbacks.length ? isCutback : undefined}
+              isCutback={storedWeeks.some((w) => w.cutback) ? isCutback : undefined}
             />
           </Card>
           <div className="week-heading">
@@ -313,7 +314,7 @@ function CalendarView({
   const inPlan = (date: string) =>
     (!startDate || date >= startDate) && (!endDate || date <= endDate);
   const selectedWorkouts = workoutsOn(workouts, selected);
-  const goalRaces = workouts.some((workout) => workout.racePriority === 'A');
+  const classified = workouts.some((workout) => workout.racePriority);
   const changes = useContext(WorkoutChangesContext);
   const changed = (workout: WorkoutSummary) =>
     changes.some((change) => change.workoutId === workout.id);
@@ -346,7 +347,7 @@ function CalendarView({
           const items = workoutsOn(workouts, date);
           const outside = date.slice(0, 7) !== month.slice(0, 7);
           // Goal races carry the trophy; plans without race priorities mark their end date.
-          const isGoal = goalRaces ? items.some((w) => w.racePriority === 'A') : date === endDate;
+          const isGoal = classified ? items.some((w) => w.racePriority === 'A') : date === endDate;
           return (
             <button
               type="button"

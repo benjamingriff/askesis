@@ -39,14 +39,22 @@ export function phasedBlocks(blocks: TrainingBlock[]): PlanBlock[] {
   return blocks.some((block) => block.phase) ? labelBlocks(blocks) : [];
 }
 
-export type PlanStructure = { blocks: PlanBlock[]; cutbacks: TrainingWeek[] };
+export type PlanStructure = { blocks: PlanBlock[]; weeks: TrainingWeek[] };
 
-/** A version's phased blocks and its deliberately lighter weeks, which apply with or without phases. */
+/** A version's phased blocks and all its stored weeks, whose cutback flags apply with or without phases. */
 export function planStructure(blocks: TrainingBlock[]): PlanStructure {
-  return {
-    blocks: phasedBlocks(blocks),
-    cutbacks: blocks.flatMap((block) => block.weeks.filter((week) => week.cutback)),
-  };
+  return { blocks: phasedBlocks(blocks), weeks: blocks.flatMap((block) => block.weeks) };
+}
+
+/**
+ * Whether a displayed week is a cutback: the stored week covering most of it is flagged. Stored
+ * weeks may start midweek, so a neighbouring cutback must not claim a mostly normal week.
+ */
+export function isCutback(
+  weeks: readonly TrainingWeek[],
+  range: { startDate: string; endDate: string },
+) {
+  return coveringRange(weeks, range)?.cutback ?? false;
 }
 
 /**

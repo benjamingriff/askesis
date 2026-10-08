@@ -325,37 +325,38 @@
   width: 100%;
 }
 .bar-fill {
+  position: relative;
   width: 100%;
   border-radius: 8px;
-  background: color-mix(in srgb, var(--accent) 38%, var(--surface-raised));
+  background-color: color-mix(in srgb, var(--accent) 38%, var(--surface-raised));
   transition:
     height 0.5s cubic-bezier(0.22, 1, 0.36, 1),
     background 0.15s ease;
 }
 .week-bar.past .bar-fill {
-  background: color-mix(in srgb, var(--accent) 62%, var(--surface-raised));
+  background-color: color-mix(in srgb, var(--accent) 62%, var(--surface-raised));
 }
 .week-bar:hover .bar-fill {
-  background: color-mix(in srgb, var(--accent) 75%, var(--surface-raised));
+  background-color: color-mix(in srgb, var(--accent) 75%, var(--surface-raised));
 }
 /* Phased plans tint each week by its block; strong enough that warm hues stay clean. */
 .week-bar.phased .bar-fill {
-  background: color-mix(in srgb, var(--bar) 55%, var(--surface-raised));
+  background-color: color-mix(in srgb, var(--bar) 55%, var(--surface-raised));
 }
 .week-bar.phased.past .bar-fill {
-  background: color-mix(in srgb, var(--bar) 85%, var(--surface-raised));
+  background-color: color-mix(in srgb, var(--bar) 85%, var(--surface-raised));
 }
 .week-bar.phased:hover .bar-fill {
-  background: color-mix(in srgb, var(--bar) 92%, var(--surface-raised));
+  background-color: color-mix(in srgb, var(--bar) 92%, var(--surface-raised));
 }
 .week-bar.phased.active .bar-fill {
-  background: var(--accent);
+  background-color: var(--accent);
 }
 .week-bar.active .bar-fill {
-  background: var(--accent);
+  background-color: var(--accent);
 }
 .week-bar.unplanned .bar-fill {
-  background: transparent;
+  background-color: transparent;
   border: 1.5px dashed var(--border);
 }
 .week-bar.unplanned.active .bar-fill {
@@ -368,9 +369,6 @@
     transparent 0 5px,
     color-mix(in srgb, var(--surface) 45%, transparent) 5px 8px
   );
-}
-.bar-fill {
-  position: relative;
 }
 /* A race badge sits above its week's bar: filled for A, outlined for B, muted for C. */
 .bar-race {
