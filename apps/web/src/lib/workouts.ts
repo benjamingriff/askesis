@@ -1,4 +1,4 @@
-import type { WorkoutStep, WorkoutSummary } from '@askesis/api-client';
+import type { RacePriority, WorkoutStep, WorkoutSummary } from '@askesis/api-client';
 import { Moon, PersonStanding, Trophy, type LucideIcon } from 'lucide-react';
 import { effortColor, EFFORTS, zoneEffort, type Effort } from '../theme/palette';
 import { METRES_PER_MILE, addDays, daysBetween, startOfWeek } from './format';
@@ -71,15 +71,16 @@ const NAMES: Partial<Record<Sport, Partial<Record<WorkoutKind, string>>>> = {
 };
 
 /**
- * The API classifies workouts by sport only, so infer the session from the coach's wording. This
- * only drives labels and colour; it never changes the prescription.
+ * The API classifies workouts by sport, and races by an explicit race priority, so infer the
+ * session from the coach's wording. A title never makes a workout a race. This only drives labels
+ * and colour; it never changes the prescription.
  */
 export function inferKind(
-  workout: Pick<WorkoutSummary, 'title' | 'purpose' | 'discipline'>,
+  workout: Pick<WorkoutSummary, 'title' | 'purpose' | 'discipline' | 'racePriority'>,
 ): WorkoutKind {
   const title = workout.title.toLowerCase();
   const sport = workout.discipline;
-  if (/\brace\b|parkrun/.test(title)) return 'race';
+  if (workout.racePriority) return 'race';
   if (/time trial|\btest\b|benchmark/.test(title)) return 'test';
   if (/^rest\b|rest day/.test(title)) return 'rest';
   if (/mobility|yoga|stretch|flexibility/.test(title)) return 'mobility';
@@ -128,7 +129,7 @@ function strengthEffort(title: string): Effort {
 
 /** How a workout presents: the icon names the sport and the colour says how hard it is. */
 export function workoutLook(
-  workout: Pick<WorkoutSummary, 'title' | 'purpose' | 'discipline'>,
+  workout: Pick<WorkoutSummary, 'title' | 'purpose' | 'discipline' | 'racePriority'>,
 ): WorkoutLook {
   const kind = inferKind(workout);
   const sport = (workout.discipline in SPORT_META ? workout.discipline : 'other') as Sport;
@@ -151,6 +152,21 @@ export function workoutLook(
     effort,
     color: effort ? effortColor(effort) : 'var(--text-muted)',
   };
+}
+
+// ---- Races -------------------------------------------------------------------------------------
+
+export const RACE_META: Record<RacePriority, { label: string; description: string }> = {
+  A: { label: 'A race', description: 'Goal race, reached through a taper.' },
+  B: { label: 'B race', description: 'Important tune-up, with a few easier days before it.' },
+  C: { label: 'C race', description: 'Raced hard as training, without a taper.' },
+};
+
+/** The most important race among some workouts, if any. */
+export function topRace(
+  workouts: readonly Pick<WorkoutSummary, 'racePriority'>[],
+): RacePriority | null {
+  return (['A', 'B', 'C'] as const).find((p) => workouts.some((w) => w.racePriority === p)) ?? null;
 }
 
 // ---- Intensity profile -------------------------------------------------------------------------

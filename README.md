@@ -29,9 +29,9 @@ pnpm install --frozen-lockfile
 
 ## Run with Docker
 
-For agent UI verification in a fresh worktree, use `pnpm dev:setup`, `pnpm dev:local`, then `pnpm dev:login` in another terminal. This provisions an isolated local database and signs a dedicated Clerk development account into the sample plan; see the [browser verification workflow](./docs/operations/local-development.md#agent-browser-verification-in-a-worktree).
+For agent UI verification in a fresh worktree, use `pnpm dev:setup`, `pnpm dev:local`, then `pnpm dev:login` in another terminal. This provisions an isolated local database and prepares an empty dedicated Clerk development account; manually run `pnpm example:seed --email askesis-verification+clerk_test@example.com` when sample data is useful; see the [browser verification workflow](./docs/operations/local-development.md#agent-browser-verification-in-a-worktree).
 
-Configure ignored `.env` with Clerk development keys as described in [local setup](./docs/operations/local-development.md), then build/start PostgreSQL, Atlas migrations, seed, fixture publication, API and web. Real coaching additionally requires the [agent profile](./docs/operations/phase-5-runtime.md#local-setup):
+Configure ignored `.env` with Clerk development keys as described in [local setup](./docs/operations/local-development.md), then build/start PostgreSQL, Atlas migrations, API and web. Real coaching additionally requires the [agent profile](./docs/operations/phase-5-runtime.md#local-setup):
 
 ```bash
 docker compose up --build -d

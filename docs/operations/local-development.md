@@ -23,7 +23,21 @@ pnpm dev:local
 
 `dev:setup` reads only the Clerk development keys from the main checkout's ignored `.env`, writes a private ignored worktree `.env`, and chooses worktree-specific API/web/database ports and a Compose project. It does not copy provider credentials. If the keys live elsewhere, use `pnpm dev:setup /absolute/path/to/.env`. Existing worktree configuration is retained; occupied initial ports fail with a diagnostic. Change the corresponding ports, URLs and authorized origins together when overriding them.
 
-Setup starts PostgreSQL, applies migrations, seeds/publishes the sample plans (Cardiff half marathon, an Olympic triathlon and a Hyrox plan, with running, cycling and swimming calibration), and creates or reuses `askesis-verification+clerk_test@example.com` in the configured Clerk development instance. It links that account to the **local synthetic athlete**, so authenticated screens have sample data. It refuses production/Railway, live Clerk keys, remote/non-Askesis database URLs and conflicting identity mappings. Database URL query parameters are restricted to `sslmode`, preventing driver options from overriding the checked connection target. Re-running setup keeps data; an edited fixture is rejected by the existing publisher. Use a fresh worktree database for destructive lifecycle experiments.
+Setup starts PostgreSQL, applies migrations and creates or reuses
+`askesis-verification+clerk_test@example.com` in the configured Clerk development
+instance using normal athlete provisioning. Fresh databases start empty so onboarding
+can be tested. Existing identities and data are preserved. Local verification still
+refuses production/Railway, live Clerk keys and remote/non-Askesis database URLs.
+Database URL query parameters are restricted to `sslmode`.
+
+When populated screens are needed, seed manually after setup:
+
+```bash
+pnpm example:seed --email askesis-verification+clerk_test@example.com
+```
+
+See [the complete multisport example](./example-plan.md) for its eight-week content,
+relative dates, calibration estimates and rerun/preservation rules.
 
 `dev:local` starts the API and Vite together. Ctrl+C stops both process groups. The Vite URL printed on startup is the browser address; `LOCAL_WEB_URL` in `.env` records the same origin. Simulated chat is enabled for newly generated verification environments. This can validate conversation, streaming and failure UI; real coaching/plan edits still require the separately configured worker/provider.
 
@@ -71,7 +85,9 @@ pnpm --silent dev:login
 
 The final JSON contains `url`, `agentTaskId` and `webOrigin`. Open `url` in the browser being used for verification. Clerk establishes a real session and redirects to `/plan`; its maximum duration is 30 minutes. Generate another link when needed. Confirm the active account is `askesis-verification+clerk_test@example.com` before making changes; a shared browser can have an existing development session. If another account remains active, sign out in Settings and open a fresh login link. Treat the login URL as a credential: do not include it, handshake query strings or session tokens in screenshots, recordings, issue text or commits. Start recordings after the redirect settles on the clean local app URL.
 
-The samples' workouts are dated **11–24 May 2026**; the triathlon and Hyrox plans cover every sport. Navigate to those weeks in the Plan view to inspect populated schedules and workout details; Today may be empty outside those dates. This workflow deliberately preserves the published fixture's immutable content.
+The manually seeded example starts on the previous Monday in the athlete's timezone
+and runs for eight complete weeks, including the current week. Historical Cardiff,
+triathlon and Hyrox test fixtures, when explicitly loaded, remain dated 11–24 May 2026. Navigate to the dates of the plan actually selected.
 
 For agents in T3 Code:
 
@@ -90,7 +106,7 @@ Stop only this worktree's database with `docker compose stop postgres`. Its volu
 docker compose up --build -d
 ```
 
-Default order is PostgreSQL → Atlas migrations → synthetic draft seed → development fixture publisher → API → nginx web. Migration, seed and publication are successful one-shot jobs, not persistent servers. Publication confirms, locks and activates the fixture through domain services.
+Default order is PostgreSQL → Atlas migrations → API → nginx web. Historical seed/publication jobs are optional in the `fixtures` profile. Migration, seed and publication are successful one-shot jobs, not persistent servers. Publication confirms, locks and activates the fixture through domain services.
 
 - Web: <http://localhost:8080>
 - API liveness/readiness: <http://localhost:3000/api/health>, <http://localhost:3000/api/ready>
@@ -111,7 +127,7 @@ For real coaching, configure agent mode/token/provider key and use the `agent` p
 ## Run the application processes locally
 
 ```bash
-docker compose up -d postgres migrate seed
+docker compose up -d postgres migrate
 ```
 
 In separate terminals:
@@ -126,13 +142,14 @@ pnpm dev:web
 
 Both dev scripts read root `.env`; Vite also loads its normal environment files from `apps/web`. Root/shell values take precedence over app environment files. Only `VITE_*` variables are exposed to client code. Vite defaults to <http://localhost:5173>, or `WEB_PORT` when configured, and refuses to silently move to another port. Its API proxy defaults to <http://localhost:3000>; override `VITE_API_PROXY_TARGET` when changing API port. The API's host process uses `PORT` (Compose uses `API_PORT` for the published port).
 
-If a published local fixture is needed, after migrations/seed run:
+Historical test fixtures can still be loaded explicitly:
 
 ```bash
-pnpm --filter @askesis/api fixture:publish
+docker compose --profile fixtures run --rm seed
+docker compose --profile fixtures run --rm publish-fixture
 ```
 
-This reads root `.env` and requires development/test configuration. It refuses production and Railway environments. It does not map the synthetic owner to a Clerk user.
+These historical fixtures belong to their synthetic athlete and do not automatically appear for signed-in accounts. Their publisher remains forbidden in production/Railway. Use `pnpm example:seed --email <verified-email>` for account-owned examples.
 
 ## Local simulated chat
 

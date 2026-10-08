@@ -7,6 +7,7 @@ import {
   colorDistance,
   EFFORT_META,
   EFFORTS,
+  phaseColor,
   RETIRED_ACCENTS,
   STATUS_COLORS,
   ZONE_EFFORT,
@@ -17,6 +18,15 @@ const nearestEffort = (color: string) =>
   Math.min(...shades.map((shade) => colorDistance(color, shade)));
 
 describe('colour language', () => {
+  it('colours each phase by the effort that defines it, warming towards the peak', () => {
+    expect(phaseColor('base')).toBe('var(--effort-easy)');
+    expect(phaseColor('build')).toBe('var(--effort-threshold)');
+    expect(phaseColor('peak')).toBe('var(--effort-hard)');
+    expect(phaseColor('taper')).toBe('var(--effort-steady)');
+    expect(phaseColor('recovery')).toBe('var(--effort-recovery)');
+    expect(phaseColor(null)).toBe('var(--text-muted)');
+  });
+
   it('keeps every accent, blend end and the locked status apart from the effort colours', () => {
     const colors = [
       ...ACCENTS.flatMap((accent) => [

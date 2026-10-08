@@ -10,11 +10,15 @@ import {
   Power,
   PowerOff,
   TriangleAlert,
+  Trophy,
 } from 'lucide-react';
+import { timeline, type PlanBlock } from '../lib/blocks';
 import {
   addDays,
+  daysBetween,
   formatDistance,
   formatDuration,
+  formatRange,
   formatShort,
   formatShortYear,
 } from '../lib/format';
@@ -26,7 +30,7 @@ import {
   SYSTEM_META,
   systemsForSports,
 } from '../lib/sports';
-import { effortMix, workoutLook, type WeekSummary } from '../lib/workouts';
+import { effortMix, RACE_META, topRace, workoutLook, type WeekSummary } from '../lib/workouts';
 import {
   knownCoverage,
   usePerformance,
@@ -177,6 +181,116 @@ export function CoverageNote({ state }: { state: BriefState }) {
   );
 }
 
+// ---- Training blocks ---------------------------------------------------------------------------
+
+/**
+ * The plan's shape: blocks end to end, sized by days and coloured by phase, with today marked.
+ * Finished blocks are solid, the current one half-strength and later ones faint.
+ */
+export function BlockTimeline({
+  blocks,
+  startDate,
+  endDate,
+  today,
+  races = [],
+}: {
+  blocks: PlanBlock[];
+  startDate: string | null;
+  endDate: string | null;
+  today: string;
+  /** A and B races are marked on the line; C races are training and stay off it. */
+  races?: Pick<WorkoutSummary, 'id' | 'title' | 'scheduledDate' | 'racePriority'>[] | undefined;
+}) {
+  const line = timeline(blocks, startDate, endDate);
+  if (!line) return null;
+  const at = (date: string) => {
+    const offset = daysBetween(line.startDate, date);
+    return offset >= 0 && offset < line.days ? ((offset + 0.5) / line.days) * 100 : null;
+  };
+  const marker = at(today);
+  const marked = races.filter((race) => race.racePriority === 'A' || race.racePriority === 'B');
+  const current = blocks.find((block) => today >= block.startDate && today <= block.endDate);
+  const next = current ? null : blocks.find((block) => block.startDate > today);
+  const focus = current ?? next;
+  return (
+    <div className="block-timeline">
+      <div className="block-track-wrap">
+        <ol className="block-track" aria-label="Training blocks">
+          {line.segments.map((segment) => {
+            if (segment.kind === 'gap')
+              return (
+                <li
+                  key={segment.startDate}
+                  className="block-segment gap"
+                  style={{ flexGrow: segment.days }}
+                  title={`${formatRange(segment.startDate, segment.endDate)} · not organised into blocks yet`}
+                >
+                  <span className="block-bar" aria-hidden="true" />
+                  <span className="sr-only">
+                    {formatRange(segment.startDate, segment.endDate)}: not organised into blocks yet
+                  </span>
+                </li>
+              );
+            const { block } = segment;
+            const state =
+              block.endDate < today ? 'past' : block.startDate > today ? 'future' : 'current';
+            const range = formatRange(block.startDate, block.endDate);
+            return (
+              <li
+                key={block.id}
+                className={cx('block-segment', state)}
+                style={{ flexGrow: segment.days, '--phase': block.color } as CSSProperties}
+                title={`${block.label} · ${block.title}\n${range}${block.description ? `\n${block.description}` : ''}`}
+              >
+                <span className="block-bar" aria-hidden="true" />
+                <span className="block-label" aria-hidden="true">
+                  {block.label}
+                </span>
+                <span className="sr-only">
+                  {block.label}: {block.title}, {range}
+                  {state === 'current' ? ' (current block)' : ''}
+                </span>
+              </li>
+            );
+          })}
+        </ol>
+        {marker !== null ? (
+          <span className="block-today" style={{ left: `${marker}%` }} aria-hidden="true" />
+        ) : null}
+        {marked.map((race) => {
+          const left = at(race.scheduledDate);
+          return left === null ? null : (
+            <span
+              key={race.id}
+              className={cx('block-race', `race-${race.racePriority!.toLowerCase()}`)}
+              style={{ left: `${left}%` }}
+              title={`${RACE_META[race.racePriority!].label}: ${race.title}, ${formatShort(race.scheduledDate)}`}
+            >
+              {race.racePriority === 'A' ? <Trophy size={11} aria-hidden="true" /> : null}
+              <span className="sr-only">
+                {RACE_META[race.racePriority!].label}: {race.title},{' '}
+                {formatShort(race.scheduledDate)}
+              </span>
+            </span>
+          );
+        })}
+      </div>
+      {focus ? (
+        <p className="block-now" style={{ '--phase': focus.color } as CSSProperties}>
+          <span className="block-now-label">{current ? 'Now' : 'Starts with'}</span>
+          <strong>{focus.label}</strong>
+          <span>{focus.title}</span>
+          <small>
+            {current
+              ? `until ${formatShort(focus.endDate)}`
+              : `from ${formatShort(focus.startDate)}`}
+          </small>
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
 // ---- Weekly volume -----------------------------------------------------------------------------
 
 export function WeekChart({
@@ -186,6 +300,8 @@ export function WeekChart({
   onSelect,
   units,
   measure = 'distance',
+  blockOf,
+  isCutback,
 }: {
   weeks: WeekSummary[];
   selected: number;
@@ -193,37 +309,70 @@ export function WeekChart({
   onSelect: (week: number) => void;
   units: Units;
   measure?: 'distance' | 'time' | undefined;
+  /** Runs a rail in each block's phase colour beneath its weeks. */
+  blockOf?: ((week: WeekSummary) => PlanBlock | null) | undefined;
+  /** Hatches deliberately lighter weeks. */
+  isCutback?: ((week: WeekSummary) => boolean) | undefined;
 }) {
   const amount = (week: WeekSummary) => (measure === 'time' ? week.seconds : week.metres);
   const max = Math.max(...weeks.map(amount), 1);
+  const blocks = weeks.map((week) => blockOf?.(week) ?? null);
+  // Leave headroom for race badges above the tallest bars.
+  const room = weeks.some((week) => topRace(week.workouts)) ? 82 : 100;
   return (
     <div className="week-chart" role="group" aria-label="Weekly volume">
-      {weeks.map((week) => {
+      {weeks.map((week, index) => {
         const active = week.number === selected;
-        const height = week.planned ? Math.max(10, (amount(week) / max) * 100) : 26;
+        const block = blocks[index] ?? null;
+        const cutback = isCutback?.(week) ?? false;
+        const race = topRace(week.workouts);
+        const height = week.planned ? Math.max(10, (amount(week) / max) * room) : 26;
         return (
           <button
             key={week.number}
             type="button"
             className={cx(
               'week-bar',
+              block && 'phased',
+              cutback && 'cutback',
               active && 'active',
               !week.planned && 'unplanned',
               current !== null && week.number < current && 'past',
             )}
             aria-pressed={active}
-            aria-label={`Week ${week.number}${week.planned ? `, ${measure === 'time' ? formatDuration(week.seconds) : formatDistance(week.metres, units)}` : ', not planned'}`}
+            aria-label={`Week ${week.number}${block ? `, ${block.label}` : ''}${cutback ? ', cutback week' : ''}${race ? `, ${RACE_META[race].label}` : ''}${week.planned ? `, ${measure === 'time' ? formatDuration(week.seconds) : formatDistance(week.metres, units)}` : ', not planned'}`}
             onClick={() => onSelect(week.number)}
           >
             <span className="bar-track">
               <span className="bar-fill" style={{ height: `${height}%` }}>
-                {week.planned
-                  ? effortMix(week.workouts, measure).map(({ effort, amount: part }) => (
-                      <i key={effort} style={{ flexGrow: part, background: effortColor(effort) }} />
-                    ))
-                  : null}
+                <span className="bar-stack">
+                  {week.planned
+                    ? effortMix(week.workouts, measure).map(({ effort, amount: part }) => (
+                        <i
+                          key={effort}
+                          style={{ flexGrow: part, background: effortColor(effort) }}
+                        />
+                      ))
+                    : null}
+                </span>
+                {race ? (
+                  <span className={cx('bar-race', `race-${race.toLowerCase()}`)} aria-hidden="true">
+                    {race}
+                  </span>
+                ) : null}
               </span>
             </span>
+            {blockOf ? (
+              <span
+                className={cx(
+                  'bar-phase',
+                  blocks[index - 1] !== block && 'first',
+                  blocks[index + 1] !== block && 'last',
+                )}
+                style={{ '--phase': block?.color ?? 'transparent' } as CSSProperties}
+                aria-hidden="true"
+              />
+            ) : null}
             <span className={cx('bar-label', week.number === current && 'current')}>
               {week.number}
             </span>
@@ -238,7 +387,7 @@ export function WeekChart({
 export function EffortLegend({
   workouts,
 }: {
-  workouts: Pick<WorkoutSummary, 'title' | 'purpose' | 'discipline'>[];
+  workouts: Pick<WorkoutSummary, 'title' | 'purpose' | 'discipline' | 'racePriority'>[];
 }) {
   const present = new Set(workouts.map((workout) => workoutLook(workout).effort));
   const efforts = EFFORTS.filter((effort) => present.has(effort));

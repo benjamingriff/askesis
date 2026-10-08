@@ -84,19 +84,21 @@ beforeEach(() => {
     data:
       path === '/api/v1/plans'
         ? { plans }
-        : path === '/api/v1/workouts'
-          ? { workouts: [] }
-          : path.endsWith('/revisions')
-            ? { revisions: [] }
-            : path === '/api/v1/performance'
-              ? {
-                  timezone: 'Europe/London',
-                  today: '2027-01-01',
-                  current: [],
-                  entries: [],
-                  usedByPlans: [],
-                }
-              : brief,
+        : path === '/api/v1/blocks'
+          ? { blocks: [] }
+          : path === '/api/v1/workouts'
+            ? { workouts: [] }
+            : path.endsWith('/revisions')
+              ? { revisions: [] }
+              : path === '/api/v1/performance'
+                ? {
+                    timezone: 'Europe/London',
+                    today: '2027-01-01',
+                    current: [],
+                    entries: [],
+                    usedByPlans: [],
+                  }
+                : brief,
   }));
 });
 afterEach(() => {

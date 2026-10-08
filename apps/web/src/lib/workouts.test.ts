@@ -6,6 +6,7 @@ import {
   inferKind,
   intensitySegments,
   summarizeWeeks,
+  topRace,
   volumeMeasure,
   workoutLook,
 } from './workouts';
@@ -22,6 +23,7 @@ const workout = (date: string, metres: number, title = 'Easy run'): WorkoutSumma
   purpose: null,
   discipline: 'run',
   priority: 'medium',
+  racePriority: null,
   estimatedDurationSeconds: 1800,
   estimatedDistanceMetres: metres,
 });
@@ -35,7 +37,23 @@ describe('inferKind', () => {
     ['Easy run and strides', 'easy'],
     ['Recovery jog', 'recovery'],
   ])('classifies “%s” as %s', (title, kind) => {
-    expect(inferKind({ title, purpose: null, discipline: 'run' })).toBe(kind);
+    expect(inferKind({ title, purpose: null, discipline: 'run', racePriority: null })).toBe(kind);
+  });
+});
+
+describe('races', () => {
+  it('treats only workouts with a race priority as races, whatever their title', () => {
+    const run = (title: string, racePriority: WorkoutSummary['racePriority']) =>
+      inferKind({ title, purpose: null, discipline: 'run', racePriority });
+    expect(run('Cardiff Half', 'A')).toBe('race');
+    expect(run('Saturday parkrun', null)).toBe('easy');
+    expect(run('Race-pace long run', null)).toBe('long');
+  });
+
+  it('picks the most important race among workouts', () => {
+    const race = (racePriority: WorkoutSummary['racePriority']) => ({ racePriority });
+    expect(topRace([race(null), race('C'), race('B')])).toBe('B');
+    expect(topRace([race(null)])).toBeNull();
   });
 });
 
@@ -221,7 +239,12 @@ describe('format', () => {
 });
 
 describe('multi-sport presentation', () => {
-  const summary = (discipline: string, title: string) => ({ title, purpose: null, discipline });
+  const summary = (discipline: string, title: string) => ({
+    title,
+    purpose: null,
+    discipline,
+    racePriority: null,
+  });
   it.each([
     ['swim', 'CSS intervals', 'tempo', 'Threshold swim', 'threshold'],
     ['cycle', 'Sweet spot 3 x 12', 'tempo', 'Threshold ride', 'threshold'],

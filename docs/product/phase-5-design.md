@@ -6,7 +6,7 @@ Current implementation verified 2026-10-06. Phases 5 and 6 are implemented; orig
 
 The prompt asks the coach to discuss goals, baseline training, schedule and fitness before generating when sufficient context exists. No separate generation button or prior human brief confirmation is required. Human confirmation remains required before locking.
 
-Planning can cover an initial horizon within longer plan dates, then extend after feedback. Estimates are labelled with provenance/basis and must not be presented as measured evidence. The prompt encourages adaptable methodology, candid clarification/pushback and honest statements about unavailable web search. These are model instructions; API invariants enforce ownership and writes, not the quality of every coaching reply.
+Planning can cover an initial horizon within longer plan dates, then extend after feedback. The coach organises a schedule into blocks by training phase (base, build, peak, taper, recovery) fitted to the plan's length and goal; prompt contract `multisport-coach-v2` added this. `multisport-coach-v3` adds race priorities (A goal race with a taper, B tune-up with easier days, C raced as training) and cutback weeks; each contract change means the API and worker deploy together. Estimates are labelled with provenance/basis and must not be presented as measured evidence. The prompt encourages adaptable methodology, candid clarification/pushback and honest statements about unavailable web search. These are model instructions; API invariants enforce ownership and writes, not the quality of every coaching reply.
 
 Standalone discussion does not automatically need a plan. Clear new-plan intent can create one draft and associate that conversation atomically. Earlier standalone message/run provenance remains unchanged. Existing plan-linked runs cannot create unrelated plans.
 
@@ -26,19 +26,19 @@ Queued work survives restart before deadline. Expired running work fails; provid
 
 ## Context and tools
 
-| Tool                     | Current permission                                                                    |
-| ------------------------ | ------------------------------------------------------------------------------------- |
-| `read_plan_context`      | Read current authorized plan, brief and coverage                                      |
-| `read_schedule`          | Read its version's blocks/weeks/workout trees; optional date filtering of workouts    |
-| `create_plan_draft`      | Create/bind one plan from a standalone run                                            |
-| `update_plan_brief`      | Save collected canonical assumptions/dates with concurrency checks                    |
-| `read_performance`       | Read the athlete's calibration timeline, today and timezone, with or without a plan   |
-| `preview_performance`    | Calculate zones for a reported result beside current fitness without saving           |
-| `record_performance`     | Record race evidence or a labelled threshold estimate for every plan, from today      |
-| `retract_performance`    | Withdraw a result the user says was wrong; the previous entry applies again           |
-| `apply_schedule_changes` | Atomic bounded block/week/workout add/update/move/delete batch; omitted content stays |
-| `replace_schedule_range` | Atomic replacement inside explicit date bounds with coverage intent                   |
-| `validate_plan`          | Compute current validation/hash/review projection without locking                     |
+| Tool                     | Current permission                                                                                                                                                              |
+| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `read_plan_context`      | Read current authorized plan, brief and coverage                                                                                                                                |
+| `read_schedule`          | Read its version's blocks/weeks/workout trees; optional date filtering of workouts                                                                                              |
+| `create_plan_draft`      | Create/bind one plan from a standalone run                                                                                                                                      |
+| `update_plan_brief`      | Save collected canonical assumptions/dates with concurrency checks                                                                                                              |
+| `read_performance`       | Read the athlete's calibration timeline, today and timezone, with or without a plan                                                                                             |
+| `preview_performance`    | Calculate zones for a reported result beside current fitness without saving                                                                                                     |
+| `record_performance`     | Record race evidence or a labelled threshold estimate for every plan, from today                                                                                                |
+| `retract_performance`    | Withdraw a result the user says was wrong; the previous entry applies again                                                                                                     |
+| `apply_schedule_changes` | Atomic bounded block/week/workout add/update/move/delete batch; omitted content stays. Every block names its phase, every week whether it is a cutback, every race its priority |
+| `replace_schedule_range` | Atomic replacement inside explicit date bounds with coverage intent                                                                                                             |
+| `validate_plan`          | Compute current validation/hash/review projection without locking                                                                                                               |
 
 Schedule reads are not paged bounded chunks: filters limit returned workouts but block/week context remains. Conversation history is bounded separately. Current write batches bound blocks/weeks/workouts/steps and total tools; see [runtime limits](../operations/phase-5-runtime.md).
 

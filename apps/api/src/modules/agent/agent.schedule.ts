@@ -181,6 +181,7 @@ export async function writeSchedule(
     const id = b.id ?? randomUUID();
     const values = {
       title: b.title,
+      phase: b.phase,
       description: b.description,
       start_date: b.startDate,
       end_date: b.endDate,
@@ -210,6 +211,7 @@ export async function writeSchedule(
       block_id: parent,
       week_number: w.weekNumber,
       position: w.position,
+      cutback: w.cutback,
       title: w.title,
       description: w.description,
       start_date: w.startDate,
@@ -297,6 +299,7 @@ export async function writeSchedule(
       purpose: w.purpose,
       primary_discipline: w.discipline,
       priority: w.priority,
+      race_priority: w.racePriority,
       estimated_duration_seconds: w.estimatedDurationSeconds,
       estimated_distance_metres: w.estimatedDistanceMetres,
     };

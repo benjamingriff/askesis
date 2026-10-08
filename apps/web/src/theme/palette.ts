@@ -1,6 +1,8 @@
 // Shared with the mobile prototype (apps/mobile/src/theme/palette.ts) so both clients read as one
 // product. Keep the theme, accent and effort values in step when either side changes.
 
+import type { BlockPhase } from '@askesis/api-client';
+
 export type ThemeId = 'midnight' | 'graphite' | 'forest' | 'dusk' | 'paper' | 'daylight';
 
 export type ThemeColors = {
@@ -162,6 +164,27 @@ export const ZONE_EFFORT: Record<string, Effort> = {
 
 export function zoneEffort(key: string | null | undefined): Effort {
   return (key && ZONE_EFFORT[key]) || 'easy';
+}
+
+// ---- Phases -----------------------------------------------------------------------------------
+//
+// A training phase takes the colour of the effort that defines it: base is easy aerobic volume,
+// build is threshold work, peak is the hardest race-specific training, taper keeps some quality
+// while volume falls, and recovery is recovery. Phases are only ever drawn as rails, bands and
+// labelled pills, never as filled marks beside workout data, so the shared hue reads as "this
+// block is about that effort" rather than as a workout.
+
+export const PHASE_EFFORT: Record<BlockPhase, Effort> = {
+  base: 'easy',
+  build: 'threshold',
+  peak: 'hard',
+  taper: 'steady',
+  recovery: 'recovery',
+};
+
+/** The theme-aware colour for a phase, or a neutral one for blocks written before phases. */
+export function phaseColor(phase: BlockPhase | null | undefined): string {
+  return phase ? effortColor(PHASE_EFFORT[phase]) : 'var(--text-muted)';
 }
 
 export const STATUS_COLORS = {

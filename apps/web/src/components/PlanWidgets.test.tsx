@@ -2,7 +2,8 @@ import { cleanup, render, screen } from '@testing-library/react';
 import { afterEach, expect, it } from 'vitest';
 import type { BriefState, Plan } from '../plan-data';
 import { knownCoverage } from '../plan-data';
-import { CoverageNote, PlanStatus } from './PlanWidgets';
+import { labelBlocks } from '../lib/blocks';
+import { BlockTimeline, CoverageNote, PlanStatus } from './PlanWidgets';
 
 const state = {
   startDate: '2027-01-01',
@@ -104,4 +105,64 @@ it('explains why an initial draft cannot be activated', () => {
     'title',
     'Lock a version before activating this plan.',
   );
+});
+
+it('shows the plan as phased blocks with the current one named', () => {
+  const blocks = labelBlocks([
+    {
+      id: 'a',
+      position: 1,
+      title: 'Aerobic foundation',
+      description: null,
+      phase: 'base',
+      startDate: '2027-01-04',
+      endDate: '2027-01-17',
+      weeks: [],
+    },
+    {
+      id: 'b',
+      position: 2,
+      title: 'Threshold build',
+      description: null,
+      phase: 'build',
+      startDate: '2027-01-18',
+      endDate: '2027-01-31',
+      weeks: [],
+    },
+  ]);
+  const race = (id: string, scheduledDate: string, racePriority: 'A' | 'B' | 'C') => ({
+    id,
+    title: `${racePriority} event`,
+    scheduledDate,
+    racePriority,
+  });
+  render(
+    <BlockTimeline
+      blocks={blocks}
+      startDate="2027-01-04"
+      endDate="2027-02-14"
+      today="2027-01-20"
+      races={[
+        race('b', '2027-01-23', 'B'),
+        race('c', '2027-01-27', 'C'),
+        race('a', '2027-02-14', 'A'),
+      ]}
+    />,
+  );
+  // Goal and tune-up races are marked; C races are training and stay off the line.
+  expect(screen.getByText('A race: A event, 14 Feb')).toBeInTheDocument();
+  expect(screen.getByText('B race: B event, 23 Jan')).toBeInTheDocument();
+  expect(screen.queryByText(/C race/)).not.toBeInTheDocument();
+  const items = screen.getAllByRole('listitem');
+  expect(items.map((item) => item.className)).toEqual([
+    'block-segment past',
+    'block-segment current',
+    'block-segment gap',
+  ]);
+  expect(items[1]).toHaveTextContent(
+    'Build: Threshold build, 18 Jan – 31 Jan 2027 (current block)',
+  );
+  expect(items[2]).toHaveTextContent('not organised into blocks yet');
+  expect(screen.getByText('Now')).toBeInTheDocument();
+  expect(screen.getByText('until 31 Jan')).toBeInTheDocument();
 });
