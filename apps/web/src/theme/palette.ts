@@ -170,9 +170,9 @@ export function zoneEffort(key: string | null | undefined): Effort {
 //
 // A training phase takes the colour of the effort that defines it: base is easy aerobic volume,
 // build is threshold work, peak is the hardest race-specific training, taper keeps some quality
-// while volume falls, and recovery is recovery. Phases are only ever drawn as rails, bands and
-// labelled pills, never as filled marks beside workout data, so the shared hue reads as "this
-// block is about that effort" rather than as a workout.
+// while volume falls, and recovery is recovery. Phases only colour whole blocks and weeks (the
+// timeline, the week chart and labelled pills), never a single workout, so the shared hue reads
+// as "this block is about that effort" rather than as a session.
 
 export const PHASE_EFFORT: Record<BlockPhase, Effort> = {
   base: 'easy',
