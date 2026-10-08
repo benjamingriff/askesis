@@ -248,7 +248,7 @@ it('marks cutback weeks and races on the chart, with the trophy on the goal race
   expect(trophyDays).toEqual([expect.stringMatching(/^Saturday 23 January/)]);
 });
 
-it('keeps the end-date trophy for plans whose races have no goal', () => {
+it('shows no trophy without a goal race, even on the end date', () => {
   const tuneUp = { ...workout, id: 'tune', title: 'Tune-up 5K', racePriority: 'B' as const };
   const view = (workouts: (typeof workout)[]) => (
     <AccountQueryProvider>
@@ -266,8 +266,7 @@ it('keeps the end-date trophy for plans whose races have no goal', () => {
     screen.getAllByRole('gridcell').filter((cell) => cell.querySelector('.lucide-trophy'));
   const mounted = render(view([workout]));
   fireEvent.click(screen.getByRole('radio', { name: 'Calendar' }));
-  // Unclassified plans mark their end date, as before race priorities existed.
-  expect(trophies()).toHaveLength(1);
+  expect(trophies()).toHaveLength(0);
   mounted.rerender(view([tuneUp]));
   expect(trophies()).toHaveLength(0);
 });

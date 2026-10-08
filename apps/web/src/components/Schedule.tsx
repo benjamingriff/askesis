@@ -314,7 +314,6 @@ function CalendarView({
   const inPlan = (date: string) =>
     (!startDate || date >= startDate) && (!endDate || date <= endDate);
   const selectedWorkouts = workoutsOn(workouts, selected);
-  const classified = workouts.some((workout) => workout.racePriority);
   const changes = useContext(WorkoutChangesContext);
   const changed = (workout: WorkoutSummary) =>
     changes.some((change) => change.workoutId === workout.id);
@@ -346,8 +345,8 @@ function CalendarView({
         {grid.flat().map((date) => {
           const items = workoutsOn(workouts, date);
           const outside = date.slice(0, 7) !== month.slice(0, 7);
-          // Goal races carry the trophy; plans without race priorities mark their end date.
-          const isGoal = classified ? items.some((w) => w.racePriority === 'A') : date === endDate;
+          // Only goal races the coach marked carry the trophy.
+          const isGoal = items.some((w) => w.racePriority === 'A');
           return (
             <button
               type="button"

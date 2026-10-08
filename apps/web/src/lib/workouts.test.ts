@@ -29,17 +29,17 @@ describe('inferKind', () => {
     ['Easy run and strides', 'easy'],
     ['Recovery jog', 'recovery'],
   ])('classifies “%s” as %s', (title, kind) => {
-    expect(inferKind({ title, purpose: null, discipline: 'run' })).toBe(kind);
+    expect(inferKind({ title, purpose: null, discipline: 'run', racePriority: null })).toBe(kind);
   });
 });
 
 describe('races', () => {
-  it('treats any workout with a race priority as a race, whatever its title', () => {
-    expect(
-      inferKind({ title: 'Cardiff Half', purpose: null, discipline: 'run', racePriority: 'A' }),
-    ).toBe('race');
-    // Plans written before race priorities still recognise races by title.
-    expect(inferKind({ title: 'Saturday parkrun', purpose: null, discipline: 'run' })).toBe('race');
+  it('treats only workouts with a race priority as races, whatever their title', () => {
+    const run = (title: string, racePriority: WorkoutSummary['racePriority']) =>
+      inferKind({ title, purpose: null, discipline: 'run', racePriority });
+    expect(run('Cardiff Half', 'A')).toBe('race');
+    expect(run('Saturday parkrun', null)).toBe('easy');
+    expect(run('Race-pace long run', null)).toBe('long');
   });
 
   it('picks the most important race among workouts', () => {
@@ -230,7 +230,12 @@ describe('format', () => {
 });
 
 describe('multi-sport presentation', () => {
-  const summary = (discipline: string, title: string) => ({ title, purpose: null, discipline });
+  const summary = (discipline: string, title: string) => ({
+    title,
+    purpose: null,
+    discipline,
+    racePriority: null,
+  });
   it.each([
     ['swim', 'CSS intervals', 'swim'],
     ['cycle', 'Sweet spot 3 x 12', 'ride'],

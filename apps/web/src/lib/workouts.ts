@@ -35,19 +35,16 @@ export const KIND_META: Record<WorkoutKind, { label: string; icon: LucideIcon; c
 };
 
 /**
- * The API classifies workouts by sport, plus race priority, so infer a presentation kind for runs
- * from the coach's wording. Workouts written before race priorities existed are recognised as
- * races by title. This only drives colour and iconography; it never changes the prescription.
+ * The API classifies workouts by sport, and races by an explicit race priority, so infer a
+ * presentation kind for runs from the coach's wording. A title never makes a workout a race. This
+ * only drives colour and iconography; it never changes the prescription.
  */
 export function inferKind(
-  workout: Pick<WorkoutSummary, 'title' | 'purpose' | 'discipline'> & {
-    racePriority?: RacePriority | null | undefined;
-  },
+  workout: Pick<WorkoutSummary, 'title' | 'purpose' | 'discipline' | 'racePriority'>,
 ): WorkoutKind {
   const text = `${workout.title} ${workout.purpose ?? ''}`.toLowerCase();
   const title = workout.title.toLowerCase();
   if (workout.racePriority) return 'race';
-  if (/\brace\b|parkrun/.test(title)) return 'race';
   if (/time trial|\btest\b|benchmark/.test(title)) return 'test';
   if (workout.discipline === 'swim') return 'swim';
   if (workout.discipline === 'cycle') return 'ride';
