@@ -140,6 +140,26 @@ describe('complete multisport blueprint', () => {
     expect(total(7, 'minutes')).toBeLessThan(total(6, 'minutes') * 0.85);
   });
 
+  it('keeps numbered tests and sets intact when lightening a week', () => {
+    const plan = buildExample('2026-09-28');
+    const light = plan.weeks.filter((week) => week.volume < 1);
+    expect(light.map((week) => week.index)).toEqual([2, 4, 7]);
+    for (const week of light)
+      for (const { session } of week.sessions)
+        for (const step of flatten(session.steps)) {
+          // A label stating metres ('400 m controlled test') still prescribes that distance.
+          const stated = /^(\d+) m\b/.exec(step.label)?.[1];
+          if (stated && step.completion?.completion_type === 'distance')
+            expect(Number(step.completion.numeric_value)).toBe(Number(stated));
+        }
+    const session = (index: number, title: string) =>
+      plan.weeks[index]!.sessions.find(({ session }) => session.title === title)!.session;
+    expect(session(2, 'Sweet spot 2 × 15')).toEqual(session(0, 'Sweet spot 2 × 15'));
+    expect(session(2, '400/200 swim test rehearsal').steps).toEqual(
+      session(1, '400/200 swim test rehearsal').steps,
+    );
+  });
+
   it('derives the publication revision from the blueprint content', () => {
     expect(BLUEPRINT_REVISION).toMatch(/^multisport-showcase-v3-[0-9a-f]{12}$/);
   });

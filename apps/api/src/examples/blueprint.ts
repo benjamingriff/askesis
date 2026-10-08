@@ -534,11 +534,20 @@ const PHASE_PLAN: { phase: BlockPhase; weeks: number; title: string; description
   },
 ];
 const CUTBACK_WEEKS = new Set([2]);
-const LIGHT_WEEK_FACTOR = 0.75;
+const LIGHT_WEEK_FACTOR = 0.7;
 
-/** A lighter session for a light week: the same structure with shorter efforts and estimates. */
+/** Titles and labels that state a number ('400/200', '2 × 15', '5K') describe their values. */
+const numbered = (text: string) => /\d/.test(text);
+
+/**
+ * A lighter session for a light week: the same structure with shorter efforts and estimates.
+ * Numbered sessions and steps (benchmark tests, counted sets) keep their prescription, so a
+ * 400/200 test still swims 400 and 200 metres and the surrounding work shrinks instead.
+ */
 function lighten(session: Session, factor: number): Session {
+  if (numbered(session.title)) return session;
   const scale = (step: Step): Step => {
+    if (numbered(step.label)) return step;
     const completion = step.completion;
     const unit =
       completion?.completion_type === 'duration'
