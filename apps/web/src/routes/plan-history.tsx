@@ -97,7 +97,8 @@ function RevisionView({ planId, revisionId }: { planId: string; revisionId: stri
   const revision = detail.data?.revision;
   const revisionKey = revision ? { id: revisionId, editNumber: revision.editNumber } : null;
   const workouts = useWorkouts(revisionKey);
-  const blocks = useBlocks(revisionKey).data ?? [];
+  const blockQuery = useBlocks(revisionKey);
+  const blocks = blockQuery.data ?? [];
   // The revision brief carries the coverage saved with this version.
   const brief = useBriefState(
     planId,
@@ -309,6 +310,12 @@ function RevisionView({ planId, revisionId }: { planId: string; revisionId: stri
             <ErrorState
               message={`Couldn’t load this version’s coverage: ${brief.error.message}`}
               onRetry={() => void brief.refetch()}
+            />
+          ) : null}
+          {blockQuery.error ? (
+            <ErrorState
+              message="Couldn’t load this version’s training blocks."
+              onRetry={() => void blockQuery.refetch()}
             />
           ) : null}
           {workouts.data && brief.data && !brief.error ? (

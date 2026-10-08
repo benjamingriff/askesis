@@ -81,7 +81,8 @@ export function PlanView({
   const version = planVersion(plan, view);
   const brief = useBriefState(plan.id, version);
   const workouts = useWorkouts(version);
-  const blocks = useBlocks(version).data ?? [];
+  const blockQuery = useBlocks(version);
+  const blocks = blockQuery.data ?? [];
   const changes = useDraftChanges(plan.id, view === 'draft' ? plan.draft : null);
   const selection = useWorkoutSelection(workouts.data ?? [], version?.id);
   const units = useUnits(brief.data?.brief.unit);
@@ -177,6 +178,12 @@ export function PlanView({
                 startDate={version?.startDate ?? null}
                 endDate={version?.endDate ?? null}
                 today={today}
+              />
+            ) : null}
+            {blockQuery.error ? (
+              <ErrorState
+                message="Couldn’t load this plan’s training blocks."
+                onRetry={() => void blockQuery.refetch()}
               />
             ) : null}
             {progress ? (

@@ -123,11 +123,13 @@ beforeEach(() => {
     data:
       path === '/api/v1/plans'
         ? { plans: [plan] }
-        : path === '/api/v1/workouts'
-          ? { workouts: [] }
-          : path === '/api/v1/performance'
-            ? performance
-            : brief,
+        : path === '/api/v1/blocks'
+          ? { blocks: [] }
+          : path === '/api/v1/workouts'
+            ? { workouts: [] }
+            : path === '/api/v1/performance'
+              ? performance
+              : brief,
   }));
 });
 afterEach(() => {
@@ -216,11 +218,13 @@ it('does not declare a rest day when coverage could not be loaded', async () => 
   mocks.get.mockImplementation(async (path: string) =>
     path === '/api/v1/plans'
       ? { data: { plans: [plan] } }
-      : path === '/api/v1/workouts'
-        ? { data: { workouts: [] } }
-        : path === '/api/v1/performance'
-          ? { data: performance }
-          : { error: { error: { message: 'Brief unavailable' } } },
+      : path === '/api/v1/blocks'
+        ? { blocks: [] }
+        : path === '/api/v1/workouts'
+          ? { data: { workouts: [] } }
+          : path === '/api/v1/performance'
+            ? { data: performance }
+            : { error: { error: { message: 'Brief unavailable' } } },
   );
   mount();
   expect(await screen.findByText(/Couldn’t load this plan’s coverage/)).toBeInTheDocument();
@@ -276,26 +280,28 @@ it('closes a superseded workout after locking a new version without resetting th
       data:
         path === '/api/v1/plans'
           ? { plans: [currentPlan] }
-          : path === '/api/v1/workouts'
-            ? {
-                workouts: [
-                  options?.params?.query?.planVersionId === locked.id
-                    ? originalWorkout
-                    : replacement,
-                ],
-              }
-            : path === '/api/v1/workouts/{workoutId}'
+          : path === '/api/v1/blocks'
+            ? { blocks: [] }
+            : path === '/api/v1/workouts'
               ? {
-                  workout:
-                    options?.params?.path?.workoutId === originalWorkout.id
+                  workouts: [
+                    options?.params?.query?.planVersionId === locked.id
                       ? originalWorkout
                       : replacement,
-                  tags: [],
-                  prescription: { kind: 'sequence', steps: [] },
+                  ],
                 }
-              : path === '/api/v1/performance'
-                ? performance
-                : brief,
+              : path === '/api/v1/workouts/{workoutId}'
+                ? {
+                    workout:
+                      options?.params?.path?.workoutId === originalWorkout.id
+                        ? originalWorkout
+                        : replacement,
+                    tags: [],
+                    prescription: { kind: 'sequence', steps: [] },
+                  }
+                : path === '/api/v1/performance'
+                  ? performance
+                  : brief,
     }),
   );
   mount();

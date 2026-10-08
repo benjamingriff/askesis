@@ -71,9 +71,11 @@ beforeEach(() => {
           ? { revisions: [revision] }
           : path === '/api/v1/workouts'
             ? { workouts: [] }
-            : path.endsWith('/brief')
-              ? emptyBrief
-              : { revision, content: { description: revision.description } },
+            : path === '/api/v1/blocks'
+              ? { blocks: [] }
+              : path.endsWith('/brief')
+                ? emptyBrief
+                : { revision, content: { description: revision.description } },
   }));
   mocks.post.mockImplementation(async (path: string) => ({
     data: path.endsWith('restore-preview') ? preview : { ...current, draft: { id: 'new-draft' } },
@@ -120,6 +122,26 @@ it('loads the exact historical schedule and requires preview before restoring', 
         expectedSourceHash: preview.sourceHash,
       },
     },
+  );
+});
+
+it('reports a failed block request with a retry instead of hiding the phases', async () => {
+  const fallback = mocks.get.getMockImplementation()!;
+  let fail = true;
+  mocks.get.mockImplementation(async (path: string, init: unknown) =>
+    path === '/api/v1/blocks' && fail
+      ? { error: { error: { message: 'Blocks unavailable' } } }
+      : fallback(path, init),
+  );
+  mount();
+  await screen.findByText('Couldn’t load this version’s training blocks.');
+  expect(screen.getByRole('button', { name: 'Review restore as draft' })).toBeInTheDocument();
+  fail = false;
+  fireEvent.click(screen.getByRole('button', { name: /retry/i }));
+  await waitFor(() =>
+    expect(
+      screen.queryByText('Couldn’t load this version’s training blocks.'),
+    ).not.toBeInTheDocument(),
   );
 });
 
@@ -251,7 +273,9 @@ it.each(['loaded', 'failed'])(
                       },
                     ],
                   }
-                : { revision: historical, content: {} },
+                : path === '/api/v1/blocks'
+                  ? { blocks: [] }
+                  : { revision: historical, content: {} },
     }));
     if (status === 'failed') {
       const loaded = mocks.get.getMockImplementation()!;
