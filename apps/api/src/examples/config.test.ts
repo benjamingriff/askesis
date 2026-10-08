@@ -1,7 +1,7 @@
 import { expect, it } from 'vitest';
-import { configuredExampleEmail, hostedExampleTarget } from './config.js';
+import { configuredExampleEmail } from './config.js';
 
-it('keeps local, unrelated hosted and new-install accounts empty unless explicitly enabled', () => {
+it('keeps every environment empty unless publication is explicitly enabled', () => {
   expect(configuredExampleEmail({ NODE_ENV: 'development' })).toBeNull();
   expect(
     configuredExampleEmail({ NODE_ENV: 'production', EXAMPLE_PLAN_EMAIL: 'someone@example.com' }),
@@ -9,27 +9,24 @@ it('keeps local, unrelated hosted and new-install accounts empty unless explicit
   expect(
     configuredExampleEmail({
       NODE_ENV: 'production',
-      RAILWAY_PROJECT_ID: 'another-project',
-      RAILWAY_ENVIRONMENT_ID: hostedExampleTarget.environmentId,
+      RAILWAY_PROJECT_ID: 'production-project',
+      RAILWAY_ENVIRONMENT_ID: 'production-environment',
+      EXAMPLE_PLAN_EMAIL: 'owner@example.com',
     }),
   ).toBeNull();
 });
 
-it('selects the requested owner only for the exact existing hosted environment', () => {
-  const environment = {
-    NODE_ENV: 'production',
-    RAILWAY_PROJECT_ID: hostedExampleTarget.projectId,
-    RAILWAY_ENVIRONMENT_ID: hostedExampleTarget.environmentId,
-  };
-  expect(configuredExampleEmail(environment)).toBe('drjamin1990@gmail.com');
-  expect(configuredExampleEmail({ ...environment, EXAMPLE_PLAN_ENABLED: 'false' })).toBeNull();
-  expect(configuredExampleEmail({ ...environment, RAILWAY_ENVIRONMENT_ID: 'preview' })).toBeNull();
+it('requires an explicit owner when enabled, and supports disabling without an owner', () => {
   expect(
     configuredExampleEmail({
       EXAMPLE_PLAN_ENABLED: 'true',
       EXAMPLE_PLAN_EMAIL: ' Test@Example.com ',
     }),
   ).toBe('test@example.com');
+  expect(configuredExampleEmail({ EXAMPLE_PLAN_ENABLED: 'false' })).toBeNull();
+  expect(
+    configuredExampleEmail({ EXAMPLE_PLAN_ENABLED: 'false', EXAMPLE_PLAN_EMAIL: 'invalid' }),
+  ).toBeNull();
 });
 
 it('fails invalid enabled configuration without exposing its values', () => {

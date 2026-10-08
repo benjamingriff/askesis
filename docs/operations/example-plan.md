@@ -18,25 +18,46 @@ does not add a scoring or time-cap engine, heart-rate zones or strength calibrat
 
 ## Hosted deployment
 
-The existing Askesis Railway production project/environment is explicitly targeted
-in `examples/config.ts`, with owner email `drjamin1990@gmail.com`. API image startup
-runs the operator command before opening the listener; the existing Atlas
-pre-deploy job still applies migrations first. The Railway API service was inspected
-on 8 October 2026: repository-root Docker build, `apps/api/Dockerfile`, no start-command
-override. No Railway settings need changing for this image to run the command.
-
-Other installations and preview environments do not seed automatically. To opt in:
+Every environment defaults to **disabled**, including production and Railway.
+The application contains no account email, Clerk user ID or Railway deployment ID
+for the hosted owner. Enable publication only on the intended **API service**:
 
 ```text
 EXAMPLE_PLAN_ENABLED=true
 EXAMPLE_PLAN_EMAIL=<existing verified Clerk account email>
 ```
 
-`EXAMPLE_PLAN_ENABLED=false` disables publication, including on the configured
-Askesis deployment. An explicit email overrides the configured owner. Startup
+`EXAMPLE_PLAN_ENABLED=false` or an unset flag disables publication. Setting an
+email alone does not enable it; `true` requires an explicit valid email. Startup
 rejects invalid enabled configuration or an absent, ambiguous or unverified owner.
 It resolves accounts in the API's own Clerk instance and uses normal athlete
 provisioning; it never reassigns an existing identity or creates a Clerk user.
+
+### Release order
+
+1. Before merging, set both variables together in the intended Railway API
+   service/environment. Use the verified email of the account that should own the
+   example. Keep these variables out of the web service, worker and preview
+   environments unless those APIs should independently seed an example. The
+   currently deployed API predates this startup hook and ignores these variables.
+2. Keep the API's existing Atlas migration pre-deploy command and leave its
+   start-command override empty. The API image includes the new registry migration;
+   normal image startup invokes the example publisher. The service was inspected
+   on 8 October 2026 with these settings already in place. Reconfirm them before
+   release; see [Railway operations](./railway-deployment-plan.md#api-service).
+3. Merge the PR and deploy the API from that merged commit. Railway runs Atlas
+   first, then the publisher, then opens the API listener. No manual migration or
+   seed command is required. If automatic deployments are enabled, merging triggers
+   this sequence; avoid deploying this branch before merging.
+4. Wait for API readiness and an `Example publication` log (`created`, `unchanged`
+   or `preserved`), then inspect the plan while signed in as the configured owner.
+   `calibration-required` means withdrawn fitness needs a replacement before a new
+   edition can be published. This change requires no worker/web configuration;
+   existing automatic worker/web rebuilds can proceed normally.
+
+An invalid enabled configuration or failed publication blocks the new API startup.
+Correct the service variables and redeploy. Setting `EXAMPLE_PLAN_ENABLED=false`
+also lets the API start without publication; it does not delete existing plans.
 
 ## Manual local seeding
 
