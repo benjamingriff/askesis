@@ -17,7 +17,8 @@ import {
   type PoolUnits,
 } from '../lib/format';
 import { formatZoneValue, SPORT_META, zoneLabel, type Sport } from '../lib/sports';
-import { inferKind, KIND_META } from '../lib/workouts';
+import { stepEffort, workoutLook } from '../lib/workouts';
+import { effortColor } from '../theme/palette';
 import { useWorkoutDetail, type PlanVersion } from '../plan-data';
 import { useSportUnits, type Units } from '../settings';
 import { WorkoutChangeBadge } from './PlanChanges';
@@ -126,20 +127,20 @@ export function WorkoutCard({
   units: Units;
   onOpen: (workout: WorkoutSummary) => void;
 }) {
-  const kind = KIND_META[inferKind(workout)];
+  const look = workoutLook(workout);
   const { pool } = useSportUnits();
   return (
     <button
       type="button"
       className="workout-card"
-      style={{ '--kind': kind.color } as CSSProperties}
+      style={{ '--kind': look.color } as CSSProperties}
       onClick={() => onOpen(workout)}
-      aria-label={`${workout.title}, ${kind.label}, ${formatLong(workout.scheduledDate)}`}
+      aria-label={`${workout.title}, ${look.label}, ${formatLong(workout.scheduledDate)}`}
     >
-      <KindIcon icon={kind.icon} color={kind.color} />
+      <KindIcon icon={look.icon} color={look.color} />
       <span className="workout-card-copy">
         <span className="workout-card-kind">
-          {kind.label}
+          {look.label}
           {workout.priority === 'high' ? <em>Key session</em> : null}
           <WorkoutChangeBadge id={workout.id} />
         </span>
@@ -277,18 +278,21 @@ function StepItem({
   const completion = formatCompletion(step, display);
   const zone = step.targets.find((t) => t.type === 'zone')?.zoneKey ?? null;
   const sport = step.discipline ? SPORT_META[step.discipline as Sport] : undefined;
+  const { effort } = stepEffort(step);
   return (
     <li
       className={cx('step', `step-${step.role ?? 'other'}`)}
       data-zone={zone ?? undefined}
+      data-effort={effort}
       data-sport={step.discipline ?? undefined}
+      style={{ '--zone': effortColor(effort) } as CSSProperties}
     >
       <span className="step-marker" aria-hidden="true" />
       <div className="step-copy">
         <span className="label">
           {mixed && sport ? (
             <>
-              <span className="step-sport" style={{ '--kind': sport.color } as CSSProperties}>
+              <span className="step-sport">
                 <sport.icon size={12} aria-hidden="true" /> {sport.label}
               </span>
               {step.role ? ' · ' : ''}
@@ -330,18 +334,18 @@ export function WorkoutDialog({
   const detail = useWorkoutDetail(workout?.id, version);
   const { pool } = useSportUnits();
   if (!workout) return null;
-  const kind = KIND_META[inferKind(workout)];
+  const look = workoutLook(workout);
   return (
     <Dialog
       open
       onClose={onClose}
       size="lg"
       className="workout-dialog"
-      style={{ '--kind': kind.color } as CSSProperties}
+      style={{ '--kind': look.color } as CSSProperties}
       title={
         <span className="workout-title">
           <span className="workout-kind-label">
-            <kind.icon size={15} aria-hidden="true" /> {kind.label}
+            <look.icon size={15} aria-hidden="true" /> {look.label}
           </span>
           {workout.title}
         </span>

@@ -23,11 +23,10 @@ import {
   WEEKDAYS_SHORT,
 } from '../lib/format';
 import {
-  inferKind,
   volumeMeasure,
   isCovered,
-  KIND_META,
   summarizeWeeks,
+  workoutLook,
   workoutsOn,
   type CoverageRange,
 } from '../lib/workouts';
@@ -37,7 +36,7 @@ import type { PlanVersion } from '../plan-data';
 import { useFollowingState } from '../lib/use-following-state';
 import { useWorkoutSelection, type WorkoutSelection } from '../lib/use-workout-selection';
 import { WorkoutChangesContext } from './PlanChanges';
-import { Stat, WeekChart } from './PlanWidgets';
+import { EffortLegend, Stat, WeekChart } from './PlanWidgets';
 import { DayRow, WorkoutCard, WorkoutDialog } from './Workout';
 import { Button, Card, EmptyState, IconButton, Pill, Segmented, Notice, cx } from './ui';
 
@@ -46,17 +45,6 @@ export type SchedulePresentation = 'interactive' | 'week-list';
 const MODE_KEY = 'askesis-schedule-mode';
 
 /** Runna-style schedule: weekly volume, a week at a time, or a month calendar. */
-/** Calendar legend: the run kinds for running plans, plus each other sport present. */
-function legendKinds(workouts: WorkoutSummary[]) {
-  const present = new Set(workouts.map((workout) => inferKind(workout)));
-  const base = ['easy', 'long', 'tempo', 'intervals', 'test'] as const;
-  const extra = (['ride', 'swim', 'strength', 'mixed'] as const).filter((kind) =>
-    present.has(kind),
-  );
-  const runs = workouts.some((workout) => workout.discipline === 'run');
-  return [...(runs || !extra.length ? base : (['test'] as const)), ...extra];
-}
-
 export function Schedule({
   workouts,
   version,
@@ -335,7 +323,7 @@ function CalendarView({
                   <i
                     key={workout.id}
                     className={changed(workout) ? 'changed' : undefined}
-                    style={{ '--kind': KIND_META[inferKind(workout)].color } as CSSProperties}
+                    style={{ '--kind': workoutLook(workout).color } as CSSProperties}
                   />
                 ))}
               </span>
@@ -343,13 +331,7 @@ function CalendarView({
           );
         })}
       </div>
-      <div className="calendar-legend">
-        {legendKinds(workouts).map((key) => (
-          <span key={key} style={{ '--kind': KIND_META[key].color } as CSSProperties}>
-            <i /> {KIND_META[key].label}
-          </span>
-        ))}
-      </div>
+      <EffortLegend workouts={workouts} />
       <div className="calendar-selection">
         <span className="label">{formatLong(selected)}</span>
         {selectedWorkouts.length ? (

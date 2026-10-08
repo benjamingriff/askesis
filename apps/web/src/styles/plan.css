@@ -216,21 +216,35 @@
   width: 100%;
 }
 .bar-fill {
+  display: flex;
+  flex-direction: column-reverse;
+  gap: 2px;
   width: 100%;
   border-radius: 8px;
-  background: color-mix(in srgb, var(--accent) 38%, var(--surface-raised));
+  overflow: hidden;
+  background: var(--surface-raised);
+  opacity: 0.5;
   transition:
     height 0.5s cubic-bezier(0.22, 1, 0.36, 1),
-    background 0.15s ease;
+    opacity 0.15s ease,
+    box-shadow 0.15s ease;
+}
+/* Each week stacks its volume by effort, easiest at the bottom. */
+.bar-fill i {
+  flex: 1 1 0;
+  min-height: 3px;
 }
 .week-bar.past .bar-fill {
-  background: color-mix(in srgb, var(--accent) 62%, var(--surface-raised));
+  opacity: 0.72;
 }
 .week-bar:hover .bar-fill {
-  background: color-mix(in srgb, var(--accent) 75%, var(--surface-raised));
+  opacity: 0.88;
 }
 .week-bar.active .bar-fill {
-  background: var(--accent);
+  opacity: 1;
+  box-shadow:
+    0 0 0 2px var(--bg),
+    0 0 0 3.5px var(--accent);
 }
 .week-bar.unplanned .bar-fill {
   background: transparent;
@@ -238,6 +252,7 @@
 }
 .week-bar.unplanned.active .bar-fill {
   border-color: var(--accent);
+  box-shadow: none;
 }
 .bar-label {
   color: var(--text-muted);
@@ -325,7 +340,7 @@
   color: var(--accent-text);
 }
 .day-row.today .day-gutter strong {
-  background: var(--accent);
+  background: var(--accent-fill);
   color: var(--on-accent);
 }
 .day-row.past .day-gutter strong {
@@ -475,7 +490,7 @@
   box-shadow: inset 0 0 0 1.5px var(--accent-border);
 }
 .calendar-day.selected {
-  background: var(--accent);
+  background: var(--accent-fill);
   color: var(--on-accent);
 }
 .calendar-dots {
@@ -491,7 +506,8 @@
   background: var(--kind);
 }
 .calendar-day.selected .calendar-dots i {
-  background: var(--on-accent);
+  /* Keep the effort colour; a rim in the on-accent colour lifts it off the accent fill. */
+  box-shadow: 0 0 0 1.5px var(--on-accent);
 }
 .calendar-legend {
   display: flex;
@@ -608,21 +624,6 @@
   border-radius: 16px;
   background: var(--surface);
   border: 1px solid var(--border);
-}
-.step[data-zone='easy'] {
-  --zone: #34d399;
-}
-.step[data-zone='marathon'] {
-  --zone: #a3e635;
-}
-.step[data-zone='threshold'] {
-  --zone: #fbbf24;
-}
-.step[data-zone='interval'] {
-  --zone: #fb923c;
-}
-.step[data-zone='repetition'] {
-  --zone: #f87171;
 }
 .step-marker {
   flex: none;
@@ -1116,8 +1117,8 @@
   border-color: var(--accent-border);
 }
 .strip-day.selected {
-  background: var(--accent);
-  border-color: var(--accent);
+  background: var(--accent-fill);
+  border-color: transparent;
   color: var(--on-accent);
 }
 .strip-day.selected .label {
@@ -1125,7 +1126,7 @@
   opacity: 0.7;
 }
 .strip-day.selected i {
-  background: var(--on-accent);
+  box-shadow: 0 0 0 1.5px var(--on-accent);
 }
 .today-grid {
   display: grid;
@@ -1241,7 +1242,7 @@
   width: 38px;
   height: 38px;
   border-radius: 50%;
-  background: var(--accent);
+  background: var(--accent-fill);
   color: var(--on-accent);
 }
 .week-summary {
@@ -1338,5 +1339,5 @@
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  color: var(--kind);
+  color: var(--text-dim);
 }

@@ -1,5 +1,5 @@
 // Shared with the mobile prototype (apps/mobile/src/theme/palette.ts) so both clients read as one
-// product. Keep the theme, accent, kind and zone values in step when either side changes.
+// product. Keep the theme, accent and effort values in step when either side changes.
 
 export type ThemeId = 'midnight' | 'graphite' | 'forest' | 'dusk' | 'paper' | 'daylight';
 
@@ -119,61 +119,166 @@ export const THEME_BY_ID = Object.fromEntries(THEMES.map((t) => [t.id, t])) as R
   ThemeDefinition
 >;
 
-export type AccentOption = { id: string; name: string; color: string };
+// ---- Effort ---------------------------------------------------------------------------------
+//
+// Colour in workout data means one thing: how hard. Every zone system (run paces, cycling power,
+// swim paces) and strength's RPE and reps in reserve land on the same six steps, so a hard ride and
+// a hard run look equally warm. Cool steps are aerobic and easy; warm steps are quality work.
+// Sport is shown with icons, never colour. Light themes use deeper shades so the warm steps still
+// read on a pale page.
 
-export const ACCENTS: AccentOption[] = [
-  { id: 'volt', name: 'Volt', color: '#C8F031' },
-  { id: 'ember', name: 'Ember', color: '#FF6B35' },
-  { id: 'sky', name: 'Sky', color: '#38BDF8' },
-  { id: 'violet', name: 'Violet', color: '#8B7CFF' },
-  { id: 'rose', name: 'Rose', color: '#FF5C8A' },
-  { id: 'mint', name: 'Mint', color: '#2DD4A8' },
-  { id: 'gold', name: 'Gold', color: '#FFC233' },
-  { id: 'mono', name: 'Mono', color: '#E8E8EA' },
-];
+export const EFFORTS = ['recovery', 'easy', 'steady', 'threshold', 'hard', 'max'] as const;
+export type Effort = (typeof EFFORTS)[number];
 
-export const DEFAULT_ACCENT = ACCENTS[0]!.color;
-
-// Workout kinds and intensity zones use fixed hues so a tempo run looks like a tempo run
-// regardless of the user's theme or accent.
-export const KIND_COLORS = {
-  easy: '#34D399',
-  recovery: '#5EEAD4',
-  long: '#60A5FA',
-  tempo: '#FBBF24',
-  intervals: '#F87171',
-  strength: '#A78BFA',
-  race: '#F472B6',
-  rest: '#6B7280',
-  swim: '#22D3EE',
-  ride: '#FB923C',
-  mixed: '#818CF8',
-} as const;
-
-/**
- * Zone hues shared by every system, easiest to hardest. Keys used by more than one system (for
- * example threshold) mean a comparable effort, so they share a colour.
- */
-export const ZONE_COLORS: Record<string, string> = {
-  recovery: '#7DD3FC',
-  easy: '#34D399',
-  endurance: '#34D399',
-  marathon: '#A3E635',
-  tempo: '#A3E635',
-  sweet_spot: '#FDE047',
-  threshold: '#FBBF24',
-  interval: '#FB923C',
-  vo2max: '#FB923C',
-  speed: '#F87171',
-  repetition: '#F87171',
-  anaerobic: '#F87171',
+export const EFFORT_META: Record<Effort, { label: string; dark: string; light: string }> = {
+  recovery: { label: 'Recovery', dark: '#94A3B8', light: '#64748B' },
+  easy: { label: 'Easy', dark: '#38BDF8', light: '#0284C7' },
+  steady: { label: 'Steady', dark: '#2DD4BF', light: '#0D9488' },
+  threshold: { label: 'Threshold', dark: '#FBBF24', light: '#CA8A04' },
+  hard: { label: 'Hard', dark: '#FB8A3C', light: '#EA580C' },
+  max: { label: 'Max', dark: '#F43F5E', light: '#E11D48' },
 };
 
+/** The theme-aware colour for an effort step, as a CSS value. */
+export function effortColor(effort: Effort): string {
+  return `var(--effort-${effort})`;
+}
+
+/** Each zone key, from every system, on the shared effort scale. */
+export const ZONE_EFFORT: Record<string, Effort> = {
+  recovery: 'recovery',
+  easy: 'easy',
+  endurance: 'easy',
+  marathon: 'steady',
+  tempo: 'steady',
+  sweet_spot: 'threshold',
+  threshold: 'threshold',
+  interval: 'hard',
+  vo2max: 'hard',
+  speed: 'max',
+  repetition: 'max',
+  anaerobic: 'max',
+};
+
+export function zoneEffort(key: string | null | undefined): Effort {
+  return (key && ZONE_EFFORT[key]) || 'easy';
+}
+
 export const STATUS_COLORS = {
-  locked: '#34D399',
+  locked: '#22C55E',
   warning: '#FBBF24',
   danger: '#F87171',
 } as const;
+
+// ---- Accent -----------------------------------------------------------------------------------
+//
+// The accent is the app's own colour: buttons, selection, the active tab, "today". It never
+// carries data, so every option sits in hues the effort scale leaves free (lime, violet, magenta)
+// or is neutral. Blends are two-tone gradients for fills; their midpoint stands in wherever a
+// single colour is needed (rings, borders, text).
+
+export type AccentOption = {
+  id: string;
+  name: string;
+  /** Solid accents have one stop; blends have two. */
+  stops: [string] | [string, string];
+  /** Accents that follow the theme instead of a fixed colour. */
+  adaptive?: { dark: string; light: string };
+};
+
+export const ACCENTS: AccentOption[] = [
+  { id: 'volt', name: 'Volt', stops: ['#C8F031'] },
+  { id: 'iris', name: 'Iris', stops: ['#8B7CFF'] },
+  { id: 'orchid', name: 'Orchid', stops: ['#D774F2'] },
+  {
+    id: 'mono',
+    name: 'Mono',
+    stops: ['#E8E8EA'],
+    adaptive: { dark: '#ECECEE', light: '#1A191F' },
+  },
+  { id: 'acid', name: 'Acid', stops: ['#E4FA5B', '#8EE36A'] },
+  { id: 'nebula', name: 'Nebula', stops: ['#8B7CFF', '#E879F9'] },
+  { id: 'ultraviolet', name: 'Ultraviolet', stops: ['#6E6BFA', '#B062F5'] },
+  { id: 'blossom', name: 'Blossom', stops: ['#C77DFF', '#F78FD8'] },
+];
+
+export const ACCENT_BY_ID = Object.fromEntries(ACCENTS.map((a) => [a.id, a])) as Record<
+  string,
+  AccentOption
+>;
+
+export const DEFAULT_ACCENT = 'volt';
+
+/**
+ * Earlier presets that shared a hue with workout data, mapped to the closest remaining accent so a
+ * saved preference still looks deliberate.
+ */
+export const RETIRED_ACCENTS: Record<string, string> = {
+  '#C8F031': 'volt',
+  '#FF6B35': 'blossom',
+  '#38BDF8': 'ultraviolet',
+  '#8B7CFF': 'iris',
+  '#FF5C8A': 'blossom',
+  '#2DD4A8': 'acid',
+  '#FFC233': 'acid',
+  '#E8E8EA': 'mono',
+};
+
+/** The colour stops for an accent preference: a preset id or a custom hex. */
+export function accentStops(accent: string, mode: 'dark' | 'light'): string[] {
+  const preset = ACCENT_BY_ID[accent];
+  if (!preset) return [normalizeHex(accent)];
+  if (preset.adaptive) return [preset.adaptive[mode]];
+  return preset.stops;
+}
+
+/** A CSS fill for an accent: a gradient for blends, a flat colour otherwise. */
+export function accentFill(stops: string[]): string {
+  return stops.length > 1 ? `linear-gradient(135deg, ${stops.join(', ')})` : stops[0]!;
+}
+
+// ---- Perceptual distance ----------------------------------------------------------------------
+
+function linear(channel: number): number {
+  const c = channel / 255;
+  return c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+}
+
+/** OKLab coordinates, where straight-line distance tracks how different two colours look. */
+export function oklab(hex: string): [number, number, number] {
+  const [r, g, b] = hexToRgb(hex).map(linear) as [number, number, number];
+  const l = Math.cbrt(0.4122214708 * r + 0.5363325363 * g + 0.0514459929 * b);
+  const m = Math.cbrt(0.2119034982 * r + 0.6806995451 * g + 0.1073969566 * b);
+  const s = Math.cbrt(0.0883024619 * r + 0.2817188376 * g + 0.6299787005 * b);
+  return [
+    0.2104542553 * l + 0.793617785 * m - 0.0040720468 * s,
+    1.9779984951 * l - 2.428592205 * m + 0.4505937099 * s,
+    0.0259040371 * l + 0.7827717662 * m - 0.808675766 * s,
+  ];
+}
+
+export function colorDistance(a: string, b: string): number {
+  const [al, aa, ab] = oklab(a);
+  const [bl, ba, bb] = oklab(b);
+  return Math.hypot(al - bl, aa - ba, ab - bb);
+}
+
+/** Below this OKLab distance two colours are easily mistaken for each other at a glance. */
+export const CLASH_DISTANCE = 0.1;
+
+/** The effort step a custom accent would be confused with, if any. */
+export function accentClash(hex: string): Effort | null {
+  if (!isValidHex(hex)) return null;
+  const color = normalizeHex(hex);
+  let nearest: { effort: Effort; distance: number } | null = null;
+  for (const effort of EFFORTS) {
+    for (const shade of [EFFORT_META[effort].dark, EFFORT_META[effort].light]) {
+      const distance = colorDistance(color, shade);
+      if (!nearest || distance < nearest.distance) nearest = { effort, distance };
+    }
+  }
+  return nearest && nearest.distance < CLASH_DISTANCE ? nearest.effort : null;
+}
 
 export function hexToRgb(hex: string): [number, number, number] {
   const clean = hex.replace('#', '');

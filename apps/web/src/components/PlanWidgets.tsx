@@ -1,3 +1,4 @@
+import type { WorkoutSummary } from '@askesis/api-client';
 import type { CSSProperties } from 'react';
 import {
   Archive,
@@ -25,7 +26,7 @@ import {
   SYSTEM_META,
   systemsForSports,
 } from '../lib/sports';
-import type { WeekSummary } from '../lib/workouts';
+import { effortMix, workoutLook, type WeekSummary } from '../lib/workouts';
 import {
   knownCoverage,
   usePerformance,
@@ -34,7 +35,7 @@ import {
   type Plan,
 } from '../plan-data';
 import { useSportUnits, type Units } from '../settings';
-import { ZONE_COLORS } from '../theme/palette';
+import { EFFORT_META, EFFORTS, effortColor, zoneEffort } from '../theme/palette';
 import { Pill, cx } from './ui';
 
 // ---- Plan state --------------------------------------------------------------------------------
@@ -215,7 +216,13 @@ export function WeekChart({
             onClick={() => onSelect(week.number)}
           >
             <span className="bar-track">
-              <span className="bar-fill" style={{ height: `${height}%` }} />
+              <span className="bar-fill" style={{ height: `${height}%` }}>
+                {week.planned
+                  ? effortMix(week.workouts, measure).map(({ effort, amount: part }) => (
+                      <i key={effort} style={{ flexGrow: part, background: effortColor(effort) }} />
+                    ))
+                  : null}
+              </span>
             </span>
             <span className={cx('bar-label', week.number === current && 'current')}>
               {week.number}
@@ -223,6 +230,26 @@ export function WeekChart({
           </button>
         );
       })}
+    </div>
+  );
+}
+
+/** Key to the effort colours, limited to the efforts these workouts use. */
+export function EffortLegend({
+  workouts,
+}: {
+  workouts: Pick<WorkoutSummary, 'title' | 'purpose' | 'discipline'>[];
+}) {
+  const present = new Set(workouts.map((workout) => workoutLook(workout).effort));
+  const efforts = EFFORTS.filter((effort) => present.has(effort));
+  if (!efforts.length) return null;
+  return (
+    <div className="calendar-legend" aria-label="Effort colours">
+      {efforts.map((effort) => (
+        <span key={effort} style={{ '--kind': effortColor(effort) } as CSSProperties}>
+          <i /> {EFFORT_META[effort].label}
+        </span>
+      ))}
     </div>
   );
 }
@@ -280,7 +307,7 @@ export function ZoneGuides({
           <div
             className="pace-card"
             key={zone.key}
-            style={{ '--zone': ZONE_COLORS[zone.key] ?? ZONE_COLORS.easy } as CSSProperties}
+            style={{ '--zone': effortColor(zoneEffort(zone.key)) } as CSSProperties}
           >
             <span className="zone-swatch" aria-hidden="true" />
             <span className="label">

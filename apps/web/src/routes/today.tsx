@@ -29,7 +29,7 @@ import {
   WEEKDAYS_SHORT,
 } from '../lib/format';
 import { planSports, systemsForSports } from '../lib/sports';
-import { inferKind, isCovered, KIND_META, volumeMeasure, workoutsOn } from '../lib/workouts';
+import { isCovered, volumeMeasure, workoutLook, workoutsOn } from '../lib/workouts';
 import {
   currentEntry,
   knownCoverage,
@@ -150,7 +150,7 @@ function TodayForPlan({ plan, today }: { plan: Plan; today: string }) {
       <div className="week-strip" role="group" aria-label="This week">
         {days.map((date, index) => {
           const items = workoutsOn(all, date);
-          const kind = items[0] ? KIND_META[inferKind(items[0])] : null;
+          const kind = items[0] ? workoutLook(items[0]) : null;
           return (
             <button
               key={date}
@@ -280,7 +280,7 @@ function TodayForPlan({ plan, today }: { plan: Plan; today: string }) {
               {days.map((date, index) => {
                 const items = workoutsOn(week, date);
                 const metres = items.reduce((sum, w) => sum + amount(w), 0);
-                const kind = items[0] ? KIND_META[inferKind(items[0])] : null;
+                const kind = items[0] ? workoutLook(items[0]) : null;
                 return (
                   <span
                     key={date}
@@ -340,7 +340,7 @@ function HeroWorkout({
   units: Units;
   onOpen: (workout: WorkoutSummary) => void;
 }) {
-  const kind = KIND_META[inferKind(workout)];
+  const kind = workoutLook(workout);
   const detail = useWorkoutDetail(workout.id, version);
   const { pool } = useSportUnits();
   return (

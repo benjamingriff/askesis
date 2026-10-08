@@ -68,8 +68,8 @@ form.card legend {
   text-transform: capitalize;
 }
 .weekday-chip.preferred {
-  background: var(--accent);
-  border-color: var(--accent);
+  background: var(--accent-fill);
+  border-color: transparent;
   color: var(--on-accent);
 }
 .weekday-chip.preferred small {
@@ -220,12 +220,15 @@ form.card legend {
     color 0.15s ease;
 }
 .sport-chip svg {
-  color: var(--kind);
+  color: var(--text-muted);
 }
 .sport-chip.selected {
-  border-color: var(--kind);
-  background: color-mix(in srgb, var(--kind) 16%, transparent);
+  border-color: var(--accent-border);
+  background: var(--accent-soft);
   color: var(--text);
+}
+.sport-chip.selected svg {
+  color: var(--accent-text);
 }
 .sport-chip:disabled {
   cursor: default;
@@ -236,7 +239,7 @@ form.card legend {
   gap: 8px;
 }
 .system-title svg {
-  color: var(--kind);
+  color: var(--text-dim);
 }
 .result-form {
   border-top: 1px solid var(--border);

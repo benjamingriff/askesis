@@ -11,7 +11,6 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import type { Units } from '../settings';
-import { KIND_COLORS } from '../theme/palette';
 import {
   formatClock,
   formatDistance,
@@ -27,18 +26,16 @@ type PerformanceSystem = PerformanceState['usedByPlans'][number];
 export type BriefSport = 'run' | 'cycle' | 'swim' | 'strength';
 export type Sport = BriefSport | 'row' | 'ski_erg' | 'other' | 'mixed';
 
-export const SPORT_META: Record<
-  Sport,
-  { label: string; noun: string; icon: LucideIcon; color: string }
-> = {
-  run: { label: 'Run', noun: 'running', icon: Footprints, color: KIND_COLORS.easy },
-  cycle: { label: 'Ride', noun: 'cycling', icon: Bike, color: KIND_COLORS.ride },
-  swim: { label: 'Swim', noun: 'swimming', icon: Waves, color: KIND_COLORS.swim },
-  strength: { label: 'Strength', noun: 'strength', icon: Dumbbell, color: KIND_COLORS.strength },
-  row: { label: 'Row', noun: 'rowing', icon: Ship, color: KIND_COLORS.mixed },
-  ski_erg: { label: 'SkiErg', noun: 'SkiErg', icon: Snowflake, color: KIND_COLORS.mixed },
-  other: { label: 'Transition', noun: 'other', icon: Shuffle, color: KIND_COLORS.rest },
-  mixed: { label: 'Multisport', noun: 'multisport', icon: Layers, color: KIND_COLORS.mixed },
+/** Sports are told apart by icon; colour is reserved for effort. */
+export const SPORT_META: Record<Sport, { label: string; noun: string; icon: LucideIcon }> = {
+  run: { label: 'Run', noun: 'running', icon: Footprints },
+  cycle: { label: 'Ride', noun: 'cycling', icon: Bike },
+  swim: { label: 'Swim', noun: 'swimming', icon: Waves },
+  strength: { label: 'Strength', noun: 'strength', icon: Dumbbell },
+  row: { label: 'Row', noun: 'rowing', icon: Ship },
+  ski_erg: { label: 'SkiErg', noun: 'SkiErg', icon: Snowflake },
+  other: { label: 'Transition', noun: 'other', icon: Shuffle },
+  mixed: { label: 'Multisport', noun: 'multisport', icon: Layers },
 };
 
 export const BRIEF_SPORTS: BriefSport[] = ['run', 'cycle', 'swim', 'strength'];

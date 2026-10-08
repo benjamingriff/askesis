@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Bot, Gauge, MessagesSquare, Plus, Undo2 } from 'lucide-react';
-import { useState, type CSSProperties, type ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import { Link } from 'react-router';
 import type { RecordCalibration } from '@askesis/api-client';
 import { api } from '../api';
@@ -161,7 +161,7 @@ function SystemCard({
     <Card className="performance-current" data-system={system}>
       <SectionHeader
         title={
-          <span className="system-title" style={{ '--kind': sport.color } as CSSProperties}>
+          <span className="system-title">
             <sport.icon size={18} aria-hidden="true" /> {meta.title}
           </span>
         }
