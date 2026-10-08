@@ -129,10 +129,13 @@ export function LiveProvider({ enabled, children }: { enabled: boolean; children
     const stop = new AbortController();
     let cursor: string | undefined,
       failures = 0,
+      established = false,
       // Ends the current connection or backoff wait so the next attempt starts now.
       retry = new AbortController();
     const reconnect = async () => {
       while (!stop.signal.aborted) {
+        // Renewal can wait for credentials or headers: fallback reads must run throughout.
+        setState(established ? 'reconnecting' : 'connecting');
         retry = new AbortController();
         try {
           if (cursor === undefined) {
@@ -157,6 +160,7 @@ export function LiveProvider({ enabled, children }: { enabled: boolean; children
           );
           if (!response.ok || !response.headers.get('content-type')?.includes('text/event-stream'))
             throw new Error('Live connection failed');
+          established = true;
           setState('live');
           failures = 0;
           await readNotifications(response, (notification) => {

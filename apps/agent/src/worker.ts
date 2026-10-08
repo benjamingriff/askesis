@@ -9,7 +9,7 @@ const MAX_HEARTBEAT_FAILURES = 3;
 export class Worker {
   readonly id = randomUUID();
   private stopping = false;
-  private active: AbortController | undefined;
+  private active: { execution: AbortController; hardStop: AbortController } | undefined;
   private heartbeatPending: Promise<void> | undefined;
   constructor(
     private config: AgentConfig,
@@ -29,9 +29,14 @@ export class Worker {
   }
   async execute(claim: Claim) {
     const controller = new AbortController();
-    this.active = controller;
+    const hardStop = new AbortController();
+    this.active = { execution: controller, hardStop };
+    const interrupt = (reason: string) => {
+      hardStop.abort(reason);
+      controller.abort(reason);
+    };
     const remaining = Math.max(1, Date.parse(claim.deadlineAt) - Date.now());
-    const deadline = setTimeout(() => controller.abort('EXECUTION_TIMEOUT'), remaining);
+    const deadline = setTimeout(() => interrupt('EXECUTION_TIMEOUT'), remaining);
     let heartbeat: Promise<void> | undefined;
     // A single failed heartbeat (network blip, or a tool call holding the run lock) must not
     // discard the run while its lease is still valid; give up only after repeated failures.
@@ -50,7 +55,7 @@ export class Worker {
             failures >= MAX_HEARTBEAT_FAILURES ||
             (error instanceof ApiError && [401, 403, 404, 409].includes(error.status))
           )
-            controller.abort('LEASE_LOST');
+            interrupt('LEASE_LOST');
         })
         .finally(() => {
           heartbeat = undefined;
@@ -58,7 +63,13 @@ export class Worker {
     }, 15000);
     try {
       const context = await this.api.context(claim, controller.signal);
-      const output = await this.runtime.execute(context, claim, this.api, controller.signal);
+      const output = await this.runtime.execute(
+        context,
+        claim,
+        this.api,
+        controller.signal,
+        hardStop.signal,
+      );
       controller.signal.throwIfAborted();
       const result = await this.api.finish(claim, { status: 'completed', ...output });
       this.report(result.status, claim.runId);
@@ -126,6 +137,7 @@ export class Worker {
   }
   stop() {
     this.stopping = true;
-    this.active?.abort('WORKER_SHUTDOWN');
+    this.active?.hardStop.abort('WORKER_SHUTDOWN');
+    this.active?.execution.abort('WORKER_SHUTDOWN');
   }
 }
