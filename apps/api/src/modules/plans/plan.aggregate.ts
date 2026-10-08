@@ -291,7 +291,7 @@ export function affectedWorkouts(before: Aggregate | null, after: Aggregate) {
   );
 }
 
-/** Bulk cloning uses one temporary ID map shared by all tables in this transaction. */
+/** Bulk cloning uses one temporary ID map per clone, shared by its content tables. */
 export async function cloneContent(db: Transaction<DB>, source: string, destination: string) {
   await sql`CREATE TEMP TABLE plan_clone_ids(old_id uuid PRIMARY KEY, new_id uuid NOT NULL) ON COMMIT DROP`.execute(
     db,
@@ -329,6 +329,9 @@ export async function cloneContent(db: Transaction<DB>, source: string, destinat
       db,
     );
   }
+  // A seed can publish several plans in one transaction. Release this clone's map
+  // before the next unlock/restore; ON COMMIT DROP still handles transaction exit.
+  await sql`DROP TABLE pg_temp.plan_clone_ids`.execute(db);
 }
 
 export async function deleteDraftContent(db: Transaction<DB>, versionId: string) {

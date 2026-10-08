@@ -1,169 +1,140 @@
 import { describe, expect, it } from 'vitest';
-import { WORKOUT_DISCIPLINES, STEP_DISCIPLINES } from '../modules/plans/disciplines.js';
-import { BLOCK_PHASES, RACE_PRIORITIES } from '../modules/plans/periodization.js';
+import { BriefSchema } from '../modules/plans/brief.schemas.js';
 import { CALIBRATORS } from '../modules/performance/performance.calibrators.js';
 import {
-  StepCompletionSchema,
-  StepTargetSchema,
-  WorkoutStepKindSchema,
-} from '../modules/workouts/workout.schemas.js';
-import {
-  BLUEPRINT_REVISION,
+  BLUEPRINT_REVISIONS,
+  EXAMPLE_KINDS,
   buildExample,
   exampleAnchor,
-  exampleCoverage,
   shiftDay,
   type Step,
 } from './blueprint.js';
 
 const flatten = (steps: Step[]): Step[] =>
   steps.flatMap((step) => [step, ...flatten(step.steps ?? [])]);
-const sorted = (items: Iterable<unknown>) => [...new Set(items)].sort();
+const total = (plan: ReturnType<typeof buildExample>, week: number) =>
+  plan.weeks[week]!.sessions.reduce((sum, { session }) => sum + session.minutes, 0);
 
-describe('complete multisport blueprint', () => {
-  it('covers the storage vocabulary with valid trees and sport-specific zones', () => {
-    expect(sorted(exampleCoverage.completionTypes)).toEqual(
-      sorted(StepCompletionSchema.shape.type.options),
-    );
-    expect(sorted(exampleCoverage.targetTypes)).toEqual(
-      sorted(StepTargetSchema.shape.type.options),
-    );
-    const plan = buildExample('2026-09-28');
-    const sessions = plan.weeks.flatMap((week) => week.sessions.map((s) => s.session));
-    const steps = sessions.flatMap((session) => flatten(session.steps));
-    expect(sorted(steps.map((s) => s.kind ?? 'effort'))).toEqual(
-      sorted(WorkoutStepKindSchema.options),
-    );
-    expect(sorted(sessions.map((s) => s.sport))).toEqual(sorted(WORKOUT_DISCIPLINES));
-    expect(sorted(steps.flatMap((s) => (s.sport ? [s.sport] : [])))).toEqual(
-      sorted(STEP_DISCIPLINES),
-    );
-    expect(sorted(steps.flatMap((s) => (s.role ? [s.role] : [])))).toEqual(
-      sorted(exampleCoverage.stepRoles),
+describe('three-month example plans', () => {
+  for (const kind of EXAMPLE_KINDS) {
+    it(`${kind} spans twelve populated weeks with contiguous realistic blocks and valid prescriptions`, () => {
+      const plan = buildExample(kind, '2026-09-28');
+      expect(plan.endDate).toBe('2026-12-20');
+      expect(plan.weeks).toHaveLength(12);
+      expect(plan.blocks.map((b) => b.weekCount)).toEqual([4, 4, 3, 1]);
+      expect(BriefSchema.safeParse(plan.brief).success).toBe(true);
+      expect(plan.blocks[0]!.startDate).toBe(plan.anchor);
+      expect(plan.blocks.at(-1)!.endDate).toBe(plan.endDate);
+      for (const [index, block] of plan.blocks.entries()) {
+        if (index) expect(block.startDate).toBe(shiftDay(plan.blocks[index - 1]!.endDate, 1));
+        const weeks = plan.weeks.filter((w) => w.blockIndex === index);
+        expect(weeks[0]!.startDate).toBe(block.startDate);
+        expect(weeks.at(-1)!.endDate).toBe(block.endDate);
+        expect(weeks.map((w) => w.position)).toEqual(weeks.map((_, i) => i + 1));
+      }
+      for (const week of plan.weeks) {
+        expect(week.sessions.length).toBeGreaterThan(0);
+        for (let day = 0; day < 7; day++) {
+          const count = week.sessions.filter((s) => s.day === day).length;
+          expect(count).toBeLessThanOrEqual(2);
+          if (plan.brief.weekdays[day] === 'unavailable') expect(count).toBe(0);
+        }
+        for (const { session } of week.sessions) {
+          for (const step of flatten(session.steps)) {
+            if (step.kind) {
+              expect(step.steps?.length).toBeGreaterThan(0);
+              expect(step.completion).toBeUndefined();
+            } else {
+              expect(step.sport).toBeDefined();
+              expect(step.completion).toBeDefined();
+              if (step.completion?.numeric_value)
+                expect(Number(step.completion.numeric_value)).toBeGreaterThan(0);
+            }
+            for (const target of step.targets ?? []) {
+              if (target.target_type !== 'zone') continue;
+              const calibrator = CALIBRATORS[target.zone_system as keyof typeof CALIBRATORS];
+              expect(calibrator.discipline).toBe(step.sport);
+              expect(calibrator.zoneKeys).toContain(target.zone_key);
+            }
+          }
+        }
+        for (const target of week.targets) {
+          const matching = week.sessions.filter(
+            ({ session }) => session.sport === target.discipline,
+          );
+          if (target.metric === 'duration')
+            expect(target.target).toBe(
+              matching.reduce((sum, { session }) => sum + session.minutes * 60, 0),
+            );
+          if (target.metric === 'distance')
+            expect(target.target).toBe(
+              matching.reduce((sum, { session }) => sum + (session.metres ?? 0), 0),
+            );
+          if (target.metric === 'strength_session_count')
+            expect(target.target).toBe(matching.length);
+        }
+      }
+      expect(plan.weeks.filter((w) => w.cutback).map((w) => w.index)).toEqual([3, 7]);
+      expect(total(plan, 2)).toBeGreaterThan(total(plan, 0));
+      expect(total(plan, 3)).toBeLessThan(total(plan, 2) * 0.8);
+      expect(total(plan, 7)).toBeLessThan(total(plan, 6) * 0.8);
+      expect(total(plan, 11)).toBeLessThan(total(plan, 10) * 0.85);
+      expect(BLUEPRINT_REVISIONS[kind]).toMatch(new RegExp(`^${kind}-example-v1-[0-9a-f]{12}$`));
+    });
+  }
+  it('keeps cycling focused and reduces supporting strength during specific preparation', () => {
+    const plan = buildExample('cycling', '2026-09-28');
+    expect(plan.brief.sports.map((s) => s.sport)).toEqual(['cycle', 'strength']);
+    for (const week of plan.weeks) {
+      expect(week.sessions.filter(({ session }) => session.sport === 'cycle')).toHaveLength(4);
+      expect(week.sessions.filter(({ session }) => session.sport === 'strength')).toHaveLength(
+        week.index < 8 ? 2 : 1,
+      );
+      expect(
+        week.sessions.every(({ session }) => ['cycle', 'strength'].includes(session.sport)),
+      ).toBe(true);
+    }
+  });
+  it('balances triathlon disciplines, transitions and the final sprint event', () => {
+    const plan = buildExample('triathlon', '2026-09-28');
+    for (const week of plan.weeks.slice(0, 11)) {
+      expect(week.sessions.filter(({ session }) => session.sport === 'swim')).toHaveLength(2);
+      const brick = week.sessions.find(({ session }) => session.tags.includes('brick'))!.session;
+      expect(flatten(brick.steps).map((s) => s.sport)).toEqual([
+        'cycle',
+        'cycle',
+        'other',
+        'run',
+        'other',
+      ]);
+    }
+    const last = plan.weeks.at(-1)!.sessions.at(-1)!;
+    expect(last.day).toBe(6);
+    expect(last.session.race).toBe('A');
+    expect(
+      last.session.steps
+        .filter((s) => s.completion?.completion_type === 'distance')
+        .map((s) => Number(s.completion!.numeric_value)),
+    ).toEqual([750, 20000, 5000]);
+    expect(plan.blocks.at(-1)!.phase).toBe('taper');
+  });
+  it('includes a broad gym spectrum without adding endurance sports to the brief', () => {
+    const plan = buildExample('strength-hiit', '2026-09-28');
+    expect(plan.brief.sports.map((s) => s.sport)).toEqual(['strength']);
+    const tags = new Set(
+      plan.weeks.flatMap((w) => w.sessions.flatMap(({ session }) => session.tags)),
     );
     expect(
-      sorted(steps.flatMap((s) => (s.completion ? [s.completion.completion_type] : []))),
-    ).toEqual(sorted(exampleCoverage.completionTypes));
-    expect(sorted(steps.flatMap((s) => (s.targets ?? []).map((t) => t.target_type)))).toEqual(
-      sorted(exampleCoverage.targetTypes),
-    );
-    for (const step of steps) {
-      if (step.kind) {
-        expect(step.steps?.length).toBeGreaterThan(0);
-        expect(step.completion).toBeUndefined();
-        expect(step.targets).toBeUndefined();
-      } else {
-        expect(step.completion).toBeDefined();
-        expect(step.sport).toBeDefined();
-      }
-      for (const target of step.targets ?? []) {
-        if (target.target_type !== 'zone') continue;
-        const calibrator = CALIBRATORS[target.zone_system as keyof typeof CALIBRATORS];
-        expect(calibrator.discipline).toBe(step.sport);
-        expect(calibrator.zoneKeys).toContain(target.zone_key);
-      }
-    }
-  });
-
-  it('fills eight complete weeks with rest days and no more than two daily sessions', () => {
-    const plan = buildExample('2026-09-28');
-    expect(plan.endDate).toBe('2026-11-22');
-    expect(plan.weeks).toHaveLength(8);
+      ['emom', 'amrap', 'for-time', 'aerobic', 'lower', 'upper', 'full'].every((tag) =>
+        tags.has(tag),
+      ),
+    ).toBe(true);
     for (const week of plan.weeks) {
-      expect(week.sessions).toHaveLength(8);
-      for (let day = 0; day < 7; day++) {
-        const count = week.sessions.filter((s) => s.day === day).length;
-        expect(count).toBeLessThanOrEqual(2);
-        expect(count === 0).toBe(day === 4);
-      }
+      expect(week.sessions.filter(({ session }) => session.sport === 'strength')).toHaveLength(3);
+      expect(week.sessions.filter(({ session }) => session.sport === 'mixed')).toHaveLength(2);
     }
+    expect(plan.blocks.at(-1)!.phase).toBe('recovery');
   });
-
-  it('covers every phase in contiguous blocks of whole weeks, with build repeated', () => {
-    const plan = buildExample('2026-09-28');
-    expect(plan.blocks.map((b) => b.phase)).toEqual([
-      'base',
-      'build',
-      'recovery',
-      'build',
-      'peak',
-      'taper',
-    ]);
-    expect([...new Set(plan.blocks.map((b) => b.phase))].sort()).toEqual([...BLOCK_PHASES].sort());
-    expect(plan.blocks[0]!.startDate).toBe(plan.anchor);
-    expect(plan.blocks.at(-1)!.endDate).toBe(plan.endDate);
-    for (const [index, block] of plan.blocks.entries()) {
-      if (index) expect(block.startDate).toBe(shiftDay(plan.blocks[index - 1]!.endDate, 1));
-      const weeks = plan.weeks.filter((w) => w.blockIndex === index);
-      expect(weeks[0]!.startDate).toBe(block.startDate);
-      expect(weeks.at(-1)!.endDate).toBe(block.endDate);
-      expect(weeks.map((w) => w.position)).toEqual(weeks.map((_, i) => i + 1));
-    }
-  });
-
-  it('races each priority once and lightens the cutback week inside its block', () => {
-    const plan = buildExample('2026-09-28');
-    expect(sorted(exampleCoverage.racePriorities)).toEqual(sorted(RACE_PRIORITIES));
-    const races = plan.weeks.flatMap((week) =>
-      week.sessions
-        .filter(({ session }) => session.race)
-        .map(({ session }) => [week.index, session.race]),
-    );
-    expect(races).toEqual([
-      [3, 'B'],
-      [5, 'C'],
-      [7, 'A'],
-    ]);
-    // The A race is the plan's last training day, at the end of the taper.
-    expect(plan.blocks[plan.weeks[7]!.blockIndex]!.phase).toBe('taper');
-    expect(plan.weeks.filter((w) => w.cutback).map((w) => w.index)).toEqual([2]);
-    const cutback = plan.weeks[2]!;
-    expect(plan.blocks[cutback.blockIndex]!.phase).toBe('base');
-    // The sessions themselves are lighter, so the weekly totals clients chart drop too.
-    const total = (index: number, key: 'minutes' | 'metres') =>
-      plan.weeks[index]!.sessions.reduce((sum, { session }) => sum + (session[key] ?? 0), 0);
-    expect(total(2, 'minutes')).toBeLessThanOrEqual(total(1, 'minutes') * 0.8);
-    expect(total(2, 'metres')).toBeLessThanOrEqual(total(1, 'metres') * 0.8);
-    const longest = (index: number) =>
-      Math.max(
-        ...plan.weeks[index]!.sessions.flatMap(({ session }) =>
-          flatten(session.steps).map((step) =>
-            step.completion?.completion_type === 'duration'
-              ? Number(step.completion.numeric_value)
-              : 0,
-          ),
-        ),
-      );
-    expect(longest(2)).toBeLessThan(longest(1));
-    // Recovery and taper weeks are lighter than the training weeks before them too.
-    expect(total(4, 'minutes')).toBeLessThan(total(3, 'minutes') * 0.8);
-    expect(total(7, 'minutes')).toBeLessThan(total(6, 'minutes') * 0.85);
-  });
-
-  it('keeps numbered tests and sets intact when lightening a week', () => {
-    const plan = buildExample('2026-09-28');
-    const light = plan.weeks.filter((week) => week.volume < 1);
-    expect(light.map((week) => week.index)).toEqual([2, 4, 7]);
-    for (const week of light)
-      for (const { session } of week.sessions)
-        for (const step of flatten(session.steps)) {
-          // A label stating metres ('400 m controlled test') still prescribes that distance.
-          const stated = /^(\d+) m\b/.exec(step.label)?.[1];
-          if (stated && step.completion?.completion_type === 'distance')
-            expect(Number(step.completion.numeric_value)).toBe(Number(stated));
-        }
-    const session = (index: number, title: string) =>
-      plan.weeks[index]!.sessions.find(({ session }) => session.title === title)!.session;
-    expect(session(2, 'Sweet spot 2 × 15')).toEqual(session(0, 'Sweet spot 2 × 15'));
-    expect(session(2, '400/200 swim test rehearsal').steps).toEqual(
-      session(1, '400/200 swim test rehearsal').steps,
-    );
-  });
-
-  it('derives the publication revision from the blueprint content', () => {
-    expect(BLUEPRINT_REVISION).toMatch(/^multisport-showcase-v3-[0-9a-f]{12}$/);
-  });
-
   it('anchors by local calendar week through midnight and DST boundaries', () => {
     expect(exampleAnchor('Europe/London', new Date('2026-10-11T22:30:00Z'))).toBe('2026-09-28');
     expect(exampleAnchor('Europe/London', new Date('2026-10-11T23:30:00Z'))).toBe('2026-10-05');

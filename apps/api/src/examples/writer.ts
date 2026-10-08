@@ -1,11 +1,14 @@
 import { randomUUID } from 'node:crypto';
 import type { Transaction } from 'kysely';
 import type { DB } from '../database/generated.js';
-import { buildExample, shiftDay, type Step } from './blueprint.js';
+import { shiftDay, type ExampleBlueprint, type Step } from './blueprint.js';
 
 /** Operator writer for schema-supported fields that the coach does not yet expose. */
-export async function writeExample(db: Transaction<DB>, versionId: string, anchor: string) {
-  const blueprint = buildExample(anchor);
+export async function writeExample(
+  db: Transaction<DB>,
+  versionId: string,
+  blueprint: ExampleBlueprint,
+) {
   const movements = new Map<string, string>();
   const blockIds: string[] = [];
   for (const [index, block] of blueprint.blocks.entries()) {
@@ -37,22 +40,12 @@ export async function writeExample(db: Transaction<DB>, versionId: string, ancho
         position: week.position,
         cutback: week.cutback,
         title: week.title,
-        description:
-          'Friday is a prescribed rest day. Monday and Sunday demonstrate ordered double sessions.',
+        description: week.description,
         start_date: week.startDate,
         end_date: week.endDate,
       })
       .execute();
-    const scale = week.volume;
-    const targets = [
-      { metric: 'distance', discipline: 'run', target: 25000 * scale, unit: 'metres' },
-      { metric: 'distance', discipline: 'swim', target: 3600, unit: 'metres' },
-      { metric: 'duration', discipline: 'cycle', target: 9000, unit: 'seconds' },
-      { metric: 'hard_session_count', discipline: null, target: 3, unit: 'sessions' },
-      { metric: 'strength_session_count', discipline: 'strength', target: 2, unit: 'sessions' },
-      { metric: 'training_load', discipline: null, target: 350 * scale, unit: 'arbitrary_units' },
-    ];
-    for (const target of targets)
+    for (const target of week.targets)
       await db
         .insertInto('week_targets')
         .values({
@@ -84,8 +77,7 @@ export async function writeExample(db: Transaction<DB>, versionId: string, ancho
           scheduled_date: shiftDay(week.startDate, day),
           position,
           title: session.title,
-          description:
-            'Committed multisport software example. Suggested values illustrate the model; adapt prescriptions before training.',
+          description: blueprint.description,
           purpose: session.purpose,
           primary_discipline: session.sport,
           race_priority: session.race ?? null,
@@ -111,7 +103,8 @@ export async function writeExample(db: Transaction<DB>, versionId: string, ancho
               .values({
                 id: movementId,
                 name: step.movement,
-                category: 'supporting_strength',
+                category:
+                  blueprint.kind === 'strength-hiit' ? 'gym_strength' : 'supporting_strength',
                 primary_discipline: 'strength',
                 instructions:
                   'Use a controlled range of motion and the prescribed repetitions in reserve.',

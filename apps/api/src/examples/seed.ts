@@ -18,7 +18,13 @@ import {
   unlockPlanRows,
   organizePlanRows,
 } from '../modules/plans/plan.service.js';
-import { BLUEPRINT_REVISION, EXAMPLE_NAME, buildExample, exampleAnchor } from './blueprint.js';
+import {
+  BLUEPRINT_REVISIONS,
+  EXAMPLE_KINDS,
+  buildExample,
+  exampleAnchor,
+  type ExampleKind,
+} from './blueprint.js';
 import { writeExample } from './writer.js';
 
 const estimates: CalibrationInput[] = [
@@ -84,24 +90,54 @@ export async function ensureExample(owner: string, now = new Date()) {
         .forUpdate()
         .executeTakeFirstOrThrow();
       const anchor = exampleAnchor(athlete.timezone, now);
-      const existing = editions.find(
-        (e) => e.blueprint_revision === BLUEPRINT_REVISION && String(e.anchor_date) === anchor,
+      const existing = EXAMPLE_KINDS.map((kind) =>
+        editions.find(
+          (e) =>
+            e.blueprint_revision === BLUEPRINT_REVISIONS[kind] && String(e.anchor_date) === anchor,
+        ),
       );
-      if (existing) {
-        const current = await detail(db, owner, existing.plan_id);
+      const results: {
+        kind: ExampleKind;
+        status: 'created' | 'unchanged' | 'preserved';
+        planId: string;
+      }[] = [];
+      if (existing.every(Boolean)) {
+        for (const [index, edition] of existing.entries()) {
+          const current = await detail(db, owner, edition!.plan_id);
+          results.push({
+            kind: EXAMPLE_KINDS[index]!,
+            status:
+              current.stateVersion === edition!.published_state_version ? 'unchanged' : 'preserved',
+            planId: edition!.plan_id,
+          });
+        }
         return {
-          status:
-            current.stateVersion === existing.published_state_version
-              ? ('unchanged' as const)
-              : ('preserved' as const),
-          planId: existing.plan_id,
+          status: results.some((r) => r.status === 'preserved')
+            ? ('preserved' as const)
+            : ('unchanged' as const),
+          plans: results,
+          planId: results[0]!.planId,
           anchor,
           addedCalibrations: [] as string[],
         };
       }
+      // Only new blueprints need fitness. A gym-only update must not depend on
+      // a deliberately withdrawn endurance calibration used by an existing plan.
+      const neededSystems = new Set(
+        EXAMPLE_KINDS.flatMap((kind, index) =>
+          existing[index]
+            ? []
+            : kind === 'triathlon'
+              ? ['run_pace', 'cycle_power', 'swim_pace']
+              : kind === 'cycling'
+                ? ['cycle_power']
+                : [],
+        ),
+      );
+      const neededEstimates = estimates.filter((estimate) => neededSystems.has(estimate.system));
       const entries = await readEntries(db, owner);
       // A withdrawal is deliberate. Do not resurrect withdrawn example fitness.
-      const withdrawn = estimates.filter(
+      const withdrawn = neededEstimates.filter(
         (estimate) =>
           entries.some((e) => e.system === estimate.system) &&
           !entries.some((e) => e.system === estimate.system && !e.retractedAt),
@@ -110,11 +146,12 @@ export async function ensureExample(owner: string, now = new Date()) {
         return {
           status: 'calibration-required' as const,
           planId: null,
+          plans: results,
           anchor,
           addedCalibrations: [] as string[],
         };
       const addedCalibrations: string[] = [];
-      for (const estimate of estimates) {
+      for (const estimate of neededEstimates) {
         if (entries.some((e) => e.system === estimate.system && !e.retractedAt)) continue;
         await recordCalibrationRows(
           db,
@@ -123,77 +160,85 @@ export async function ensureExample(owner: string, now = new Date()) {
             ...estimate,
             provenance: 'user_estimate',
             estimateBasis:
-              'Synthetic multisport example estimate, not a measured result. Added only because this sport had no calibration history; replace it with your own fitness input.',
+              'Synthetic training example estimate, not a measured result. Added only because this sport had no calibration history; replace it with your own fitness input.',
           },
           { now },
         );
         addedCalibrations.push(estimate.system);
       }
-      const blueprint = buildExample(anchor);
-      const { planId, draftId } = await createPlanRows(db, owner, EXAMPLE_NAME, {
-        startDate: anchor,
-        endDate: blueprint.endDate,
-      });
-      await db
-        .updateTable('plan_versions')
-        .set({
-          description:
-            'Complete eight-week multisport software showcase, including storage examples beyond the current coaching writer.',
-        })
-        .where('id', '=', draftId)
-        .execute();
-      await saveBriefRows(db, await readBrief(db, draftId), blueprint.brief);
-      await writeExample(db, draftId, anchor);
-      const brief = await readBrief(db, draftId);
-      await db
-        .insertInto('plan_schedule_coverage')
-        .values({
-          plan_version_id: draftId,
-          start_date: anchor,
-          end_date: blueprint.endDate,
-          brief_hash: brief.hash,
-        })
-        .execute();
-      let plan = await publish(db, owner, planId);
-      // A real second revision demonstrates history, lineage, changes and restore.
-      plan = await unlockPlanRows(db, owner, planId, plan.stateVersion);
-      const second = plan.draft!.id;
-      const workout = await db
-        .selectFrom('workouts')
-        .select(['id', 'title'])
-        .where('plan_version_id', '=', second)
-        .where('primary_discipline', '=', 'strength')
-        .orderBy('scheduled_date')
-        .executeTakeFirstOrThrow();
-      await db
-        .updateTable('workouts')
-        .set({
-          title: `${workout.title} · reviewed`,
-          purpose:
-            'Reviewed supporting strength: keep two repetitions in reserve and prioritise movement quality.',
-        })
-        .where('id', '=', workout.id)
-        .execute();
-      await recordDraftChange(db, second, 'edit-only');
-      plan = await publish(db, owner, planId);
-      plan = await organizePlanRows(db, owner, planId, 'activate', plan.stateVersion);
-      const version = await db
-        .selectFrom('plan_versions')
-        .select('content_hash')
-        .where('id', '=', plan.locked!.id)
-        .executeTakeFirstOrThrow();
-      await db
-        .insertInto('example_plan_editions')
-        .values({
-          owner_id: owner,
-          blueprint_revision: BLUEPRINT_REVISION,
-          anchor_date: anchor,
-          plan_id: planId,
-          published_state_version: plan.stateVersion,
-          published_content_hash: version.content_hash!,
-        })
-        .execute();
+      for (const [index, kind] of EXAMPLE_KINDS.entries()) {
+        const edition = existing[index];
+        if (edition) {
+          const current = await detail(db, owner, edition.plan_id);
+          results.push({
+            kind,
+            status:
+              current.stateVersion === edition.published_state_version ? 'unchanged' : 'preserved',
+            planId: edition.plan_id,
+          });
+          continue;
+        }
+        const blueprint = buildExample(kind, anchor);
+        const { planId, draftId } = await createPlanRows(db, owner, blueprint.name, {
+          startDate: anchor,
+          endDate: blueprint.endDate,
+        });
+        await db
+          .updateTable('plan_versions')
+          .set({ description: blueprint.description })
+          .where('id', '=', draftId)
+          .execute();
+        await saveBriefRows(db, await readBrief(db, draftId), blueprint.brief);
+        await writeExample(db, draftId, blueprint);
+        const brief = await readBrief(db, draftId);
+        await db
+          .insertInto('plan_schedule_coverage')
+          .values({
+            plan_version_id: draftId,
+            start_date: anchor,
+            end_date: blueprint.endDate,
+            brief_hash: brief.hash,
+          })
+          .execute();
+        let plan = await publish(db, owner, planId);
+        // Retain real history and restore examples for each plan.
+        plan = await unlockPlanRows(db, owner, planId, plan.stateVersion);
+        const second = plan.draft!.id;
+        const workout = await db
+          .selectFrom('workouts')
+          .select(['id', 'purpose'])
+          .where('plan_version_id', '=', second)
+          .where('primary_discipline', '=', 'strength')
+          .orderBy('scheduled_date')
+          .executeTakeFirstOrThrow();
+        await db
+          .updateTable('workouts')
+          .set({ purpose: `${workout.purpose} Review technique before increasing load.` })
+          .where('id', '=', workout.id)
+          .execute();
+        await recordDraftChange(db, second, 'edit-only');
+        plan = await publish(db, owner, planId);
+        plan = await organizePlanRows(db, owner, planId, 'activate', plan.stateVersion);
+        const version = await db
+          .selectFrom('plan_versions')
+          .select('content_hash')
+          .where('id', '=', plan.locked!.id)
+          .executeTakeFirstOrThrow();
+        await db
+          .insertInto('example_plan_editions')
+          .values({
+            owner_id: owner,
+            blueprint_revision: BLUEPRINT_REVISIONS[kind],
+            anchor_date: anchor,
+            plan_id: planId,
+            published_state_version: plan.stateVersion,
+            published_content_hash: version.content_hash!,
+          })
+          .execute();
+        results.push({ kind, status: 'created', planId });
+      }
       for (const edition of editions) {
+        if (results.some((r) => r.planId === edition.plan_id)) continue;
         const old = await detail(db, owner, edition.plan_id);
         if (
           old.stateVersion !== edition.published_state_version ||
@@ -216,6 +261,12 @@ export async function ensureExample(owner: string, now = new Date()) {
         }
         await organizePlanRows(db, owner, old.id, 'archive', old.stateVersion);
       }
-      return { status: 'created' as const, planId, anchor, addedCalibrations };
+      return {
+        status: 'created' as const,
+        plans: results,
+        planId: results[0]!.planId,
+        anchor,
+        addedCalibrations,
+      };
     });
 }
