@@ -1,7 +1,7 @@
 import { createClerkClient } from '@clerk/backend';
-import { closeDatabase, getDatabase } from '../database/client.js';
+import { closeDatabase } from '../database/client.js';
+import { ensureAthlete } from '../auth/athlete-provisioning.js';
 import {
-  fixtureOwner,
   LocalVerificationError,
   verificationConfig,
   verificationEmail,
@@ -32,44 +32,11 @@ async function main() {
   if (!user)
     throw new LocalVerificationError('Run pnpm dev:setup to prepare the verification account.');
   const userId = user.id;
-  const db = getDatabase();
-  await db.transaction().execute(async (tx) => {
-    // Serialize first-time linking and refuse to replace any existing identity.
-    const owner = await tx
-      .selectFrom('athletes')
-      .select('id')
-      .where('id', '=', fixtureOwner)
-      .forUpdate()
-      .executeTakeFirst();
-    if (!owner)
-      throw new LocalVerificationError('Development seed is missing. Run pnpm dev:setup.');
-    const identities = await tx
-      .selectFrom('athlete_identities')
-      .select(['athlete_id', 'provider_subject'])
-      .where('provider', '=', 'clerk')
-      .where((eb) =>
-        eb.or([eb('athlete_id', '=', fixtureOwner), eb('provider_subject', '=', userId)]),
-      )
-      .execute();
-    if (
-      identities.some(
-        (identity) => identity.athlete_id !== fixtureOwner || identity.provider_subject !== userId,
-      )
-    )
-      throw new LocalVerificationError(
-        'Verification identity is already linked elsewhere; refusing to reassign it. Use a fresh local database.',
-      );
-    if (!identities.length) {
-      if (mode !== 'prepare')
-        throw new LocalVerificationError('Run pnpm dev:setup to link the sample athlete.');
-      await tx
-        .insertInto('athlete_identities')
-        .values({ athlete_id: fixtureOwner, provider: 'clerk', provider_subject: userId })
-        .execute();
-    }
-  });
+  await ensureAthlete(clerk, userId);
   if (mode === 'prepare') {
-    console.log('Dedicated Clerk development account is linked to the local sample athlete.');
+    console.log(
+      'Dedicated Clerk development account is ready. Fresh databases start with no plans.',
+    );
     return;
   }
   const task = await clerk.agentTasks.create({

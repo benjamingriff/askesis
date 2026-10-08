@@ -1,4 +1,4 @@
-# Development seed
+# Historical test fixtures
 
 `cardiff-half-example.sql` inserts a two-week subset inspired by the existing Cardiff Half Marathon plan. It demonstrates:
 
@@ -17,14 +17,14 @@
 triathlon with strength (swims, rides, runs, bricks and lifts) and a Hyrox plan (stations,
 compromised running and strength), covering 11–24 May 2026.
 
-The Compose `seed` service runs `seed.sh` after Atlas finishes migrating. The `seed_runs` table makes startup idempotent, so the seed is only loaded into a database volume once.
+The optional Compose `fixtures` profile runs `seed.sh` after Atlas finishes migrating; normal local setup starts empty. For account-owned local/hosted examples see [example-plan operations](../../docs/operations/example-plan.md). The `seed_runs` table makes startup idempotent, so the seed is only loaded into a database volume once.
 
 The current seed key is `cardiff-half-example-v3`. SQL creates a populated draft
 with version ID `00000000-0000-0000-0000-000000000050`. Compose then runs
 `publish-fixture`, which sets the athlete timezone, records its race results, fills/confirms the brief, validates, hashes, locks Version 1 and activates the plan
 through the real lifecycle service. Repeated publication is safe; edited fixtures
 are rejected rather than overwritten. The fixture belongs to its synthetic athlete.
-Publication refuses production or Railway environments; never seed Railway.
+This historical publication refuses production or Railway environments; never run it on Railway. Cardiff is required by smoke/database tests and migration rehearsals.
 
 Reset preserves athlete rows, external authentication identities and calibration history. It
 requires table-owner privileges, disables user triggers only within its transaction, and

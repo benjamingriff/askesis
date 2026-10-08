@@ -47,6 +47,7 @@ services:
         condition: service_healthy
 
   seed:
+    profiles: ['fixtures']
     image: postgres:17-alpine
     working_dir: /workspace
     environment:
@@ -63,6 +64,7 @@ services:
         condition: service_completed_successfully
 
   publish-fixture:
+    profiles: ['fixtures']
     build:
       context: .
       dockerfile: apps/api/Dockerfile
@@ -83,6 +85,8 @@ services:
     environment:
       PORT: 3000
       CHAT_EXECUTION_MODE: ${CHAT_EXECUTION_MODE:-unavailable}
+      EXAMPLE_PLAN_ENABLED: ${EXAMPLE_PLAN_ENABLED:-false}
+      EXAMPLE_PLAN_EMAIL: ${EXAMPLE_PLAN_EMAIL:-}
       AGENT_BOOTSTRAP_TOKEN: ${AGENT_BOOTSTRAP_TOKEN:-}
       DATABASE_URL: postgres://${POSTGRES_USER:-askesis}:${POSTGRES_PASSWORD:-askesis}@postgres:5432/${POSTGRES_DB:-askesis}
       CLERK_SECRET_KEY: ${CLERK_SECRET_KEY:-}
@@ -105,7 +109,7 @@ services:
       timeout: 5s
       retries: 20
     depends_on:
-      publish-fixture:
+      migrate:
         condition: service_completed_successfully
 
   agent:

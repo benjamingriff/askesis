@@ -1,6 +1,9 @@
 #!/usr/bin/env sh
 set -eu
 
+# .env COMPOSE_PROJECT_NAME overrides the Compose file's name. Never let smoke
+# cleanup target the development stack (or another concurrently running smoke).
+export COMPOSE_PROJECT_NAME="askesis-smoke-$$"
 compose='docker compose -f compose.smoke.yaml'
 cleanup() {
   $compose down --volumes --remove-orphans >/dev/null 2>&1 || true
