@@ -135,6 +135,43 @@ describe('three-month example plans', () => {
     }
     expect(plan.blocks.at(-1)!.phase).toBe('recovery');
   });
+  it('makes every gym format rule visible as an effort and budgets its full prescription', () => {
+    const plan = buildExample('strength-hiit', '2026-09-28');
+    for (const week of plan.weeks) {
+      const aerobic = week.sessions.find(({ session }) =>
+        session.tags.includes('aerobic'),
+      )!.session;
+      const timedSeconds = (steps: Step[]): number =>
+        steps.reduce(
+          (sum, step) =>
+            sum +
+            (step.kind
+              ? (step.repeat ?? 1) * timedSeconds(step.steps ?? [])
+              : step.completion?.completion_type === 'duration'
+                ? Number(step.completion.numeric_value)
+                : 0),
+          0,
+        );
+      expect(aerobic.minutes * 60).toBe(timedSeconds(aerobic.steps) + 60);
+      const hiit = week.sessions.find(({ session }) => session.tags.includes('hiit'))!.session;
+      const briefing = hiit.steps.find((step) => step.label === 'Format briefing')!;
+      expect(briefing.kind).toBeUndefined();
+      expect(briefing.completion?.completion_type).toBe('open');
+      const rules = briefing.targets!.find((t) => t.target_type === 'instruction')!.text_value;
+      const minutes = hiit.tags.includes('emom')
+        ? Number(/EMOM (\d+)/.exec(hiit.title)![1])
+        : hiit.tags.includes('amrap')
+          ? Number(/AMRAP (\d+)/.exec(hiit.title)![1])
+          : Number(/(\d+)-minute cap/.exec(String(rules))![1]);
+      expect(hiit.minutes).toBe(minutes + 11);
+      if (hiit.tags.includes('amrap')) {
+        expect(rules).toContain('Stop at the time cap');
+        expect(
+          hiit.steps.find((step) => step.label === 'Repeat circuit until time cap')?.kind,
+        ).toBe('sequence');
+      }
+    }
+  });
   it('anchors by local calendar week through midnight and DST boundaries', () => {
     expect(exampleAnchor('Europe/London', new Date('2026-10-11T22:30:00Z'))).toBe('2026-09-28');
     expect(exampleAnchor('Europe/London', new Date('2026-10-11T23:30:00Z'))).toBe('2026-10-05');

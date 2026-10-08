@@ -317,6 +317,19 @@ function conditioning(week: number, aerobic: boolean): Session {
   const format = week % 3;
   const rounds = light ? 3 : 4 + Math.floor(week / 4) + (week % 4);
   const cap = light ? 10 : 15 + Math.floor(week / 4) * 3 + (week % 4) * 2;
+  const mainMinutes = aerobic
+    ? rounds * 5
+    : format === 0
+      ? rounds * 4
+      : format === 1
+        ? cap
+        : cap + 5;
+  const formatRules =
+    format === 0
+      ? `Start a station every minute; finish with time to rest. The fourth minute is rest. Complete ${rounds} four-minute rounds.`
+      : format === 1
+        ? `Repeat these stations for ${cap} minutes, resting as needed. Stop at the time cap; record rounds and reps separately.`
+        : `Complete ${rounds} rounds with a ${cap + 5}-minute cap. Keep the first round controlled and stop at the cap even if unfinished.`;
   const stations: Step[] = [
     effort(
       'Row',
@@ -347,7 +360,8 @@ function conditioning(week: number, aerobic: boolean): Session {
     purpose: aerobic
       ? 'Build aerobic capacity between lifting days with low-impact stations.'
       : 'Develop repeatable high-intensity work while retaining sound movement technique.',
-    minutes: light ? 25 : 40,
+    // Ten timed minutes around the main set, plus a minute for the core exercise.
+    minutes: mainMinutes + 11,
     tags: [
       'gym',
       aerobic ? 'aerobic' : 'hiit',
@@ -355,24 +369,30 @@ function conditioning(week: number, aerobic: boolean): Session {
     ],
     steps: [
       effort('Easy SkiErg warm-up', 'ski_erg', duration(300), [numeric('rpe', 3, 'rpe')], 'warmup'),
+      ...(!aerobic
+        ? [
+            effort(
+              'Format briefing',
+              'other',
+              { completion_type: 'open' },
+              [instruction(formatRules)],
+              'other',
+            ),
+          ]
+        : []),
       aerobic
         ? repeat('Aerobic stations', rounds, [
             effort('Row steadily', 'row', duration(120), [numeric('rpe', 5, 'rpe')]),
             effort('SkiErg steadily', 'ski_erg', duration(120), [numeric('rpe', 5, 'rpe')]),
             rest(60),
           ])
-        : {
-            ...repeat('Conditioning circuit', format === 1 ? 1 : rounds, [
-              ...stations,
-              rest(format === 0 ? 60 : 45),
-            ]),
-            instructions:
-              format === 0
-                ? `Start a station every minute; finish with time to rest. The fourth minute is rest. Complete ${rounds} four-minute rounds.`
-                : format === 1
-                  ? `Repeat these stations for ${cap} minutes, resting as needed. Stop at the time cap; record rounds and reps separately.`
-                  : `Complete ${rounds} rounds with a ${cap + 5}-minute cap. Keep the first round controlled and stop at the cap even if unfinished.`,
-          },
+        : format === 1
+          ? {
+              label: 'Repeat circuit until time cap',
+              kind: 'sequence',
+              steps: [...stations, rest(45)],
+            }
+          : repeat('Conditioning circuit', rounds, [...stations, rest(format === 0 ? 60 : 45)]),
       {
         ...effort('Dead bug', 'strength', reps(12), [numeric('rpe', 4, 'rpe')], 'other'),
         movement: 'Dead bug',
