@@ -57,7 +57,17 @@ describe('sport formatting', () => {
         entry({ method: 'css_test', t400Seconds: 380, t200Seconds: 170 }, 'swim_pace'),
         metric,
       ),
-    ).toBe('400 in 6:20, 200 in 2:50 → CSS 1:45/100m');
+    ).toBe('400 m in 6:20, 200 m in 2:50 → CSS 1:45/100m');
+    // A yard-pool test is stored as metric equivalents and shown as it was swum.
+    expect(
+      describeEvidence(
+        entry(
+          { method: 'css_test', t400Seconds: 348 / 0.9144, t200Seconds: 156 / 0.9144 },
+          'swim_pace',
+        ),
+        { units: 'km', pool: 'yd' },
+      ),
+    ).toBe('400 yd in 5:48, 200 yd in 2:36 → CSS 1:36/100yd');
   });
   it('finds the systems a plan’s sports need, in display order', () => {
     expect(systemsForSports(['strength', 'swim', 'run'])).toEqual(['run_pace', 'swim_pace']);

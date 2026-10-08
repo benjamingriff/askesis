@@ -18,6 +18,7 @@ import {
   formatPace,
   formatPower,
   formatSwimPace,
+  METRES_PER_YARD,
   type PoolUnits,
 } from './format';
 
@@ -179,8 +180,12 @@ export function describeEvidence(entry: CalibrationEntry, display: DisplayUnits)
       return `20-minute test at ${formatPower(input.averageWatts)} → ${ftp(input.averageWatts * 0.95)}`;
     case 'ramp_test':
       return `Ramp test best minute ${formatPower(input.bestMinuteWatts)} → ${ftp(input.bestMinuteWatts * 0.75)}`;
-    case 'css_test':
-      return `400 in ${formatClock(input.t400Seconds)}, 200 in ${formatClock(input.t200Seconds)}${css()}`;
+    case 'css_test': {
+      // Stored as metric 400 m / 200 m times; a yard pool covers 0.9144 of each at the same speed.
+      const factor = display.pool === 'yd' ? METRES_PER_YARD : 1;
+      const time = (seconds: number) => formatClock(seconds * factor);
+      return `400 ${display.pool} in ${time(input.t400Seconds)}, 200 ${display.pool} in ${time(input.t200Seconds)}${css()}`;
+    }
     case 'css_pace':
       return `CSS ${formatSwimPace(input.secondsPer100Metres, display.pool)}`;
   }

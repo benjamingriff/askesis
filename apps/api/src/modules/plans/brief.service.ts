@@ -11,6 +11,7 @@ import {
   BriefSchema,
   BriefStateSchema,
   emptyBrief,
+  type Brief,
   type SportBaseline,
   type SaveBriefSchema,
   type ConfirmBriefSchema,
@@ -56,10 +57,9 @@ export async function readBrief(db: Database, versionId: string, readOnly = fals
         context: row.context,
       })
     : emptyBrief();
-  const { unit: _unit, ...facts } = brief;
   const hash = contentHash(
     semantic({
-      brief: facts,
+      brief: hashedFacts(brief),
       startDate: date(version.start_date),
       endDate: date(version.end_date),
     }),
@@ -126,6 +126,24 @@ export async function readBrief(db: Database, versionId: string, readOnly = fals
     })),
     generations,
   });
+}
+
+/**
+ * The facts a confirmation covers; display units are excluded. A running-only brief keeps the
+ * shape it had before per-sport baselines, so confirmations and coverage recorded against
+ * existing briefs (including locked versions) still match after the multi-sport migration.
+ */
+function hashedFacts({ unit: _unit, sports, ...rest }: Brief) {
+  const [run] = sports;
+  if (sports.length === 1 && run?.sport === 'run')
+    return {
+      ...rest,
+      weeklyDistance: run.weeklyDistance,
+      currentRuns: run.currentSessions,
+      longestRun: run.longestDistance,
+      desiredRuns: run.desiredSessions,
+    };
+  return { ...rest, sports };
 }
 
 const SPORT_ORDER = new Map<string, number>(BRIEF_SPORTS.map((sport, index) => [sport, index]));
@@ -329,9 +347,8 @@ export async function saveBriefRows(
   // Sports are stored and read in a fixed order; compare like with like.
   const b = { ...brief, sports: sortSports(brief.sports) };
   if (JSON.stringify(b) === JSON.stringify(state.brief)) return;
-  const { unit: _a, ...oldFacts } = state.brief;
-  const { unit: _b, ...newFacts } = b;
-  const clear = contentHash(semantic(oldFacts)) !== contentHash(semantic(newFacts));
+  const clear =
+    contentHash(semantic(hashedFacts(state.brief))) !== contentHash(semantic(hashedFacts(b)));
   await sql`INSERT INTO plan_briefs (plan_version_id, goal_text, distance_unit, context)
       VALUES (${state.versionId}::uuid, ${b.goal}, ${b.unit}, ${b.context})
       ON CONFLICT (plan_version_id) DO UPDATE SET goal_text = EXCLUDED.goal_text,
