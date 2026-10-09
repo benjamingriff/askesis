@@ -1,0 +1,1035 @@
+{
+  "plan": {
+    "header": {
+      "id": "88eb530f-c09b-43a2-b940-7076838e1735",
+      "displayName": "First half marathon — January 2027",
+      "stateVersion": 1,
+      "active": false,
+      "archived": false,
+      "draft": {
+        "id": "5e94acdf-53bd-4881-85cf-e5e5eb6afe34",
+        "state": "draft",
+        "versionNumber": null,
+        "editNumber": 7,
+        "description": "First half-marathon preparation with three weekly runs. First four weeks prescribed now; subsequent training will be adapted after feedback.",
+        "startDate": "2026-10-12",
+        "endDate": "2027-01-03",
+        "basedOnVersionId": null,
+        "supersedesVersionId": null,
+        "lockedAt": null
+      },
+      "locked": null
+    },
+    "brief": {
+      "versionId": "5e94acdf-53bd-4881-85cf-e5e5eb6afe34",
+      "editNumber": 7,
+      "startDate": "2026-10-12",
+      "endDate": "2027-01-03",
+      "readOnly": false,
+      "brief": {
+        "goal": "Prepare for the athlete's first half marathon on 2027-01-03, an A-priority goal race. No other races planned. Prioritise comfortable completion; no finish-time target supplied.",
+        "unit": "kilometres",
+        "sports": [
+          {
+            "sport": "run",
+            "currentSessions": {
+              "status": "known",
+              "value": 3
+            },
+            "desiredSessions": 3,
+            "weeklyDistance": {
+              "status": "known",
+              "value": 22000
+            },
+            "longestDistance": {
+              "status": "known",
+              "value": 9000
+            }
+          }
+        ],
+        "weekdays": [
+          "unavailable",
+          "available",
+          "unavailable",
+          "available",
+          "unavailable",
+          "unavailable",
+          "preferred"
+        ],
+        "context": "Prescribe only the first four weeks, 2026-10-12 through 2026-11-08, then extend after athlete feedback. Running only, exactly three runs weekly on Tuesday, Thursday and Sunday; all other weekdays unavailable. Sunday preferred for long run. Time limits: Tuesday and Thursday 60 minutes each; Sunday 100 minutes. For the last six weeks athlete has run three times weekly, approximately 22 km per week; longest recent run 9 km felt comfortable. Athlete is 35, reports no current injuries or health restrictions, and has flat roads and paths available. Prefers kilometres. Recorded fitness evidence: all-out flat 5 km race in 28:00 on 2026-09-25 in fair conditions, reflecting current fitness. Initial coaching default is an easy aerobic base block with weekly distances 22, 23, 24 and 19 km; fourth week deliberately cutback. Long runs 9, 10, 11 and 8 km. Effort and time limits take precedence over distance or pace. Later build and taper to be prescribed after feedback; no strength or other sports included."
+      },
+      "confirmed": false,
+      "hash": "fbd80b1d2857f8f85836ce400091df0d9bf21da9dedd0ffb3c8e4042c5db4006",
+      "scheduleReviewRequired": false,
+      "findings": [],
+      "coverage": [
+        {
+          "startDate": "2026-10-12",
+          "endDate": "2026-11-08",
+          "current": true
+        }
+      ],
+      "generations": [
+        {
+          "runId": "a9615a4e-5234-428f-aed9-e6e877fd81d4",
+          "startDate": "2026-10-12",
+          "endDate": "2026-11-08",
+          "prescribedThrough": "2026-11-08",
+          "status": "completed"
+        }
+      ]
+    },
+    "blocks": [
+      {
+        "id": "3b81f302-cff1-4d22-b366-98e131cef151",
+        "position": 1,
+        "title": "Comfortable mileage and long-run durability",
+        "description": "Four-week aerobic base block. All runs conversational, approximately RPE 2–3/10. Start and finish each run gently. No pace chasing or fast finish. All non-running days are rest days. Week four reduces volume for absorption; review feedback before prescribing the next block.",
+        "phase": "base",
+        "startDate": "2026-10-12",
+        "endDate": "2026-11-08",
+        "weeks": [
+          {
+            "weekNumber": 1,
+            "startDate": "2026-10-12",
+            "endDate": "2026-10-18",
+            "cutback": false
+          },
+          {
+            "weekNumber": 2,
+            "startDate": "2026-10-19",
+            "endDate": "2026-10-25",
+            "cutback": false
+          },
+          {
+            "weekNumber": 3,
+            "startDate": "2026-10-26",
+            "endDate": "2026-11-01",
+            "cutback": false
+          },
+          {
+            "weekNumber": 4,
+            "startDate": "2026-11-02",
+            "endDate": "2026-11-08",
+            "cutback": true
+          }
+        ]
+      }
+    ],
+    "workouts": [
+      {
+        "workout": {
+          "id": "88046961-8b23-4e5d-99cc-5fe7fd63d6b9",
+          "planId": "88eb530f-c09b-43a2-b940-7076838e1735",
+          "planVersionId": "5e94acdf-53bd-4881-85cf-e5e5eb6afe34",
+          "planTitle": "First half marathon — January 2027",
+          "weekNumber": 1,
+          "scheduledDate": "2026-10-13",
+          "title": "Easy run — 6 km",
+          "description": "Flat roads or paths. Easy-zone pace is a guide, not a requirement; slow down if needed. Maximum 60 minutes.",
+          "purpose": "Maintain consistent aerobic training without adding fatigue.",
+          "discipline": "run",
+          "priority": "medium",
+          "racePriority": null,
+          "estimatedDurationSeconds": 2618,
+          "estimatedDistanceMetres": 6000
+        },
+        "tags": ["base", "easy"],
+        "prescription": {
+          "id": "77c43b8d-192c-4fb2-9f6c-fc372eb4a2c5",
+          "kind": "effort",
+          "role": "main",
+          "discipline": "run",
+          "repeatCount": null,
+          "label": "Conversational easy run",
+          "instructions": "Run 6 km at conversational effort, RPE 2–3/10. Use the first kilometre as a gentle warmup and ease down over the final kilometre. No fast finish. Stop at 60 minutes if distance remains.",
+          "movement": null,
+          "completion": {
+            "type": "distance",
+            "value": 6000,
+            "unit": "metres",
+            "conditionType": null,
+            "conditionValue": null
+          },
+          "targets": [
+            {
+              "type": "zone",
+              "minimumValue": null,
+              "targetValue": null,
+              "maximumValue": null,
+              "unit": null,
+              "zoneSystem": "run_pace",
+              "zoneKey": "easy",
+              "text": null,
+              "resolvedZone": {
+                "calibrationId": "2229b955-5d47-463d-98e5-3e68cb46af2d",
+                "effectiveFrom": "2026-10-09",
+                "calculatorVersion": "run-pace-v1",
+                "method": "race_result",
+                "metric": "pace",
+                "minimumValue": 411.606,
+                "targetValue": 436.302,
+                "maximumValue": 464.151,
+                "unit": "seconds_per_kilometre"
+              }
+            }
+          ],
+          "steps": []
+        }
+      },
+      {
+        "workout": {
+          "id": "f069f43a-a5f6-49ae-8707-34a2bb03511c",
+          "planId": "88eb530f-c09b-43a2-b940-7076838e1735",
+          "planVersionId": "5e94acdf-53bd-4881-85cf-e5e5eb6afe34",
+          "planTitle": "First half marathon — January 2027",
+          "weekNumber": 1,
+          "scheduledDate": "2026-10-15",
+          "title": "Easy aerobic run — 7 km",
+          "description": "Stay relaxed on flat roads or paths. Maximum 60 minutes.",
+          "purpose": "Build aerobic durability within established weekly mileage.",
+          "discipline": "run",
+          "priority": "medium",
+          "racePriority": null,
+          "estimatedDurationSeconds": 3054,
+          "estimatedDistanceMetres": 7000
+        },
+        "tags": ["base", "easy"],
+        "prescription": {
+          "id": "644876e2-bd64-4df6-9c5b-9ab1a9f907ff",
+          "kind": "effort",
+          "role": "main",
+          "discipline": "run",
+          "repeatCount": null,
+          "label": "Relaxed aerobic running",
+          "instructions": "Run 7 km at an easy conversational effort, RPE 2–3/10. First kilometre gentle to warm up; final kilometre gently ease down. Slow down rather than push to match the pace guide. Stop at 60 minutes if needed.",
+          "movement": null,
+          "completion": {
+            "type": "distance",
+            "value": 7000,
+            "unit": "metres",
+            "conditionType": null,
+            "conditionValue": null
+          },
+          "targets": [
+            {
+              "type": "zone",
+              "minimumValue": null,
+              "targetValue": null,
+              "maximumValue": null,
+              "unit": null,
+              "zoneSystem": "run_pace",
+              "zoneKey": "easy",
+              "text": null,
+              "resolvedZone": {
+                "calibrationId": "2229b955-5d47-463d-98e5-3e68cb46af2d",
+                "effectiveFrom": "2026-10-09",
+                "calculatorVersion": "run-pace-v1",
+                "method": "race_result",
+                "metric": "pace",
+                "minimumValue": 411.606,
+                "targetValue": 436.302,
+                "maximumValue": 464.151,
+                "unit": "seconds_per_kilometre"
+              }
+            }
+          ],
+          "steps": []
+        }
+      },
+      {
+        "workout": {
+          "id": "3f8cac73-12f3-400e-a504-129693b0b77b",
+          "planId": "88eb530f-c09b-43a2-b940-7076838e1735",
+          "planVersionId": "5e94acdf-53bd-4881-85cf-e5e5eb6afe34",
+          "planTitle": "First half marathon — January 2027",
+          "weekNumber": 1,
+          "scheduledDate": "2026-10-18",
+          "title": "Easy long run — 9 km",
+          "description": "Repeat your comfortable recent longest distance. Maximum 100 minutes.",
+          "purpose": "Establish a relaxed long-run routine before extending distance.",
+          "discipline": "run",
+          "priority": "high",
+          "racePriority": null,
+          "estimatedDurationSeconds": 3927,
+          "estimatedDistanceMetres": 9000
+        },
+        "tags": ["base", "easy", "long_run"],
+        "prescription": {
+          "id": "37b1a15d-3d56-4dca-91ee-fdbb780d4926",
+          "kind": "effort",
+          "role": "main",
+          "discipline": "run",
+          "repeatCount": null,
+          "label": "Comfortable long run",
+          "instructions": "Run 9 km at conversational effort, RPE 2–3/10. Start with a gentle first kilometre and ease down in the final kilometre. No fast finish; finish feeling you could continue. Brief walking is fine if needed. Stop by 100 minutes.",
+          "movement": null,
+          "completion": {
+            "type": "distance",
+            "value": 9000,
+            "unit": "metres",
+            "conditionType": null,
+            "conditionValue": null
+          },
+          "targets": [
+            {
+              "type": "zone",
+              "minimumValue": null,
+              "targetValue": null,
+              "maximumValue": null,
+              "unit": null,
+              "zoneSystem": "run_pace",
+              "zoneKey": "easy",
+              "text": null,
+              "resolvedZone": {
+                "calibrationId": "2229b955-5d47-463d-98e5-3e68cb46af2d",
+                "effectiveFrom": "2026-10-09",
+                "calculatorVersion": "run-pace-v1",
+                "method": "race_result",
+                "metric": "pace",
+                "minimumValue": 411.606,
+                "targetValue": 436.302,
+                "maximumValue": 464.151,
+                "unit": "seconds_per_kilometre"
+              }
+            }
+          ],
+          "steps": []
+        }
+      },
+      {
+        "workout": {
+          "id": "d4aef899-ec46-4579-94eb-0b721cf2e9e3",
+          "planId": "88eb530f-c09b-43a2-b940-7076838e1735",
+          "planVersionId": "5e94acdf-53bd-4881-85cf-e5e5eb6afe34",
+          "planTitle": "First half marathon — January 2027",
+          "weekNumber": 2,
+          "scheduledDate": "2026-10-20",
+          "title": "Easy run — 6 km",
+          "description": "Keep the weekday distance unchanged. Maximum 60 minutes.",
+          "purpose": "Maintain frequency while preserving recovery from Sunday's run.",
+          "discipline": "run",
+          "priority": "medium",
+          "racePriority": null,
+          "estimatedDurationSeconds": 2618,
+          "estimatedDistanceMetres": 6000
+        },
+        "tags": ["base", "easy"],
+        "prescription": {
+          "id": "073c84e1-cc06-404f-b014-e536f222f177",
+          "kind": "effort",
+          "role": "main",
+          "discipline": "run",
+          "repeatCount": null,
+          "label": "Conversational easy run",
+          "instructions": "Run 6 km at RPE 2–3/10, able to speak in full sentences. First kilometre gentle to warm up; final kilometre gently ease down. Shorten if fatigue remains from Sunday. Stop by 60 minutes.",
+          "movement": null,
+          "completion": {
+            "type": "distance",
+            "value": 6000,
+            "unit": "metres",
+            "conditionType": null,
+            "conditionValue": null
+          },
+          "targets": [
+            {
+              "type": "zone",
+              "minimumValue": null,
+              "targetValue": null,
+              "maximumValue": null,
+              "unit": null,
+              "zoneSystem": "run_pace",
+              "zoneKey": "easy",
+              "text": null,
+              "resolvedZone": {
+                "calibrationId": "2229b955-5d47-463d-98e5-3e68cb46af2d",
+                "effectiveFrom": "2026-10-09",
+                "calculatorVersion": "run-pace-v1",
+                "method": "race_result",
+                "metric": "pace",
+                "minimumValue": 411.606,
+                "targetValue": 436.302,
+                "maximumValue": 464.151,
+                "unit": "seconds_per_kilometre"
+              }
+            }
+          ],
+          "steps": []
+        }
+      },
+      {
+        "workout": {
+          "id": "478ee4f6-407b-4199-b466-6dac7b8fb67d",
+          "planId": "88eb530f-c09b-43a2-b940-7076838e1735",
+          "planVersionId": "5e94acdf-53bd-4881-85cf-e5e5eb6afe34",
+          "planTitle": "First half marathon — January 2027",
+          "weekNumber": 2,
+          "scheduledDate": "2026-10-22",
+          "title": "Easy aerobic run — 7 km",
+          "description": "Relaxed, even effort; no speed work. Maximum 60 minutes.",
+          "purpose": "Develop aerobic consistency without competing with long-run progression.",
+          "discipline": "run",
+          "priority": "medium",
+          "racePriority": null,
+          "estimatedDurationSeconds": 3054,
+          "estimatedDistanceMetres": 7000
+        },
+        "tags": ["base", "easy"],
+        "prescription": {
+          "id": "b4eba5af-b284-41b9-8943-337b01409dd4",
+          "kind": "effort",
+          "role": "main",
+          "discipline": "run",
+          "repeatCount": null,
+          "label": "Relaxed aerobic running",
+          "instructions": "Run 7 km at conversational effort, RPE 2–3/10. Use the first kilometre to warm up gently and ease down in the final kilometre. Pace is secondary to effort. Stop by 60 minutes.",
+          "movement": null,
+          "completion": {
+            "type": "distance",
+            "value": 7000,
+            "unit": "metres",
+            "conditionType": null,
+            "conditionValue": null
+          },
+          "targets": [
+            {
+              "type": "zone",
+              "minimumValue": null,
+              "targetValue": null,
+              "maximumValue": null,
+              "unit": null,
+              "zoneSystem": "run_pace",
+              "zoneKey": "easy",
+              "text": null,
+              "resolvedZone": {
+                "calibrationId": "2229b955-5d47-463d-98e5-3e68cb46af2d",
+                "effectiveFrom": "2026-10-09",
+                "calculatorVersion": "run-pace-v1",
+                "method": "race_result",
+                "metric": "pace",
+                "minimumValue": 411.606,
+                "targetValue": 436.302,
+                "maximumValue": 464.151,
+                "unit": "seconds_per_kilometre"
+              }
+            }
+          ],
+          "steps": []
+        }
+      },
+      {
+        "workout": {
+          "id": "a334f76c-2d03-44ac-8beb-757288c74b39",
+          "planId": "88eb530f-c09b-43a2-b940-7076838e1735",
+          "planVersionId": "5e94acdf-53bd-4881-85cf-e5e5eb6afe34",
+          "planTitle": "First half marathon — January 2027",
+          "weekNumber": 2,
+          "scheduledDate": "2026-10-25",
+          "title": "Easy long run — 10 km",
+          "description": "A 1 km increase if week one was comfortable; otherwise repeat 9 km. Maximum 100 minutes.",
+          "purpose": "Gradually extend time on feet for half-marathon endurance.",
+          "discipline": "run",
+          "priority": "high",
+          "racePriority": null,
+          "estimatedDurationSeconds": 4363,
+          "estimatedDistanceMetres": 10000
+        },
+        "tags": ["base", "easy", "long_run"],
+        "prescription": {
+          "id": "99aaa702-e799-412e-99fc-edb6d314a7d8",
+          "kind": "effort",
+          "role": "main",
+          "discipline": "run",
+          "repeatCount": null,
+          "label": "Progressive-distance long run",
+          "instructions": "Run 10 km easy, RPE 2–3/10; repeat 9 km instead if the previous week left unusual fatigue. Start gently for the first kilometre and ease down in the final kilometre. No fast finish. For this longer run, practise familiar pre-run food and taking water if needed. Stop by 100 minutes.",
+          "movement": null,
+          "completion": {
+            "type": "distance",
+            "value": 10000,
+            "unit": "metres",
+            "conditionType": null,
+            "conditionValue": null
+          },
+          "targets": [
+            {
+              "type": "zone",
+              "minimumValue": null,
+              "targetValue": null,
+              "maximumValue": null,
+              "unit": null,
+              "zoneSystem": "run_pace",
+              "zoneKey": "easy",
+              "text": null,
+              "resolvedZone": {
+                "calibrationId": "2229b955-5d47-463d-98e5-3e68cb46af2d",
+                "effectiveFrom": "2026-10-09",
+                "calculatorVersion": "run-pace-v1",
+                "method": "race_result",
+                "metric": "pace",
+                "minimumValue": 411.606,
+                "targetValue": 436.302,
+                "maximumValue": 464.151,
+                "unit": "seconds_per_kilometre"
+              }
+            }
+          ],
+          "steps": []
+        }
+      },
+      {
+        "workout": {
+          "id": "1c066343-808b-4d90-851b-eeb3a4323bf6",
+          "planId": "88eb530f-c09b-43a2-b940-7076838e1735",
+          "planVersionId": "5e94acdf-53bd-4881-85cf-e5e5eb6afe34",
+          "planTitle": "First half marathon — January 2027",
+          "weekNumber": 3,
+          "scheduledDate": "2026-10-27",
+          "title": "Easy run — 6 km",
+          "description": "Check that Sunday's extra distance has been absorbed. Maximum 60 minutes.",
+          "purpose": "Maintain aerobic frequency with low recovery cost.",
+          "discipline": "run",
+          "priority": "medium",
+          "racePriority": null,
+          "estimatedDurationSeconds": 2618,
+          "estimatedDistanceMetres": 6000
+        },
+        "tags": ["base", "easy"],
+        "prescription": {
+          "id": "c5ccf622-2d54-49af-800d-2199920ddb1e",
+          "kind": "effort",
+          "role": "main",
+          "discipline": "run",
+          "repeatCount": null,
+          "label": "Conversational easy run",
+          "instructions": "Run 6 km at easy conversational effort, RPE 2–3/10. First kilometre gentle to warm up; final kilometre gently ease down. If unusually tired, shorten rather than forcing the distance. Stop by 60 minutes.",
+          "movement": null,
+          "completion": {
+            "type": "distance",
+            "value": 6000,
+            "unit": "metres",
+            "conditionType": null,
+            "conditionValue": null
+          },
+          "targets": [
+            {
+              "type": "zone",
+              "minimumValue": null,
+              "targetValue": null,
+              "maximumValue": null,
+              "unit": null,
+              "zoneSystem": "run_pace",
+              "zoneKey": "easy",
+              "text": null,
+              "resolvedZone": {
+                "calibrationId": "2229b955-5d47-463d-98e5-3e68cb46af2d",
+                "effectiveFrom": "2026-10-09",
+                "calculatorVersion": "run-pace-v1",
+                "method": "race_result",
+                "metric": "pace",
+                "minimumValue": 411.606,
+                "targetValue": 436.302,
+                "maximumValue": 464.151,
+                "unit": "seconds_per_kilometre"
+              }
+            }
+          ],
+          "steps": []
+        }
+      },
+      {
+        "workout": {
+          "id": "d45e90be-5a55-4056-b24a-bc71810e5345",
+          "planId": "88eb530f-c09b-43a2-b940-7076838e1735",
+          "planVersionId": "5e94acdf-53bd-4881-85cf-e5e5eb6afe34",
+          "planTitle": "First half marathon — January 2027",
+          "weekNumber": 3,
+          "scheduledDate": "2026-10-29",
+          "title": "Easy aerobic run — 7 km",
+          "description": "Stay comfortably conversational throughout. Maximum 60 minutes.",
+          "purpose": "Consolidate easy mileage ahead of the longest run in this block.",
+          "discipline": "run",
+          "priority": "medium",
+          "racePriority": null,
+          "estimatedDurationSeconds": 3054,
+          "estimatedDistanceMetres": 7000
+        },
+        "tags": ["base", "easy"],
+        "prescription": {
+          "id": "dbde9ad1-5913-4816-a17b-c2afcc3962ac",
+          "kind": "effort",
+          "role": "main",
+          "discipline": "run",
+          "repeatCount": null,
+          "label": "Relaxed aerobic running",
+          "instructions": "Run 7 km at RPE 2–3/10. First kilometre gentle to warm up; final kilometre gently ease down. Keep effort even and resist speeding up when feeling good. Stop by 60 minutes.",
+          "movement": null,
+          "completion": {
+            "type": "distance",
+            "value": 7000,
+            "unit": "metres",
+            "conditionType": null,
+            "conditionValue": null
+          },
+          "targets": [
+            {
+              "type": "zone",
+              "minimumValue": null,
+              "targetValue": null,
+              "maximumValue": null,
+              "unit": null,
+              "zoneSystem": "run_pace",
+              "zoneKey": "easy",
+              "text": null,
+              "resolvedZone": {
+                "calibrationId": "2229b955-5d47-463d-98e5-3e68cb46af2d",
+                "effectiveFrom": "2026-10-09",
+                "calculatorVersion": "run-pace-v1",
+                "method": "race_result",
+                "metric": "pace",
+                "minimumValue": 411.606,
+                "targetValue": 436.302,
+                "maximumValue": 464.151,
+                "unit": "seconds_per_kilometre"
+              }
+            }
+          ],
+          "steps": []
+        }
+      },
+      {
+        "workout": {
+          "id": "9f6abc37-806f-418b-bb23-271535e5cf06",
+          "planId": "88eb530f-c09b-43a2-b940-7076838e1735",
+          "planVersionId": "5e94acdf-53bd-4881-85cf-e5e5eb6afe34",
+          "planTitle": "First half marathon — January 2027",
+          "weekNumber": 3,
+          "scheduledDate": "2026-11-01",
+          "title": "Easy long run — 11 km",
+          "description": "Increase only if 10 km felt comfortable and recovery was normal; otherwise repeat the previous comfortable distance. Maximum 100 minutes.",
+          "purpose": "Build long-run durability with a small, controlled increase.",
+          "discipline": "run",
+          "priority": "high",
+          "racePriority": null,
+          "estimatedDurationSeconds": 4799,
+          "estimatedDistanceMetres": 11000
+        },
+        "tags": ["base", "easy", "long_run"],
+        "prescription": {
+          "id": "293a61d9-c2f9-47e4-8af5-5df0a85088ac",
+          "kind": "effort",
+          "role": "main",
+          "discipline": "run",
+          "repeatCount": null,
+          "label": "Longest easy run of the block",
+          "instructions": "Run 11 km at conversational effort, RPE 2–3/10. Use the first kilometre as a gentle warmup and ease down over the final kilometre. Do not increase if last week's 10 km was taxing; repeat a comfortable distance instead. Practise carrying water and, if tolerated, a small familiar carbohydrate snack during this roughly 80-minute run. No fast finish; stop by 100 minutes.",
+          "movement": null,
+          "completion": {
+            "type": "distance",
+            "value": 11000,
+            "unit": "metres",
+            "conditionType": null,
+            "conditionValue": null
+          },
+          "targets": [
+            {
+              "type": "zone",
+              "minimumValue": null,
+              "targetValue": null,
+              "maximumValue": null,
+              "unit": null,
+              "zoneSystem": "run_pace",
+              "zoneKey": "easy",
+              "text": null,
+              "resolvedZone": {
+                "calibrationId": "2229b955-5d47-463d-98e5-3e68cb46af2d",
+                "effectiveFrom": "2026-10-09",
+                "calculatorVersion": "run-pace-v1",
+                "method": "race_result",
+                "metric": "pace",
+                "minimumValue": 411.606,
+                "targetValue": 436.302,
+                "maximumValue": 464.151,
+                "unit": "seconds_per_kilometre"
+              }
+            }
+          ],
+          "steps": []
+        }
+      },
+      {
+        "workout": {
+          "id": "e03f57de-65e2-44fe-8a76-6f9cc1b8fd5c",
+          "planId": "88eb530f-c09b-43a2-b940-7076838e1735",
+          "planVersionId": "5e94acdf-53bd-4881-85cf-e5e5eb6afe34",
+          "planTitle": "First half marathon — January 2027",
+          "weekNumber": 4,
+          "scheduledDate": "2026-11-03",
+          "title": "Cutback easy run — 5 km",
+          "description": "Reduced distance to begin the lighter week. Maximum 60 minutes.",
+          "purpose": "Absorb the preceding three weeks while retaining the running routine.",
+          "discipline": "run",
+          "priority": "low",
+          "racePriority": null,
+          "estimatedDurationSeconds": 2182,
+          "estimatedDistanceMetres": 5000
+        },
+        "tags": ["cutback", "easy"],
+        "prescription": {
+          "id": "2275889a-49fe-49fa-90c6-ef29431d5fdf",
+          "kind": "effort",
+          "role": "main",
+          "discipline": "run",
+          "repeatCount": null,
+          "label": "Short easy run",
+          "instructions": "Run 5 km at relaxed conversational effort, RPE 2–3/10. Start gently over the first kilometre and ease down over the final kilometre. Do not compensate for reduced mileage by running faster. Stop by 60 minutes.",
+          "movement": null,
+          "completion": {
+            "type": "distance",
+            "value": 5000,
+            "unit": "metres",
+            "conditionType": null,
+            "conditionValue": null
+          },
+          "targets": [
+            {
+              "type": "zone",
+              "minimumValue": null,
+              "targetValue": null,
+              "maximumValue": null,
+              "unit": null,
+              "zoneSystem": "run_pace",
+              "zoneKey": "easy",
+              "text": null,
+              "resolvedZone": {
+                "calibrationId": "2229b955-5d47-463d-98e5-3e68cb46af2d",
+                "effectiveFrom": "2026-10-09",
+                "calculatorVersion": "run-pace-v1",
+                "method": "race_result",
+                "metric": "pace",
+                "minimumValue": 411.606,
+                "targetValue": 436.302,
+                "maximumValue": 464.151,
+                "unit": "seconds_per_kilometre"
+              }
+            }
+          ],
+          "steps": []
+        }
+      },
+      {
+        "workout": {
+          "id": "f0a2adfd-3387-4f9f-9f56-10ab630f20b9",
+          "planId": "88eb530f-c09b-43a2-b940-7076838e1735",
+          "planVersionId": "5e94acdf-53bd-4881-85cf-e5e5eb6afe34",
+          "planTitle": "First half marathon — January 2027",
+          "weekNumber": 4,
+          "scheduledDate": "2026-11-05",
+          "title": "Cutback aerobic run — 6 km",
+          "description": "Easy effort on familiar flat roads or paths. Maximum 60 minutes.",
+          "purpose": "Maintain aerobic stimulus during a deliberate volume reduction.",
+          "discipline": "run",
+          "priority": "low",
+          "racePriority": null,
+          "estimatedDurationSeconds": 2618,
+          "estimatedDistanceMetres": 6000
+        },
+        "tags": ["cutback", "easy"],
+        "prescription": {
+          "id": "97463a3a-648a-4b1e-8212-4578dc29e6eb",
+          "kind": "effort",
+          "role": "main",
+          "discipline": "run",
+          "repeatCount": null,
+          "label": "Relaxed cutback run",
+          "instructions": "Run 6 km at conversational effort, RPE 2–3/10. First kilometre gentle to warm up; final kilometre gently ease down. Keep it relaxed even if feeling fresher. Stop by 60 minutes.",
+          "movement": null,
+          "completion": {
+            "type": "distance",
+            "value": 6000,
+            "unit": "metres",
+            "conditionType": null,
+            "conditionValue": null
+          },
+          "targets": [
+            {
+              "type": "zone",
+              "minimumValue": null,
+              "targetValue": null,
+              "maximumValue": null,
+              "unit": null,
+              "zoneSystem": "run_pace",
+              "zoneKey": "easy",
+              "text": null,
+              "resolvedZone": {
+                "calibrationId": "2229b955-5d47-463d-98e5-3e68cb46af2d",
+                "effectiveFrom": "2026-10-09",
+                "calculatorVersion": "run-pace-v1",
+                "method": "race_result",
+                "metric": "pace",
+                "minimumValue": 411.606,
+                "targetValue": 436.302,
+                "maximumValue": 464.151,
+                "unit": "seconds_per_kilometre"
+              }
+            }
+          ],
+          "steps": []
+        }
+      },
+      {
+        "workout": {
+          "id": "0fb41cba-914a-4745-8abf-eca1df89f5dd",
+          "planId": "88eb530f-c09b-43a2-b940-7076838e1735",
+          "planVersionId": "5e94acdf-53bd-4881-85cf-e5e5eb6afe34",
+          "planTitle": "First half marathon — January 2027",
+          "weekNumber": 4,
+          "scheduledDate": "2026-11-08",
+          "title": "Cutback long run — 8 km",
+          "description": "Shorter long run to finish the absorption week. Maximum 100 minutes. Share feedback before the next block.",
+          "purpose": "Reduce fatigue and assess readiness for the next phase.",
+          "discipline": "run",
+          "priority": "medium",
+          "racePriority": null,
+          "estimatedDurationSeconds": 3490,
+          "estimatedDistanceMetres": 8000
+        },
+        "tags": ["cutback", "easy", "long_run"],
+        "prescription": {
+          "id": "7af0bd59-fb18-4cb6-a2d6-9d2e996cf5e3",
+          "kind": "effort",
+          "role": "main",
+          "discipline": "run",
+          "repeatCount": null,
+          "label": "Shorter easy long run",
+          "instructions": "Run 8 km at easy conversational effort, RPE 2–3/10. Start gently for the first kilometre and ease down in the final kilometre. Finish fresh rather than pushing. Stop by 100 minutes. Afterwards note actual duration, effort, any discomfort and next-day recovery for planning feedback.",
+          "movement": null,
+          "completion": {
+            "type": "distance",
+            "value": 8000,
+            "unit": "metres",
+            "conditionType": null,
+            "conditionValue": null
+          },
+          "targets": [
+            {
+              "type": "zone",
+              "minimumValue": null,
+              "targetValue": null,
+              "maximumValue": null,
+              "unit": null,
+              "zoneSystem": "run_pace",
+              "zoneKey": "easy",
+              "text": null,
+              "resolvedZone": {
+                "calibrationId": "2229b955-5d47-463d-98e5-3e68cb46af2d",
+                "effectiveFrom": "2026-10-09",
+                "calculatorVersion": "run-pace-v1",
+                "method": "race_result",
+                "metric": "pace",
+                "minimumValue": 411.606,
+                "targetValue": 436.302,
+                "maximumValue": 464.151,
+                "unit": "seconds_per_kilometre"
+              }
+            }
+          ],
+          "steps": []
+        }
+      }
+    ]
+  },
+  "performance": {
+    "timezone": "Europe/London",
+    "today": "2026-10-09",
+    "current": [
+      {
+        "id": "2229b955-5d47-463d-98e5-3e68cb46af2d",
+        "system": "run_pace",
+        "method": "race_result",
+        "input": {
+          "method": "race_result",
+          "distanceMetres": 5000,
+          "durationSeconds": 1680
+        },
+        "calculatorVersion": "run-pace-v1",
+        "provenance": "user_supplied",
+        "estimateBasis": "Athlete reports an all-out flat 5 km race in 28:00 on 2026-09-25 in fair conditions and confirms it reflects current fitness.",
+        "observedOn": "2026-09-25",
+        "effectiveFrom": "2026-10-09",
+        "recordedAt": "2026-10-09T14:44:45.692Z",
+        "recordedBy": "coach",
+        "conversationId": "fb8e5f21-011b-4762-8761-5cb2fdb00833",
+        "retractedAt": null,
+        "zones": [
+          {
+            "key": "easy",
+            "metric": "pace",
+            "unit": "seconds_per_kilometre",
+            "minimum": 411.606,
+            "target": 436.302,
+            "maximum": 464.151
+          },
+          {
+            "key": "marathon",
+            "metric": "pace",
+            "unit": "seconds_per_kilometre",
+            "minimum": 370.087,
+            "target": 377.489,
+            "maximum": 385.193
+          },
+          {
+            "key": "threshold",
+            "metric": "pace",
+            "unit": "seconds_per_kilometre",
+            "minimum": 344.561,
+            "target": 349.729,
+            "maximum": 355.055
+          },
+          {
+            "key": "interval",
+            "metric": "pace",
+            "unit": "seconds_per_kilometre",
+            "minimum": 314.941,
+            "target": 318.09,
+            "maximum": 321.303
+          },
+          {
+            "key": "repetition",
+            "metric": "pace",
+            "unit": "seconds_per_kilometre",
+            "minimum": 292.451,
+            "target": 294.645,
+            "maximum": 296.871
+          }
+        ]
+      }
+    ],
+    "entries": [
+      {
+        "id": "2229b955-5d47-463d-98e5-3e68cb46af2d",
+        "system": "run_pace",
+        "method": "race_result",
+        "input": {
+          "method": "race_result",
+          "distanceMetres": 5000,
+          "durationSeconds": 1680
+        },
+        "calculatorVersion": "run-pace-v1",
+        "provenance": "user_supplied",
+        "estimateBasis": "Athlete reports an all-out flat 5 km race in 28:00 on 2026-09-25 in fair conditions and confirms it reflects current fitness.",
+        "observedOn": "2026-09-25",
+        "effectiveFrom": "2026-10-09",
+        "recordedAt": "2026-10-09T14:44:45.692Z",
+        "recordedBy": "coach",
+        "conversationId": "fb8e5f21-011b-4762-8761-5cb2fdb00833",
+        "retractedAt": null,
+        "zones": [
+          {
+            "key": "easy",
+            "metric": "pace",
+            "unit": "seconds_per_kilometre",
+            "minimum": 411.606,
+            "target": 436.302,
+            "maximum": 464.151
+          },
+          {
+            "key": "marathon",
+            "metric": "pace",
+            "unit": "seconds_per_kilometre",
+            "minimum": 370.087,
+            "target": 377.489,
+            "maximum": 385.193
+          },
+          {
+            "key": "threshold",
+            "metric": "pace",
+            "unit": "seconds_per_kilometre",
+            "minimum": 344.561,
+            "target": 349.729,
+            "maximum": 355.055
+          },
+          {
+            "key": "interval",
+            "metric": "pace",
+            "unit": "seconds_per_kilometre",
+            "minimum": 314.941,
+            "target": 318.09,
+            "maximum": 321.303
+          },
+          {
+            "key": "repetition",
+            "metric": "pace",
+            "unit": "seconds_per_kilometre",
+            "minimum": 292.451,
+            "target": 294.645,
+            "maximum": 296.871
+          }
+        ]
+      }
+    ],
+    "usedByPlans": ["run_pace"]
+  },
+  "messages": [
+    {
+      "role": "user",
+      "content": "I'd like help creating a running plan for my first half marathon. I want to prescribe the first four weeks now, then extend the plan after feedback.",
+      "sequence": 1
+    },
+    {
+      "role": "assistant",
+      "content": "Absolutely—we can map out the build to your first half marathon, prescribe the first four weeks, then adjust and extend it based on how you’re responding.\n\n**What’s the race date, or your target timeframe if you haven’t entered one yet?**",
+      "sequence": 2
+    },
+    {
+      "role": "user",
+      "content": "Start my plan on 2026-10-12. My half marathon is on 2027-01-03, an A-priority goal race. I have no other races planned. My goal is to finish comfortably, without a target finish time.",
+      "sequence": 3
+    },
+    {
+      "role": "assistant",
+      "content": "That gives us **12 weeks**, starting Monday 12 October and finishing with your A-priority half marathon on 3 January. We’ll prescribe **12 October–8 November** first, then extend after your feedback.\n\nTo set a sensible starting load, **what has your running looked like over the last few weeks—runs per week, approximate weekly distance, and your longest recent run?** Kilometres or miles are both fine.",
+      "sequence": 4
+    },
+    {
+      "role": "user",
+      "content": "For the last six weeks I have run three times per week, about 22 km total per week. My longest recent run is 9 km, which felt comfortable. Running is the only sport this plan should train.",
+      "sequence": 5
+    },
+    {
+      "role": "assistant",
+      "content": "That’s a useful starting base: **three runs and 22 km per week**, with a comfortable 9 km long run. I’ve saved those details and kept the plan running-only.\n\n**Would you like to stay at three runs per week, or build toward four—and which weekdays can you run?**",
+      "sequence": 6
+    },
+    {
+      "role": "user",
+      "content": "I want exactly three runs per week.\nI can run only on Tuesdays, Thursdays and Sundays. Sundays are best for my long run. All other weekdays are unavailable. I have up to 60 minutes on Tuesdays and Thursdays and up to 100 minutes on Sundays.",
+      "sequence": 7
+    },
+    {
+      "role": "assistant",
+      "content": "Saved: **exactly three runs per week**, on Tuesdays, Thursdays and Sundays, with Sunday as your long run. I’ll keep weekday sessions within **60 minutes** and Sunday runs within **100 minutes**, leaving all other days free.\n\n**Do you have a recent race result—such as a 5K or 10K—or a known threshold pace?** Include roughly when it was recorded; this will help set appropriate training intensities.",
+      "sequence": 8
+    },
+    {
+      "role": "user",
+      "content": "I ran an all-out, flat 5 km race in 28 minutes on 2026-09-25 in fair conditions. That reflects my current fitness.",
+      "sequence": 9
+    },
+    {
+      "role": "assistant",
+      "content": "I’ve recorded your **28:00 5K from 25 September** as your first running fitness benchmark. Your training zones now apply from today across your plans.\n\nYour calculated **easy pace is roughly 6:52–7:44/km**. Treat that as a guide, not a requirement—easy runs should feel conversational, and it’s fine to slow down for hills, heat or fatigue.\n\nBefore I prescribe the first four weeks, **are there any current or recent injuries, health concerns, or other constraints that could affect your running?**",
+      "sequence": 10
+    },
+    {
+      "role": "user",
+      "content": "I'm 35, have no current injuries or health restrictions, and can run on flat roads and paths. I prefer distances in kilometres.",
+      "sequence": 11
+    },
+    {
+      "role": "assistant",
+      "content": "Your **first four weeks are saved as a draft**, covering **12 October–8 November 2026**.\n\n### First four weeks\nAll runs are easy and conversational.\n\n| Week | Tuesday | Thursday | Sunday long run | Total |\n|---|---:|---:|---:|---:|\n| 12–18 Oct | 6 km | 7 km | 9 km | **22 km** |\n| 19–25 Oct | 6 km | 7 km | 10 km | **23 km** |\n| 26 Oct–1 Nov | 6 km | 7 km | 11 km | **24 km** |\n| 2–8 Nov — cutback | 5 km | 6 km | 8 km | **19 km** |\n\nMonday, Wednesday, Friday and Saturday are rest days.\n\n**How to run these sessions**\n- Use your race-based easy zone—approximately **6:52–7:44/km**—as a guide, not a pace requirement. You should be able to speak in full sentences.\n- Start gently for the first kilometre and ease down over the final kilometre.\n- Keep Tuesday and Thursday within **60 minutes**, and Sunday within **100 minutes**. Shorten the distance if necessary.\n- Increase the long run only if the previous week felt comfortable and recovery was normal; otherwise repeat the previous comfortable distance.\n\nThe fourth week deliberately reduces mileage so you can absorb the training.\n\n**Next steps:** Share how the runs feel, actual durations, any discomfort and next-day recovery—particularly after the long runs. We’ll use that feedback to prescribe the next block.\n\nValidation flagged the expected gaps **after 8 November**, which we’re intentionally leaving unprescribed, plus the need for you to **review and confirm the brief in the app before locking**. The four-week prescription is complete; the draft remains unlocked.",
+      "sequence": 12
+    }
+  ]
+}

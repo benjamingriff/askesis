@@ -15,6 +15,7 @@ import {
   providerFailure,
   SIMULATOR_VERSION,
   REVIEW_VERSION,
+  REVIEW_PROMPT,
   type Review,
   type Disclosure,
   type ModelUsage,
@@ -33,6 +34,8 @@ import {
   installInterruptHandlers,
   startWorker,
 } from './local.js';
+import { loadFixtures, scriptedCalibrationReview, type Split } from './fixtures.js';
+import { fixtureHash, runCalibration } from './calibration.js';
 
 const options = parseArgs({
   allowPositionals: true,
@@ -43,6 +46,11 @@ const options = parseArgs({
     scripted: { type: 'boolean', default: false },
     run: { type: 'string' },
     help: { type: 'boolean', default: false },
+    repeat: { type: 'string', default: '1' },
+    split: { type: 'string', default: 'development' },
+    fixture: { type: 'string', multiple: true },
+    list: { type: 'boolean', default: false },
+    assert: { type: 'boolean', default: false },
   },
 });
 const command = options.positionals[0] ?? 'run';
@@ -399,7 +407,7 @@ async function grade() {
 async function main() {
   if (options.values.help) {
     console.log(
-      'pnpm bench run [--scenario running-poc] [--env-file PATH] [--keep-alive] [--scripted]\npnpm bench grade --run RUN_ID [--env-file PATH]\npnpm bench stop\npnpm bench reset',
+      'pnpm bench run [--scenario running-poc] [--env-file PATH] [--keep-alive] [--scripted]\npnpm bench grade --run RUN_ID [--env-file PATH]\npnpm bench calibrate [--split development|holdout|all] [--fixture ID] [--repeat 1..5] [--env-file PATH] [--list] [--assert] [--scripted]\npnpm bench stop\npnpm bench reset',
     );
     return;
   }
@@ -407,6 +415,7 @@ async function main() {
     throw new BenchmarkError('Expected one command: run, grade, stop or reset.');
   if (command === 'run') return run();
   if (command === 'grade') return grade();
+  if (command === 'calibrate') return calibrate();
   if (command === 'stop' || command === 'reset') {
     const environment = await localEnvironment();
     const release = await acquireLock();
@@ -427,6 +436,94 @@ async function main() {
     return;
   }
   throw new BenchmarkError('Unknown command. Use pnpm bench --help.');
+}
+
+async function calibrate() {
+  const split = options.values.split;
+  if (!['development', 'holdout', 'all'].includes(split))
+    throw new BenchmarkError('Calibration split must be development, holdout or all.');
+  const repeat = Number(options.values.repeat);
+  if (!Number.isInteger(repeat) || repeat < 1 || repeat > 5)
+    throw new BenchmarkError('Calibration repeat must be an integer from 1 to 5.');
+  const suite = await loadFixtures(split as Split, options.values.fixture ?? []).catch((error) => {
+    throw new BenchmarkError(
+      error instanceof Error ? error.message : 'Could not load calibration fixtures.',
+    );
+  });
+  if (options.values.list) {
+    console.log(`Suite v${suite.version}: ${suite.labelStatus}`);
+    for (const fixture of suite.fixtures)
+      console.log(`${fixture.id} (${fixture.split}) — ${fixture.description}`);
+    return;
+  }
+  const scripted = options.values.scripted;
+  const credentials = await loadCredentials(options.values['env-file'], false);
+  const key = credentials.values.OPENAI_API_KEY;
+  if (!scripted && (!key || key.startsWith('op://')))
+    throw new BenchmarkError(
+      'Configure a resolved OPENAI_API_KEY in your shell or --env-file; use op run for 1Password references.',
+    );
+  const model =
+    credentials.values.BENCH_REVIEW_MODEL ?? credentials.values.AGENT_MODEL ?? 'gpt-6.1-sol';
+  const reviewer = scripted ? undefined : new EvaluationModels(key!, model);
+  const runId = `calibration-${new Date().toISOString().replace(/[:.]/g, '-')}-${randomUUID().slice(0, 8)}`;
+  const directory = resolve(root, 'benchmark-results', runId);
+  const artifacts = new Artifacts(directory);
+  await artifacts.init();
+  await artifacts.json('manifest.json', {
+    runId,
+    startedAt: new Date().toISOString(),
+    revision: execFileSync('git', ['rev-parse', 'HEAD'], { cwd: root, encoding: 'utf8' }).trim(),
+    workingTreeDirty:
+      execFileSync('git', ['status', '--porcelain'], { cwd: root, encoding: 'utf8' }).trim()
+        .length > 0,
+    suiteVersion: suite.version,
+    labelStatus: suite.labelStatus,
+    split,
+    repeat,
+    scripted,
+    reviewerModel: scripted ? null : model,
+    reviewerVersion: REVIEW_VERSION,
+    reviewerPromptHash: createHash('sha256').update(REVIEW_PROMPT).digest('hex'),
+    fixtures: suite.fixtures.map((f) => ({ id: f.id, split: f.split, hash: fixtureHash(f) })),
+  });
+  const abort = new AbortController();
+  const removeInterruptHandlers = installInterruptHandlers(() => {
+    console.log('Stopping calibration; retaining completed judgments.');
+    abort.abort('INTERRUPTED');
+  });
+  const timeout = setTimeout(() => abort.abort('TIME_LIMIT'), 30 * 60000);
+  console.log(
+    `Calibration: ${runId}\nArtifacts: ${directory}\n${suite.fixtures.length * repeat} ${scripted ? 'scripted checks (no model quality measured)' : `reviewer calls using ${model}`}.`,
+  );
+  try {
+    const result = await runCalibration({
+      directory,
+      fixtures: suite.fixtures,
+      repeat,
+      scripted,
+      signal: abort.signal,
+      onProgress: console.log,
+      reviewer: async (evidence, disclosures, signal) =>
+        scripted
+          ? {
+              review: scriptedCalibrationReview(evidence),
+              usage: { inputTokens: 0, outputTokens: 0 },
+            }
+          : reviewer!.review(evidence, disclosures, signal),
+    });
+    console.log(
+      `Completed ${result.summary.completed}/${result.summary.requested}; fixture agreement ${result.summary.fixtureMatches}/${result.summary.completed}. Missed defects: ${result.summary.missedDefects}; false alarms: ${result.summary.falseAlarms}.\nReport: ${resolve(directory, 'report.md')}`,
+    );
+    if (
+      result.operationalFailure ||
+      (options.values.assert && result.summary.fixtureMatches !== result.summary.requested)
+    )
+      process.exitCode = 1;
+  } finally {
+    clearTimeout(timeout);
+    removeInterruptHandlers();
+  }
 }
 
 main().catch((error: unknown) => {

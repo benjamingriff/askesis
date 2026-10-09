@@ -65,6 +65,49 @@ pnpm bench grade --run <run-id> --env-file /absolute/path/to/private.env
 
 The command preserves the previous assessment and writes a versioned review artifact before updating the report. It uses the saved dates. `BENCH_REVIEW_MODEL` selects the reviewer. Failed regrading leaves the previous assessment intact.
 
+## Validate the grader with fixed fixtures
+
+Run the current reviewer against committed synthetic evidence without generating a plan or starting the API, PostgreSQL or coaching worker:
+
+```sh
+pnpm bench calibrate --list --split all
+pnpm bench calibrate
+```
+
+Live calibration needs only a resolved `OPENAI_API_KEY`, through your shell, `.env.bench.local` or `--env-file`. No Clerk keys or database connection are needed. `BENCH_REVIEW_MODEL` selects the reviewer, with `AGENT_MODEL` then `gpt-6.1-sol` as fallbacks. For a 1Password reference already configured in your shell, use `op run -- pnpm bench calibrate`.
+
+There are twelve fixtures: three good controls and nine deliberately flawed or incomplete examples. Eight development cases run by default. Both time-based and distance-based good plans should pass, while ignored duration preferences should be caught. Other cases cover unsupported goal confirmation, availability, progression, missing prescriptions, saved/claimed mismatches, time limits, missing plans and plan text attempting to instruct the grader. The labels are provisional engineering judgments, available in [the fixture catalogue](../../apps/bench/fixtures/calibration.json) and [fixture documentation](../../apps/bench/fixtures/README.md), for owner/coach review. They are never sent to the reviewer.
+
+```sh
+# Repeat development cases to measure stability (24 model calls).
+pnpm bench calibrate --repeat 3
+
+# Evaluate the four holdout cases after refining on development cases.
+pnpm bench calibrate --split holdout --repeat 3
+
+# Run all twelve once, or target one case.
+pnpm bench calibrate --split all
+pnpm bench calibrate --split all --fixture unconfirmed-goal
+```
+
+`--repeat` accepts 1–5; `--fixture` may be repeated. Unknown fixture names or fixtures outside the chosen split are rejected. The existing reviewer prompt and response validation are reused, including required evidence references. Deterministic plan checks do not participate, so they cannot hide a reviewer missing a defect.
+
+Each run prints a new `benchmark-results/calibration-<run-id>/report.md`. Open it to see verdict and criterion agreement, missed defects, false alarms, bad plans accepted, repeat consistency, latency, usage, and individual explanations/citations. Only explicitly labelled criteria count in comparison metrics. A flagged good criterion (`fail` or `uncertain`) is a false alarm; a `pass` on an expected defect is a missed defect. Other disagreements, such as `uncertain` instead of a required `fail`, remain visible separately. Repetition consistency compares the verdict and all six criterion results, rather than prose wording.
+
+`results.json` contains machine-readable results. Each fixture directory contains `input.json`, `expected.json` and `attempt-<number>.json`. The manifest records selected cases, resolved fixture/label hashes, model, reviewer version/prompt hash, Git revision and dirty-tree state. Files are private and ignored by Git. Usage currently records successful input/output token totals; monetary cost remains unknown because cache breakdown is not retained.
+
+Reports update after each attempt. Ctrl+C or the 30-minute suite limit retains completed reviews. A provider or review-validation failure stops further calls, records safe diagnostics and returns exit status 1. Errors and unattempted cases are excluded from grading-agreement denominators and shown explicitly. There is no automatic resume or retry.
+
+By default, a fully executed suite exits 0 even when the grader disagrees with labels: disagreement is the result being measured. Add `--assert` to exit 1 on any labelled disagreement, for a regression gate after calibrating and reviewing the labels. Operational errors always exit 1.
+
+Verify report wiring without an API key:
+
+```sh
+pnpm bench calibrate --scripted --split all --repeat 2
+```
+
+This uses a deliberately permissive stand-in that passes every existing plan and marks a missing plan incomplete. It should expose sixteen missed defects across 24 scripted judgments. Reports are prominently marked **SCRIPTED WIRING CHECK**, and the result says nothing about a live model's grading quality. `--list` also makes no provider request.
+
 ## Keep the API available and stop it
 
 ```sh
