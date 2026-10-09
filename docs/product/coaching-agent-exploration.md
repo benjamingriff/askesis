@@ -8,6 +8,35 @@ The strongest opportunities are richer input, persistent coaching context, bette
 
 My first product slice would combine image/PDF attachments, references to specific workouts, and structured clarification cards. My first runtime experiment would compare the current generator with a lead coach plus cheaper workout generators and with deterministic workout-template expansion. Persistent preferences and structured training feedback would follow; together they support meaningful weekly reviews.
 
+## Idea tracking
+
+The feature ideas below are captured as GitHub issues with `enhancement`, `state:inbox` and `approval:human`. Priorities are unassigned. Issues are authoritative for scope, decisions, dependencies and delivery state; this document retains the research and architectural rationale. Inbox issues need bounded acceptance criteria and validation before promotion to ready.
+
+| Idea                                                                      | Issue                                                     |
+| ------------------------------------------------------------------------- | --------------------------------------------------------- |
+| Share images and PDFs with the coaching agent                             | [#37](https://github.com/benjamingriff/askesis/issues/37) |
+| Reference workouts and weeks directly in coaching messages                | [#38](https://github.com/benjamingriff/askesis/issues/38) |
+| Answer coaching clarifications through structured question cards          | [#39](https://github.com/benjamingriff/askesis/issues/39) |
+| Queue editable coaching follow-ups while a run is active                  | [#40](https://github.com/benjamingriff/askesis/issues/40) |
+| Steer an active coaching run at a safe execution boundary                 | [#41](https://github.com/benjamingriff/askesis/issues/41) |
+| Evaluate cheaper parallel specialist agents for workout generation        | [#42](https://github.com/benjamingriff/askesis/issues/42) |
+| Review generated plans with deterministic checks and a focused specialist | [#43](https://github.com/benjamingriff/askesis/issues/43) |
+| Remember editable athlete coaching preferences across conversations       | [#44](https://github.com/benjamingriff/askesis/issues/44) |
+| Record workout completion and perceived-effort feedback for coaching      | [#45](https://github.com/benjamingriff/askesis/issues/45) |
+| Deliver evidence-based weekly coaching reviews with optional recurrence   | [#46](https://github.com/benjamingriff/askesis/issues/46) |
+| Compare alternative training schedules before applying one                | [#47](https://github.com/benjamingriff/askesis/issues/47) |
+| Restore a plan draft to before a coaching turn                            | [#48](https://github.com/benjamingriff/askesis/issues/48) |
+| Show typed visual and interactive coaching cards in chat                  | [#49](https://github.com/benjamingriff/askesis/issues/49) |
+| Dictate editable coaching messages and post-workout notes on mobile web   | [#50](https://github.com/benjamingriff/askesis/issues/50) |
+| Configure versioned coaching methodologies and communication preferences  | [#51](https://github.com/benjamingriff/askesis/issues/51) |
+| Offer a discussion mode with no plan mutation tools                       | [#52](https://github.com/benjamingriff/askesis/issues/52) |
+| Route coaching tasks to appropriate model and reasoning settings          | [#53](https://github.com/benjamingriff/askesis/issues/53) |
+| Connect activity data to prescribed workouts for coaching                 | [#54](https://github.com/benjamingriff/askesis/issues/54) |
+| Look up event information and coaching evidence with source links         | [#55](https://github.com/benjamingriff/askesis/issues/55) |
+| Account for coaching run and specialist-task costs                        | [#56](https://github.com/benjamingriff/askesis/issues/56) |
+
+Grouped sections below may map to several independently scoped issues. The parallel-generation issue begins with a comparison of architectures; it does not assume that sub-agents improve latency or cost.
+
 ## What was inspected
 
 Askesis source: the web composer/transcript/run activity and change cards; the worker prompt, runtime, configuration and execution loop; API conversation acceptance, context assembly, tools, authorization and schedule writes; current product guidance and post-alpha backlog.
