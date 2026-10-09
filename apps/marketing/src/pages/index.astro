@@ -859,12 +859,16 @@ const sports: { icon: IconName; name: string; tag: string }[] = [
 
   /* Two marquee rows scrolling in opposite directions. Each track holds the
      row twice so a -50% translate loops seamlessly. The animation only runs
-     while a track is on screen (see homeMotion), and pauses on hover. */
+     while a track is on screen (see homeMotion), and pauses on hover. The
+     carousel stays narrower than one group (six cards at most 312px wide),
+     so the loop never shows a gap on very wide screens. */
   .session-carousel {
     position: relative;
     display: flex;
     flex-direction: column;
     gap: 12px;
+    max-width: 1880px;
+    margin: 0 auto;
   }
 
   .session-carousel::before,
@@ -874,7 +878,7 @@ const sports: { icon: IconName; name: string; tag: string }[] = [
     top: 0;
     bottom: 0;
     z-index: 2;
-    width: max(48px, calc((100vw - 1240px) / 2 + 56px));
+    width: max(48px, calc((100% - 1240px) / 2 + 56px));
     pointer-events: none;
   }
 
@@ -915,9 +919,24 @@ const sports: { icon: IconName; name: string; tag: string }[] = [
     animation-play-state: paused;
   }
 
+  /* Without motion, each row scrolls by hand so every session stays reachable. */
   @media (prefers-reduced-motion: reduce) {
     .session-track {
       animation: none;
+    }
+    .session-row {
+      overflow-x: auto;
+      scroll-snap-type: x proximity;
+      scroll-padding-inline: max(20px, calc((100% - 1240px) / 2 + 32px));
+      padding: 0 max(20px, calc((100% - 1240px) / 2 + 32px)) 10px;
+      scrollbar-width: thin;
+      scrollbar-color: var(--border-strong) transparent;
+    }
+    .session-track-group[aria-hidden='true'] {
+      display: none;
+    }
+    .session-card {
+      scroll-snap-align: start;
     }
   }
 

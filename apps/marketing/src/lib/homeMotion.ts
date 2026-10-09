@@ -15,10 +15,16 @@ export function startHomeMotion({
   tracks: HTMLElement[];
   caret: HTMLElement;
 }) {
-  if (typeof IntersectionObserver === 'undefined') return () => {};
-
   const marks = Array.from(field.querySelectorAll<HTMLElement>('.hero-float-mark'));
   const gated = [...marks, ...tracks, caret];
+
+  // Without visibility tracking, run everything rather than freezing the marquee with most sessions
+  // out of view. Reduced-motion styles still switch the animations off.
+  if (typeof IntersectionObserver === 'undefined') {
+    for (const element of gated) element.style.setProperty('--home-motion-state', 'running');
+    return () => {};
+  }
+
   const visible = new Set<Element>();
   const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
   const finePointer = window.matchMedia('(pointer: fine)');

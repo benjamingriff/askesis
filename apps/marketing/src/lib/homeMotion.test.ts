@@ -129,6 +129,15 @@ describe('homepage motion', () => {
     expect(mark.properties.get('--home-motion-state')).toBe('running');
   });
 
+  it('runs everything when visibility cannot be tracked', () => {
+    vi.stubGlobal('IntersectionObserver', undefined);
+    const { mark, track, caret } = fixture();
+    expect(observers).toHaveLength(0);
+    expect(mark.properties.get('--home-motion-state')).toBe('running');
+    expect(track.properties.get('--home-motion-state')).toBe('running');
+    expect(caret.properties.get('--home-motion-state')).toBe('running');
+  });
+
   it('cancels pending work and ignores events after cleanup', () => {
     const { hero, mark, track, observer } = fixture();
     observer.report(mark, true);
