@@ -29,9 +29,11 @@ export default tseslint.config(
       'apps/marketing/*.{mjs,ts}',
       'apps/api/**/*.ts',
       'apps/agent/**/*.ts',
+      'apps/bench/**/*.ts',
       'packages/**/*.ts',
       '*.js',
       'scripts/dev-*.mjs',
+      'scripts/bench.mjs',
     ],
     languageOptions: {
       globals: globals.node,

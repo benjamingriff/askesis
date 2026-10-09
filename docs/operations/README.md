@@ -2,6 +2,7 @@
 
 ## Development and deployment
 
+- [Training-plan benchmarks](./training-plan-benchmarks.md): isolated local scenarios, CLI progress, plan assessments and saved evidence.
 - [Local development](./local-development.md): web/API startup, agent sign-in and screenshot/video verification, background server lifetime, validation and generated types.
 - [Complete multisport example](./example-plan.md): hosted owner, manual local seeding and preservation.
 - [Database setup](./database-setup.md): Docker Compose, Atlas and development fixtures.

@@ -9,6 +9,7 @@
     "pnpm": "11.18.0"
   },
   "scripts": {
+    "bench": "node scripts/bench.mjs",
     "build": "pnpm -r --if-present run build",
     "check": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm generate:check && pnpm migrations:check && pnpm audit:production",
     "dev:agent": "pnpm --filter @askesis/agent dev",
