@@ -220,7 +220,53 @@ describe('local isolation and portable evidence', () => {
         message: 'Incorrect API key: confidential',
         headers: { authorization: 'secret' },
       }),
-    ).toEqual({ category: 'provider_authentication', httpStatus: 401 });
+    ).toEqual({ category: 'provider_authentication', httpStatus: 401, errorType: 'UnknownError' });
+  });
+  it('finds a wrapped provider failure without exporting its credential-bearing fields', () => {
+    const error = new Error('Wrapper includes confidential');
+    error.cause = {
+      name: 'AuthenticationError',
+      status: 401,
+      code: 'invalid_api_key',
+      message: 'Incorrect API key: confidential',
+      request_id: 'confidential',
+      headers: { authorization: 'confidential' },
+    };
+    expect(providerFailure(error)).toMatchObject({
+      category: 'provider_authentication',
+      httpStatus: 401,
+      errorCode: 'invalid_api_key',
+      errorType: 'AuthenticationError',
+    });
+    expect(JSON.stringify(providerFailure(error))).not.toContain('confidential');
+  });
+  it('identifies SDK stream terminal failures and their source location', () => {
+    const error = new Error(
+      'OpenAI Responses request ended with unsuccessful terminal state "response.failed".',
+    );
+    error.name = 'ModelBehaviorError';
+    error.stack = `${error.name}: ${error.message}\n    at createUnsuccessfulResponseError (/private/confidential/node_modules/sdk/openaiResponsesModel.mjs:865:19)`;
+    expect(providerFailure(error)).toEqual({
+      category: 'execution_or_review_error',
+      httpStatus: null,
+      errorType: 'ModelBehaviorError',
+      terminalState: 'response.failed',
+      failureLocation: 'openaiResponsesModel.mjs:865:19',
+    });
+  });
+  it('bounds cyclic causes and ignores unrecognized diagnostic values', () => {
+    const error: Record<string, unknown> = {
+      name: 'confidential',
+      code: 'confidential',
+      status: 'confidential',
+      stack: 'Error: confidential\n    at confidential (/private/confidential.mjs:1:2)',
+    };
+    error.cause = error;
+    expect(providerFailure(error)).toEqual({
+      category: 'execution_or_review_error',
+      httpStatus: null,
+      errorType: 'UnknownError',
+    });
   });
   it('assigns separate project identities and refuses conflicting ports', () => {
     expect(environmentFor('/worktree/a').project).not.toBe(environmentFor('/worktree/b').project);

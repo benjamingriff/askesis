@@ -124,7 +124,15 @@ async function execute(message: unknown) {
         const diagnostic = providerFailure(error);
         await artifacts.event({ stage: 'coach_failed', ...diagnostic });
         console.error(
-          `Coach request failed: ${diagnostic.category}${diagnostic.httpStatus ? ` (HTTP ${diagnostic.httpStatus})` : ''}.`,
+          `Coach request failed: ${diagnostic.category} (${[
+            diagnostic.errorType,
+            diagnostic.httpStatus ? `HTTP ${diagnostic.httpStatus}` : null,
+            diagnostic.errorCode,
+            diagnostic.terminalState,
+            diagnostic.failureLocation,
+          ]
+            .filter(Boolean)
+            .join('; ')}).`,
         );
         throw error;
       }

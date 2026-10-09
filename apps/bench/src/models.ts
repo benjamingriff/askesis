@@ -152,12 +152,23 @@ export function validateReview(review: Review, snapshot: BenchmarkSnapshot) {
     throw new Error('Reviewer verdict contradicts its findings.');
 }
 
-/** Do not export provider messages: authentication errors can contain credential fragments. */
+/** Select diagnostic metadata; raw messages, stacks and headers can contain credentials. */
 export function providerFailure(error: unknown) {
+  const causes: Record<string, unknown>[] = [];
+  let current = error;
+  while (current && typeof current === 'object' && causes.length < 5) {
+    const item = current as Record<string, unknown>;
+    if (causes.includes(item)) break;
+    causes.push(item);
+    current = item.cause;
+  }
   const status =
-    error && typeof error === 'object' && 'status' in error && typeof error.status === 'number'
-      ? error.status
-      : null;
+    causes
+      .map((item) => item.status)
+      .find(
+        (value): value is number =>
+          typeof value === 'number' && Number.isInteger(value) && value >= 100 && value <= 599,
+      ) ?? null;
   const category =
     status === 401
       ? 'provider_authentication'
@@ -172,5 +183,82 @@ export function providerFailure(error: unknown) {
               : status !== null
                 ? 'provider_request_rejected'
                 : 'execution_or_review_error';
-  return { category, httpStatus: status };
+  const errorTypes = [
+    'Error',
+    'TypeError',
+    'RangeError',
+    'SyntaxError',
+    'ZodError',
+    'APIError',
+    'AuthenticationError',
+    'PermissionDeniedError',
+    'BadRequestError',
+    'NotFoundError',
+    'RateLimitError',
+    'InternalServerError',
+    'APIConnectionError',
+    'APIConnectionTimeoutError',
+    'ModelBehaviorError',
+    'UserError',
+    'MaxTurnsExceededError',
+    'AbortError',
+    'TimeoutError',
+  ];
+  const errorCodes = [
+    'invalid_api_key',
+    'invalid_request_error',
+    'invalid_json_schema',
+    'model_not_found',
+    'insufficient_quota',
+    'rate_limit_exceeded',
+    'server_error',
+    'unsupported_parameter',
+    'context_length_exceeded',
+    'ECONNRESET',
+    'ECONNREFUSED',
+    'ETIMEDOUT',
+    'ENOTFOUND',
+  ];
+  const errorType =
+    causes
+      .toReversed()
+      .map((item) => item.name)
+      .find((name): name is string => typeof name === 'string' && errorTypes.includes(name)) ??
+    'UnknownError';
+  const errorCode = causes
+    .map((item) => item.code)
+    .find((code): code is string => typeof code === 'string' && errorCodes.includes(code));
+  const terminalStates = ['response.failed', 'response.incomplete', 'response.error', 'error'];
+  const terminalState = terminalStates.find((state) =>
+    causes.some(
+      (item) =>
+        item.message ===
+        `OpenAI Responses request ended with unsuccessful terminal state "${state}".`,
+    ),
+  );
+  // Keep only recognized source filenames and line/column numbers, never the message or path.
+  const failureLocation = causes
+    .toReversed()
+    .flatMap((item) => (typeof item.stack === 'string' ? item.stack.split('\n').slice(1) : []))
+    .filter((line) => /^\s+at /.test(line))
+    .map((line) =>
+      line
+        .match(
+          /\/(openaiResponsesModel|openaiResponsesConverter|runtime|progress|run|stream|responses|error|core|index)\.(m?js|ts):(\d+):(\d+)\)?$/,
+        )
+        ?.slice(1),
+    )
+    .find((match) => match !== undefined);
+  return {
+    category,
+    httpStatus: status,
+    errorType,
+    ...(errorCode ? { errorCode } : {}),
+    ...(terminalState ? { terminalState } : {}),
+    ...(failureLocation
+      ? {
+          failureLocation: `${failureLocation[0]}.${failureLocation[1]}:${failureLocation[2]}:${failureLocation[3]}`,
+        }
+      : {}),
+  };
 }
