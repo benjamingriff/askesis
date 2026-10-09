@@ -3,6 +3,12 @@
   "private": true,
   "version": "0.1.0",
   "type": "module",
+  "exports": {
+    "./benchmark": {
+      "types": "./dist/benchmark/operator.d.ts",
+      "default": "./dist/benchmark/operator.js"
+    }
+  },
   "scripts": {
     "fixture:publish": "tsx --env-file-if-exists=../../.env src/development/publish-fixture.ts",
     "verification:check": "tsx --env-file-if-exists=../../.env src/development/verification.ts check",
