@@ -2,11 +2,12 @@ import { createHash } from 'node:crypto';
 import type { Insertable } from 'kysely';
 import type { DB } from '../database/generated.js';
 import { localDate } from '../modules/athletes/timezone.js';
-import { emptyBrief, type Brief } from '../modules/plans/brief.schemas.js';
+import { emptyBrief, type Brief, type SportBaseline } from '../modules/plans/brief.schemas.js';
 import type { StepDiscipline, WorkoutDiscipline } from '../modules/plans/disciplines.js';
 import type { BlockPhase, RacePriority } from '../modules/plans/periodization.js';
 
-export const EXAMPLE_NAME = 'Multisport example · 8 weeks';
+export const EXAMPLE_KINDS = ['cycling', 'triathlon', 'strength-hiit'] as const;
+export type ExampleKind = (typeof EXAMPLE_KINDS)[number];
 export type Completion = Omit<Insertable<DB['step_completions']>, 'step_id' | 'plan_version_id'>;
 export type Target = Omit<
   Insertable<DB['step_targets']>,
@@ -34,7 +35,12 @@ export type Session = {
   steps: Step[];
   race?: RacePriority;
 };
-
+export type WeekTarget = {
+  metric: 'distance' | 'duration' | 'strength_session_count';
+  discipline: WorkoutDiscipline;
+  target: number;
+  unit: 'metres' | 'seconds' | 'sessions';
+};
 export const shiftDay = (date: string, days: number) =>
   new Date(Date.parse(`${date}T12:00:00Z`) + days * 86400000).toISOString().slice(0, 10);
 
@@ -44,7 +50,6 @@ export function exampleAnchor(timezone: string, now = new Date()) {
   const weekday = (new Date(`${today}T12:00:00Z`).getUTCDay() + 6) % 7;
   return shiftDay(today, -weekday - 7);
 }
-
 const duration = (seconds: number): Completion => ({
   completion_type: 'duration',
   numeric_value: seconds,
@@ -65,17 +70,7 @@ const numeric = (target_type: string, value: number, unit: string): Target => ({
   target_value: value,
   unit,
 });
-const range = (
-  target_type: string,
-  min: number,
-  value: number,
-  max: number,
-  unit: string,
-): Target => ({ target_type, minimum_value: min, target_value: value, maximum_value: max, unit });
-const text = (target_type: 'instruction' | 'tempo', text_value: string): Target => ({
-  target_type,
-  text_value,
-});
+const instruction = (text_value: string): Target => ({ target_type: 'instruction', text_value });
 const zone = (sport: 'run' | 'cycle' | 'swim', zone_key: string): Target => ({
   target_type: 'zone',
   zone_system: sport === 'run' ? 'run_pace' : sport === 'cycle' ? 'cycle_power' : 'swim_pace',
@@ -88,7 +83,7 @@ const effort = (
   targets: Target[] = [],
   role: Step['role'] = 'work',
 ): Step => ({ label, sport, completion, targets, role });
-const rest = (seconds = 60) =>
+const rest = (seconds = 90) =>
   effort('Recover and reset', 'other', duration(seconds), [], 'recovery');
 const repeat = (label: string, count: number, steps: Step[]): Step => ({
   label,
@@ -96,527 +91,439 @@ const repeat = (label: string, count: number, steps: Step[]): Step => ({
   repeat: count,
   steps,
 });
-const sequence = (label: string, steps: Step[]): Step => ({ label, kind: 'sequence', steps });
 
-const running = (week: number): Session => {
-  const titles = [
-    'Easy run and strides',
-    'Hill repetitions',
-    'Threshold cruise intervals',
-    'Long aerobic run',
-    'Recovery run',
-    '5K controlled test',
-    'Progression run',
-    'Easy run and event strides',
-  ];
-  const recovery = week === 4 || week === 7;
-  const main =
-    week === 1
-      ? repeat('Hill set', 6, [
-          effort('Run uphill', 'run', duration(60), [
-            zone('run', 'interval'),
-            numeric('rpe', 8, 'rpe'),
-          ]),
-          effort('Jog back', 'run', duration(120), [zone('run', 'easy')], 'recovery'),
-        ])
-      : week === 2
-        ? repeat('Cruise set', 3, [
-            effort('Threshold', 'run', distance(1600), [zone('run', 'threshold')]),
-            effort('Easy jog', 'run', duration(120), [zone('run', 'easy')], 'recovery'),
-          ])
-        : effort(
-            titles[week]!,
-            'run',
-            week === 5 ? distance(5000) : duration((recovery ? 25 : week === 3 ? 70 : 35) * 60),
-            [zone('run', week === 5 ? 'threshold' : 'easy')],
-            'main',
-          );
+/** Four-week waves: three progressive weeks followed by reduced volume. */
+const progression = (week: number) => 1 + Math.floor(week / 4) * 0.12 + (week % 4) * 0.06;
+const isLight = (week: number) => week % 4 === 3;
+const minutesFor = (base: number, week: number) =>
+  Math.round(base * (isLight(week) ? 0.65 : progression(week)));
+
+function ride(week: number, type: 'easy' | 'quality' | 'long'): Session {
+  const light = isLight(week);
+  const minutes = minutesFor(type === 'long' ? 105 : type === 'quality' ? 60 : 45, week);
+  const sets = light ? 2 : week < 4 ? 3 : 4;
+  const work = week < 4 ? 300 : week < 8 ? 420 : 480;
   return {
-    title: titles[week]!,
-    sport: 'run',
-    purpose: 'Demonstrate running volume, effort changes and repeat prescriptions.',
-    minutes: week === 3 ? 90 : 50,
-    metres: week === 3 ? 15000 : 8000,
-    tags: ['running', recovery ? 'recovery' : 'quality'],
+    title:
+      type === 'long'
+        ? 'Long endurance ride'
+        : type === 'easy'
+          ? 'Easy spin and cadence'
+          : light
+            ? 'Reduced sweet spot intervals'
+            : week < 4
+              ? 'Tempo foundation intervals'
+              : week < 8
+                ? 'Sweet spot progression'
+                : 'Threshold sharpening',
+    sport: 'cycle',
+    purpose:
+      type === 'quality'
+        ? 'Build sustainable power while keeping recoveries easy.'
+        : 'Develop aerobic endurance with relaxed pedalling and steady fuelling.',
+    minutes,
+    tags: ['cycling', type, ...(light ? ['cutback'] : [])],
     steps: [
-      effort('Easy warm-up', 'run', duration(600), [zone('run', 'easy')], 'warmup'),
-      main,
-      repeat('Relaxed strides', 4, [
-        effort('Stride', 'run', duration(20), [zone('run', 'repetition')]),
-        effort('Walk/jog', 'run', duration(40), [], 'recovery'),
-      ]),
+      effort('Spin up', 'cycle', duration(600), [zone('cycle', 'recovery')], 'warmup'),
+      ...(type === 'quality'
+        ? [
+            repeat('Power intervals', sets, [
+              effort('Controlled effort', 'cycle', duration(work), [
+                zone(
+                  'cycle',
+                  light ? 'sweet_spot' : week < 4 ? 'tempo' : week < 8 ? 'sweet_spot' : 'threshold',
+                ),
+                numeric('rpe', light ? 6 : 7, 'rpe'),
+              ]),
+              effort('Easy spin', 'cycle', duration(180), [zone('cycle', 'recovery')], 'recovery'),
+            ]),
+            effort(
+              'Endurance finish',
+              'cycle',
+              duration(minutes * 60 - 900 - sets * (work + 180)),
+              [zone('cycle', 'endurance')],
+              'main',
+            ),
+          ]
+        : [
+            effort(
+              'Steady riding',
+              'cycle',
+              duration((minutes - 15) * 60),
+              [
+                zone('cycle', type === 'easy' ? 'recovery' : 'endurance'),
+                numeric('cadence', 90, 'revolutions_per_minute'),
+                instruction(
+                  'Keep effort conversational; practise drinking and fuelling on longer rides.',
+                ),
+              ],
+              'main',
+            ),
+          ]),
+      effort('Spin down', 'cycle', duration(300), [zone('cycle', 'recovery')], 'cooldown'),
+    ],
+  };
+}
+function run(week: number, type: 'easy' | 'long'): Session {
+  const minutes = minutesFor(type === 'long' ? 50 : 35, week);
+  return {
+    title: type === 'long' ? 'Long aerobic run' : 'Easy run and relaxed strides',
+    sport: 'run',
+    purpose: 'Build durable running volume without compromising the swim and bike sessions.',
+    minutes,
+    tags: ['triathlon', 'running', type],
+    steps: [
+      effort('Easy warm-up', 'run', duration(300), [zone('run', 'easy')], 'warmup'),
+      effort(
+        'Conversational running',
+        'run',
+        duration((minutes - (type === 'easy' ? 12 : 10)) * 60),
+        [zone('run', 'easy')],
+        'main',
+      ),
+      ...(type === 'easy'
+        ? [
+            repeat('Relaxed strides', 3, [
+              effort('Smooth stride', 'run', duration(15), [numeric('rpe', 7, 'rpe')]),
+              effort('Easy jog', 'run', duration(25), [], 'recovery'),
+            ]),
+          ]
+        : []),
       effort('Easy cool-down', 'run', duration(300), [zone('run', 'easy')], 'cooldown'),
     ],
   };
-};
-
-const cycling = (week: number): Session => ({
-  title:
-    week === 5
-      ? '20-minute FTP test rehearsal'
-      : week === 4
-        ? 'Recovery spin'
-        : week % 2
-          ? 'Endurance ride and cadence'
-          : 'Sweet spot 2 × 15',
-  sport: 'cycle',
-  purpose: 'FTP-based riding with RPE and cadence guidance.',
-  minutes: week === 5 ? 50 : week === 4 || week === 7 ? 45 : 65,
-  tags: ['cycling', 'ftp'],
-  steps: [
-    effort('Spin up', 'cycle', duration(600), [zone('cycle', 'recovery')], 'warmup'),
-    repeat('Main riding set', week === 4 || week === 5 || week === 7 ? 1 : 2, [
-      effort(
-        week === 5 ? '20-minute test effort' : 'Controlled riding',
-        'cycle',
-        duration(week === 5 ? 1200 : 900),
-        [
-          zone(
-            'cycle',
-            week === 5
-              ? 'threshold'
-              : week === 4
-                ? 'recovery'
-                : week % 2
-                  ? 'endurance'
-                  : 'sweet_spot',
-          ),
-          numeric('rpe', week === 5 ? 9 : week === 4 ? 2 : 6, 'rpe'),
-          range('cadence', 80, 90, 100, 'revolutions_per_minute'),
-        ],
-      ),
-      effort('Easy spin', 'cycle', duration(300), [zone('cycle', 'recovery')], 'recovery'),
-    ]),
-    effort('Power target illustration', 'cycle', duration(300), [
-      range('power', 140, 160, 180, 'watts'),
-      text('instruction', 'Example watt range; use your current calibrated zones for training.'),
-    ]),
-    effort('Spin down', 'cycle', duration(600), [zone('cycle', 'recovery')], 'cooldown'),
-  ],
-});
-
-const swimming = (week: number): Session => ({
-  title:
-    week % 3 === 0
-      ? 'CSS swim intervals'
-      : week % 3 === 1
-        ? 'Swim technique and endurance'
-        : '400/200 swim test rehearsal',
-  sport: 'swim',
-  purpose: 'Pool work with CSS zones, distance repeats and technique instructions.',
-  minutes: 45,
-  metres: week % 3 === 2 ? 1600 : 1800,
-  tags: ['swimming', 'pool', 'css'],
-  steps: [
-    effort('Easy swim', 'swim', distance(300), [zone('swim', 'recovery')], 'warmup'),
-    repeat('Technique set', 4, [
-      effort('Catch-up drill', 'swim', distance(50), [
-        zone('swim', 'endurance'),
-        text('instruction', 'Long body line; breathe to both sides.'),
-      ]),
-      rest(15),
-    ]),
-    week % 3 === 2
-      ? sequence('400/200 CSS test rehearsal', [
-          effort('400 m controlled test', 'swim', distance(400), [
-            zone('swim', 'speed'),
-            numeric('rpe', 9, 'rpe'),
-          ]),
-          rest(300),
-          effort('200 m controlled test', 'swim', distance(200), [
-            zone('swim', 'speed'),
-            numeric('rpe', 9, 'rpe'),
-          ]),
-        ])
-      : repeat('Main swim set', 8, [
-          effort('100 m at CSS', 'swim', distance(100), [zone('swim', 'threshold')]),
-          rest(20),
-        ]),
-    effort('Pace illustration', 'swim', distance(200), [
-      range('pace', 100, 105, 110, 'seconds_per_100_metres'),
-    ]),
-    effort('Easy swim', 'swim', distance(300), [zone('swim', 'recovery')], 'cooldown'),
-  ],
-});
-
-const strength = (week: number): Session => ({
-  title: week % 2 ? 'Full body, carries and core' : 'Full body supporting strength',
-  sport: 'strength',
-  purpose: 'Strength prescriptions with movements, repetitions, RIR, loads and tempo.',
-  minutes: 50,
-  tags: ['strength', 'supporting'],
-  steps: [
-    effort(
-      'Joint preparation',
-      'other',
-      { completion_type: 'open' },
-      [text('instruction', 'Mobilise ankles, hips and shoulders for five minutes.')],
-      'warmup',
-    ),
-    ...[
-      'Back squat',
-      'Romanian deadlift',
-      'Dumbbell bench press',
-      'Bent-over row',
-      'Split squat',
-    ].map((movement, index) =>
-      repeat(`${movement} sets`, week === 4 || week === 7 ? 2 : 3, [
-        {
-          ...effort(movement, 'strength', reps(8), [
-            numeric('rir', 2, 'repetitions'),
-            range('load', 20, 30 + index * 5, 60, 'kilograms'),
-          ]),
-          movement,
-          instructions:
-            'Suggested example weight. Adjust to finish with two repetitions in reserve.',
-        },
-        rest(90),
-      ]),
-    ),
-    effort('Tempo goblet squat', 'strength', reps(10), [
-      text('tempo', '3–1–1–0'),
-      numeric('percentage_1rm', 60, 'percent'),
-    ]),
-    effort('Farmer carry', 'strength', distance(40), [
-      numeric('load', 24, 'kilograms'),
-      text('instruction', 'Suggested load per hand; brace and walk steadily.'),
-    ]),
-    effort('Core hold', 'strength', duration(45), [numeric('rpe', 6, 'rpe')], 'other'),
-    effort(
-      'Stretch',
-      'other',
-      {
-        completion_type: 'until_condition',
-        condition_type: 'comfortable_range',
-        condition_value: 'Move freely without discomfort',
-        unit: null,
-      },
-      [text('instruction', 'End when you can move comfortably; condition-based storage example.')],
-      'cooldown',
-    ),
-  ],
-});
-
-const brick = (week: number): Session => ({
-  title: week === 7 ? 'Swim, bike, run event rehearsal' : 'Bike → run brick',
-  sport: 'mixed',
-  purpose: 'Change disciplines within one prescription and practise transitions.',
-  minutes: week === 7 ? 100 : 85,
-  tags: ['triathlon', 'brick', 'transition'],
-  steps: [
-    ...(week === 7
-      ? [
-          effort('Open-water swim rehearsal', 'swim', distance(750), [zone('swim', 'endurance')]),
-          effort(
-            'T1',
-            'other',
-            duration(180),
-            [text('instruction', 'Exit the water, change equipment and prepare to ride.')],
-            'transition',
-          ),
-        ]
-      : []),
-    effort('Easy bike warm-up', 'cycle', duration(600), [zone('cycle', 'recovery')], 'warmup'),
-    sequence('Bike main set', [
-      effort('Endurance ride', 'cycle', duration(2400), [
-        zone('cycle', 'endurance'),
-        numeric('rpe', 5, 'rpe'),
-      ]),
-    ]),
-    effort(
-      'T2: bike to run',
-      'other',
-      duration(120),
-      [text('instruction', 'Rack bike, change shoes, settle breathing.')],
-      'transition',
-    ),
-    effort('Run off the bike', 'run', duration(1500), [zone('run', 'easy')], 'main'),
-    effort('Walk and recover', 'other', duration(480), [], 'cooldown'),
-  ],
-});
-
-const hyrox = (): Session => {
-  const stations: Step[] = [
-    effort('SkiErg', 'ski_erg', distance(1000), [numeric('rpe', 7, 'rpe')]),
-    effort('Sled push', 'strength', distance(50), [
-      numeric('rpe', 8, 'rpe'),
-      numeric('load', 100, 'kilograms'),
-    ]),
-    effort('Sled pull', 'strength', distance(50), [
-      numeric('rpe', 8, 'rpe'),
-      numeric('load', 75, 'kilograms'),
-    ]),
-    effort('Burpee broad jumps', 'strength', distance(80), [numeric('rpe', 7, 'rpe')]),
-    effort('Row', 'row', distance(1000), [numeric('rpe', 7, 'rpe')]),
-    effort('Farmer carry', 'strength', distance(200), [
-      numeric('load', 24, 'kilograms'),
-      text('instruction', 'Suggested load per hand.'),
-    ]),
-    effort('Sandbag lunges', 'strength', distance(100), [numeric('load', 20, 'kilograms')]),
-    effort('Wall balls', 'strength', reps(100), [numeric('load', 6, 'kilograms')]),
-  ];
+}
+function swim(week: number, technique: boolean): Session {
+  const count = isLight(week) ? 5 : 8 + Math.floor(week / 4) * 2 + (week % 4);
+  const metres = 600 + count * 100;
   return {
-    title: 'Hyrox stations and compromised running',
-    sport: 'mixed',
-    purpose: 'A complete station vocabulary with running between each effort.',
-    minutes: 90,
-    tags: ['hyrox', 'stations', 'compromised-running'],
+    title: technique ? 'Swim technique and aerobic repeats' : 'CSS swim progression',
+    sport: 'swim',
+    purpose: technique
+      ? 'Improve body position and a relaxed catch.'
+      : 'Develop repeatable swim pace with controlled rests.',
+    minutes: Math.round((metres / 100) * 1.75 + count / 3 + 5),
+    metres,
+    tags: ['triathlon', 'swimming', technique ? 'technique' : 'css'],
     steps: [
-      effort('Warm-up jog', 'run', duration(600), [zone('run', 'easy')], 'warmup'),
-      ...stations.map((station) =>
-        sequence(`Run + ${station.label}`, [
-          effort('Compromised run', 'run', distance(500), [
-            zone('run', 'easy'),
-            numeric('rpe', 6, 'rpe'),
-          ]),
-          station,
-          rest(60),
+      effort('Easy swim', 'swim', distance(200), [zone('swim', 'recovery')], 'warmup'),
+      repeat('Drills', 4, [
+        effort('Catch-up drill', 'swim', distance(50), [
+          instruction('Stay long through the water and exhale steadily.'),
         ]),
-      ),
-      effort('Cool-down walk', 'other', duration(300), [], 'cooldown'),
+        rest(15),
+      ]),
+      repeat('Main swim set', count, [
+        effort('100 m repeat', 'swim', distance(100), [
+          zone('swim', technique || isLight(week) ? 'endurance' : 'threshold'),
+        ]),
+        rest(20),
+      ]),
+      effort('Easy swim', 'swim', distance(200), [zone('swim', 'recovery')], 'cooldown'),
     ],
-  };
-};
-
-const conditioning = (week: number): Session => {
-  const names = [
-    'EMOM 12 · gym conditioning',
-    'AMRAP 15 · mixed circuit',
-    '4 rounds for time',
-    'Timed aerobic circuit',
-  ];
-  const movements = [
-    effort(
-      'Row for calories',
-      'row',
-      { completion_type: 'energy', numeric_value: 12, unit: 'kilocalories' },
-      [numeric('rpe', 6, 'rpe')],
-    ),
-    effort('Push-ups', 'strength', reps(10), [numeric('rir', 2, 'repetitions')]),
-    effort('SkiErg', 'ski_erg', duration(45), [numeric('rpe', 6, 'rpe')]),
-  ];
-  return {
-    title: names[week % 4]!,
-    sport: 'mixed',
-    purpose:
-      'Gym format examples expressed as steps and instructions; no automatic scoring or AMRAP execution.',
-    minutes: 30,
-    tags: ['gym', ['emom', 'amrap', 'for-time', 'circuit'][week % 4]!],
-    steps: [
-      {
-        ...effort(
-          'Format briefing',
-          'other',
-          { completion_type: 'open' },
-          [
-            text(
-              'instruction',
-              week % 4 === 0
-                ? 'Start one station each minute for 12 minutes; rest for the remaining seconds.'
-                : week % 4 === 1
-                  ? 'Repeat the circuit for 15 minutes; record rounds separately. The time cap is an instruction.'
-                  : 'Complete four controlled rounds; prioritise movement quality.',
-            ),
-          ],
-          'other',
-        ),
-        instructions:
-          'These formats use existing containers and instructions rather than a dedicated score/time-cap model.',
-      },
-      repeat('Circuit rounds', week % 4 === 0 ? 4 : week % 4 === 1 ? 1 : 4, [
-        sequence('Stations', movements),
-        rest(30),
-      ]),
-      effort(
-        'Finish on lap',
-        'other',
-        { completion_type: 'until_lap' },
-        [text('instruction', 'Lap-ended storage example: finish this step manually.')],
-        'transition',
-      ),
-      effort('Treadmill storage examples', 'run', duration(120), [
-        numeric('speed', 10, 'kilometres_per_hour'),
-        range('heart_rate', 120, 130, 140, 'beats_per_minute'),
-        numeric('cadence', 170, 'steps_per_minute'),
-      ]),
-      effort('Pace range example', 'run', distance(400), [
-        range('pace', 330, 345, 360, 'seconds_per_kilometre'),
-      ]),
-      effort('Walk and stretch', 'other', duration(180), [], 'cooldown'),
-    ],
-  };
-};
-
-const known = (value: number) => ({ status: 'known' as const, value });
-export const exampleBrief = (): Brief => ({
-  ...emptyBrief(),
-  goal: 'Inspect a complete multisport example: endurance, triathlon transitions, supporting strength, Hyrox and gym conditioning.',
-  sports: [
-    {
-      sport: 'run',
-      currentSessions: known(3),
-      desiredSessions: 3,
-      weeklyDistance: known(25000),
-      longestDistance: known(15000),
-    },
-    {
-      sport: 'cycle',
-      currentSessions: known(2),
-      desiredSessions: 2,
-      weeklyDuration: known(9000),
-      longestDuration: known(5400),
-    },
-    {
-      sport: 'swim',
-      currentSessions: known(2),
-      desiredSessions: 2,
-      weeklyDistance: known(3600),
-      longestDistance: known(1800),
-    },
-    { sport: 'strength', currentSessions: known(2), desiredSessions: 2 },
-  ],
-  weekdays: [
-    'preferred',
-    'available',
-    'available',
-    'available',
-    'unavailable',
-    'preferred',
-    'available',
-  ],
-  context:
-    'Software showcase, not an individual coaching recommendation. Friday is a rest day. Up to two sessions per day. Some prescriptions demonstrate storage fields beyond the coaching writer. Existing athlete fitness is preserved; any missing calibration is explicitly marked as an example estimate.',
-});
-
-/**
- * Every phase appears, and build repeats, so clients show Build 1 and Build 2. Base ends with a
- * cutback week; a B race closes Build 1 and recovery follows it; Build 2 holds a C race and the
- * taper leads to the A race on the last day. Cutback, recovery and taper weeks carry reduced
- * weekly targets.
- */
-const PHASE_PLAN: { phase: BlockPhase; weeks: number; title: string; description: string }[] = [
-  {
-    phase: 'base',
-    weeks: 3,
-    title: 'Aerobic foundation',
-    description:
-      'Mostly easy volume across every sport, with technique and supporting strength. The third week is a cutback.',
-  },
-  {
-    phase: 'build',
-    weeks: 1,
-    title: 'Threshold build',
-    description: 'Longer threshold efforts in each sport, closing with a B-race tune-up.',
-  },
-  {
-    phase: 'recovery',
-    weeks: 1,
-    title: 'Absorb the tune-up',
-    description: 'An easy week after the B race so the first build is absorbed.',
-  },
-  {
-    phase: 'build',
-    weeks: 1,
-    title: 'Race-specific build',
-    description: 'Bricks, transitions and Hyrox stations at event intensity, with a C race.',
-  },
-  {
-    phase: 'peak',
-    weeks: 1,
-    title: 'Sharpen',
-    description: 'The most event-like week: full rehearsals at target effort.',
-  },
-  {
-    phase: 'taper',
-    weeks: 1,
-    title: 'Taper to the event',
-    description: 'Volume comes down and intensity stays, arriving fresh for the A race.',
-  },
-];
-const CUTBACK_WEEKS = new Set([2]);
-const LIGHT_WEEK_FACTOR = 0.7;
-
-/** Titles and labels that state a number ('400/200', '2 × 15', '5K') describe their values. */
-const numbered = (text: string) => /\d/.test(text);
-
-/**
- * A lighter session for a light week: the same structure with shorter efforts and estimates.
- * Numbered sessions and steps (benchmark tests, counted sets) keep their prescription, so a
- * 400/200 test still swims 400 and 200 metres and the surrounding work shrinks instead.
- */
-function lighten(session: Session, factor: number): Session {
-  if (numbered(session.title)) return session;
-  const scale = (step: Step): Step => {
-    if (numbered(step.label)) return step;
-    const completion = step.completion;
-    const unit =
-      completion?.completion_type === 'duration'
-        ? 30
-        : completion?.completion_type === 'distance'
-          ? 50
-          : null;
-    return {
-      ...step,
-      ...(completion && unit
-        ? {
-            completion: {
-              ...completion,
-              numeric_value: Math.max(
-                unit,
-                Math.round((Number(completion.numeric_value) * factor) / unit) * unit,
-              ),
-            },
-          }
-        : {}),
-      ...(step.steps ? { steps: step.steps.map(scale) } : {}),
-    };
-  };
-  return {
-    ...session,
-    minutes: Math.round(session.minutes * factor),
-    ...(session.metres ? { metres: Math.round((session.metres * factor) / 100) * 100 } : {}),
-    steps: session.steps.map(scale),
   };
 }
-
-/** Races by week index and weekday, replacing that day's session. */
-const RACES: Record<number, { day: number; race: (session: Session) => Session }> = {
-  3: {
-    day: 5,
-    race: (session) => ({
-      ...session,
-      title: 'Sprint duathlon tune-up',
-      purpose: 'B race: an important tune-up at event effort, with easier days before it.',
-      tags: [...session.tags, 'race'],
-      race: 'B',
-    }),
+function strength(week: number, focus: 'lower' | 'upper' | 'full', supporting = false): Session {
+  const light = isLight(week);
+  const sets = light ? 2 : week < 4 ? 3 : 4;
+  const repetitions = light ? 8 : (week < 4 ? 8 : week < 8 ? 6 : 5) + (week % 4);
+  const movements =
+    focus === 'lower'
+      ? ['Back squat', 'Romanian deadlift', 'Reverse lunge', 'Calf raise']
+      : focus === 'upper'
+        ? ['Dumbbell bench press', 'Bent-over row', 'Overhead press', 'Assisted pull-up']
+        : ['Goblet squat', 'Dumbbell Romanian deadlift', 'Push-up', 'Cable row'];
+  const minutes = light ? 30 : supporting ? 45 : 55 + (week % 4) * 3;
+  return {
+    title: `${focus === 'lower' ? 'Lower body' : focus === 'upper' ? 'Upper body' : 'Full body'} ${supporting ? 'supporting strength' : 'strength and accessories'}`,
+    sport: 'strength',
+    purpose: supporting
+      ? 'Support endurance training with controlled lifting; finish fresh for the next ride or run.'
+      : 'Progress squat, hinge, push and pull patterns; add load only when every set meets the effort target.',
+    minutes,
+    tags: ['strength', supporting ? 'supporting' : focus, ...(light ? ['deload'] : [])],
+    steps: [
+      effort(
+        'Joint preparation and ramp-up sets',
+        'other',
+        duration(300),
+        [instruction('Mobilise hips and shoulders, then use light rehearsal sets.')],
+        'warmup',
+      ),
+      ...movements.map((movement) =>
+        repeat(`${movement} sets`, supporting && week >= 8 ? 2 : sets, [
+          {
+            ...effort(movement, 'strength', reps(repetitions), [
+              numeric('rir', light || supporting ? 3 : 2, 'repetitions'),
+              ...(week < 4 ? [{ target_type: 'tempo', text_value: '3–1–1–0' }] : []),
+            ]),
+            movement,
+            instructions:
+              'Choose a load that leaves the prescribed repetitions in reserve. Increase slightly next week only if technique stays consistent.',
+          },
+          rest(supporting ? 75 : 120),
+        ]),
+      ),
+      repeat('Carry and core', light ? 2 : 3, [
+        {
+          ...effort('Farmer carry', 'strength', distance(30), [numeric('rpe', 6, 'rpe')]),
+          movement: 'Farmer carry',
+        },
+        {
+          ...effort('Side plank', 'strength', duration(30), [
+            instruction('Hold for 30 seconds on each side.'),
+          ]),
+          movement: 'Side plank',
+        },
+        rest(45),
+      ]),
+      effort('Easy mobility', 'other', duration(300), [], 'cooldown'),
+    ],
+  };
+}
+function brick(week: number): Session {
+  const bikeMinutes = minutesFor(60, week);
+  const runMinutes = minutesFor(15, week);
+  return {
+    title:
+      week >= 8 && !isLight(week) ? 'Race-effort bike → run brick' : 'Aerobic bike → run brick',
+    sport: 'mixed',
+    purpose: 'Practise the transition and settle into a controlled run off the bike.',
+    minutes: bikeMinutes + runMinutes + 5,
+    tags: ['triathlon', 'brick', 'transition'],
+    steps: [
+      effort('Bike warm-up', 'cycle', duration(600), [zone('cycle', 'recovery')], 'warmup'),
+      effort(
+        'Bike main set',
+        'cycle',
+        duration((bikeMinutes - 10) * 60),
+        [zone('cycle', week >= 8 && !isLight(week) ? 'tempo' : 'endurance')],
+        'main',
+      ),
+      effort(
+        'T2: bike to run',
+        'other',
+        duration(120),
+        [instruction('Rack bike, change shoes and start the run smoothly.')],
+        'transition',
+      ),
+      effort('Run off the bike', 'run', duration(runMinutes * 60), [zone('run', 'easy')], 'main'),
+      effort('Walk and recover', 'other', duration(180), [], 'cooldown'),
+    ],
+  };
+}
+function conditioning(week: number, aerobic: boolean): Session {
+  const light = isLight(week);
+  const format = week % 3;
+  const rounds = light ? 3 : 4 + Math.floor(week / 4) + (week % 4);
+  const cap = light ? 10 : 15 + Math.floor(week / 4) * 3 + (week % 4) * 2;
+  const mainMinutes = aerobic
+    ? rounds * 5
+    : format === 0
+      ? rounds * 4
+      : format === 1
+        ? cap
+        : cap + 5;
+  const formatRules =
+    format === 0
+      ? `Start a station every minute; finish with time to rest. The fourth minute is rest. Complete ${rounds} four-minute rounds.`
+      : format === 1
+        ? `Repeat these stations for ${cap} minutes, resting as needed. Stop at the time cap; record rounds and reps separately.`
+        : `Complete ${rounds} rounds with a ${cap + 5}-minute cap. Keep the first round controlled and stop at the cap even if unfinished.`;
+  const stations: Step[] = [
+    effort(
+      'Row',
+      'row',
+      { completion_type: 'energy', numeric_value: light ? 8 : 12, unit: 'kilocalories' },
+      [numeric('rpe', light || aerobic ? 5 : 7, 'rpe')],
+    ),
+    {
+      ...effort('Kettlebell swing', 'strength', reps(light ? 10 : 15), [numeric('rpe', 6, 'rpe')]),
+      movement: 'Kettlebell swing',
+    },
+    {
+      ...effort('Box step-up', 'strength', reps(10), [
+        instruction('Alternate legs; use a height that allows a controlled descent.'),
+      ]),
+      movement: 'Box step-up',
+    },
+  ];
+  return {
+    title: aerobic
+      ? 'Aerobic circuit and mobility'
+      : format === 0
+        ? `EMOM ${rounds * 4} · erg and movement quality`
+        : format === 1
+          ? `AMRAP ${cap} · mixed gym circuit`
+          : `${rounds} rounds for time · controlled conditioning`,
+    sport: 'mixed',
+    purpose: aerobic
+      ? 'Build aerobic capacity between lifting days with low-impact stations.'
+      : 'Develop repeatable high-intensity work while retaining sound movement technique.',
+    // Ten timed minutes around the main set, plus a minute for the core exercise.
+    minutes: mainMinutes + 11,
+    tags: [
+      'gym',
+      aerobic ? 'aerobic' : 'hiit',
+      aerobic ? 'circuit' : ['emom', 'amrap', 'for-time'][format]!,
+    ],
+    steps: [
+      effort('Easy SkiErg warm-up', 'ski_erg', duration(300), [numeric('rpe', 3, 'rpe')], 'warmup'),
+      ...(!aerobic
+        ? [
+            effort(
+              'Format briefing',
+              'other',
+              { completion_type: 'open' },
+              [instruction(formatRules)],
+              'other',
+            ),
+          ]
+        : []),
+      aerobic
+        ? repeat('Aerobic stations', rounds, [
+            effort('Row steadily', 'row', duration(120), [numeric('rpe', 5, 'rpe')]),
+            effort('SkiErg steadily', 'ski_erg', duration(120), [numeric('rpe', 5, 'rpe')]),
+            rest(60),
+          ])
+        : format === 1
+          ? {
+              label: 'Repeat circuit until time cap',
+              kind: 'sequence',
+              steps: [...stations, rest(45)],
+            }
+          : repeat('Conditioning circuit', rounds, [...stations, rest(format === 0 ? 60 : 45)]),
+      {
+        ...effort('Dead bug', 'strength', reps(12), [numeric('rpe', 4, 'rpe')], 'other'),
+        movement: 'Dead bug',
+      },
+      effort('Mobility and easy breathing', 'other', duration(300), [], 'cooldown'),
+    ],
+  };
+}
+const known = (value: number) => ({ status: 'known' as const, value });
+const definitions: Record<
+  ExampleKind,
+  { name: string; description: string; goal: string; sports: SportBaseline[]; restDays: number[] }
+> = {
+  cycling: {
+    name: 'Cycling endurance & strength · 12 weeks',
+    description:
+      'Three months of progressive cycling with supporting strength, cutback weeks and a final reduced-volume week.',
+    goal: 'Build the endurance and sustainable power for a long sportive, supported by strength training.',
+    sports: [
+      {
+        sport: 'cycle',
+        currentSessions: known(4),
+        desiredSessions: 4,
+        weeklyDuration: known(14400),
+        longestDuration: known(6300),
+      },
+      { sport: 'strength', currentSessions: known(2), desiredSessions: 2 },
+    ],
+    restDays: [4],
   },
-  5: {
-    day: 2,
-    race: (session) => ({
-      ...session,
-      title: '5K club race',
-      purpose: 'C race: raced hard as training, without a taper.',
-      tags: [...session.tags, 'race'],
-      race: 'C',
-    }),
+  triathlon: {
+    name: 'Triathlon foundation to race · 12 weeks',
+    description:
+      'Three months of swim, bike and run development with weekly bricks, supporting strength and a sprint-distance goal event.',
+    goal: 'Prepare for a sprint triathlon with balanced swim, bike and run training and confident transitions.',
+    sports: [
+      {
+        sport: 'run',
+        currentSessions: known(3),
+        desiredSessions: 3,
+        weeklyDistance: known(18000),
+        longestDistance: known(10000),
+      },
+      {
+        sport: 'cycle',
+        currentSessions: known(2),
+        desiredSessions: 2,
+        weeklyDuration: known(7200),
+        longestDuration: known(3600),
+      },
+      {
+        sport: 'swim',
+        currentSessions: known(2),
+        desiredSessions: 2,
+        weeklyDistance: known(2800),
+        longestDistance: known(1400),
+      },
+      { sport: 'strength', currentSessions: known(1), desiredSessions: 1 },
+    ],
+    restDays: [4],
   },
-  7: {
-    day: 6,
-    race: (session) => ({
-      ...session,
-      title: 'Hyrox event',
-      purpose: 'A race: the goal event, reached through the taper.',
-      tags: [...session.tags, 'race'],
-      race: 'A',
-    }),
+  'strength-hiit': {
+    name: 'Strength & HIIT athlete · 12 weeks',
+    description:
+      'Three months of gym training: lower, upper and full-body lifting, ergs, carries, core, EMOM, AMRAP and controlled rounds for time.',
+    goal: 'Build full-body strength and repeatable conditioning across a broad range of gym workouts.',
+    sports: [{ sport: 'strength', currentSessions: known(3), desiredSessions: 3 }],
+    restDays: [3, 6],
   },
 };
-
-export function buildExample(anchor: string) {
-  const endDate = shiftDay(anchor, 55);
+function weeklyTargets(sessions: { day: number; session: Session }[]): WeekTarget[] {
+  const targets: WeekTarget[] = [];
+  for (const sport of ['run', 'cycle', 'swim', 'mixed', 'strength'] as const) {
+    const matching = sessions.filter(({ session }) => session.sport === sport);
+    if (!matching.length) continue;
+    targets.push({
+      metric: 'duration',
+      discipline: sport,
+      target: matching.reduce((sum, { session }) => sum + session.minutes * 60, 0),
+      unit: 'seconds',
+    });
+    const metres = matching.reduce((sum, { session }) => sum + (session.metres ?? 0), 0);
+    if (metres)
+      targets.push({ metric: 'distance', discipline: sport, target: metres, unit: 'metres' });
+    if (sport === 'strength')
+      targets.push({
+        metric: 'strength_session_count',
+        discipline: sport,
+        target: matching.length,
+        unit: 'sessions',
+      });
+  }
+  return targets;
+}
+export function buildExample(kind: ExampleKind, anchor: string) {
+  const definition = definitions[kind];
+  const phases: { phase: BlockPhase; weeks: number; title: string; description: string }[] = [
+    {
+      phase: 'base',
+      weeks: 4,
+      title: kind === 'strength-hiit' ? 'Movement foundation' : 'Aerobic foundation',
+      description:
+        'Three progressive weeks establish technique and consistency; week four reduces volume to absorb the work.',
+    },
+    {
+      phase: 'build',
+      weeks: 4,
+      title:
+        kind === 'strength-hiit' ? 'Strength and work capacity' : 'Sustainable power and endurance',
+      description:
+        'Progress the main work for three weeks, then take a cutback week while retaining familiar movements.',
+    },
+    {
+      phase: 'peak',
+      weeks: 3,
+      title:
+        kind === 'strength-hiit'
+          ? 'Strength and conditioning integration'
+          : 'Event-specific preparation',
+      description:
+        'Consolidate the largest training weeks with specific efforts and controlled intensity.',
+    },
+    {
+      phase: kind === 'strength-hiit' ? 'recovery' : 'taper',
+      weeks: 1,
+      title: kind === 'strength-hiit' ? 'Deload and consolidate' : 'Freshen and finish',
+      description: 'Reduce volume, keep technique sharp and finish the training cycle fresh.',
+    },
+  ];
   let firstWeek = 0;
-  const blocks = PHASE_PLAN.map(({ weeks, ...block }) => {
+  const blocks = phases.map(({ weeks, ...block }) => {
     const start = firstWeek;
     firstWeek += weeks;
     return {
@@ -627,92 +534,120 @@ export function buildExample(anchor: string) {
       endDate: shiftDay(anchor, firstWeek * 7 - 1),
     };
   });
-  const weeks = Array.from({ length: 8 }, (_, index) => {
+  const weeks = Array.from({ length: 12 }, (_, index) => {
+    let sessions: { day: number; session: Session }[];
+    if (kind === 'cycling')
+      sessions = [
+        { day: 0, session: strength(index, 'full', true) },
+        { day: 1, session: ride(index, 'quality') },
+        { day: 2, session: ride(index, 'easy') },
+        ...(index < 8 ? [{ day: 3, session: strength(index, 'lower', true) }] : []),
+        { day: 5, session: ride(index, 'long') },
+        { day: 6, session: ride(index, 'easy') },
+      ];
+    else if (kind === 'triathlon')
+      sessions = [
+        { day: 0, session: swim(index, true) },
+        { day: 0, session: strength(index, 'full', true) },
+        { day: 1, session: ride(index, 'quality') },
+        { day: 2, session: run(index, 'easy') },
+        { day: 3, session: swim(index, false) },
+        { day: 5, session: brick(index) },
+        { day: 6, session: run(index, 'long') },
+      ];
+    else
+      sessions = [
+        { day: 0, session: strength(index, 'lower') },
+        { day: 1, session: conditioning(index, false) },
+        { day: 2, session: strength(index, 'upper') },
+        { day: 4, session: strength(index, 'full') },
+        { day: 5, session: conditioning(index, true) },
+      ];
+    if (kind === 'triathlon' && index === 11)
+      sessions = sessions
+        .filter(({ day }) => day < 5)
+        .concat([
+          {
+            day: 6,
+            session: {
+              title: 'Sprint triathlon goal event',
+              sport: 'mixed',
+              purpose:
+                'Put twelve weeks of preparation into practice: a controlled swim, steady bike and confident run.',
+              minutes: 100,
+              tags: ['triathlon', 'race'],
+              race: 'A',
+              steps: [
+                effort('Swim 750 m', 'swim', distance(750), [zone('swim', 'endurance')]),
+                effort(
+                  'T1',
+                  'other',
+                  duration(180),
+                  [instruction('Change equipment and prepare to ride.')],
+                  'transition',
+                ),
+                effort('Bike 20 km', 'cycle', distance(20000), [zone('cycle', 'tempo')]),
+                effort(
+                  'T2',
+                  'other',
+                  duration(120),
+                  [instruction('Rack bike and change shoes.')],
+                  'transition',
+                ),
+                effort('Run 5 km', 'run', distance(5000), [zone('run', 'easy')]),
+              ],
+            },
+          },
+        ]);
     const blockIndex = blocks.findIndex(
       (b) => index >= b.firstWeek && index < b.firstWeek + b.weekCount,
     );
-    const block = blocks[blockIndex]!;
-    const volume =
-      CUTBACK_WEEKS.has(index) || block.phase === 'recovery' || block.phase === 'taper'
-        ? LIGHT_WEEK_FACTOR
-        : 1;
     return {
       index,
       blockIndex,
-      position: index - block.firstWeek + 1,
-      cutback: CUTBACK_WEEKS.has(index),
-      volume,
-      title: `Week ${index + 1} · ${block.title}`,
+      position: index - blocks[blockIndex]!.firstWeek + 1,
+      cutback: index === 3 || index === 7,
+      title: `Week ${index + 1} · ${blocks[blockIndex]!.title}`,
+      description:
+        kind === 'strength-hiit'
+          ? 'Thursday and Sunday are rest days. Alternate lifting and conditioning; scale loads to the prescribed effort.'
+          : 'Friday is a rest day. Keep easy sessions easy and reduce volume during cutback weeks.',
       startDate: shiftDay(anchor, index * 7),
       endDate: shiftDay(anchor, index * 7 + 6),
-      sessions: [
-        { day: 0, session: swimming(index) },
-        { day: 0, session: strength(index) },
-        { day: 1, session: cycling(index) },
-        { day: 2, session: running(index) },
-        { day: 3, session: conditioning(index) },
-        { day: 5, session: brick(index) },
-        { day: 6, session: hyrox() },
-        // After the A race, the plan's last session is an easy technique swim, not a test.
-        { day: 6, session: swimming(index === 7 ? 7 : index + 1) },
-      ].map(({ day, session }, position, all) => ({
-        day,
-        // The first session on the race day becomes the race. Other sessions in cutback,
-        // recovery and taper weeks shrink, so their published totals match the lighter targets.
-        session:
-          RACES[index]?.day === day && all.findIndex((s) => s.day === day) === position
-            ? RACES[index].race(session)
-            : volume < 1
-              ? lighten(session, volume)
-              : session,
-      })),
+      sessions,
+      targets: weeklyTargets(sessions),
     };
   });
-  return { anchor, endDate, blocks, weeks, brief: exampleBrief() };
+  const brief: Brief = {
+    ...emptyBrief(),
+    goal: definition.goal,
+    sports: definition.sports,
+    weekdays: Array.from({ length: 7 }, (_, day) =>
+      definition.restDays.includes(day) ? 'unavailable' : 'available',
+    ),
+    context:
+      'Synthetic example for exploring the application. Adjust training and loads to your experience. Existing fitness is preserved; missing endurance calibration is labelled as an example estimate. Bricks count toward both bike and run frequency. Conditioning complements the three lifting days in the gym plan.',
+  };
+  return {
+    kind,
+    name: definition.name,
+    description: definition.description,
+    anchor,
+    endDate: shiftDay(anchor, 83),
+    blocks,
+    weeks,
+    brief,
+  };
 }
+export type ExampleBlueprint = ReturnType<typeof buildExample>;
 
-/**
- * Publication identity. The fingerprint changes whenever the blueprint's content does, so a
- * deploy with edited example data publishes a new edition and archives the untouched old one.
- * Bump the prefix for changes outside the blueprint, such as the writer or publication steps.
- */
-export const BLUEPRINT_REVISION = `multisport-showcase-v3-${createHash('sha256')
-  .update(JSON.stringify(buildExample('2000-01-03')))
-  .digest('hex')
-  .slice(0, 12)}`;
-
-/** Exhaustive storage vocabulary: additions require a deliberate fixture decision. */
-export const exampleCoverage = {
-  completionTypes: [
-    'duration',
-    'distance',
-    'repetitions',
-    'energy',
-    'until_lap',
-    'until_condition',
-    'open',
-  ],
-  targetTypes: [
-    'zone',
-    'pace',
-    'speed',
-    'heart_rate',
-    'power',
-    'cadence',
-    'rpe',
-    'load',
-    'percentage_1rm',
-    'rir',
-    'tempo',
-    'instruction',
-  ],
-  stepRoles: ['warmup', 'work', 'recovery', 'cooldown', 'transition', 'main', 'other'],
-  racePriorities: ['A', 'B', 'C'],
-  weekMetrics: [
-    'distance',
-    'duration',
-    'hard_session_count',
-    'strength_session_count',
-    'training_load',
-  ],
-} as const;
+/** Independent identities let unchanged examples survive edits to another blueprint. */
+export const BLUEPRINT_REVISIONS = Object.fromEntries(
+  EXAMPLE_KINDS.map((kind) => [
+    kind,
+    `${kind}-example-v1-${createHash('sha256')
+      .update(JSON.stringify(buildExample(kind, '2000-01-03')))
+      .digest('hex')
+      .slice(0, 12)}`,
+  ]),
+) as Record<ExampleKind, string>;

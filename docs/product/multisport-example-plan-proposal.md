@@ -1,12 +1,12 @@
-# Complete multisport example: accepted implementation plan
+# Example training plans: implementation
 
-The owner approved the complete multisport showcase. Its hosted owner is selected
+The owner requested three separate three-month examples: cycling with supporting strength, triathlon, and strength/HIIT. These replace the original eight-week multisport showcase. Its hosted owner is selected
 through API service environment variables; account emails and deployment IDs are
 not embedded in the application. Local accounts start empty, with manual example
 seeding available for verification.
 
-The implementation uses a committed eight-week blueprint, 64 sessions, full
-prescription/storage coverage and two real published revisions. Account lookup
+The implementation uses three committed twelve-week blueprints, 211 sessions, full
+prescriptions and two real published revisions. Account lookup
 requires an exact verified email in the configured Clerk instance and preserves
 normal athlete ownership. Existing fitness is retained; missing systems receive
 clearly labelled estimates, and withdrawn fitness is respected.
@@ -20,7 +20,7 @@ The existing Railway API has no custom startup override. The image's startup
 wrapper ensures the example after the existing Atlas pre-deploy migrations, only
 when explicitly enabled for a configured owner. This also makes restarts safe.
 
-The revised design was independently reviewed against `deec265` using the
+The original publication infrastructure was independently reviewed against `deec265` using the
 review-proposal skill. The review accepted account targeting, transaction-capable
 lifecycle helpers, plan-before-athlete lock ordering and checks for missing fitness
 under the athlete lock. It did not approve merge or deployment.

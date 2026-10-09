@@ -36,7 +36,7 @@ When populated screens are needed, seed manually after setup:
 pnpm example:seed --email askesis-verification+clerk_test@example.com
 ```
 
-See [the complete multisport example](./example-plan.md) for its eight-week content,
+See [the example training plans](./example-plan.md) for their twelve-week content,
 relative dates, calibration estimates and rerun/preservation rules.
 
 `dev:local` starts the API and Vite together. Ctrl+C stops both process groups. The Vite URL printed on startup is the browser address; `LOCAL_WEB_URL` in `.env` records the same origin. Simulated chat is enabled for newly generated verification environments. This can validate conversation, streaming and failure UI; real coaching/plan edits still require the separately configured worker/provider.
@@ -86,7 +86,7 @@ pnpm --silent dev:login
 The final JSON contains `url`, `agentTaskId` and `webOrigin`. Open `url` in the browser being used for verification. Clerk establishes a real session and redirects to `/plan`; its maximum duration is 30 minutes. Generate another link when needed. Confirm the active account is `askesis-verification+clerk_test@example.com` before making changes; a shared browser can have an existing development session. If another account remains active, sign out in Settings and open a fresh login link. Treat the login URL as a credential: do not include it, handshake query strings or session tokens in screenshots, recordings, issue text or commits. Start recordings after the redirect settles on the clean local app URL.
 
 The manually seeded example starts on the previous Monday in the athlete's timezone
-and runs for eight complete weeks, including the current week. Historical Cardiff,
+and runs for twelve complete weeks, including the current week. Historical Cardiff,
 triathlon and Hyrox test fixtures, when explicitly loaded, remain dated 11–24 May 2026. Navigate to the dates of the plan actually selected.
 
 For agents in T3 Code:

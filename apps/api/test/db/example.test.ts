@@ -4,7 +4,7 @@ import { afterAll, expect, it, vi } from 'vitest';
 import { closeDatabase, getDatabase } from '../../src/database/client.js';
 import { ensureExample } from '../../src/examples/seed.js';
 import * as writer from '../../src/examples/writer.js';
-import { exampleCoverage } from '../../src/examples/blueprint.js';
+import { BLUEPRINT_REVISIONS, buildExample, EXAMPLE_KINDS } from '../../src/examples/blueprint.js';
 import {
   getPlan,
   renamePlan,
@@ -48,110 +48,92 @@ it('publishes all content through the real lifecycle, preserving fitness and own
   expect((await getPerformance(owner, now)).entries.find((e) => e.system === 'run_pace')).toEqual(
     before.entries[0],
   );
-  const plan = await getPlan(owner, result.planId!);
-  expect(plan.active).toBe(true);
-  expect(plan.draft).toBeNull();
-  expect(plan.locked?.versionNumber).toBe(2);
-  const versions = await db
-    .selectFrom('plan_versions')
-    .selectAll()
-    .where('plan_id', '=', plan.id)
-    .orderBy('version_number')
-    .execute();
-  expect(versions).toHaveLength(2);
-  for (const version of versions) {
-    expect(version.content_hash).toBe(contentHash((await readAggregate(db, version.id)).semantic));
-    expect(version.validation_findings).toEqual([]);
-    expect(version.calibration_basis).toHaveLength(3);
+  expect(result.plans.map((p) => p.kind)).toEqual([...EXAMPLE_KINDS]);
+  for (const seeded of result.plans) {
+    const blueprint = buildExample(seeded.kind, result.anchor);
+    const plan = await getPlan(owner, seeded.planId);
+    expect(plan.displayName).toBe(blueprint.name);
+    expect(plan.active).toBe(true);
+    expect(plan.draft).toBeNull();
+    expect(plan.locked?.versionNumber).toBe(2);
+    const versions = await db
+      .selectFrom('plan_versions')
+      .selectAll()
+      .where('plan_id', '=', plan.id)
+      .orderBy('version_number')
+      .execute();
+    expect(versions).toHaveLength(2);
+    for (const version of versions) {
+      expect(version.content_hash).toBe(
+        contentHash((await readAggregate(db, version.id)).semantic),
+      );
+      expect(version.validation_findings).toEqual([]);
+    }
+    const versionId = plan.locked!.id;
+    expect(
+      await db
+        .selectFrom('plan_brief_sports')
+        .select('sport')
+        .where('plan_version_id', '=', versionId)
+        .orderBy('sport')
+        .execute(),
+    ).toEqual(
+      blueprint.brief.sports
+        .map((s) => ({ sport: s.sport }))
+        .sort((a, b) => a.sport.localeCompare(b.sport)),
+    );
+    expect(
+      await db
+        .selectFrom('training_blocks')
+        .select('phase')
+        .where('plan_version_id', '=', versionId)
+        .orderBy('start_date')
+        .execute(),
+    ).toEqual(blueprint.blocks.map((b) => ({ phase: b.phase })));
+    expect(
+      await db
+        .selectFrom('training_weeks')
+        .select('week_number')
+        .where('plan_version_id', '=', versionId)
+        .where('cutback', '=', true)
+        .orderBy('week_number')
+        .execute(),
+    ).toEqual([{ week_number: 4 }, { week_number: 8 }]);
+    expect(
+      await db
+        .selectFrom('training_weeks')
+        .select('id')
+        .where('plan_version_id', '=', versionId)
+        .execute(),
+    ).toHaveLength(12);
+    expect(
+      await db
+        .selectFrom('plan_schedule_coverage')
+        .selectAll()
+        .where('plan_version_id', '=', versionId)
+        .execute(),
+    ).toEqual([expect.objectContaining({ start_date: '2026-09-28', end_date: '2026-12-20' })]);
+    const workouts = await listWorkouts(owner, versionId);
+    expect(workouts).toHaveLength(blueprint.weeks.reduce((sum, w) => sum + w.sessions.length, 0));
+    const weekSeconds = (week: number) =>
+      workouts
+        .filter((w) => w.weekNumber === week)
+        .reduce((sum, w) => sum + (w.estimatedDurationSeconds ?? 0), 0);
+    expect(weekSeconds(4)).toBeLessThan(weekSeconds(3) * 0.8);
+    expect(await listWorkouts(await athlete(), versionId)).toEqual([]);
+    for (const workout of workouts) {
+      const detail = await getWorkoutDetail(owner, workout.id);
+      expect(detail?.tags.length).toBeGreaterThan(0);
+      expect(detail?.prescription.steps.length).toBeGreaterThan(0);
+    }
+    await expect(
+      db
+        .updateTable('workouts')
+        .set({ title: 'Illegal immutable edit' })
+        .where('id', '=', workouts[0]!.id)
+        .execute(),
+    ).rejects.toMatchObject({ code: '23514' });
   }
-  const versionId = plan.locked!.id;
-  expect(
-    await db
-      .selectFrom('plan_brief_sports')
-      .select('sport')
-      .where('plan_version_id', '=', versionId)
-      .execute(),
-  ).toHaveLength(4);
-  expect(
-    await db
-      .selectFrom('training_blocks')
-      .select('phase')
-      .where('plan_version_id', '=', versionId)
-      .orderBy('start_date')
-      .execute(),
-  ).toEqual(['base', 'build', 'recovery', 'build', 'peak', 'taper'].map((phase) => ({ phase })));
-  expect(
-    await db
-      .selectFrom('training_weeks')
-      .select('week_number')
-      .where('plan_version_id', '=', versionId)
-      .where('cutback', '=', true)
-      .execute(),
-  ).toEqual([{ week_number: 3 }]);
-  expect(
-    await db
-      .selectFrom('training_weeks')
-      .select('id')
-      .where('plan_version_id', '=', versionId)
-      .execute(),
-  ).toHaveLength(8);
-  const coverage = await db
-    .selectFrom('plan_schedule_coverage')
-    .selectAll()
-    .where('plan_version_id', '=', versionId)
-    .execute();
-  expect(coverage).toEqual([
-    expect.objectContaining({ start_date: '2026-09-28', end_date: '2026-11-22' }),
-  ]);
-  const completions = await db
-    .selectFrom('step_completions')
-    .select('completion_type')
-    .distinct()
-    .where('plan_version_id', '=', versionId)
-    .execute();
-  expect(completions.map((c) => c.completion_type).sort()).toEqual(
-    [...exampleCoverage.completionTypes].sort(),
-  );
-  const targets = await db
-    .selectFrom('step_targets')
-    .select('target_type')
-    .distinct()
-    .where('plan_version_id', '=', versionId)
-    .execute();
-  expect(targets.map((t) => t.target_type).sort()).toEqual([...exampleCoverage.targetTypes].sort());
-  const metrics = await db
-    .selectFrom('week_targets')
-    .select('metric')
-    .distinct()
-    .where('plan_version_id', '=', versionId)
-    .execute();
-  expect(metrics.map((t) => t.metric).sort()).toEqual([...exampleCoverage.weekMetrics].sort());
-  const workouts = await listWorkouts(owner, versionId);
-  expect(workouts).toHaveLength(64);
-  expect(workouts.filter((w) => w.racePriority).map((w) => [w.title, w.racePriority])).toEqual([
-    ['Sprint duathlon tune-up', 'B'],
-    ['5K club race', 'C'],
-    ['Hyrox event', 'A'],
-  ]);
-  // The cutback week's published sessions are lighter than the week before it.
-  const weekSeconds = (week: number) =>
-    workouts
-      .filter((w) => w.weekNumber === week)
-      .reduce((sum, w) => sum + (w.estimatedDurationSeconds ?? 0), 0);
-  expect(weekSeconds(3)).toBeLessThan(weekSeconds(2) * 0.8);
-  expect(await listWorkouts(await athlete(), versionId)).toEqual([]);
-  for (const workout of workouts) {
-    const detail = await getWorkoutDetail(owner, workout.id);
-    expect(detail?.tags.length).toBeGreaterThan(0);
-    expect(detail?.prescription.steps.length).toBeGreaterThan(0);
-  }
-  await expect(
-    db
-      .updateTable('workouts')
-      .set({ title: 'Illegal immutable edit' })
-      .where('id', '=', workouts[0]!.id)
-      .execute(),
-  ).rejects.toMatchObject({ code: '23514' });
 }, 60000);
 
 it('serializes simultaneous first seeds and reruns without duplicating plans or estimates', async () => {
@@ -225,8 +207,10 @@ it('does not archive an unlocked example or one with an active coaching turn', a
 it('rolls back failed replacement and retries while the previous edition stays intact', async () => {
   const owner = await athlete();
   const initial = await ensureExample(owner, now);
+  const originalWrite = writer.writeExample;
   const write = vi
     .spyOn(writer, 'writeExample')
+    .mockImplementationOnce(originalWrite)
     .mockRejectedValueOnce(new Error('Interrupted writer'));
   try {
     await expect(ensureExample(owner, nextWeek)).rejects.toThrow('Interrupted writer');
@@ -236,21 +220,23 @@ it('rolls back failed replacement and retries while the previous edition stays i
   expect((await getPlan(owner, initial.planId!)).active).toBe(true);
   expect(
     await db.selectFrom('plans').select('id').where('owner_id', '=', owner).execute(),
-  ).toHaveLength(1);
+  ).toHaveLength(3);
   expect(
     await db
       .selectFrom('example_plan_editions')
       .select('plan_id')
       .where('owner_id', '=', owner)
       .execute(),
-  ).toHaveLength(1);
+  ).toHaveLength(3);
   expect((await ensureExample(owner, nextWeek)).status).toBe('created');
 }, 60000);
 
 it('rolls back new estimates on first-publication failure and respects withdrawn fitness', async () => {
   const owner = await athlete();
+  const originalWrite = writer.writeExample;
   const write = vi
     .spyOn(writer, 'writeExample')
+    .mockImplementationOnce(originalWrite)
     .mockRejectedValueOnce(new Error('Interrupted writer'));
   try {
     await expect(ensureExample(owner, now)).rejects.toThrow('Interrupted writer');
@@ -297,4 +283,54 @@ it('checks missing fitness under the athlete lock, preserving a simultaneous rea
   expect(
     (await getPerformance(owner, now)).entries.find((e) => e.system === 'cycle_power')?.input,
   ).toEqual({ method: 'ftp', watts: 310 });
+}, 60000);
+
+it('replaces the former managed showcase without duplicating other current blueprints', async () => {
+  const owner = await athlete();
+  const initial = await ensureExample(owner, now);
+  // An untouched published plan with the former revision models the deployed registry.
+  await db
+    .updateTable('example_plan_editions')
+    .set({ blueprint_revision: 'multisport-showcase-v3-legacy' })
+    .where('owner_id', '=', owner)
+    .where('blueprint_revision', '=', BLUEPRINT_REVISIONS.cycling)
+    .execute();
+  const next = await ensureExample(owner, now);
+  expect(next.plans.map((p) => p.status)).toEqual(['created', 'unchanged', 'unchanged']);
+  expect(next.plans.slice(1).map((p) => p.planId)).toEqual(
+    initial.plans.slice(1).map((p) => p.planId),
+  );
+  expect((await getPlan(owner, initial.planId!)).archived).toBe(true);
+  expect(
+    await db
+      .selectFrom('plans')
+      .select('id')
+      .where('owner_id', '=', owner)
+      .where('archived_at', 'is', null)
+      .execute(),
+  ).toHaveLength(3);
+  expect((await ensureExample(owner, now)).status).toBe('unchanged');
+}, 60000);
+
+it('can update the gym blueprint without restoring withdrawn endurance fitness', async () => {
+  const owner = await athlete();
+  const initial = await ensureExample(owner, now);
+  const swim = (await getPerformance(owner, now)).entries.find((e) => e.system === 'swim_pace')!;
+  await retractCalibration(owner, swim.id);
+  await db
+    .updateTable('example_plan_editions')
+    .set({ blueprint_revision: 'strength-hiit-example-v0' })
+    .where('owner_id', '=', owner)
+    .where('blueprint_revision', '=', BLUEPRINT_REVISIONS['strength-hiit'])
+    .execute();
+  const result = await ensureExample(owner, now);
+  expect(result.status).toBe('created');
+  expect(result.plans.map((p) => p.status)).toEqual(['unchanged', 'unchanged', 'created']);
+  expect(result.addedCalibrations).toEqual([]);
+  expect(result.plans.slice(0, 2).map((p) => p.planId)).toEqual(
+    initial.plans.slice(0, 2).map((p) => p.planId),
+  );
+  expect(
+    (await getPerformance(owner, now)).entries.find((e) => e.id === swim.id)?.retractedAt,
+  ).not.toBeNull();
 }, 60000);
