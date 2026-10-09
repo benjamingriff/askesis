@@ -6,7 +6,7 @@ import { IntensityChart } from '../components/IntensityChart';
 import { useOpenPlanChat, PlanChatError } from '../components/PlanLifecycle';
 import { planProgress } from '../components/PlanView';
 import { PlanZones, Stat, zonesTitle } from '../components/PlanWidgets';
-import { WorkoutDialog, workoutStats } from '../components/Workout';
+import { DayRow, WorkoutDialog, workoutStats } from '../components/Workout';
 import {
   Button,
   ButtonLink,
@@ -121,6 +121,7 @@ function TodayForPlan({ plan, today }: { plan: Plan; today: string }) {
     1,
   );
   const selectedWorkouts = workoutsOn(all, selected);
+  const upcoming = days.filter((date) => date > selected && workoutsOn(all, date).length);
   const end = version?.endDate;
   const progress = planProgress(version?.startDate ?? null, end ?? null, today);
   const daysToEnd = end ? daysBetween(today, end) : null;
@@ -238,6 +239,26 @@ function TodayForPlan({ plan, today }: { plan: Plan; today: string }) {
               onOpen={dialog.open}
             />
           ))}
+
+          {upcoming.length ? (
+            <section className="today-upcoming" aria-labelledby="upcoming-heading">
+              <span className="label" id="upcoming-heading">
+                Coming up this week
+              </span>
+              <ol className="day-list">
+                {upcoming.map((date) => (
+                  <DayRow
+                    key={date}
+                    date={date}
+                    today={today}
+                    workouts={workoutsOn(all, date)}
+                    units={units}
+                    onOpen={dialog.open}
+                  />
+                ))}
+              </ol>
+            </section>
+          ) : null}
 
           {plan.draft ? (
             <button

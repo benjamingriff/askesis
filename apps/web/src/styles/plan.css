@@ -6,13 +6,14 @@
   display: flex;
   gap: 8px;
   align-items: flex-start;
-  color: var(--accent-text);
+  color: var(--text);
   font-size: 14px;
-  font-weight: 700;
+  font-weight: 600;
 }
 .plan-goal svg {
   flex: none;
   margin-top: 3px;
+  color: var(--accent-text);
 }
 .plan-header h1 {
   margin-top: 2px;
@@ -21,29 +22,30 @@
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: 8px;
-  margin-top: 8px;
-  font-size: 13px;
+  gap: 6px;
+  margin-top: 6px;
+  font-size: 12.5px;
 }
 .plan-header-actions {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: 10px;
+  gap: 6px;
   justify-content: flex-end;
 }
 .plan-toolbar {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
 }
 .plan-switcher select {
-  min-height: 42px;
+  min-height: var(--control-h);
   width: auto;
-  max-width: 240px;
+  max-width: 260px;
+  padding-block: 4px;
   border-radius: var(--radius-sm);
-  font-weight: 600;
-  font-size: 14px;
+  font-weight: 550;
+  font-size: 13px;
 }
 .source-toggle {
   margin-top: -4px;
@@ -51,31 +53,45 @@
 
 .plan-layout {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 340px;
-  gap: 20px;
+  grid-template-columns: minmax(0, 1fr) 292px;
+  gap: 16px;
   align-items: start;
 }
 .plan-main,
 .plan-side {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 12px;
   min-width: 0;
 }
 .plan-side {
   position: sticky;
-  top: 24px;
+  top: 16px;
 }
 .plan-hero {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(220px, 0.42fr);
+  gap: 12px 24px;
+  align-items: start;
+}
+.plan-hero > * {
+  grid-column: 1;
+}
+.plan-hero > .plan-progress,
+.plan-hero > .coverage-note {
+  grid-column: 2;
+}
+.plan-hero > .plan-progress {
+  grid-row: 1;
+}
+.plan-hero > .coverage-note {
+  grid-row: 2 / span 2;
 }
 .plan-progress {
   display: flex;
   align-items: center;
-  gap: 12px;
-  font-size: 13px;
+  gap: 10px;
+  font-size: 12.5px;
 }
 .plan-progress strong {
   white-space: nowrap;
@@ -106,8 +122,8 @@
   min-width: 0;
 }
 .block-bar {
-  height: 8px;
-  border-radius: 4px;
+  height: 6px;
+  border-radius: 3px;
   background: color-mix(in srgb, var(--phase) 36%, var(--surface-raised));
 }
 .block-segment.current .block-bar {
@@ -123,11 +139,9 @@
 .block-label {
   overflow: hidden;
   color: var(--text-muted);
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
+  font-size: 11px;
+  font-weight: 550;
   text-overflow: ellipsis;
-  text-transform: uppercase;
   white-space: nowrap;
 }
 .block-segment.current .block-label {
@@ -168,14 +182,11 @@
   flex-wrap: wrap;
   align-items: baseline;
   gap: 4px 8px;
-  font-size: 13px;
+  font-size: 12.5px;
 }
 .block-now-label {
   color: var(--text-muted);
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  font-size: 12px;
 }
 .block-now strong {
   color: color-mix(in srgb, var(--phase) 78%, var(--text));
@@ -190,8 +201,9 @@
   border-color: color-mix(in srgb, var(--phase) 30%, transparent);
 }
 .plan-description {
+  max-width: 72ch;
   color: var(--text-dim);
-  font-size: 14px;
+  font-size: 13px;
 }
 .draft-banner strong {
   color: var(--text);
@@ -199,8 +211,8 @@
 }
 .brief-summary {
   display: grid;
-  gap: 8px;
-  font-size: 14px;
+  gap: 6px;
+  font-size: 13px;
 }
 .brief-summary p {
   display: flex;
@@ -225,13 +237,13 @@
 .history-card summary::after {
   content: '+';
   color: var(--text-muted);
-  font-size: 20px;
+  font-size: 16px;
 }
 .history-card[open] summary::after {
   content: '−';
 }
 .history-card summary h2 {
-  font-size: 16px;
+  font-size: 13.5px;
 }
 .history-card[open] summary {
   margin-bottom: 12px;
@@ -241,15 +253,16 @@
 .coverage-note {
   display: flex;
   align-items: flex-start;
-  gap: 10px;
-  padding: 12px;
-  border-radius: 16px;
-  border: 1px solid var(--border);
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: var(--radius-sm);
   background: var(--surface-raised);
-  font-size: 13px;
+  font-size: 12.5px;
 }
 .coverage-note > svg {
   flex: none;
+  width: 15px;
+  height: 15px;
   margin-top: 1px;
   color: var(--text-dim);
 }
@@ -272,7 +285,7 @@
 .schedule {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 10px;
 }
 .schedule-header,
 .week-heading,
@@ -287,24 +300,24 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 20px;
-  font-weight: 700;
+  font-size: 16px;
+  font-weight: 650;
 }
 .week-heading .muted {
-  font-size: 13px;
+  font-size: 12.5px;
 }
 .week-nav {
   display: flex;
-  gap: 6px;
+  gap: 4px;
 }
 .week-chart-card {
-  padding: 16px 14px 10px;
+  padding: 12px 12px 8px;
 }
 .week-chart {
   display: flex;
   align-items: flex-end;
-  gap: 5px;
-  height: 104px;
+  gap: 4px;
+  height: 76px;
 }
 .week-bar {
   flex: 1;
@@ -327,7 +340,7 @@
 .bar-fill {
   position: relative;
   width: 100%;
-  border-radius: 8px;
+  border-radius: 4px;
   background-color: color-mix(in srgb, var(--accent) 38%, var(--surface-raised));
   transition:
     height 0.5s cubic-bezier(0.22, 1, 0.36, 1),
@@ -418,10 +431,16 @@
 .week-bar.active .bar-label {
   color: var(--accent-text);
 }
+/* Week totals sit inline with the week heading rather than in their own card. */
 .week-stats {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 8px;
+  display: flex;
+  gap: 28px;
+  padding: 0 2px;
+  border: 0;
+  background: none;
+}
+.week-stats .stat-value strong {
+  font-size: 17px;
 }
 .stat {
   display: flex;
@@ -435,19 +454,19 @@
   margin-top: 3px;
 }
 .stat-value strong {
-  font-size: 20px;
-  font-weight: 800;
+  font-size: 18px;
+  font-weight: 700;
   letter-spacing: -0.02em;
   font-variant-numeric: tabular-nums;
 }
 .stat-large .stat-value strong {
-  font-size: 24px;
+  font-size: 21px;
 }
 .stat-value small,
 .stat-sub {
   color: var(--text-dim);
-  font-size: 12px;
-  font-weight: 600;
+  font-size: 11.5px;
+  font-weight: 500;
 }
 
 .day-list {
@@ -456,36 +475,34 @@
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 6px;
 }
 .day-row {
   display: flex;
-  gap: 12px;
+  gap: 10px;
 }
 .day-gutter {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 4px;
-  width: 40px;
+  gap: 2px;
+  width: 36px;
   flex: none;
-  padding-top: 10px;
+  padding-top: 8px;
 }
 .day-gutter span {
   color: var(--text-muted);
-  font-size: 11px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
+  font-size: 11.5px;
+  font-weight: 500;
 }
 .day-gutter strong {
   display: grid;
   place-items: center;
-  min-width: 32px;
-  height: 32px;
-  border-radius: 16px;
-  font-size: 16px;
-  font-weight: 800;
+  min-width: 26px;
+  height: 26px;
+  border-radius: 13px;
+  font-size: 14px;
+  font-weight: 700;
   font-variant-numeric: tabular-nums;
 }
 .day-row.today .day-gutter span {
@@ -508,14 +525,14 @@
 .rest-card {
   display: flex;
   align-items: center;
-  gap: 10px;
-  min-height: 52px;
-  padding: 14px;
-  border-radius: 20px;
+  gap: 8px;
+  min-height: 44px;
+  padding: 10px 12px;
+  border-radius: var(--radius-md);
   border: 1px dashed var(--border);
   color: var(--text-muted);
-  font-size: 13px;
-  font-weight: 600;
+  font-size: 12.5px;
+  font-weight: 500;
 }
 .rest-card.unplanned {
   border-style: dashed;
@@ -526,10 +543,10 @@
 .workout-card {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
   width: 100%;
-  padding: 14px;
-  border-radius: 20px;
+  padding: 10px 12px;
+  border-radius: var(--radius-md);
   border: 1px solid var(--border);
   background: var(--surface);
   color: var(--text);
@@ -559,16 +576,14 @@
 .workout-card-kind {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   color: var(--kind);
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  font-size: 11.5px;
+  font-weight: 600;
 }
 .workout-card-kind em {
-  padding: 1px 7px;
-  border-radius: 10px;
+  padding: 0 6px;
+  border-radius: 5px;
   background: var(--accent-soft);
   color: var(--accent-text);
   font-style: normal;
@@ -579,7 +594,7 @@
   color: var(--on-accent);
 }
 .workout-card-copy strong {
-  font-size: 16px;
+  font-size: 13.5px;
   font-weight: 600;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -587,7 +602,7 @@
 }
 .workout-card-copy small {
   color: var(--text-dim);
-  font-size: 13px;
+  font-size: 12px;
   font-variant-numeric: tabular-nums;
 }
 .chevron {
@@ -602,8 +617,8 @@
   gap: 12px;
 }
 .calendar-header h3 {
-  font-size: 20px;
-  font-weight: 700;
+  font-size: 15px;
+  font-weight: 650;
 }
 .calendar-grid {
   display: grid;
@@ -613,24 +628,22 @@
 .calendar-weekday {
   text-align: center;
   color: var(--text-muted);
-  font-size: 10px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  padding-bottom: 6px;
+  font-size: 11.5px;
+  font-weight: 500;
+  padding-bottom: 4px;
 }
 .calendar-day {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 4px;
-  height: 52px;
+  gap: 3px;
+  height: 44px;
   border: 0;
-  border-radius: 14px;
+  border-radius: var(--radius-sm);
   background: transparent;
-  font-size: 15px;
-  font-weight: 700;
+  font-size: 13px;
+  font-weight: 600;
   font-variant-numeric: tabular-nums;
 }
 .calendar-day:hover {
@@ -702,28 +715,26 @@
   align-items: center;
   gap: 6px;
   color: var(--kind);
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  font-size: 12px;
+  font-weight: 600;
 }
 .workout-dialog {
   background:
-    linear-gradient(170deg, color-mix(in srgb, var(--kind) 24%, transparent), transparent 280px),
+    linear-gradient(170deg, color-mix(in srgb, var(--kind) 14%, transparent), transparent 220px),
     var(--bg);
 }
 .workout-detail {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 12px;
 }
 .workout-stats {
   display: flex;
   flex-wrap: wrap;
-  gap: 28px;
+  gap: 24px;
 }
 .workout-purpose {
-  font-size: 15px;
+  font-size: 14px;
 }
 .effort-profile {
   display: flex;
@@ -739,7 +750,7 @@
 .intensity-chart span {
   flex-basis: 0;
   min-width: 3px;
-  border-radius: 4px 4px 2px 2px;
+  border-radius: 2px 2px 1px 1px;
   transition: height 0.5s ease;
 }
 .intensity-chart.dimmed {
@@ -751,12 +762,12 @@
   gap: 6px;
 }
 .tag-list span {
-  padding: 4px 10px;
-  border-radius: 12px;
+  padding: 2px 8px;
+  border-radius: 5px;
   background: var(--surface-raised);
   color: var(--text-dim);
-  font-size: 12px;
-  font-weight: 600;
+  font-size: 11.5px;
+  font-weight: 500;
   text-transform: capitalize;
 }
 .steps-heading {
@@ -769,15 +780,15 @@
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
 }
 .step {
   --zone: var(--text-muted);
   display: flex;
   align-items: flex-start;
-  gap: 12px;
-  padding: 12px 14px;
-  border-radius: 16px;
+  gap: 10px;
+  padding: 8px 12px;
+  border-radius: var(--radius-sm);
   background: var(--surface);
   border: 1px solid var(--border);
 }
@@ -800,7 +811,7 @@
 }
 .step-copy p {
   color: var(--text-dim);
-  font-size: 14px;
+  font-size: 13px;
 }
 .step-completion {
   flex: none;
@@ -813,85 +824,121 @@
   margin-top: 4px;
 }
 .target {
-  padding: 3px 9px;
-  border-radius: 10px;
+  padding: 1px 7px;
+  border-radius: 5px;
   background: color-mix(in srgb, var(--zone) 14%, transparent);
   color: var(--text);
-  font-size: 12px;
-  font-weight: 600;
+  font-size: 11.5px;
+  font-weight: 550;
 }
 .step-repeat {
-  padding: 12px;
-  border-radius: 18px;
+  padding: 8px;
+  border-radius: var(--radius-md);
   border: 1px dashed var(--border);
 }
 .repeat-heading {
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin-bottom: 10px;
+  gap: 6px;
+  margin: 0 4px 6px;
   color: var(--text-dim);
-  font-size: 13px;
+  font-size: 12.5px;
 }
 .repeat-heading strong {
   color: var(--accent-text);
-  font-size: 15px;
+  font-size: 13px;
 }
 
 /* Pace guides */
 .pace-guides {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-  gap: 10px;
-}
-.pace-guides.compact {
-  grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(128px, 1fr));
   gap: 8px;
 }
 .pace-card {
   display: flex;
   flex-direction: column;
   gap: 2px;
-  padding: 14px;
-  border-radius: 20px;
+  padding: 10px 12px;
+  border-radius: var(--radius-md);
   border: 1px solid var(--border);
   background: var(--surface);
 }
-.pace-guides.compact .pace-card {
-  padding: 12px;
-  border-radius: 16px;
-  background: var(--surface-raised);
-  border-color: transparent;
-}
 .zone-swatch {
-  width: 28px;
-  height: 4px;
+  width: 22px;
+  height: 3px;
   border-radius: 2px;
   background: var(--zone);
-  margin-bottom: 10px;
+  margin-bottom: 8px;
 }
 .pace-card strong {
-  font-size: 20px;
-  font-weight: 800;
+  font-size: 18px;
+  font-weight: 700;
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.02em;
 }
 .pace-card small {
   color: var(--text-dim);
-  font-size: 12px;
+  font-size: 11.5px;
   font-variant-numeric: tabular-nums;
 }
 .pace-card p {
-  margin-top: 6px;
+  margin-top: 4px;
+  color: var(--text-dim);
+  font-size: 12px;
+}
+/* Compact zones read as a list: swatch, name, target, range. No cards inside cards. */
+.pace-guides.compact {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+.pace-guides.compact .pace-card {
+  display: grid;
+  grid-template-columns: 8px minmax(0, 1fr) auto 74px;
+  grid-template-areas: 'swatch name target range';
+  align-items: baseline;
+  column-gap: 10px;
+  padding: 5px 0;
+  border: 0;
+  border-bottom: 1px solid var(--border);
+  border-radius: 0;
+  background: none;
+}
+.pace-guides.compact .pace-card:last-child {
+  border-bottom: 0;
+}
+.pace-guides.compact .zone-swatch {
+  grid-area: swatch;
+  align-self: center;
+  width: 8px;
+  height: 8px;
+  margin: 0;
+  border-radius: 50%;
+}
+.pace-guides.compact .label {
+  grid-area: name;
   color: var(--text-dim);
   font-size: 12.5px;
+}
+.pace-guides.compact strong {
+  grid-area: target;
+  justify-self: end;
+  font-size: 13.5px;
+  font-weight: 650;
+}
+.pace-guides.compact small {
+  grid-area: range;
+  justify-self: end;
+  font-size: 11px;
+  color: var(--text-muted);
 }
 .calibration-source {
   display: flex;
   flex-direction: column;
   gap: 4px;
-  margin-top: 12px;
-  font-size: 13px;
+  margin-top: 10px;
+  font-size: 12.5px;
 }
 .calibration-heading {
   display: flex;
@@ -912,8 +959,8 @@
 .review-card {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  padding: 16px;
+  gap: 10px;
+  padding: 12px 14px;
   border-radius: var(--radius-lg);
   border: 1px solid var(--border);
   background: var(--surface);
@@ -921,10 +968,8 @@
 .review-card h3,
 .review-block h3 {
   color: var(--text-muted);
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  font-size: 12px;
+  font-weight: 550;
 }
 .review-block {
   display: flex;
@@ -1178,16 +1223,16 @@
   margin: 0;
   padding: 0;
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 14px;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 10px;
 }
 .plan-card {
   position: relative;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 4px;
   height: 100%;
-  padding: 18px 44px 18px 18px;
+  padding: 14px 40px 14px 16px;
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   background: var(--surface);
@@ -1203,20 +1248,21 @@
 }
 .plan-card-top {
   display: flex;
-  gap: 6px;
+  gap: 4px;
   flex-wrap: wrap;
-  margin-bottom: 6px;
+  margin-bottom: 4px;
 }
 .plan-card strong {
-  font-size: 18px;
-  letter-spacing: -0.02em;
+  font-size: 15px;
+  font-weight: 650;
+  letter-spacing: -0.015em;
 }
 .plan-card .muted {
-  font-size: 13px;
+  font-size: 12.5px;
 }
 .plan-card p {
   color: var(--text-dim);
-  font-size: 13px;
+  font-size: 12.5px;
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
@@ -1233,24 +1279,24 @@
 .today-chip {
   display: inline-flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   align-self: flex-start;
-  margin-top: -8px;
-  font-size: 13px;
+  margin-top: -6px;
+  font-size: 12.5px;
 }
 .week-strip {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
-  gap: 6px;
-  max-width: 640px;
+  gap: 4px;
+  max-width: 560px;
 }
 .strip-day {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 4px;
-  padding: 10px 0;
-  border-radius: 18px;
+  gap: 2px;
+  padding: 6px 0;
+  border-radius: var(--radius-md);
   border: 1px solid var(--border);
   background: var(--surface);
   transition: transform 0.12s ease;
@@ -1259,8 +1305,8 @@
   transform: scale(0.95);
 }
 .strip-day strong {
-  font-size: 16px;
-  font-weight: 800;
+  font-size: 14px;
+  font-weight: 700;
   font-variant-numeric: tabular-nums;
 }
 .strip-day i {
@@ -1286,24 +1332,24 @@
 }
 .today-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 360px;
-  gap: 20px;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  gap: 16px;
   align-items: start;
 }
 .today-main,
 .today-side {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 10px;
   min-width: 0;
 }
 .hero-workout {
   position: relative;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
   width: 100%;
-  padding: 22px;
+  padding: 18px 20px;
   border-radius: var(--radius-xl);
   border: 1px solid color-mix(in srgb, var(--kind) 35%, transparent);
   background:
@@ -1320,18 +1366,16 @@
 .hero-kind {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   color: var(--kind);
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  font-size: 12px;
+  font-weight: 600;
 }
 .hero-title {
-  font-size: 30px;
-  line-height: 1.2;
-  font-weight: 800;
-  letter-spacing: -0.03em;
+  font-size: 22px;
+  line-height: 1.25;
+  font-weight: 750;
+  letter-spacing: -0.022em;
 }
 .hero-purpose {
   color: var(--text-dim);
@@ -1339,38 +1383,49 @@
 .hero-stats {
   display: flex;
   flex-wrap: wrap;
-  gap: 28px;
-  margin: 10px 0 6px;
+  gap: 24px;
+  margin: 6px 0 4px;
 }
 .hero-cta {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  margin-top: 8px;
-  color: var(--accent-text);
-  font-size: 16px;
-  font-weight: 800;
-}
-.rest-hero {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
   gap: 6px;
-  padding: 28px;
-  text-align: center;
+  margin-top: 4px;
+  color: var(--accent-text);
+  font-size: 13px;
+  font-weight: 650;
+}
+/* Rest reads as one quiet line, not a hero-sized empty card. */
+.rest-hero {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  grid-template-rows: auto auto;
+  column-gap: 12px;
+  align-items: center;
+  padding: 14px 16px;
 }
 .rest-hero .empty-icon {
+  grid-row: 1 / span 2;
+  width: 34px;
+  height: 34px;
+  margin: 0;
   background: var(--surface-raised);
   color: var(--text-dim);
+}
+.rest-hero h2 {
+  font-size: 14px;
+}
+.rest-hero p {
+  font-size: 13px;
 }
 .draft-callout,
 .plan-update {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
   width: 100%;
-  padding: 14px;
-  border-radius: 20px;
+  padding: 10px 12px;
+  border-radius: var(--radius-md);
   border: 1px solid var(--accent-border);
   background: var(--accent-soft);
   color: var(--text);
@@ -1385,7 +1440,7 @@
 .draft-callout small,
 .plan-update small {
   color: var(--text-dim);
-  font-size: 13px;
+  font-size: 12.5px;
 }
 .draft-callout > svg,
 .plan-update > svg {
@@ -1395,8 +1450,8 @@
   display: grid;
   place-items: center;
   flex: none;
-  width: 38px;
-  height: 38px;
+  width: 30px;
+  height: 30px;
   border-radius: 50%;
   background: var(--accent-fill);
   color: var(--on-accent);
@@ -1409,9 +1464,9 @@
 .day-bars {
   display: flex;
   align-items: flex-end;
-  gap: 8px;
-  height: 72px;
-  margin-top: 18px;
+  gap: 6px;
+  height: 56px;
+  margin-top: 14px;
 }
 .day-bars > span {
   flex: 1;
@@ -1424,7 +1479,7 @@
 }
 .day-bars i {
   width: 100%;
-  border-radius: 6px;
+  border-radius: 3px;
   background: var(--kind);
 }
 .day-bars .past i {
@@ -1435,8 +1490,8 @@
 }
 .day-bars small {
   color: var(--text-muted);
-  font-size: 10px;
-  font-weight: 700;
+  font-size: 11px;
+  font-weight: 500;
 }
 
 @media (max-width: 1100px) {
@@ -1496,4 +1551,73 @@
   align-items: center;
   gap: 4px;
   color: var(--text-dim);
+}
+
+/* Desktop week board: the seven days side by side, so a whole week reads at a glance. */
+@media (min-width: 1180px) {
+  .plan-view:not(.embedded-plan) .day-list {
+    display: grid;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    gap: 6px;
+  }
+  .plan-view:not(.embedded-plan) .day-row {
+    flex-direction: column;
+    gap: 6px;
+    min-width: 0;
+  }
+  .plan-view:not(.embedded-plan) .day-gutter {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    width: auto;
+    padding: 0 4px 0 6px;
+  }
+  .plan-view:not(.embedded-plan) .day-gutter strong {
+    min-width: 24px;
+    height: 24px;
+    font-size: 13px;
+  }
+  .plan-view:not(.embedded-plan) .day-items {
+    flex: 1;
+  }
+  .plan-view:not(.embedded-plan) .workout-card {
+    flex: 1;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+    min-height: 118px;
+    padding: 10px;
+  }
+  .plan-view:not(.embedded-plan) .workout-card .chevron {
+    display: none;
+  }
+  .plan-view:not(.embedded-plan) .workout-card-copy {
+    gap: 2px;
+  }
+  .plan-view:not(.embedded-plan) .workout-card-kind {
+    flex-wrap: wrap;
+    row-gap: 2px;
+  }
+  .plan-view:not(.embedded-plan) .workout-card-copy strong {
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    font-size: 13px;
+    line-height: 1.3;
+    white-space: normal;
+  }
+  .plan-view:not(.embedded-plan) .rest-card {
+    flex: 1;
+    flex-direction: column;
+    justify-content: center;
+    min-height: 118px;
+    text-align: center;
+  }
+}
+
+.today-upcoming {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 6px;
 }

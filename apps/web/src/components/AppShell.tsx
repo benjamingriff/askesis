@@ -69,28 +69,28 @@ export function AppShell() {
             aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
             title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
           >
-            {collapsed ? <PanelLeftOpen size={18} /> : <PanelLeftClose size={18} />}
+            {collapsed ? <PanelLeftOpen size={16} /> : <PanelLeftClose size={16} />}
           </button>
         </div>
 
         <Link to="/chat/new" className="sidebar-new-chat" title="New chat">
-          <MessageSquarePlus size={17} aria-hidden="true" />
+          <MessageSquarePlus size={15} aria-hidden="true" />
           <span>New chat</span>
         </Link>
 
         <nav className="sidebar-nav" aria-label="Primary navigation">
           {TABS.slice(0, 3).map(({ to, label, icon: Icon }) => (
             <NavLink key={to} to={to} title={label}>
-              <Icon size={18} aria-hidden="true" />
+              <Icon size={16} aria-hidden="true" />
               <span>{label}</span>
             </NavLink>
           ))}
           <NavLink to="/plans" end={false} title="All plans">
-            <Library size={18} aria-hidden="true" />
+            <Library size={16} aria-hidden="true" />
             <span>All plans</span>
           </NavLink>
           <NavLink to="/performance" title="Performance">
-            <Gauge size={18} aria-hidden="true" />
+            <Gauge size={16} aria-hidden="true" />
             <span>Performance</span>
           </NavLink>
         </nav>

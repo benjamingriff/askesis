@@ -1,7 +1,7 @@
 .brief-layout {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 380px;
-  gap: 20px;
+  grid-template-columns: minmax(0, 1fr) 340px;
+  gap: 16px;
   align-items: start;
 }
 .brief-main,
@@ -25,8 +25,8 @@ form.card legend {
   width: 100%;
   padding: 0;
   margin-bottom: 4px;
-  font-size: 16px;
-  font-weight: 700;
+  font-size: 14px;
+  font-weight: 650;
 }
 .brief-form legend + * {
   clear: both;
@@ -116,8 +116,8 @@ form.card legend {
   gap: 8px;
 }
 .calibration-history details {
-  padding: 10px 12px;
-  border-radius: 14px;
+  padding: 8px 10px;
+  border-radius: var(--radius-sm);
   background: var(--surface-raised);
 }
 .calibration-history summary {
@@ -145,7 +145,7 @@ form.card legend {
 .performance-history {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 0;
   margin: 0;
   padding: 0;
   list-style: none;
@@ -153,10 +153,12 @@ form.card legend {
 .performance-history li {
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  padding: 10px 12px;
-  border-radius: 14px;
-  background: var(--surface-raised);
+  gap: 3px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+}
+.performance-history li:last-child {
+  border-bottom: 0;
 }
 .performance-history li.retracted {
   opacity: 0.6;
@@ -178,7 +180,8 @@ form.card legend {
 }
 .performance-history p {
   margin: 0;
-  font-size: 13px;
+  color: var(--text-dim);
+  font-size: 12.5px;
 }
 .performance-history .btn {
   align-self: flex-start;

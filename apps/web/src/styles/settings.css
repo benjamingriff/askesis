@@ -14,7 +14,7 @@
   min-width: 160px;
 }
 .profile-card strong {
-  font-size: 18px;
+  font-size: 15px;
 }
 .profile-card small {
   color: var(--text-dim);
@@ -22,13 +22,13 @@
 .large-avatar {
   display: grid;
   place-items: center;
-  width: 56px;
-  height: 56px;
+  width: 40px;
+  height: 40px;
   border-radius: 50%;
   object-fit: cover;
   background: var(--accent-fill);
   color: var(--on-accent);
-  font-size: 18px;
+  font-size: 14px;
   font-weight: 800;
 }
 .settings-group {
@@ -40,15 +40,15 @@
   padding-left: 4px;
 }
 .settings-group .card {
-  padding: 4px 18px;
+  padding: 2px 16px;
 }
 .settings-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
   flex-wrap: wrap;
-  gap: 12px 20px;
-  padding: 16px 0;
+  gap: 10px 20px;
+  padding: 11px 0;
   border-bottom: 1px solid var(--border);
 }
 .settings-row:last-child {
@@ -102,9 +102,9 @@
 .swatch-preview {
   position: relative;
   display: block;
-  width: 76px;
-  height: 56px;
-  border-radius: 14px;
+  width: 64px;
+  height: 44px;
+  border-radius: 9px;
   border: 1px solid var(--swatch-border);
   background: var(--swatch-bg);
   overflow: hidden;
@@ -252,6 +252,6 @@
   padding: 6px !important;
 }
 .settings-links .btn {
-  height: 46px;
-  border-radius: 14px;
+  height: 34px;
+  border-radius: var(--radius-sm);
 }

@@ -45,7 +45,7 @@ export function Button({
       {busy ? (
         <Loader2 className="spin" size={16} aria-hidden="true" />
       ) : Icon ? (
-        <Icon size={size === 'sm' ? 15 : 17} aria-hidden="true" />
+        <Icon size={size === 'sm' ? 14 : 15} aria-hidden="true" />
       ) : null}
       {children}
     </button>
@@ -62,7 +62,7 @@ export function ButtonLink({
 }: LinkProps & { variant?: ButtonVariant; size?: 'sm' | 'md' | 'lg'; icon?: LucideIcon }) {
   return (
     <Link className={cx('btn', `btn-${variant}`, `btn-${size}`, className)} {...rest}>
-      {Icon ? <Icon size={size === 'sm' ? 15 : 17} aria-hidden="true" /> : null}
+      {Icon ? <Icon size={size === 'sm' ? 14 : 15} aria-hidden="true" /> : null}
       {children}
     </Link>
   );
@@ -196,7 +196,7 @@ export function ProgressBar({
 export function KindIcon({
   icon: Icon,
   color,
-  size = 36,
+  size = 28,
 }: {
   icon: LucideIcon;
   color: string;

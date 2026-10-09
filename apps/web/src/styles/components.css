@@ -3,10 +3,10 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
+  gap: 7px;
   border: 1px solid transparent;
   border-radius: var(--radius-sm);
-  font-weight: 700;
+  font-weight: 600;
   white-space: nowrap;
   transition:
     transform 0.12s ease,
@@ -21,21 +21,21 @@
   opacity: 0.45;
 }
 .btn-sm {
-  height: 34px;
-  padding: 0 12px;
-  border-radius: 11px;
-  font-size: 13px;
+  height: 28px;
+  padding: 0 10px;
+  border-radius: 7px;
+  font-size: 12.5px;
 }
 .btn-md {
-  height: 42px;
-  padding: 0 16px;
-  font-size: 14px;
+  height: var(--control-h);
+  padding: 0 12px;
+  font-size: 13px;
 }
 .btn-lg {
-  height: 54px;
-  padding: 0 22px;
+  height: 40px;
+  padding: 0 18px;
   border-radius: var(--radius-md);
-  font-size: 16px;
+  font-size: 14px;
 }
 .btn-block {
   width: 100%;
@@ -83,10 +83,10 @@
   display: inline-grid;
   place-items: center;
   flex: none;
-  width: 40px;
-  height: 40px;
+  width: var(--control-h);
+  height: var(--control-h);
   border: 0;
-  border-radius: 50%;
+  border-radius: var(--radius-sm);
   background: transparent;
   color: var(--text);
   transition:
@@ -123,7 +123,7 @@
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   background: var(--surface);
-  padding: 18px;
+  padding: 14px 16px;
   min-width: 0;
 }
 .card-raised {
@@ -139,10 +139,11 @@
   align-items: baseline;
   justify-content: space-between;
   gap: 12px;
-  margin-bottom: 12px;
+  margin-bottom: 10px;
 }
 .section-header h2 {
-  font-size: 16px;
+  font-size: 13.5px;
+  font-weight: 650;
 }
 
 /* Pills */
@@ -150,15 +151,15 @@
   --pill-color: var(--text-dim);
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  height: 26px;
-  padding: 0 10px;
-  border-radius: 13px;
+  gap: 4px;
+  height: 22px;
+  padding: 0 8px;
+  border-radius: 6px;
   border: 1px solid transparent;
   background: var(--surface-raised);
   color: var(--pill-color);
-  font-size: 12px;
-  font-weight: 700;
+  font-size: 11.5px;
+  font-weight: 600;
   white-space: nowrap;
   vertical-align: middle;
 }
@@ -183,7 +184,7 @@
 
 /* Progress */
 .progress {
-  height: 6px;
+  height: 4px;
   border-radius: 3px;
   background: var(--surface-raised);
   overflow: hidden;
@@ -210,12 +211,12 @@
 .notice {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 12px 14px;
+  gap: 10px;
+  padding: 9px 12px;
   border-radius: var(--radius-md);
   border: 1px solid var(--border);
   background: var(--surface);
-  font-size: 14px;
+  font-size: 13px;
 }
 .notice-body {
   flex: 1;
@@ -227,7 +228,7 @@
 .notice-body small,
 .notice-body span {
   color: var(--text-dim);
-  font-size: 13px;
+  font-size: 12.5px;
 }
 .notice-icon {
   flex: none;
@@ -274,8 +275,8 @@
   flex-direction: column;
   align-items: center;
   text-align: center;
-  gap: 8px;
-  padding: 36px 24px;
+  gap: 6px;
+  padding: 28px 24px;
   border-radius: var(--radius-lg);
   border: 1px solid var(--border);
   background: var(--surface);
@@ -295,10 +296,10 @@
 .empty-icon {
   display: inline-grid;
   place-items: center;
-  width: 52px;
-  height: 52px;
+  width: 40px;
+  height: 40px;
   border-radius: 50%;
-  margin-bottom: 6px;
+  margin-bottom: 4px;
   background: var(--accent-soft);
   color: var(--accent-text);
 }
@@ -308,7 +309,7 @@
   display: inline-flex;
   align-self: flex-start;
   max-width: 100%;
-  padding: 3px;
+  padding: 2px;
   gap: 2px;
   border-radius: var(--radius-sm);
   border: 1px solid var(--border);
@@ -319,14 +320,14 @@
   align-items: center;
   justify-content: center;
   gap: 6px;
-  min-height: 34px;
-  padding: 0 14px;
+  min-height: 26px;
+  padding: 0 10px;
   border: 0;
-  border-radius: 11px;
+  border-radius: 6px;
   background: transparent;
   color: var(--text-muted);
-  font-size: 13px;
-  font-weight: 700;
+  font-size: 12.5px;
+  font-weight: 600;
   white-space: nowrap;
   transition:
     background 0.18s ease,
@@ -362,8 +363,8 @@
 }
 .field > span:first-child {
   color: var(--text-dim);
-  font-size: 13px;
-  font-weight: 600;
+  font-size: 12.5px;
+  font-weight: 500;
 }
 .field.narrow {
   max-width: 220px;
@@ -380,13 +381,13 @@ input:not([type='checkbox']):not([type='radio']),
 select,
 textarea {
   width: 100%;
-  min-height: 44px;
-  padding: 10px 12px;
+  min-height: 34px;
+  padding: 6px 10px;
   border: 1px solid var(--border);
-  border-radius: 12px;
+  border-radius: var(--radius-sm);
   background: var(--surface-raised);
   color: var(--text);
-  font-size: 15px;
+  font-size: 13.5px;
   transition: border-color 0.15s ease;
 }
 textarea {
@@ -416,8 +417,8 @@ fieldset:disabled {
   position: relative;
   display: flex;
   align-items: center;
-  gap: 14px;
-  padding: 14px;
+  gap: 12px;
+  padding: 10px 12px;
   border-radius: var(--radius-md);
   background: var(--surface-raised);
   cursor: pointer;
@@ -436,9 +437,9 @@ fieldset:disabled {
   display: grid;
   place-items: center;
   flex: none;
-  width: 26px;
-  height: 26px;
-  border-radius: 9px;
+  width: 20px;
+  height: 20px;
+  border-radius: 6px;
   border: 2px solid var(--text-muted);
   color: var(--on-accent);
 }
@@ -544,37 +545,37 @@ fieldset:disabled {
   max-width: 560px;
 }
 .dialog-lg {
-  max-width: 720px;
+  max-width: 680px;
 }
 .dialog-header {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
   gap: 16px;
-  padding: 22px 22px 8px;
+  padding: 18px 20px 6px;
 }
 .dialog-header h2 {
-  font-size: 24px;
-  line-height: 1.25;
-  font-weight: 800;
+  font-size: 18px;
+  line-height: 1.3;
+  font-weight: 700;
 }
 .dialog-header p {
-  margin-top: 6px;
+  margin-top: 4px;
   color: var(--text-dim);
-  font-size: 14px;
+  font-size: 13px;
 }
 .dialog-body {
   display: flex;
   flex-direction: column;
-  gap: 14px;
-  padding: 12px 22px 20px;
+  gap: 12px;
+  padding: 10px 20px 18px;
   overflow-y: auto;
 }
 .dialog-footer {
   display: flex;
   justify-content: flex-end;
-  gap: 10px;
-  padding: 14px 22px 18px;
+  gap: 8px;
+  padding: 12px 20px 14px;
   border-top: 1px solid var(--border);
 }
 
@@ -586,8 +587,8 @@ fieldset:disabled {
   position: absolute;
   top: calc(100% + 6px);
   z-index: 50;
-  min-width: 230px;
-  padding: 6px;
+  min-width: 210px;
+  padding: 4px;
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
   background: var(--surface);
@@ -603,14 +604,14 @@ fieldset:disabled {
 .menu-panel button {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 9px;
   width: 100%;
-  padding: 10px 12px;
+  padding: 7px 10px;
   border: 0;
-  border-radius: 11px;
+  border-radius: 6px;
   background: transparent;
   color: var(--text);
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 500;
   text-align: left;
 }
