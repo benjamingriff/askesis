@@ -3,7 +3,7 @@ import { DotStrip } from '../charts/DotStrip';
 import { Tag } from '../components/Badges';
 import { Section } from '../components/Section';
 import { cohortKey, cohortLabel, cohorts, DIMENSIONS, type Dimension } from '../lib/cohorts';
-import { coachTokens } from '../lib/filters';
+import { coachTokens, isFinished } from '../lib/filters';
 import { formatDuration, formatPercent, formatTokens, humanize, median } from '../lib/format';
 import { countModes, SOURCE_LABEL } from '../lib/modes';
 import { href } from '../lib/route';
@@ -287,7 +287,11 @@ export function Compare({
   });
   const [allChecks, setAllChecks] = useState(false);
   const [match, setMatch] = useState(true);
-  const options = useMemo(() => cohorts(runs, dimension), [runs, dimension]);
+  const [stratumPick, setStratumPick] = useState<string | null>(null);
+  // Outcomes only exist for finished runs; unfinished ones would count as failures.
+  const finished = useMemo(() => runs.filter(isFinished), [runs]);
+  const unfinished = runs.length - finished.length;
+  const options = useMemo(() => cohorts(finished, dimension), [finished, dimension]);
   // Default to the established cohort (most runs) as baseline and the newest
   // other cohort as the candidate.
   const largest = [...options].sort((a, b) => b.runs.length - a.runs.length)[0]?.key ?? null;
@@ -309,18 +313,22 @@ export function Compare({
   const matchDimension: Dimension = ['model', 'reasoning', 'variant'].includes(dimension)
     ? 'prompt'
     : 'variant';
-  const shared = new Set(
-    rawBaseline
-      .map((run) => cohortKey(run, matchDimension))
-      .filter((key) => rawCandidate.some((run) => cohortKey(run, matchDimension) === key)),
-  );
-  const matching = match && shared.size > 0;
-  const baseline = matching
-    ? rawBaseline.filter((run) => shared.has(cohortKey(run, matchDimension)))
-    : rawBaseline;
-  const candidate = matching
-    ? rawCandidate.filter((run) => shared.has(cohortKey(run, matchDimension)))
-    : rawCandidate;
+  // Compare within one shared stratum. Pooling several strata would let their
+  // different proportions in each cohort masquerade as a prompt (or model) effect.
+  const count = (list: RunSummary[], key: string) =>
+    list.filter((run) => cohortKey(run, matchDimension) === key).length;
+  const strata = [...new Set(rawBaseline.map((run) => cohortKey(run, matchDimension)))]
+    .filter((key) => count(rawCandidate, key) > 0)
+    .sort(
+      (a, b) =>
+        Math.min(count(rawBaseline, b), count(rawCandidate, b)) -
+        Math.min(count(rawBaseline, a), count(rawCandidate, a)),
+    );
+  const stratum = strata.includes(stratumPick ?? '') ? stratumPick : (strata[0] ?? null);
+  const matching = match && stratum !== null;
+  const inStratum = (run: RunSummary) => cohortKey(run, matchDimension) === stratum;
+  const baseline = matching ? rawBaseline.filter(inStratum) : rawBaseline;
+  const candidate = matching ? rawCandidate.filter(inStratum) : rawCandidate;
   const excluded = rawBaseline.length - baseline.length + (rawCandidate.length - candidate.length);
 
   const checkIds = [...new Set(runs.flatMap((run) => run.checks.map((check) => check.id)))];
@@ -353,6 +361,7 @@ export function Compare({
           onClick={() => {
             setDimension(entry.id);
             setPicked({ baseline: null, candidate: null });
+            setStratumPick(null);
           }}
         >
           {entry.label}
@@ -450,12 +459,28 @@ export function Compare({
           <span className={`selection${match ? ' checked' : ''}`} />
           Match on {matchDimension === 'prompt' ? 'prompt' : 'model + reasoning'}
         </button>
+        {matching && strata.length > 1 && (
+          <select
+            className="stratum-select"
+            value={stratum ?? ''}
+            aria-label="Shared stratum to compare within"
+            onChange={(event) => setStratumPick(event.target.value)}
+          >
+            {strata.map((key) => (
+              <option key={key} value={key}>
+                {cohortLabel(key, matchDimension)} ({count(rawBaseline, key)} vs{' '}
+                {count(rawCandidate, key)})
+              </option>
+            ))}
+          </select>
+        )}
         <span className="muted">
           {matching
-            ? `Comparing only ${[...shared].map((key) => cohortLabel(key, matchDimension)).join(', ')}${excluded > 0 ? `; ${excluded} other runs excluded` : ''}.`
+            ? `Comparing within ${cohortLabel(stratum ?? '', matchDimension)} only${excluded > 0 ? `; ${excluded} runs outside it excluded` : ''}.`
             : match
-              ? 'No overlap to match on, so the cohorts differ in other ways too.'
+              ? 'No shared stratum to match on, so the cohorts differ in other ways too.'
               : 'Unmatched: differences may come from other variables as well.'}
+          {unfinished > 0 && ` ${unfinished} unfinished runs are not counted.`}
         </span>
       </div>
 

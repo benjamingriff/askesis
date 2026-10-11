@@ -305,6 +305,11 @@ export function demoRuns(now = Date.parse('2026-10-10T12:00:00Z')): RunSummary[]
         reviewerModel: 'gpt-6.1-sol',
         reviewerVersion: 'running-plan-v1',
         verdict,
+        reviewerVerdict: crashed
+          ? null
+          : criteria.every((criterion) => criterion.result === 'pass')
+            ? 'acceptable'
+            : 'needs_revision',
         stopReason: crashed ? 'PROVIDER_ERROR' : 'completed',
         stage: `Assessment: ${verdict}`,
         checks: crashed ? checks.slice(0, 1) : checks,

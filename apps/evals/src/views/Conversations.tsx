@@ -3,7 +3,7 @@ import { DotStrip, type StripPoint } from '../charts/DotStrip';
 import { Tag, VerdictBadge } from '../components/Badges';
 import { Section } from '../components/Section';
 import { cohortKey, cohortLabel, promptKey, type Dimension } from '../lib/cohorts';
-import { coachTokens } from '../lib/filters';
+import { coachTokens, isFinished } from '../lib/filters';
 import {
   formatDateTime,
   formatDuration,
@@ -61,8 +61,10 @@ export function Conversations({
 }) {
   const [mode, setMode] = useState<string | null>(null);
   const [reliabilityBy, setReliabilityBy] = useState<Dimension>('prompt');
-  const withConversation = runs.filter((run) => run.conversation !== null);
-  const modes = useMemo(() => countModes(runs), [runs]);
+  // Aggregates describe finished conversations; the list below shows every run.
+  const finished = useMemo(() => runs.filter(isFinished), [runs]);
+  const withConversation = finished.filter((run) => run.conversation !== null);
+  const modes = useMemo(() => countModes(finished), [finished]);
   const rows = mode ? runs.filter((run) => modesOf(run).some((entry) => entry.key === mode)) : runs;
   const activeMode = modes.find((entry) => entry.key === mode);
 
@@ -151,7 +153,7 @@ export function Conversations({
         ) : (
           <ul className="mode-list">
             {modes.slice(0, 14).map((entry) => {
-              const share = entry.runs.length / runs.length;
+              const share = entry.runs.length / finished.length;
               return (
                 <li key={entry.key}>
                   <button
@@ -175,7 +177,7 @@ export function Conversations({
                       />
                     </span>
                     <span className="mode-count">
-                      {entry.runs.length}/{runs.length}
+                      {entry.runs.length}/{finished.length}
                     </span>
                   </button>
                 </li>
@@ -245,7 +247,7 @@ export function Conversations({
             },
             {
               label: 'Coach tokens',
-              ...strip(runs, (run) => coachTokens(run) || null),
+              ...strip(finished, (run) => coachTokens(run) || null),
               format: formatTokens,
             },
             {
@@ -288,7 +290,7 @@ export function Conversations({
           </div>
         }
       >
-        <ReliabilityTable runs={runs} dimension={reliabilityBy} />
+        <ReliabilityTable runs={finished} dimension={reliabilityBy} />
       </Section>
 
       <Section

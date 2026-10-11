@@ -37,6 +37,8 @@ export interface SessionInput {
   metrics: Json | null;
   /** Benchmark stop reason; discovery flags are noise when a run stopped early. */
   stopReason?: string | null;
+  /** False while a run has no assessment yet; its transcript is still growing. */
+  finished?: boolean;
 }
 
 export interface Session {
@@ -148,7 +150,11 @@ export function toolKind(name: string): ToolCall['kind'] {
   return /^(read|preview|check)_/.test(name) ? 'read' : 'write';
 }
 
-function groupToolCalls(rows: Json[]): (ToolCall & { runId: string | null })[] {
+/** Unclipped tool payloads by operation id. Analysis reads these; only the
+ * copies returned to the browser are clipped. */
+type RawPayloads = Map<string, { input: unknown; result: unknown }>;
+
+function groupToolCalls(rows: Json[], raw: RawPayloads): (ToolCall & { runId: string | null })[] {
   const calls = new Map<string, { start: Json | null; end: Json | null }>();
   rows.forEach((row, index) => {
     const key = asString(row.operationId) ?? `row-${index}`;
@@ -163,7 +169,7 @@ function groupToolCalls(rows: Json[]): (ToolCall & { runId: string | null })[] {
       const name = asString(source.name) ?? 'tool';
       const input = start?.input ?? null;
       const result =
-        isObject(end?.result) && 'result' in end.result ? end.result.result : end?.result;
+        (isObject(end?.result) && 'result' in end.result ? end.result.result : end?.result) ?? null;
       return {
         operationId,
         runId: asString(source.runId),
@@ -179,10 +185,13 @@ function groupToolCalls(rows: Json[]): (ToolCall & { runId: string | null })[] {
       };
     })
     .sort((a, b) => a.at.localeCompare(b.at))
-    .map(({ raw, ...call }) => ({
-      ...call,
-      summary: summarizeTool(call.name, raw.input, raw.result, call.status),
-    }));
+    .map(({ raw: payload, ...call }) => {
+      raw.set(call.operationId, payload);
+      return {
+        ...call,
+        summary: summarizeTool(call.name, payload.input, payload.result, call.status),
+      };
+    });
 }
 
 function summarizeTool(name: string, input: unknown, result: unknown, status: string): string {
@@ -352,7 +361,12 @@ function buildBeliefs(
   disclosures: Disclosure[],
   tools: ToolCall[],
   toolTurn: Map<string, number>,
+  raw: RawPayloads,
 ): BeliefRow[] {
+  const inputOf = (tool: ToolCall | undefined): Json => {
+    const value = tool ? raw.get(tool.operationId)?.input : undefined;
+    return isObject(value) ? value : {};
+  };
   const scenario = input.scenario ?? {};
   const expectations = isObject(scenario.expectations) ? scenario.expectations : {};
   const dates = isObject(scenario.dates) ? scenario.dates : {};
@@ -363,7 +377,7 @@ function buildBeliefs(
   const edits: BriefEdit[] = tools
     .filter((tool) => tool.name === 'update_plan_brief' && tool.status === 'completed')
     .flatMap((tool) => {
-      const body = isObject(tool.input) ? tool.input : {};
+      const body = inputOf(tool);
       return isObject(body.brief)
         ? [{ turn: toolTurn.get(tool.operationId) ?? 0, brief: body.brief }]
         : [];
@@ -417,14 +431,26 @@ function buildBeliefs(
 
   const rows: BeliefRow[] = [];
 
-  // Plan dates come from the draft rather than the brief.
-  const draftCall = tools.find(
-    (tool) => tool.name === 'create_plan_draft' && tool.status === 'completed',
-  );
+  // Plan dates are set by create_plan_draft and may be changed by any brief
+  // update, so attribute them to the turn in which the final dates stabilised.
   const header = isObject(plan?.header) && isObject(plan.header.draft) ? plan.header.draft : null;
-  const draftInput = isObject(draftCall?.input) ? draftCall.input : {};
-  const start = asString(header?.startDate) ?? asString(draftInput.startDate);
-  const end = asString(header?.endDate) ?? asString(draftInput.endDate);
+  const dateSeries: { turn: number; value: string | null }[] = [];
+  let latestDates: string | null = null;
+  for (const tool of tools) {
+    if (tool.status !== 'completed') continue;
+    if (tool.name !== 'create_plan_draft' && tool.name !== 'update_plan_brief') continue;
+    const body = inputOf(tool);
+    // A brief update that omits both dates leaves them unchanged.
+    if (tool.name === 'update_plan_brief' && !('startDate' in body) && !('endDate' in body))
+      continue;
+    const startDate = asString(body.startDate);
+    const endDate = asString(body.endDate);
+    latestDates = startDate && endDate ? `${startDate} → ${endDate}` : null;
+    dateSeries.push({ turn: toolTurn.get(tool.operationId) ?? 0, value: latestDates });
+  }
+  const savedStart = asString(header?.startDate);
+  const savedEnd = asString(header?.endDate);
+  const finalDates = savedStart && savedEnd ? `${savedStart} → ${savedEnd}` : latestDates;
   const expectedStart = asString(dates.startDate);
   const expectedEnd = asString(dates.eventDate);
   rows.push(
@@ -433,8 +459,8 @@ function buildBeliefs(
       'Plan dates',
       'dates',
       expectedStart && expectedEnd ? `${expectedStart} → ${expectedEnd}` : null,
-      start && end ? `${start} → ${end}` : null,
-      draftCall ? (toolTurn.get(draftCall.operationId) ?? null) : null,
+      finalDates,
+      firstStableTurn(dateSeries, finalDates),
     ),
   );
 
@@ -526,7 +552,7 @@ function buildBeliefs(
   const recordCall = [...tools]
     .reverse()
     .find((tool) => tool.name === 'record_performance' && tool.status === 'completed');
-  const recordInput = isObject(recordCall?.input) ? recordCall.input : {};
+  const recordInput = inputOf(recordCall);
   const measured = isObject(recordInput.input) ? recordInput.input : {};
   const raceDistance = asNumber(expectations.raceDistanceMetres);
   const raceDuration = asNumber(expectations.raceDurationSeconds);
@@ -601,13 +627,14 @@ function flattenBrief(brief: Json, top: Json): Record<string, string | null> {
   };
 }
 
-function buildDecisions(turns: CoachTurn[]): Decision[] {
+function buildDecisions(turns: CoachTurn[], raw: RawPayloads): Decision[] {
   const decisions: Decision[] = [];
   let previous: Record<string, string | null> | null = null;
   for (const turn of turns) {
     for (const tool of turn.tools) {
-      const body = isObject(tool.input) ? tool.input : {};
-      const output = isObject(tool.result) ? tool.result : {};
+      const payload = raw.get(tool.operationId);
+      const body = isObject(payload?.input) ? payload.input : {};
+      const output = isObject(payload?.result) ? payload.result : {};
       const details: string[] = [];
       let changes: FieldChange[] = [];
       if (tool.name === 'update_plan_brief' && isObject(body.brief)) {
@@ -1006,18 +1033,20 @@ function truncate(text: string | null, max = 80): string {
 export function analyzeSession(input: SessionInput): Session {
   const messages = toMessages(input.messages);
   const disclosures = toDisclosures(input.disclosures, messages);
-  const tools = groupToolCalls(input.tools);
+  const raw: RawPayloads = new Map();
+  const tools = groupToolCalls(input.tools, raw);
   const turns = buildTurns(input, messages, tools);
   const toolTurn = new Map(
     turns.flatMap((turn) => turn.tools.map((tool) => [tool.operationId, turn.index] as const)),
   );
   const allTools = turns.flatMap((turn) => turn.tools);
-  const beliefs = buildBeliefs(input, turns, disclosures, allTools, toolTurn);
-  const decisions = buildDecisions(turns);
+  const beliefs = buildBeliefs(input, turns, disclosures, allTools, toolTurn, raw);
+  const decisions = buildDecisions(turns, raw);
   const fitness = buildFitness(input);
   const claims = buildClaims(messages, fitness);
   const facts = isObject(input.scenario?.facts) ? Object.keys(input.scenario.facts) : [];
   const stoppedEarly =
+    input.finished === false ||
     (input.stopReason !== undefined &&
       input.stopReason !== null &&
       input.stopReason !== 'completed') ||

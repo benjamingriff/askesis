@@ -361,11 +361,16 @@ function FixtureAttempts({
 
 /** How often your reviews agree with the model reviewer on real benchmark runs. */
 function HumanAgreement({ runs }: { runs: RunSummary[] }) {
-  const reviewed = runs.filter((run) => run.review !== null && !run.demo);
-  const withVerdict = reviewed.filter((run) => run.review?.verdict && run.verdict !== 'running');
-  const verdictAgree = withVerdict.filter(
-    (run) => (run.review?.verdict === 'fit') === (run.verdict === 'acceptable'),
-  ).length;
+  // Scripted and demo runs have stand-in reviewers, so they cannot measure agreement.
+  const reviewed = runs.filter((run) => run.review !== null && !run.demo && !run.scripted);
+  // Compare with the model reviewer's own verdict, not the overall benchmark verdict,
+  // which exact-check failures can make negative even when the reviewer accepted.
+  const verdictClash = (run: RunSummary) =>
+    run.review?.verdict != null &&
+    run.reviewerVerdict !== null &&
+    (run.review.verdict === 'fit') !== (run.reviewerVerdict === 'acceptable');
+  const withVerdict = reviewed.filter((run) => run.review?.verdict && run.reviewerVerdict !== null);
+  const verdictAgree = withVerdict.filter((run) => !verdictClash(run)).length;
   const rows = CRITERIA.map((criterion) => {
     const marks = reviewed
       .map((run) => run.review?.criteria[criterion])
@@ -377,9 +382,7 @@ function HumanAgreement({ runs }: { runs: RunSummary[] }) {
     };
   });
   const disagreements = reviewed.filter(
-    (run) =>
-      Object.values(run.review?.criteria ?? {}).includes('disagree') ||
-      (run.review?.verdict && (run.review.verdict === 'fit') !== (run.verdict === 'acceptable')),
+    (run) => Object.values(run.review?.criteria ?? {}).includes('disagree') || verdictClash(run),
   );
   return (
     <section className="chart-section" id="human" aria-label="Human vs model reviewer">
@@ -446,17 +449,15 @@ function HumanAgreement({ runs }: { runs: RunSummary[] }) {
             <div className="disagreements">
               <h3>Disagreements to inspect</h3>
               {disagreements.map((run) => {
-                const verdictClash =
-                  run.review?.verdict &&
-                  (run.review.verdict === 'fit') !== (run.verdict === 'acceptable');
+                const clash = verdictClash(run);
                 const criteria = Object.entries(run.review?.criteria ?? {})
                   .filter(([, mark]) => mark === 'disagree')
                   .map(([criterion]) => humanize(criterion).toLowerCase());
                 return (
                   <a key={run.id} href={href('conversations', run.id)} className="text-link">
                     {formatDateTime(run.startedAt)} ·{' '}
-                    {verdictClash
-                      ? `model said ${run.verdict.replace('_', ' ')}, you said ${run.review?.verdict?.replace('_', ' ')}`
+                    {clash
+                      ? `reviewer said ${run.reviewerVerdict?.replace('_', ' ')}, you said ${run.review?.verdict?.replace('_', ' ')}`
                       : `you disagree on ${criteria.join(', ')}`}
                   </a>
                 );

@@ -55,29 +55,45 @@ export function useResultsIndex(): Load<ResultsIndex> {
   return state;
 }
 
+/**
+ * One conversation's detail. Reloads when a review is saved and, while the run is
+ * unfinished, on the index polling interval. A failed reload keeps the last good data.
+ */
 export function useRunDetail(id: string | null): Load<RunDetail> {
   const [state, setState] = useState<{ id: string; load: Load<RunDetail> } | null>(null);
+  const current = state !== null && state.id === id ? state.load : null;
+  const unfinished = current?.status === 'ready' && current.data.verdict === 'running';
   useEffect(() => {
     if (id === null) return;
     let cancelled = false;
-    fetchJson<RunDetail>(`/api/runs/${encodeURIComponent(id)}`)
-      .then((data) => !cancelled && setState({ id, load: { status: 'ready', data } }))
-      .catch(
-        (error: unknown) =>
-          !cancelled &&
-          setState({
-            id,
-            load: {
-              status: 'error',
-              message: error instanceof Error ? error.message : String(error),
-            },
-          }),
-      );
+    const load = () => {
+      fetchJson<RunDetail>(`/api/runs/${encodeURIComponent(id)}`)
+        .then((data) => !cancelled && setState({ id, load: { status: 'ready', data } }))
+        .catch((error: unknown) => {
+          if (cancelled) return;
+          setState((previous) =>
+            previous?.id === id && previous.load.status === 'ready'
+              ? previous
+              : {
+                  id,
+                  load: {
+                    status: 'error',
+                    message: error instanceof Error ? error.message : String(error),
+                  },
+                },
+          );
+        });
+    };
+    load();
+    window.addEventListener(REFRESH_EVENT, load);
+    const timer = unfinished ? window.setInterval(load, POLL_MS) : undefined;
     return () => {
       cancelled = true;
+      window.removeEventListener(REFRESH_EVENT, load);
+      if (timer !== undefined) window.clearInterval(timer);
     };
-  }, [id]);
-  return state !== null && state.id === id ? state.load : { status: 'loading' };
+  }, [id, unfinished]);
+  return current ?? { status: 'loading' };
 }
 
 export async function saveReview(

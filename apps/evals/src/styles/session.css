@@ -1189,6 +1189,16 @@
 
 .custom-tag input:focus,
 .review-panel textarea:focus,
+.stratum-select {
+  padding: 4px 8px;
+  font: inherit;
+  font-size: 12px;
+  color: var(--fg);
+  background: var(--surface);
+  border: 1px solid var(--line-2);
+  border-radius: 6px;
+}
+
 .cohort-picker select:focus {
   border-color: var(--accent);
 }

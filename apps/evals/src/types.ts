@@ -57,6 +57,8 @@ export interface RunSummary {
   reviewerModel: string | null;
   reviewerVersion: string | null;
   verdict: Verdict;
+  /** The model reviewer's own verdict, separate from the overall benchmark verdict. */
+  reviewerVerdict: string | null;
   stopReason: string | null;
   stage: string | null;
   checks: { id: string; status: string }[];

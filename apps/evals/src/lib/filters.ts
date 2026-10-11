@@ -111,3 +111,12 @@ export function medianOf(
 ): number | null {
   return median(runs.map(pick).filter((value): value is number => value !== null));
 }
+
+/**
+ * A run with a final assessment. Unfinished runs stay visible in lists and the
+ * verdict mix but are excluded from outcome estimates, where they would count as
+ * failures before their outcome exists.
+ */
+export function isFinished(run: RunSummary): boolean {
+  return run.verdict !== 'running';
+}

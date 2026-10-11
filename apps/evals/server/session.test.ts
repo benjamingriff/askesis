@@ -257,6 +257,71 @@ describe('analyzeSession', () => {
     );
   });
 
+  it('analyses tool payloads larger than the inspector clip', () => {
+    const large = input();
+    const call = (large.tools[0] as { input: { brief: Record<string, unknown> } }).input;
+    call.brief.context = 'x'.repeat(18_000);
+    const session = analyzeSession(large);
+    const weekly = session.beliefs.find((belief) => belief.field === 'weeklyDistance');
+    expect(weekly).toMatchObject({ status: 'match', recordedInTurn: 2 });
+    expect(
+      session.decisions.find((decision) => decision.tool === 'update_plan_brief')?.changes.length,
+    ).toBeGreaterThan(0);
+    // The browser copy is still clipped.
+    expect(session.turns[1]?.tools[0]?.input).toMatchObject({ truncated: true });
+  });
+
+  it('attributes plan dates to the edit that set them', () => {
+    const at = (seconds: number) => new Date(Date.UTC(2026, 9, 9, 14, 0, seconds)).toISOString();
+    const dated = input({
+      tools: [
+        {
+          at: at(2),
+          runId: 'r1',
+          operationId: 'd',
+          name: 'create_plan_draft',
+          status: 'started',
+          input: { displayName: 'Plan', startDate: null, endDate: null },
+        },
+        {
+          at: at(3),
+          runId: 'r1',
+          operationId: 'd',
+          name: 'create_plan_draft',
+          status: 'completed',
+          result: { result: {} },
+        },
+        {
+          at: at(10),
+          runId: 'r2',
+          operationId: 'e',
+          name: 'update_plan_brief',
+          status: 'started',
+          input: { brief: brief({}), startDate: '2026-10-12', endDate: '2027-01-03' },
+        },
+        {
+          at: at(11),
+          runId: 'r2',
+          operationId: 'e',
+          name: 'update_plan_brief',
+          status: 'completed',
+          result: { result: { brief: { editNumber: 2 } } },
+        },
+      ],
+    });
+    const datesRow = analyzeSession(dated).beliefs.find((belief) => belief.field === 'dates');
+    expect(datesRow).toMatchObject({ recordedInTurn: 2, disclosedAt: 3, status: 'match' });
+  });
+
+  it('does not raise discovery flags for an unfinished run', () => {
+    const kinds = analyzeSession(input({ finished: false, plan: null })).flags.map(
+      (flag) => flag.kind,
+    );
+    expect(
+      kinds.some((kind) => kind.startsWith('undisclosed:') || kind.startsWith('missing:')),
+    ).toBe(false);
+  });
+
   it('reports an early stop without cascading discovery flags', () => {
     const kinds = analyzeSession(input({ stopReason: 'PROVIDER_ERROR', plan: null })).flags.map(
       (flag) => flag.kind,

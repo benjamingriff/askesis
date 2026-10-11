@@ -181,6 +181,7 @@ function sessionOf(files: RunFiles): Session {
     scenario: files.scenario,
     metrics: files.metrics,
     stopReason: asString(files.assessment?.stopReason),
+    finished: files.assessment !== null,
   });
 }
 
@@ -226,6 +227,7 @@ function summarizeRun(id: string, files: RunFiles, session: Session): RunSummary
     reviewerModel: asString(configuration.reviewerModel),
     reviewerVersion: asString(manifest.reviewerVersion),
     verdict: toVerdict(assessment?.verdict),
+    reviewerVerdict: asString(review?.verdict),
     stopReason: asString(assessment?.stopReason),
     stage: asString(state?.stage),
     checks: checks.map(({ id: checkId, status }) => ({ id: checkId, status })),

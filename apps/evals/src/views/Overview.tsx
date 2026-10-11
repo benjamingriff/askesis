@@ -12,7 +12,7 @@ import {
   VERDICT_LABEL,
   VERDICT_ORDER,
 } from '../lib/format';
-import { coachTokens, medianOf, variants, type Variant } from '../lib/filters';
+import { coachTokens, isFinished, medianOf, variants, type Variant } from '../lib/filters';
 import { modelName, reasoningShort } from '../lib/models';
 import { href } from '../lib/route';
 import { CRITERIA, type RunSummary } from '../types';
@@ -137,7 +137,8 @@ export function Overview(props: OverviewProps) {
   const [paretoTime, setParetoTime] = useState(false);
   const [logTime, setLogTime] = useState(true);
 
-  const list = useMemo(() => variants(runs), [runs]);
+  const finished = useMemo(() => runs.filter(isFinished), [runs]);
+  const list = useMemo(() => variants(finished), [finished]);
   const models = useMemo(() => [...new Set(runs.map((run) => run.coachModel))].sort(), [runs]);
   const tokenData = useMemo(
     () => scatterData(list, colors, (run) => coachTokens(run) || null),
@@ -223,7 +224,7 @@ export function Overview(props: OverviewProps) {
     stoppedEarly > 0
       ? ` ${stoppedEarly} run${stoppedEarly === 1 ? '' : 's'} that stopped early ${stoppedEarly === 1 ? 'is' : 'are'} not plotted.`
       : '';
-  const acceptable = runs.filter((run) => run.verdict === 'acceptable').length;
+  const acceptable = finished.filter((run) => run.verdict === 'acceptable').length;
 
   if (runs.length === 0) {
     return (
@@ -243,17 +244,17 @@ export function Overview(props: OverviewProps) {
         <Stat label="Runs" value={String(runs.length)} />
         <Stat
           label="Acceptable"
-          value={formatPercent(acceptable / runs.length)}
-          sub={`${acceptable} of ${runs.length}`}
+          value={formatPercent(finished.length === 0 ? null : acceptable / finished.length)}
+          sub={`${acceptable} of ${finished.length} finished`}
         />
         <Stat label="Median score" value={formatPercent(medianOf(scored, (run) => run.score))} />
         <Stat
           label="Median coach tokens"
-          value={formatTokens(medianOf(runs, (run) => coachTokens(run) || null) ?? 0)}
+          value={formatTokens(medianOf(finished, (run) => coachTokens(run) || null) ?? 0)}
         />
         <Stat
           label="Median wall time"
-          value={formatDuration(medianOf(runs, (run) => run.durationMs))}
+          value={formatDuration(medianOf(finished, (run) => run.durationMs))}
         />
         <Stat label="Coach models" value={String(models.length)} />
       </div>
