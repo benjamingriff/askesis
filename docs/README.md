@@ -2,6 +2,8 @@
 
 Start with the [current handoff](./current-handoff.md) for priorities and verified delivery status. The current direction is continued responsive web development, drawing selected features from the mobile prototype; native integration is deferred.
 
+New to the codebase? Follow [Understand Askesis in one day](./learning/README.md), an eight-hour checklist with source traces, TypeScript explanations, SQL exercises, coaching internals and deployment inspection. Keep its navigation map for finding code after the walkthrough.
+
 | Area         | What belongs here                                                        | Start here                                     |
 | ------------ | ------------------------------------------------------------------------ | ---------------------------------------------- |
 | Product      | Roadmap, behavior contracts, pace policy and interface guidance          | [Product index](./product/README.md)           |

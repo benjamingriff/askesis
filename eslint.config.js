@@ -31,6 +31,8 @@ export default tseslint.config(
       'apps/agent/**/*.ts',
       'apps/bench/**/*.ts',
       'packages/**/*.ts',
+      'apps/evals/server/**/*.ts',
+      'apps/evals/*.ts',
       '*.js',
       'scripts/dev-*.mjs',
       'scripts/bench.mjs',
@@ -40,7 +42,7 @@ export default tseslint.config(
     },
   },
   {
-    files: ['apps/web/**/*.{ts,tsx}'],
+    files: ['apps/web/**/*.{ts,tsx}', 'apps/evals/src/**/*.{ts,tsx}'],
     ...react.configs.flat.recommended,
     languageOptions: {
       ...react.configs.flat.recommended.languageOptions,

@@ -72,6 +72,8 @@ See [`docs/operations/local-development.md`](./docs/operations/local-development
 
 See [`docs/README.md`](./docs/README.md) for architecture decisions, the data model, and the implementation roadmap.
 
+For a guided introduction, follow [Understand Askesis in one day](./docs/learning/README.md): an eight-hour walkthrough with a checklist, code links and hands-on data/API exercises.
+
 ## Repository structure
 
 ```text
