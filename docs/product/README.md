@@ -13,6 +13,10 @@ The owner is continuing development of the responsive web app and will choose fu
 
 These guides describe implemented behavior and were reconciled against code on 2026-10-06. Phases 1–7 are implemented; release-readiness tasks and future ideas are explicitly labelled in the product plan. Original design/delivery checkpoints remain in the archive.
 
+## Benchmark design
+
+- [Training-plan model benchmarks](./training-plan-benchmarks-proposal.md): headless model/prompt comparisons, simulated athletes, saved-plan checks and coaching evaluation. The local running proof of concept is implemented; broader comparisons remain proposed.
+
 ## Interface and pace policy
 
 - [Web design system](./web-design-system.md): themes, components, navigation and review patterns.

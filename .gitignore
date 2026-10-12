@@ -4,6 +4,8 @@ node_modules/
 # Build and test output
 dist/
 coverage/
+.bench/
+benchmark-results/
 *.dump
 
 # Vite / TypeScript

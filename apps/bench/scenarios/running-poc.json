@@ -1,0 +1,28 @@
+{
+  "id": "running-poc",
+  "version": 1,
+  "timezone": "Europe/London",
+  "openingMessage": "I'd like help creating a running plan for my first half marathon. I want to prescribe the first four weeks now, then extend the plan after feedback.",
+  "facts": {
+    "goal": "My goal is to finish my first half marathon comfortably. I don't have a target finish time.",
+    "dates": "Start my plan on {{startDate}}. My half marathon is on {{eventDate}}, an A-priority goal race. I have no other races planned.",
+    "training": "For the last six weeks I have run three times per week, about 22 km total per week. My longest recent run is 9 km, which felt comfortable. Running is the only sport this plan should train.",
+    "frequency": "I want exactly three runs per week.",
+    "availability": "I can run only on Tuesdays, Thursdays and Sundays. Sundays are best for my long run. All other weekdays are unavailable. I have up to 60 minutes on Tuesdays and Thursdays and up to 100 minutes on Sundays.",
+    "fitness": "I ran an all-out, flat 5 km race in 28 minutes on {{observedOn}} in fair conditions. That reflects my current fitness.",
+    "constraints": "I'm 35, have no current injuries or health restrictions, and can run on flat roads and paths. I prefer distances in kilometres.",
+    "methodology": "I don't have a preferred training methodology. Please choose a sensible approach and explain your assumptions.",
+    "horizon": "Keep the overall plan dates through my half marathon, but fully prescribe only the first four weeks, {{startDate}} through {{coverageEndDate}}, for now. Please create the plan once you have enough information; I don't need to confirm a brief first."
+  },
+  "expectations": {
+    "planningWeeks": 4,
+    "goalWeeks": 12,
+    "availableWeekdays": [2, 4, 7],
+    "sessionsPerWeek": 3,
+    "weeklyDistanceMetres": 22000,
+    "longestDistanceMetres": 9000,
+    "raceDistanceMetres": 5000,
+    "raceDurationSeconds": 1680
+  },
+  "limits": { "maxAthleteMessages": 18, "maxElapsedMinutes": 30 }
+}
