@@ -24,5 +24,6 @@ These guides describe implemented behavior and were reconciled against code on 2
 ## Explorations
 
 - [Coaching agent feature exploration](./coaching-agent-exploration.md): researched opportunities for richer inputs, coaching memory, agent interaction, parallel generation and ongoing feedback. This is exploratory guidance; linked GitHub issues track scope, decisions and delivery state.
+- [Validation dashboard roadmap](./validation-dashboard-roadmap.md): a launch panel for benchmark runs, data to add to the benchmark and further review views for the local validation dashboard.
 
 Completed delivery plans and test evidence live in the [archive](../archive/README.md). Runtime limits and recovery procedures live in [operations](../operations/README.md).

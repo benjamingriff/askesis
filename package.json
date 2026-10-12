@@ -16,6 +16,7 @@
     "dev:api": "pnpm --filter @askesis/api dev",
     "dev:web": "pnpm --filter @askesis/web dev",
     "dev:marketing": "pnpm --filter @askesis/marketing dev",
+    "dev:evals": "pnpm --filter @askesis/evals dev",
     "dev:setup": "node scripts/dev-setup.mjs",
     "dev:local": "node scripts/dev-local.mjs",
     "dev:login": "pnpm --filter @askesis/api verification:login",
