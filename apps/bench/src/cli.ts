@@ -108,6 +108,7 @@ async function run() {
   const disclosed: Disclosure[] = [];
   const usage: { role: string; usage: ModelUsage }[] = [];
   let timeout: ReturnType<typeof setTimeout> | undefined;
+  let releaseArtifacts: (() => Promise<void>) | undefined;
   const stage = async (name: string) => {
     phase = name;
     console.log(name);
@@ -116,6 +117,7 @@ async function run() {
   };
   try {
     await artifacts.init();
+    releaseArtifacts = await acquireLock(artifacts.directory);
     await artifacts.json('disclosures.json', []);
     await writeFile(resolve(artifacts.directory, 'tool-trace.jsonl'), '', { mode: 0o600 });
     const scenario = await loadScenario();
@@ -328,6 +330,9 @@ async function run() {
         { mode: 0o600 },
       );
       await stage(`Assessment: ${verdict}`);
+      // Allow regrading completed evidence while --keep-alive retains only the API.
+      await releaseArtifacts?.();
+      releaseArtifacts = undefined;
       console.log(`Report: ${resolve(artifacts.directory, 'report.md')}`);
       if (stopReason !== 'completed' || !review) process.exitCode = 1;
       if (options.values['keep-alive'] && stopApi && !abort.signal.aborted) {
@@ -344,8 +349,15 @@ async function run() {
         await workerTask;
         await stopApi?.();
       } finally {
-        await release();
-        removeInterruptHandlers();
+        try {
+          await releaseArtifacts?.();
+        } finally {
+          try {
+            await release();
+          } finally {
+            removeInterruptHandlers();
+          }
+        }
       }
     }
   }
@@ -363,7 +375,24 @@ async function grade() {
   if (!runId || !/^[a-zA-Z0-9][\w.-]*$/.test(runId))
     throw new BenchmarkError('Use bench grade --run <run-id>.');
   const directory = resolve(root, 'benchmark-results', runId);
+  const abort = new AbortController();
+  const removeInterruptHandlers = installInterruptHandlers(() => abort.abort('INTERRUPTED'));
+  let releaseReview: (() => Promise<void>) | undefined;
+  try {
+    releaseReview = await acquireLock(directory, 'review');
+    await gradeSavedRun(runId, directory, abort.signal);
+  } finally {
+    try {
+      await releaseReview?.();
+    } finally {
+      removeInterruptHandlers();
+    }
+  }
+}
+
+async function gradeSavedRun(runId: string, directory: string, signal: AbortSignal) {
   const credentials = await benchmarkCredentials(false);
+  signal.throwIfAborted();
   if (!credentials.values.OPENAI_API_KEY)
     throw new BenchmarkError('OPENAI_API_KEY is required to review saved outputs.');
   const snapshot = JSON.parse(
@@ -381,7 +410,7 @@ async function grade() {
   const result = await new EvaluationModels(credentials.values.OPENAI_API_KEY, model).review(
     snapshot,
     disclosures,
-    new AbortController().signal,
+    signal,
   );
   const checks = checkPlan(
     snapshot,
@@ -389,6 +418,8 @@ async function grade() {
     disclosures.flatMap((item) => item.factIds),
   );
   const verdict = overallVerdict(checks, result.review, assessment.stopReason);
+  // Once publication starts, finish all files even if interrupted during a write.
+  signal.throwIfAborted();
   const artifacts = new Artifacts(directory);
   await artifacts.json(`assessment-before-review-${Date.now()}.json`, assessment);
   await artifacts.json('assessment.json', {

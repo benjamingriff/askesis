@@ -65,6 +65,8 @@ pnpm bench grade --run <run-id> --env-file /absolute/path/to/private.env
 
 The command preserves the previous assessment and writes a versioned review artifact before updating the report. It uses the saved dates. `BENCH_REVIEW_MODEL` selects the reviewer. Failed regrading leaves the previous assessment intact.
 
+Writers hold a per-run `benchmark-results/<run-id>/run.lock`: generation holds it until its final report is saved, and regrading holds it throughout reading, reviewing and publishing. A second writer for the same run is rejected before starting a model call. Different saved runs can be regraded independently. The lock is released after reporting even with `--keep-alive`, so a completed run can be regraded while its API remains available. Ctrl+C during a review cancels the call and releases its lock; publication that has already started finishes before cleanup. If a process is forcibly killed, verify its recorded PID has exited before removing a stale per-run lock. JSON publication uses unique private temporary files, so concurrent writers cannot rename one another's temporary output.
+
 ## Validate the grader with fixed fixtures
 
 Run the current reviewer against committed synthetic evidence without generating a plan or starting the API, PostgreSQL or coaching worker:

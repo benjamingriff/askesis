@@ -1,4 +1,5 @@
-import { mkdir, writeFile, rename, appendFile } from 'node:fs/promises';
+import { mkdir, writeFile, rename, appendFile, unlink } from 'node:fs/promises';
+import { randomUUID } from 'node:crypto';
 import { resolve } from 'node:path';
 import type { BenchmarkSnapshot } from '@askesis/api/benchmark';
 import type { Check } from './checks.js';
@@ -29,8 +30,19 @@ export class Artifacts {
   }
   async json(name: string, value: unknown) {
     const path = resolve(this.directory, name);
-    await writeFile(`${path}.tmp`, JSON.stringify(redact(value), null, 2) + '\n', { mode: 0o600 });
-    await rename(`${path}.tmp`, path);
+    const temporary = `${path}.${randomUUID()}.tmp`;
+    try {
+      await writeFile(temporary, JSON.stringify(redact(value), null, 2) + '\n', {
+        mode: 0o600,
+        flag: 'wx',
+      });
+      await rename(temporary, path);
+    } finally {
+      await unlink(temporary).catch((error) => {
+        if (!(error && typeof error === 'object' && 'code' in error && error.code === 'ENOENT'))
+          throw error;
+      });
+    }
   }
   async event(event: Record<string, unknown>) {
     await appendFile(

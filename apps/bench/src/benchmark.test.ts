@@ -1,5 +1,5 @@
 import { spawn } from 'node:child_process';
-import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
@@ -7,7 +7,7 @@ import type { BenchmarkSnapshot } from '@askesis/api/benchmark';
 import { addDays, renderAthleteAction, resolveScenario } from './scenario.js';
 import { hasExpectedCoverage, overallVerdict, checkPlan } from './checks.js';
 import { criteria, validateReview, providerFailure, type Review } from './models.js';
-import { redact } from './artifacts.js';
+import { Artifacts, redact } from './artifacts.js';
 import { acquireLock, environmentFor } from './local.js';
 import raw from '../scenarios/running-poc.json' with { type: 'json' };
 
@@ -286,6 +286,42 @@ describe('local isolation and portable evidence', () => {
       await next();
       await writeFile(resolve(directory, 'run.lock'), JSON.stringify({ pid: 2147483647 }));
       await expect(acquireLock(directory)).rejects.toThrow('stale');
+    } finally {
+      await rm(directory, { recursive: true, force: true });
+    }
+  });
+  it('isolates saved-run writer locks and releases them for retry', async () => {
+    const root = await mkdtemp(resolve(tmpdir(), 'askesis-review-lock-'));
+    const directories = [resolve(root, 'first'), resolve(root, 'second')];
+    try {
+      await Promise.all(directories.map((directory) => new Artifacts(directory).init()));
+      const releaseFirst = await acquireLock(directories[0]!, 'review');
+      const releaseSecond = await acquireLock(directories[1]!, 'review');
+      await expect(acquireLock(directories[0]!, 'review')).rejects.toThrow(
+        'writer is already running',
+      );
+      await releaseFirst();
+      const retry = await acquireLock(directories[0]!, 'review');
+      await retry();
+      await releaseSecond();
+      expect(await readdir(directories[0]!)).toEqual([]);
+      expect(await readdir(directories[1]!)).toEqual([]);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+  it('publishes concurrent JSON writes without sharing temporary files', async () => {
+    const directory = await mkdtemp(resolve(tmpdir(), 'askesis-artifacts-'));
+    try {
+      const values = Array.from({ length: 20 }, (_, id) => ({
+        id,
+        content: String(id).repeat(1000),
+      }));
+      await Promise.all(values.map((value) => new Artifacts(directory).json('result.json', value)));
+      expect(values).toContainEqual(
+        JSON.parse(await readFile(resolve(directory, 'result.json'), 'utf8')),
+      );
+      expect(await readdir(directory)).toEqual(['result.json']);
     } finally {
       await rm(directory, { recursive: true, force: true });
     }

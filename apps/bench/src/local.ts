@@ -66,7 +66,10 @@ function alive(pid: number) {
     return !(error instanceof Error && 'code' in error && error.code === 'ESRCH');
   }
 }
-export async function acquireLock(directory = localDirectory) {
+export async function acquireLock(
+  directory = localDirectory,
+  purpose: 'benchmark' | 'review' = 'benchmark',
+) {
   const lockPath = resolve(directory, 'run.lock');
   let handle;
   try {
@@ -78,8 +81,10 @@ export async function acquireLock(directory = localDirectory) {
       .parse(JSON.parse(await readFile(lockPath, 'utf8')));
     throw new BenchmarkError(
       alive(lock.pid)
-        ? 'A benchmark is already running in this worktree. Stop it with Ctrl+C first.'
-        : `A stale benchmark lock remains. Its process has exited; remove ${lockPath} and retry.`,
+        ? purpose === 'review'
+          ? 'A writer is already running for this saved run. Wait for it to finish before regrading.'
+          : 'A benchmark is already running in this worktree. Stop it with Ctrl+C first.'
+        : `A stale ${purpose} lock remains. Its process has exited; remove ${lockPath} and retry.`,
     );
   }
   try {
