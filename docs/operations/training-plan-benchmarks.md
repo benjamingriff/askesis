@@ -74,7 +74,22 @@ pnpm bench calibrate --list --split all
 pnpm bench calibrate
 ```
 
-Live calibration needs only a resolved `OPENAI_API_KEY`, through your shell, `.env.bench.local` or `--env-file`. No Clerk keys or database connection are needed. `BENCH_REVIEW_MODEL` selects the reviewer, with `AGENT_MODEL` then `gpt-6.1-sol` as fallbacks. For a 1Password reference already configured in your shell, use `op run -- pnpm bench calibrate`.
+Live calibration needs only an OpenAI API key. Load it directly from your `askesis-bench` 1Password item:
+
+```sh
+pnpm bench calibrate --op
+pnpm bench calibrate --op --repeat 3
+```
+
+`--op` uses your existing `op` authentication/desktop integration and keeps the key in process memory. It overrides `OPENAI_API_KEY` from your environment files or shell without exporting the retrieved value into the shell or writing it to artifacts. Selection prefers a field named `OPENAI_API_KEY` or `OpenAI key`, then common API-key/token/credential fields, then a single nonempty concealed field. Ambiguous fields are rejected. Override the item, vault or field when needed:
+
+```sh
+pnpm bench calibrate --op --op-item askesis-bench --op-vault Development --op-field credential
+```
+
+`--op-field` accepts an exact field label or ID; IDs disambiguate duplicate labels. `--op-item`, `--op-vault` and `--op-field` require `--op`. The CLI must be installed and able to access the item; lookup failures produce fixed diagnostics without exposing raw subprocess output. Scripted runs, fixture listing and help never retrieve a secret. `--op` is also available on `bench run` and `bench grade`; scenario runs still require the development Clerk configuration described above.
+
+Alternatively, supply a resolved `OPENAI_API_KEY` through your shell, `.env.bench.local` or `--env-file`, or use `op run -- pnpm bench calibrate` with an exported `op://` reference. No Clerk keys or database connection are needed for calibration. `BENCH_REVIEW_MODEL` selects the reviewer, with `AGENT_MODEL` then `gpt-6.1-sol` as fallbacks.
 
 There are twelve fixtures: three good controls and nine deliberately flawed or incomplete examples. Eight development cases run by default. Both time-based and distance-based good plans should pass, while ignored duration preferences should be caught. Other cases cover unsupported goal confirmation, availability, progression, missing prescriptions, saved/claimed mismatches, time limits, missing plans and plan text attempting to instruct the grader. The labels are provisional engineering judgments, available in [the fixture catalogue](../../apps/bench/fixtures/calibration.json) and [fixture documentation](../../apps/bench/fixtures/README.md), for owner/coach review. They are never sent to the reviewer.
 

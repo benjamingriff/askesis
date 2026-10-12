@@ -36,6 +36,7 @@ import {
 } from './local.js';
 import { loadFixtures, scriptedCalibrationReview, type Split } from './fixtures.js';
 import { fixtureHash, runCalibration } from './calibration.js';
+import { readOpenAiKeyFromOnePassword } from './one-password.js';
 
 const options = parseArgs({
   allowPositionals: true,
@@ -51,14 +52,31 @@ const options = parseArgs({
     fixture: { type: 'string', multiple: true },
     list: { type: 'boolean', default: false },
     assert: { type: 'boolean', default: false },
+    op: { type: 'boolean', default: false },
+    'op-item': { type: 'string' },
+    'op-vault': { type: 'string' },
+    'op-field': { type: 'string' },
   },
 });
 const command = options.positionals[0] ?? 'run';
 
+async function benchmarkCredentials(requireClerk = true) {
+  const credentials = await loadCredentials(options.values['env-file'], requireClerk);
+  if (options.values.op && (command === 'grade' || !options.values.scripted)) {
+    console.log('Loading OpenAI key from 1Password.');
+    credentials.values.OPENAI_API_KEY = await readOpenAiKeyFromOnePassword({
+      ...(options.values['op-item'] ? { item: options.values['op-item'] } : {}),
+      ...(options.values['op-vault'] ? { vault: options.values['op-vault'] } : {}),
+      ...(options.values['op-field'] ? { field: options.values['op-field'] } : {}),
+    });
+  }
+  return credentials;
+}
+
 async function run() {
   if (options.values.scenario !== 'running-poc')
     throw new BenchmarkError('Available scenario: running-poc.');
-  const credentials = await loadCredentials(options.values['env-file']);
+  const credentials = await benchmarkCredentials();
   if (!options.values.scripted && !credentials.values.OPENAI_API_KEY)
     throw new BenchmarkError(
       'Set OPENAI_API_KEY in .env.bench.local, your shell, or --env-file before running a live scenario.',
@@ -345,7 +363,7 @@ async function grade() {
   if (!runId || !/^[a-zA-Z0-9][\w.-]*$/.test(runId))
     throw new BenchmarkError('Use bench grade --run <run-id>.');
   const directory = resolve(root, 'benchmark-results', runId);
-  const credentials = await loadCredentials(options.values['env-file'], false);
+  const credentials = await benchmarkCredentials(false);
   if (!credentials.values.OPENAI_API_KEY)
     throw new BenchmarkError('OPENAI_API_KEY is required to review saved outputs.');
   const snapshot = JSON.parse(
@@ -407,12 +425,21 @@ async function grade() {
 async function main() {
   if (options.values.help) {
     console.log(
-      'pnpm bench run [--scenario running-poc] [--env-file PATH] [--keep-alive] [--scripted]\npnpm bench grade --run RUN_ID [--env-file PATH]\npnpm bench calibrate [--split development|holdout|all] [--fixture ID] [--repeat 1..5] [--env-file PATH] [--list] [--assert] [--scripted]\npnpm bench stop\npnpm bench reset',
+      'pnpm bench run [--scenario running-poc] [--env-file PATH] [--op] [--keep-alive] [--scripted]\npnpm bench grade --run RUN_ID [--env-file PATH] [--op]\npnpm bench calibrate [--split development|holdout|all] [--fixture ID] [--repeat 1..5] [--env-file PATH] [--op] [--list] [--assert] [--scripted]\n1Password: --op loads askesis-bench; override with --op-item ITEM --op-vault VAULT --op-field FIELD\npnpm bench stop\npnpm bench reset',
     );
     return;
   }
   if (options.positionals.length > 1)
-    throw new BenchmarkError('Expected one command: run, grade, stop or reset.');
+    throw new BenchmarkError('Expected one command: run, grade, calibrate, stop or reset.');
+  if (
+    !options.values.op &&
+    ['op-item', 'op-vault', 'op-field'].some(
+      (key) => options.values[key as 'op-item' | 'op-vault' | 'op-field'] !== undefined,
+    )
+  )
+    throw new BenchmarkError('--op-item, --op-vault and --op-field require --op.');
+  if (options.values.op && !['run', 'grade', 'calibrate'].includes(command))
+    throw new BenchmarkError('--op is supported by run, grade and calibrate.');
   if (command === 'run') return run();
   if (command === 'grade') return grade();
   if (command === 'calibrate') return calibrate();
@@ -457,7 +484,7 @@ async function calibrate() {
     return;
   }
   const scripted = options.values.scripted;
-  const credentials = await loadCredentials(options.values['env-file'], false);
+  const credentials = await benchmarkCredentials(false);
   const key = credentials.values.OPENAI_API_KEY;
   if (!scripted && (!key || key.startsWith('op://')))
     throw new BenchmarkError(
