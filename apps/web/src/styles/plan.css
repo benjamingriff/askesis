@@ -1297,59 +1297,106 @@
   gap: 14px;
   min-width: 0;
 }
+/* Today's session: a cover band in the session's colour with its effort profile rising from the
+   lower edge, then plain copy on the card surface. The kind colour stays in the cover. */
 .hero-workout {
-  position: relative;
   display: flex;
   flex-direction: column;
-  gap: 8px;
   width: 100%;
-  padding: 22px;
+  padding: 0;
   border-radius: var(--radius-xl);
-  border: 1px solid color-mix(in srgb, var(--kind) 35%, transparent);
-  background:
-    linear-gradient(150deg, color-mix(in srgb, var(--kind) 30%, transparent), transparent 70%),
-    var(--surface);
+  border: 1px solid var(--border);
+  background: var(--surface);
   color: var(--text);
   text-align: left;
   overflow: hidden;
-  transition: transform 0.12s ease;
+  transition:
+    transform 0.12s ease,
+    border-color 0.15s ease;
+}
+.hero-workout:hover {
+  border-color: color-mix(in srgb, var(--kind) 40%, var(--border));
 }
 .hero-workout:active {
   transform: scale(0.99);
 }
+.hero-cover {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 20px;
+  min-height: 150px;
+  padding: 18px 22px 0;
+  background: color-mix(in srgb, var(--kind) 15%, var(--surface));
+  color: var(--kind);
+}
 .hero-kind {
+  position: relative;
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  align-self: flex-start;
+  gap: 7px;
+  padding: 6px 12px 6px 10px;
+  border-radius: 999px;
+  background: var(--surface);
   color: var(--kind);
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+}
+.hero-cover .intensity-chart {
+  position: relative;
+  width: calc(100% + 44px);
+  margin: 0 -22px;
+}
+/* The effort profile stands on the cover's lower edge, so its bars meet the body squarely. */
+.hero-cover .intensity-chart span {
+  border-radius: 3px 3px 0 0;
+}
+.hero-body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 20px 22px 22px;
 }
 .hero-title {
   font-size: 30px;
-  line-height: 1.2;
+  line-height: 1.15;
   font-weight: 800;
   letter-spacing: -0.03em;
+  text-wrap: balance;
 }
 .hero-purpose {
+  max-width: 62ch;
   color: var(--text-dim);
+}
+.hero-footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px 28px;
+  margin-top: 10px;
 }
 .hero-stats {
   display: flex;
   flex-wrap: wrap;
   gap: 28px;
-  margin: 10px 0 6px;
 }
 .hero-cta {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  margin-top: 8px;
-  color: var(--accent-text);
-  font-size: 16px;
+  padding: 12px 18px 12px 20px;
+  border-radius: 999px;
+  background: var(--accent-fill);
+  color: var(--on-accent);
+  font-size: 15px;
   font-weight: 800;
+  transition: filter 0.15s ease;
+}
+.hero-workout:hover .hero-cta {
+  filter: brightness(1.06);
 }
 .rest-hero {
   display: flex;
