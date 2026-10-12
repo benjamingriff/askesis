@@ -354,19 +354,27 @@ function HeroWorkout({
       style={{ '--kind': kind.color } as CSSProperties}
       onClick={() => onOpen(workout)}
     >
-      <span className="hero-kind">
-        <kind.icon size={16} aria-hidden="true" /> {kind.label}
+      <span className="hero-cover">
+        <span className="hero-kind">
+          <kind.icon size={15} aria-hidden="true" /> {kind.label}
+        </span>
+        {detail.data ? (
+          <IntensityChart prescription={detail.data.prescription} height={64} />
+        ) : null}
       </span>
-      <strong className="hero-title">{workout.title}</strong>
-      {workout.purpose ? <span className="hero-purpose">{workout.purpose}</span> : null}
-      <span className="hero-stats">
-        {workoutStats(workout, units, pool).map((stat) => (
-          <Stat key={stat.label} label={stat.label} value={stat.value} unit={stat.unit} large />
-        ))}
-      </span>
-      {detail.data ? <IntensityChart prescription={detail.data.prescription} height={56} /> : null}
-      <span className="hero-cta">
-        View workout <ArrowRight size={16} aria-hidden="true" />
+      <span className="hero-body">
+        <strong className="hero-title">{workout.title}</strong>
+        {workout.purpose ? <span className="hero-purpose">{workout.purpose}</span> : null}
+        <span className="hero-footer">
+          <span className="hero-stats">
+            {workoutStats(workout, units, pool).map((stat) => (
+              <Stat key={stat.label} label={stat.label} value={stat.value} unit={stat.unit} large />
+            ))}
+          </span>
+          <span className="hero-cta">
+            View workout <ArrowRight size={16} aria-hidden="true" />
+          </span>
+        </span>
       </span>
     </button>
   );
