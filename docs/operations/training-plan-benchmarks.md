@@ -111,7 +111,9 @@ Each run prints a new `benchmark-results/calibration-<run-id>/report.md`. Open i
 
 `results.json` contains machine-readable results. Each fixture directory contains `input.json`, `expected.json` and `attempt-<number>.json`. The manifest records selected cases, resolved fixture/label hashes, model, reviewer version/prompt hash, Git revision and dirty-tree state. Files are private and ignored by Git. Usage currently records successful input/output token totals; monetary cost remains unknown because cache breakdown is not retained.
 
-Reports update after each attempt. Ctrl+C or the 30-minute suite limit retains completed reviews. A provider or review-validation failure stops further calls, records safe diagnostics and returns exit status 1. Errors and unattempted cases are excluded from grading-agreement denominators and shown explicitly. There is no automatic resume or retry.
+Reports update after each attempt. Ctrl+C or the 30-minute suite limit retains completed reviews. A provider or review-validation failure stops further calls, records safe diagnostics and returns exit status 1. Validation failures have specific `REVIEW_*` codes and fixed explanations; the parsed rejected review and available usage are retained in the attempt JSON, so invalid citations or verdicts can be inspected. Errors and unattempted cases are excluded from grading-agreement denominators and shown explicitly. There is no automatic resume or retry.
+
+Reviewer v2 receives the available evidence-reference IDs explicitly. When the saved plan is null, `plan:missing` is a valid reference for that absence; `plan:brief`, workout and block IDs are unavailable. The reviewer must still provide all six criteria and an `incomplete` verdict. A valid incomplete judgment is an expected result, not an operational error. Retry just that case with `pnpm bench calibrate --op --fixture missing-plan`.
 
 By default, a fully executed suite exits 0 even when the grader disagrees with labels: disagreement is the result being measured. Add `--assert` to exit 1 on any labelled disagreement, for a regression gate after calibrating and reviewing the labels. Operational errors always exit 1.
 

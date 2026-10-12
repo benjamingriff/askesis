@@ -10,7 +10,7 @@ import {
   summarizeCalibration,
   type CalibrationAttempt,
 } from './calibration.js';
-import { validateReview } from './models.js';
+import { availableEvidenceReferences, ReviewValidationError, validateReview } from './models.js';
 
 describe('grader calibration fixtures', () => {
   it('keeps independent development/holdout cases and rejects unknown selections', async () => {
@@ -71,6 +71,23 @@ describe('grader calibration fixtures', () => {
 });
 
 describe('calibration comparisons', () => {
+  it('supports explicit missing-plan evidence and refuses it when a plan exists', async () => {
+    const { fixtures } = await loadFixtures('all', ['missing-plan', 'distance-control']);
+    const missing = fixtures.find((f) => f.id === 'missing-plan')!;
+    const present = fixtures.find((f) => f.id === 'distance-control')!;
+    const review = scriptedCalibrationReview(missing.evidence);
+    review.criteria.forEach((c) => {
+      c.evidence = ['plan:missing'];
+    });
+    expect(availableEvidenceReferences(missing.evidence)).toContain('plan:missing');
+    expect(availableEvidenceReferences(missing.evidence)).not.toContain('plan:brief');
+    expect(() => validateReview(review, missing.evidence)).not.toThrow();
+    expect(() => validateReview(review, present.evidence)).toThrow(ReviewValidationError);
+    review.verdict = 'needs_revision';
+    expect(() => validateReview(review, missing.evidence)).toThrow(
+      'must be assessed as incomplete',
+    );
+  });
   it('scores targeted missed defects and false alarms separately from overall verdicts', async () => {
     const { fixtures } = await loadFixtures('all');
     const bad = fixtures.find((f) => f.id === 'unavailable-day')!;
@@ -146,6 +163,53 @@ describe('calibration comparisons', () => {
 });
 
 describe('calibration execution', () => {
+  it('preserves rejected reviews with a specific reason and usage, without counting them as judgments', async () => {
+    const { fixtures } = await loadFixtures('all', ['missing-plan']);
+    const directory = await mkdtemp(resolve(tmpdir(), 'askesis-calibration-'));
+    try {
+      const result = await runCalibration({
+        directory,
+        fixtures,
+        repeat: 1,
+        scripted: false,
+        signal: new AbortController().signal,
+        reviewer: async (evidence) => {
+          const review = scriptedCalibrationReview(evidence);
+          review.criteria.forEach((c) => {
+            c.evidence = ['plan:brief'];
+          });
+          return { review, usage: { inputTokens: 3, outputTokens: 4 } };
+        },
+      });
+      expect(result.summary).toMatchObject({
+        completed: 0,
+        errors: 1,
+        verdictMatches: 0,
+        inputTokens: 3,
+        outputTokens: 4,
+      });
+      const attempt = JSON.parse(
+        await readFile(resolve(directory, 'missing-plan/attempt-1.json'), 'utf8'),
+      );
+      expect(attempt).toMatchObject({
+        status: 'error',
+        diagnostic: {
+          category: 'review_validation_error',
+          errorType: 'ReviewValidationError',
+          errorCode: 'REVIEW_EVIDENCE_INVALID',
+          validationReason: 'Reviewer returned missing or invalid evidence references.',
+        },
+        invalidReview: { verdict: 'incomplete' },
+        usage: { inputTokens: 3, outputTokens: 4 },
+      });
+      expect(attempt.invalidReview.criteria[0].evidence).toEqual(['plan:brief']);
+      expect(await readFile(resolve(directory, 'report.md'), 'utf8')).toContain(
+        'REVIEW_EVIDENCE_INVALID',
+      );
+    } finally {
+      await rm(directory, { recursive: true, force: true });
+    }
+  });
   it('withholds labels and exposes the defects missed by a permissive stand-in', async () => {
     const { fixtures } = await loadFixtures('all');
     const directory = await mkdtemp(resolve(tmpdir(), 'askesis-calibration-'));

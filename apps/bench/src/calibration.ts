@@ -6,6 +6,7 @@ import {
   criteria,
   providerFailure,
   validateReview,
+  ReviewValidationError,
   type Disclosure,
   type ModelUsage,
   type Review,
@@ -57,7 +58,12 @@ export type CalibrationAttempt = {
       usage: ModelUsage;
       score: ReturnType<typeof scoreReview>;
     }
-  | { status: 'error'; diagnostic: ReturnType<typeof providerFailure> }
+  | {
+      status: 'error';
+      diagnostic: ReturnType<typeof providerFailure>;
+      invalidReview?: Review;
+      usage?: ModelUsage;
+    }
 );
 
 export function summarizeCalibration(
@@ -111,8 +117,8 @@ export function summarizeCalibration(
       };
     }),
     stability: stable,
-    inputTokens: completed.reduce((sum, a) => sum + a.usage.inputTokens, 0),
-    outputTokens: completed.reduce((sum, a) => sum + a.usage.outputTokens, 0),
+    inputTokens: attempts.reduce((sum, a) => sum + (a.usage?.inputTokens ?? 0), 0),
+    outputTokens: attempts.reduce((sum, a) => sum + (a.usage?.outputTokens ?? 0), 0),
     measuredLatencyMs: completed.map((a) => a.elapsedMs),
     monetaryCost: null,
   };
@@ -165,6 +171,7 @@ export async function runCalibration(options: {
         await artifacts.event({ stage: 'grading', fixtureId: fixture.id, repetition });
         const started = performance.now();
         let attempt: CalibrationAttempt;
+        let receivedUsage: ModelUsage | undefined;
         try {
           // Labels, descriptions, IDs and split are intentionally absent from the model request.
           const result = await reviewer(
@@ -172,6 +179,7 @@ export async function runCalibration(options: {
             structuredClone(fixture.disclosures),
             signal,
           );
+          receivedUsage = result.usage;
           validateReview(result.review, fixture.evidence);
           attempt = {
             fixtureId: fixture.id,
@@ -192,9 +200,17 @@ export async function runCalibration(options: {
             status: 'error',
             elapsedMs: performance.now() - started,
             diagnostic: providerFailure(error),
+            ...(error instanceof ReviewValidationError
+              ? {
+                  invalidReview: error.review,
+                  ...((error.usage ?? receivedUsage)
+                    ? { usage: error.usage ?? receivedUsage! }
+                    : {}),
+                }
+              : {}),
           };
           options.onProgress?.(
-            `Grader failed: ${attempt.diagnostic.category} (${attempt.diagnostic.errorType}).`,
+            `Grader failed: ${attempt.diagnostic.category} (${attempt.diagnostic.errorCode ?? attempt.diagnostic.errorType}).${attempt.diagnostic.validationReason ? ` ${attempt.diagnostic.validationReason}` : ''}`,
           );
         }
         attempts.push(attempt);
@@ -314,7 +330,7 @@ export function calibrationMarkdown(
   for (const a of attempts) {
     if (a.status === 'error')
       lines.push(
-        `- ${a.fixtureId}, attempt ${a.repetition}: ${a.diagnostic.category}; ${a.diagnostic.errorType}. See the saved attempt for safe diagnostics.`,
+        `- ${a.fixtureId}, attempt ${a.repetition}: ${a.diagnostic.category}; ${a.diagnostic.errorCode ?? a.diagnostic.errorType}. ${a.diagnostic.validationReason ?? 'See the saved attempt for safe diagnostics.'}${a.invalidReview ? ' The rejected review is preserved in the saved attempt.' : ''}`,
       );
     else if (!a.score.matched) {
       lines.push(`### ${a.fixtureId} — attempt ${a.repetition}`, '', escape(a.review.summary), '');
@@ -336,7 +352,7 @@ export function calibrationMarkdown(
     '',
     '## Usage',
     '',
-    `Recorded successful-call usage: ${summary.inputTokens} input tokens; ${summary.outputTokens} output tokens. Monetary cost is unknown; cache breakdown and failed-call usage are not recorded.`,
+    `Recorded available usage, including rejected reviews: ${summary.inputTokens} input tokens; ${summary.outputTokens} output tokens. Monetary cost is unknown; cache breakdown and usage for failed provider calls are not recorded.`,
     '',
     '[Machine-readable results](results.json) · [Manifest](manifest.json) · [Progress](progress.jsonl)',
     '',
