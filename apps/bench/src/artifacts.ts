@@ -14,7 +14,7 @@ export function redact(value: unknown): unknown {
       Object.entries(value)
         .filter(
           ([key]) =>
-            !/^(?:authorization|headers|token|credential_digest|secret|apiKey|OPENAI_API_KEY|CLERK_SECRET_KEY|AGENT_BOOTSTRAP_TOKEN|DATABASE_URL)$/i.test(
+            !/^(?:authorization|headers|token|credential_digest|secret|apiKey|OPENAI_API_KEY|ANTHROPIC_API_KEY|CLERK_SECRET_KEY|AGENT_BOOTSTRAP_TOKEN|DATABASE_URL)$/i.test(
               key,
             ),
         )

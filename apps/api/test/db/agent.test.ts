@@ -388,6 +388,51 @@ it('rejects machine credentials at the private boundary and keeps bootstrap auth
   expect(r.status).toBe(401);
   await expect(runContext(randomUUID(), claim.token)).rejects.toMatchObject({ code: 'LEASE_LOST' });
 });
+it('registers a Claude worker over the private API, attributes its run and records a refusal', async () => {
+  const id = randomUUID();
+  const register = (provider: string) =>
+    app.request('/internal/agent/register', {
+      method: 'POST',
+      headers: { authorization: `Bearer ${bootstrap}`, 'content-type': 'application/json' },
+      body: JSON.stringify({
+        id,
+        provider,
+        model: 'claude-opus-5-5',
+        reasoning: 'medium',
+        promptVersion: 'multisport-coach-v3',
+        ready: true,
+      }),
+    });
+  expect((await register('gemini')).status).toBe(400);
+  expect((await register('anthropic')).status).toBe(200);
+  const created = await createConversation(
+    owner,
+    { initialMessage: { content: 'Plan my first 10K', target: null } },
+    randomUUID(),
+  );
+  const claim = (await claimRun(id)).claim!;
+  expect(claim.runId).toBe(created.accepted!.run.id);
+  const finished = await app.request(`/internal/agent/runs/${claim.runId}/finish`, {
+    method: 'POST',
+    headers: { authorization: `Bearer ${claim.token}`, 'content-type': 'application/json' },
+    body: JSON.stringify({ status: 'failed', failureCode: 'MODEL_REFUSAL' }),
+  });
+  expect(finished.status).toBe(200);
+  expect(await getRun(owner, claim.runId)).toMatchObject({
+    status: 'failed',
+    failureCode: 'MODEL_REFUSAL',
+  });
+  expect(
+    await db
+      .selectFrom('agent_runs')
+      .select(['provider', 'model'])
+      .where('id', '=', claim.runId)
+      .executeTakeFirstOrThrow(),
+  ).toEqual({ provider: 'anthropic', model: 'claude-opus-5-5' });
+  await expect(
+    db.updateTable('agent_workers').set({ provider: 'gemini' }).where('id', '=', id).execute(),
+  ).rejects.toMatchObject({ code: '23514' });
+});
 it('claims once across workers, allows discussion without generating, and persists one final reply', async () => {
   const w1 = await worker(),
     w2 = await worker();

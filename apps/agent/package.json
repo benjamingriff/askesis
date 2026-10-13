@@ -13,8 +13,8 @@
       "default": "./dist/config.js"
     },
     "./runtime": {
-      "types": "./dist/runtime.d.ts",
-      "default": "./dist/runtime.js"
+      "types": "./dist/runtime/index.d.ts",
+      "default": "./dist/runtime/index.js"
     },
     "./worker": {
       "types": "./dist/worker.d.ts",
@@ -23,6 +23,10 @@
     "./prompt": {
       "types": "./dist/prompt.d.ts",
       "default": "./dist/prompt.js"
+    },
+    "./testing": {
+      "types": "./dist/testing.d.ts",
+      "default": "./dist/testing.js"
     }
   },
   "scripts": {
@@ -34,6 +38,7 @@
     "smoke:live": "tsx --env-file-if-exists=../../.env src/live-smoke.ts"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "0.133.0",
     "@openai/agents": "0.18.0",
     "zod": "^4.3.6"
   },

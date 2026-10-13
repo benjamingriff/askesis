@@ -12,6 +12,7 @@ import { Artifacts, reportMarkdown } from './artifacts.js';
 import { checkPlan, hasExpectedCoverage, overallVerdict, type Check } from './checks.js';
 import {
   EvaluationModels,
+  evaluatorModel,
   providerFailure,
   SIMULATOR_VERSION,
   REVIEW_VERSION,
@@ -80,6 +81,14 @@ async function run() {
   if (!options.values.scripted && !credentials.values.OPENAI_API_KEY)
     throw new BenchmarkError(
       'Set OPENAI_API_KEY in .env.bench.local, your shell, or --env-file before running a live scenario.',
+    );
+  if (
+    !options.values.scripted &&
+    credentials.values.AGENT_PROVIDER === 'anthropic' &&
+    !credentials.values.ANTHROPIC_API_KEY
+  )
+    throw new BenchmarkError(
+      'Set ANTHROPIC_API_KEY in .env.bench.local, your shell, or --env-file to run a Claude coach.',
     );
   const environment = await localEnvironment();
   const release = await acquireLock();
@@ -160,16 +169,24 @@ async function run() {
       AGENT_BOOTSTRAP_TOKEN: process.env.AGENT_BOOTSTRAP_TOKEN,
       AGENT_API_URL: apiUrl,
       OPENAI_API_KEY: credentials.values.OPENAI_API_KEY ?? 'scripted-no-provider-request',
+      ANTHROPIC_API_KEY: credentials.values.ANTHROPIC_API_KEY ?? 'scripted-no-provider-request',
     });
+    const simulatorModel = evaluatorModel(
+      credentials.values,
+      credentials.values.BENCH_SIMULATOR_MODEL,
+    );
+    const reviewerModel = evaluatorModel(credentials.values, credentials.values.BENCH_REVIEW_MODEL);
+    const evaluatorKey = credentials.values.OPENAI_API_KEY ?? 'scripted-no-provider-request';
     await artifacts.json('configuration.json', {
       coach: {
+        provider: config.AGENT_PROVIDER,
         model: config.AGENT_MODEL,
         reasoning: config.AGENT_REASONING,
         maxTurns: config.AGENT_MAX_TURNS,
         maxOutputTokens: config.AGENT_MAX_OUTPUT_TOKENS,
       },
-      simulatorModel: credentials.values.BENCH_SIMULATOR_MODEL ?? config.AGENT_MODEL,
-      reviewerModel: credentials.values.BENCH_REVIEW_MODEL ?? config.AGENT_MODEL,
+      simulatorModel,
+      reviewerModel,
     });
     worker = startWorker(config, artifacts.directory, options.values.scripted ? scenario : null);
     let workerFailure = false;
@@ -189,14 +206,8 @@ async function run() {
     conversationId = created.conversation.id;
     activeRun = created.accepted!.run.id;
     console.log(`Athlete: ${scenario.openingMessage}`);
-    const simulator = new EvaluationModels(
-      config.OPENAI_API_KEY,
-      credentials.values.BENCH_SIMULATOR_MODEL ?? config.AGENT_MODEL,
-    );
-    const reviewer = new EvaluationModels(
-      config.OPENAI_API_KEY,
-      credentials.values.BENCH_REVIEW_MODEL ?? config.AGENT_MODEL,
-    );
+    const simulator = new EvaluationModels(evaluatorKey, simulatorModel);
+    const reviewer = new EvaluationModels(evaluatorKey, reviewerModel);
     stopReason = 'message_limit';
     for (let turn = 0; turn < scenario.limits.maxAthleteMessages; turn++) {
       await stage(`Coach turn ${turn + 1}`);
@@ -405,8 +416,7 @@ async function gradeSavedRun(runId: string, directory: string, signal: AbortSign
     stopReason: string;
     scripted: boolean;
   };
-  const model =
-    credentials.values.BENCH_REVIEW_MODEL ?? credentials.values.AGENT_MODEL ?? 'gpt-6.1-sol';
+  const model = evaluatorModel(credentials.values, credentials.values.BENCH_REVIEW_MODEL);
   const result = await new EvaluationModels(credentials.values.OPENAI_API_KEY, model).review(
     snapshot,
     disclosures,
@@ -521,8 +531,7 @@ async function calibrate() {
     throw new BenchmarkError(
       'Configure a resolved OPENAI_API_KEY in your shell or --env-file; use op run for 1Password references.',
     );
-  const model =
-    credentials.values.BENCH_REVIEW_MODEL ?? credentials.values.AGENT_MODEL ?? 'gpt-6.1-sol';
+  const model = evaluatorModel(credentials.values, credentials.values.BENCH_REVIEW_MODEL);
   const reviewer = scripted ? undefined : new EvaluationModels(key!, model);
   const runId = `calibration-${new Date().toISOString().replace(/[:.]/g, '-')}-${randomUUID().slice(0, 8)}`;
   const directory = resolve(root, 'benchmark-results', runId);

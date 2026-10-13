@@ -23,6 +23,7 @@ Supported configuration:
 OPENAI_API_KEY=your-provider-key
 CLERK_SECRET_KEY=sk_test_your-development-key
 CLERK_PUBLISHABLE_KEY=pk_test_your-development-key
+AGENT_PROVIDER=openai
 AGENT_MODEL=gpt-6.1-sol
 AGENT_REASONING=medium
 BENCH_SIMULATOR_MODEL=gpt-6.1-sol
@@ -33,7 +34,7 @@ Keep credential files ignored. Missing development Clerk keys can fall back to t
 
 The CLI builds the relevant packages automatically, applies migrations and prints readiness, athlete messages, coach replies, tool activity and the assessment/report path. Each run uses a new synthetic athlete and conversation. The scenario describes a first half marathon twelve weeks away, a three-run/22 km baseline, Tuesday/Thursday/Sunday availability, and a recent measured 5 km result. It asks for the first four weeks now. Dates are resolved in Europe/London and saved with the run.
 
-Default coach configuration comes from the existing worker parser and current coaching prompt. `AGENT_MODEL`, `AGENT_REASONING`, `AGENT_MAX_TURNS`, `AGENT_MAX_OUTPUT_TOKENS` and `AGENT_POLL_MS` are supported. Simulator and reviewer models default to the coach model; set their `BENCH_*_MODEL` variables explicitly when comparing coaching models so the evaluators remain fixed. Candidate prompt injection, scenario suites, repeated trials and comparison summaries are future work.
+Default coach configuration comes from the existing worker parser and current coaching prompt. `AGENT_PROVIDER`, `AGENT_MODEL`, `AGENT_REASONING`, `AGENT_MAX_TURNS`, `AGENT_MAX_OUTPUT_TOKENS` and `AGENT_POLL_MS` are supported. To benchmark a Claude coach, set `AGENT_PROVIDER=anthropic` and `ANTHROPIC_API_KEY`; `OPENAI_API_KEY` is still required because the simulator and reviewer always run on OpenAI. With an OpenAI coach they default to the coach model, and with a Claude coach to `gpt-6.1-sol`. Set their `BENCH_*_MODEL` variables explicitly when comparing coaching models so the evaluators remain fixed. `--scripted` replays the offline script through whichever coach runtime is selected. Candidate prompt injection, scenario suites, repeated trials and comparison summaries are future work.
 
 ## Review the result
 

@@ -1,5 +1,6 @@
 import { Agent, Runner, OpenAIProvider, setTracingDisabled } from '@openai/agents';
 import { z } from 'zod';
+import { DEFAULT_MODELS } from '@askesis/agent/config';
 import type { Scenario, AthleteAction } from './scenario.js';
 import type { BenchmarkSnapshot } from '@askesis/api/benchmark';
 
@@ -66,6 +67,16 @@ export function availableEvidenceReferences(snapshot: ReviewEvidence) {
     ...(snapshot.plan?.workouts.map(({ workout }) => `workout:${workout.id}`) ?? []),
     ...(snapshot.plan?.blocks.map((block) => `block:${block.id}`) ?? []),
   ];
+}
+
+/**
+ * Simulator and reviewer run on OpenAI regardless of the coach, so changing the coach provider
+ * never changes the evaluators. They follow an OpenAI coach's model unless set explicitly.
+ */
+export function evaluatorModel(values: NodeJS.ProcessEnv, override: string | undefined) {
+  if (override) return override;
+  if ((values.AGENT_PROVIDER ?? 'openai') !== 'openai') return DEFAULT_MODELS.openai;
+  return values.AGENT_MODEL || DEFAULT_MODELS.openai;
 }
 
 export class EvaluationModels {

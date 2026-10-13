@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { setTimeout as pause } from 'node:timers/promises';
 import { type AgentApi, ApiError, type Claim } from './api.js';
 import { PROMPT_VERSION, type AgentConfig } from './config.js';
-import { failureCode, type CoachingRuntime } from './runtime.js';
+import { failureCode, type CoachingRuntime } from './runtime/index.js';
 
 const MAX_HEARTBEAT_FAILURES = 3;
 
