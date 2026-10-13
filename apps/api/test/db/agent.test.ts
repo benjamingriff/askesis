@@ -432,6 +432,22 @@ it('registers a Claude worker over the private API, attributes its run and recor
   await expect(
     db.updateTable('agent_workers').set({ provider: 'gemini' }).where('id', '=', id).execute(),
   ).rejects.toMatchObject({ code: '23514' });
+  // The refused request stays in the chat but is not sent with the rephrased one.
+  await sendMessage(
+    owner,
+    created.conversation.id,
+    { content: 'Plan a first 10K in eight weeks', target: null },
+    randomUUID(),
+  );
+  const retry = (await claimRun(id)).claim!;
+  const context = await runContext(retry.runId, retry.token);
+  expect(context.messages.map((m) => m.content)).toEqual(['Plan a first 10K in eight weeks']);
+  expect(context.historyTruncated).toBe(false);
+  expect(
+    (await listMessages(owner, created.conversation.id, undefined, 50)).messages.map(
+      (m) => m.content,
+    ),
+  ).toEqual(['Plan my first 10K', 'Plan a first 10K in eight weeks']);
 });
 it('claims once across workers, allows discussion without generating, and persists one final reply', async () => {
   const w1 = await worker(),
