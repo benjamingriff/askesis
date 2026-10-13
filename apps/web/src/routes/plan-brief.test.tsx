@@ -89,11 +89,16 @@ it('distinguishes the intended month from completed coverage after generation st
   expect(screen.getByText('Still unplanned')).toBeInTheDocument();
   expect(screen.getByText('8 Sept – 1 Dec 2026')).toBeInTheDocument();
 });
-function mount() {
+function mount(revisionId?: string) {
   const router = createMemoryRouter(
-    [{ path: '/plans/:planId/brief', element: <PlanBriefPage /> }],
+    [
+      { path: '/plans/:planId/brief', element: <PlanBriefPage /> },
+      { path: '/plans/:planId/versions/:revisionId/brief', element: <PlanBriefPage /> },
+    ],
     {
-      initialEntries: ['/plans/plan-1/brief'],
+      initialEntries: [
+        revisionId ? `/plans/plan-1/versions/${revisionId}/brief` : '/plans/plan-1/brief',
+      ],
     },
   );
   render(
@@ -102,6 +107,30 @@ function mount() {
     </AccountQueryProvider>,
   );
 }
+
+it('reads the requested historical brief and keeps it read-only', async () => {
+  state = { ...state, versionId: 'revision-1', readOnly: true, confirmed: true };
+  mount('revision-1');
+  expect(await screen.findByLabelText('Goal')).toHaveValue(state.brief.goal);
+  expect(api.GET).toHaveBeenCalledWith('/api/v1/plans/{planId}/revisions/{revisionId}/brief', {
+    params: { path: { planId: 'plan-1', revisionId: 'revision-1' } },
+  });
+  expect(api.GET).not.toHaveBeenCalledWith('/api/v1/plans/{planId}/draft/brief', expect.anything());
+  expect(screen.getByText('Read-only version')).toBeInTheDocument();
+  expect(screen.getByLabelText('Goal')).toBeDisabled();
+  expect(screen.getByLabelText('Units')).toBeDisabled();
+  expect(screen.getByRole('link', { name: 'Version details' })).toHaveAttribute(
+    'href',
+    '/plans/plan-1/versions/revision-1',
+  );
+  expect(screen.queryByRole('button', { name: 'Edit brief' })).not.toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: 'Save changes' })).not.toBeInTheDocument();
+  expect(
+    screen.queryByRole('button', { name: 'Review brief for confirmation' }),
+  ).not.toBeInTheDocument();
+  expect(api.PUT).not.toHaveBeenCalled();
+  expect(api.POST).not.toHaveBeenCalled();
+});
 
 it('switches display units without changing the saved baseline distance', async () => {
   mount();
