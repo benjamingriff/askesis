@@ -2,7 +2,9 @@ import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-li
 import type { IntegrationsState, WorkoutActual, WorkoutSummary } from '@askesis/api-client';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { MemoryRouter } from 'react-router';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AccountQueryProvider } from '../query-provider';
+import { rangeAdherence, type AdherenceView } from '../activity-data';
 import { SettingsProvider } from '../settings';
 import { outcomeLabel, StravaConnection, WorkoutActualSection } from './Activity';
 
@@ -74,7 +76,7 @@ const actual: WorkoutActual = {
   activities: [
     {
       ...activity,
-      lapsSynced: true,
+      lapsPending: false,
       lapCount: 8,
       efforts: {
         verdict: 'aligned',
@@ -150,6 +152,104 @@ it('offers Strava only when the server is configured, and syncs a connection', a
   expect(screen.getByText(/never shared with your coach/)).toBeInTheDocument();
 });
 
+it('drops cached activity reads on disconnect and refreshes state after a failed sync', async () => {
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+  });
+  client.setQueryData(['adherence', 'plan', 'version', 3], { connected: true });
+  let state = connected;
+  mocks.get.mockImplementation(async () => ({ data: state }));
+  // The server marks the grant for reauthorization while the sync request fails.
+  mocks.post.mockImplementation(async () => {
+    state = {
+      strava: {
+        available: true,
+        connection: {
+          ...connected.strava.connection!,
+          status: 'reauthorization_required',
+          lastSyncError: 'STRAVA_REAUTHORIZATION_REQUIRED',
+        },
+      },
+    };
+    return { error: { error: { message: 'Strava no longer accepts this connection.' } } };
+  });
+  render(
+    <QueryClientProvider client={client}>
+      <SettingsProvider>
+        <StravaConnection />
+      </SettingsProvider>
+    </QueryClientProvider>,
+  );
+  fireEvent.click(await screen.findByRole('button', { name: 'Sync now' }));
+  expect(await screen.findByRole('button', { name: 'Reconnect' })).toBeInTheDocument();
+
+  mocks.del.mockImplementation(async () => {
+    state = { strava: { available: true, connection: null } };
+    return { data: state };
+  });
+  fireEvent.click(screen.getByRole('button', { name: 'Disconnect' }));
+  fireEvent.click(
+    within(await screen.findByRole('dialog')).getByRole('button', { name: 'Disconnect' }),
+  );
+  expect(await screen.findByRole('button', { name: 'Connect with Strava' })).toBeInTheDocument();
+  expect(client.getQueryCache().findAll({ queryKey: ['adherence'] })).toEqual([]);
+});
+
+it('totals the displayed calendar week, whatever weeks the plan stores', () => {
+  const day = (date: string, id: string, seconds: number) => ({
+    ...workout,
+    id,
+    scheduledDate: date,
+    estimatedDurationSeconds: seconds,
+  });
+  const outcome = (workoutId: string, status: 'completed' | 'missed' | 'planned', seconds = 0) => ({
+    ...actual.outcome,
+    workoutId,
+    status,
+    activityIds: status === 'completed' ? [`activity-${workoutId}`] : [],
+    actualSeconds: seconds,
+    actualMetres: 0,
+  });
+  const extraRun = { ...activity, id: 'extra', date: '2026-10-13' };
+  const view: AdherenceView = {
+    connected: true,
+    outcomes: new Map([
+      ['mon', outcome('mon', 'completed', 1800)],
+      ['tue', outcome('tue', 'missed')],
+      ['fri', outcome('fri', 'completed', 3000)], // done early
+      ['sun-before', outcome('sun-before', 'completed', 600)],
+    ]),
+    activities: new Map([['extra', extraRun]]),
+    data: {
+      extra: [{ activityId: 'extra', countsTowardPlan: true, seconds: 900, metres: 3000 }],
+    } as AdherenceView['data'],
+  };
+  const workouts = [
+    day('2026-10-11', 'sun-before', 600),
+    day('2026-10-12', 'mon', 1800),
+    day('2026-10-13', 'tue', 1200),
+    day('2026-10-16', 'fri', 3600),
+  ];
+  expect(rangeAdherence(view, workouts, '2026-10-12', '2026-10-18', '2026-10-14')).toEqual({
+    planned: { sessions: 3, seconds: 6600, metres: 0 },
+    due: { sessions: 3, seconds: 6600, metres: 0 },
+    actual: { sessions: 3, seconds: 5700, metres: 3000 },
+    completed: 2,
+    partial: 0,
+    missed: 1,
+    extra: 1,
+  });
+  expect(
+    rangeAdherence(
+      { ...view, connected: false },
+      workouts,
+      '2026-10-12',
+      '2026-10-18',
+      '2026-10-14',
+    ),
+  ).toBeNull();
+});
+
 it('asks to reconnect when Strava stops accepting the connection', async () => {
   const strava = connected.strava.connection!;
   mocks.get.mockResolvedValue({
@@ -183,7 +283,14 @@ it('shows what was done rep by rep and lets the athlete reject the match', async
     };
     return { data: current };
   });
-  mount(<WorkoutActualSection workout={workout} units="km" today="2026-10-14" />);
+  mount(
+    <WorkoutActualSection
+      workout={workout}
+      version={{ id: workout.planVersionId, editNumber: 1 }}
+      units="km"
+      today="2026-10-14"
+    />,
+  );
   const section = await screen.findByRole('region', { name: 'What you did' });
   expect(within(section).getByText('Done a day late')).toBeInTheDocument();
   expect(within(section).getByText('3 of 3 reps done')).toBeInTheDocument();

@@ -80,7 +80,9 @@ describe('matching activities to workouts', () => {
     expect(status.thu!.status).toBe('missed');
     expect(status.sat!.status).toBe('missed');
     expect(status.wed2!.status).toBe('planned');
-    expect(result.extra).toEqual([{ activityId: 'c', countsTowardPlan: false }]);
+    expect(result.extra).toEqual([
+      { activityId: 'c', countsTowardPlan: false, seconds: 3660, metres: 0 },
+    ]);
   });
 
   it('prefers the same-day workout and marks a short session partial', () => {
@@ -103,6 +105,18 @@ describe('matching activities to workouts', () => {
     // A day either side needs a plausible volume: a 10-minute jog is not the long run.
     expect(pairScore(sunday, activity('j', '2026-10-12', 'run', 10), weeks)).toBeNull();
     expect(pairScore(sunday, activity('k', '2026-10-15', 'run', 60), weeks)).toBeNull();
+  });
+
+  it('keeps rowing out of lifting sessions but lets it fill mixed gym work', () => {
+    const row = activity('r', '2026-10-05', 'row', 45);
+    const lifting = run()([workout('lift', '2026-10-05', 'strength', 45)], [row]);
+    expect(lifting.workouts[0]!.status).toBe('missed');
+    const circuit = {
+      ...workout('hyrox', '2026-10-05', 'mixed', 45),
+      slots: slotsFor('mixed', ['row', 'strength', 'ski_erg']),
+    };
+    expect(circuit.slots).toEqual(['gym']);
+    expect(run()([circuit], [row]).workouts[0]!.status).toBe('completed');
   });
 
   it('fills a brick with a ride and a run, and stays partial with only one', () => {
@@ -148,7 +162,9 @@ describe('matching activities to workouts', () => {
       ['mon', [], null],
       ['tue', ['t'], 'manual'],
     ]);
-    expect(result.extra).toEqual([{ activityId: 'a', countsTowardPlan: true }]);
+    expect(result.extra).toEqual([
+      { activityId: 'a', countsTowardPlan: true, seconds: 2400, metres: 8000 },
+    ]);
   });
 
   it('totals planned, due and actual volume by week, counting early sessions as ahead', () => {

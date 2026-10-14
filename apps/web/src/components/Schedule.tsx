@@ -41,7 +41,7 @@ import { WorkoutChangesContext } from './PlanChanges';
 import { EffortLegend, Stat, WeekChart } from './PlanWidgets';
 import { DayRow, WorkoutCard, WorkoutDialog } from './Workout';
 import { Button, Card, EmptyState, IconButton, Pill, Segmented, Notice, cx } from './ui';
-import { AdherenceContext, useAdherence, useAdherenceView } from '../activity-data';
+import { AdherenceContext, rangeAdherence, useAdherence, useAdherenceView } from '../activity-data';
 
 type Mode = 'weeks' | 'calendar';
 export type SchedulePresentation = 'interactive' | 'week-list';
@@ -103,10 +103,9 @@ export function Schedule({
     cutbackIn(storedWeeks, range);
   const weekBlock = week ? blockOf(week) : null;
   const adherence = useAdherenceView(useAdherence(version).data);
-  const weekActual =
-    adherence.connected && week
-      ? adherence.data?.weeks.find((w) => w.startDate === week.startDate)
-      : undefined;
+  const weekActual = week
+    ? rangeAdherence(adherence, workouts, week.startDate, week.endDate, today)
+    : null;
   const dayStatus = (date: string) =>
     (startDate && date < startDate) || (endDate && date > endDate)
       ? ('outside' as const)
@@ -213,7 +212,7 @@ export function Schedule({
                   ) : null}
                   <Stat label="Time" value={formatDuration(week.seconds)} />
                   <Stat label="Sessions" value={String(week.workouts.length)} />
-                  {weekActual && weekActual.startDate <= today ? (
+                  {weekActual && week.startDate <= today ? (
                     <Stat
                       label="Done"
                       value={`${weekActual.completed + weekActual.partial} / ${weekActual.planned.sessions}`}

@@ -378,9 +378,8 @@ export function WorkoutDialog({
         </div>
         {workout.purpose ? <p className="workout-purpose">{workout.purpose}</p> : null}
         {workout.description ? <p className="muted">{workout.description}</p> : null}
-        {workout.scheduledDate <= today ? (
-          <WorkoutActualSection workout={workout} units={units} today={today} />
-        ) : null}
+        {/* Future sessions too: one may already be done early, or need an early recording linked. */}
+        <WorkoutActualSection workout={workout} version={version} units={units} today={today} />
         {detail.isPending ? <LoadingState>Loading prescription…</LoadingState> : null}
         {detail.error ? (
           <ErrorState message={detail.error.message} onRetry={() => void detail.refetch()} />

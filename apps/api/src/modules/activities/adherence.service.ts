@@ -3,6 +3,7 @@ import { getDatabase } from '../../database/client.js';
 import type { Activities } from '../../database/generated.js';
 import { localDate } from '../athletes/timezone.js';
 import { getWorkoutDetail } from '../workouts/workout.repository.js';
+import type { WorkoutStep } from '../workouts/workout.schemas.js';
 import { addDays } from './activity.dates.js';
 import {
   accepts,
@@ -243,6 +244,9 @@ export async function readWorkoutActual(
   const detail = linked.some((row) => DISCIPLINE[row.sport as ActivitySport])
     ? await getWorkoutDetail(athleteId, workoutId, { canonicalUnits: true })
     : null;
+  const hasRepeats = (step: WorkoutStep): boolean =>
+    step.kind === 'repeat' || step.steps.some(hasRepeats);
+  const structured = !!detail && hasRepeats(detail.prescription);
   const date = day(workout.scheduled_date);
   const planned = workouts.find((w) => w.id === workoutId)!;
   const linkedTo = new Map(
@@ -281,7 +285,7 @@ export async function readWorkoutActual(
       const discipline = DISCIPLINE[row.sport as ActivitySport];
       return {
         ...toActivity(row),
-        lapsSynced: row.laps_fetched_at !== null,
+        lapsPending: !!discipline && structured && row.laps_fetched_at === null,
         lapCount: own.length,
         efforts:
           detail && discipline && row.laps_fetched_at !== null

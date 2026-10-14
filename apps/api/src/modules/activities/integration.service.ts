@@ -402,8 +402,8 @@ export async function syncStrava(athleteId: string, now = new Date()) {
 }
 
 /**
- * Laps for endurance activities near a structured workout in an active plan: those are the
- * sessions whose reps can be checked. Missing laps come first, then the stalest. Stops early
+ * Laps for endurance activities near a structured workout in an active plan, or linked to one by
+ * the athlete (up to a week away): those are the sessions whose reps can be checked. Missing laps come first, then the stalest. Stops early
  * when the app's shared read quota runs low, leaving the rest for the next sync.
  */
 async function fetchLaps(
@@ -421,8 +421,12 @@ async function fetchLaps(
         SELECT 1 FROM workouts w
         JOIN plans p ON p.current_locked_version_id = w.plan_version_id
         WHERE p.owner_id = ${athleteId} AND p.activated_at IS NOT NULL AND p.archived_at IS NULL
-          AND w.scheduled_date BETWEEN a.local_date - 3 AND a.local_date + 3
-          AND EXISTS (SELECT 1 FROM workout_steps s WHERE s.workout_id = w.id AND s.kind = 'repeat'))
+          AND EXISTS (SELECT 1 FROM workout_steps s WHERE s.workout_id = w.id AND s.kind = 'repeat')
+          AND (w.scheduled_date BETWEEN a.local_date - 3 AND a.local_date + 3
+            OR EXISTS (SELECT 1 FROM activity_match_overrides o
+              WHERE o.plan_id = p.id AND o.workout_lineage_id = w.lineage_id AND o.decision = 'link'
+                AND o.connection_id = a.connection_id
+                AND o.source_activity_id = a.source_activity_id)))
     ORDER BY a.laps_fetched_at NULLS FIRST, a.local_date DESC
     LIMIT ${LAP_BUDGET}`.execute(getDatabase());
   let fetched = 0;
@@ -463,10 +467,15 @@ export async function disconnectStrava(athleteId: string) {
   if (!connection) return readIntegrations(athleteId);
   const settings = stravaSettings();
   if (settings) {
-    // Local data goes regardless: the athlete asked for it to.
-    await settings.client
-      .revoke(decryptSecret(connection.refresh_token_ciphertext, settings.key))
-      .catch(() => undefined);
+    // Local data goes regardless, even when the token can no longer be decrypted after a key
+    // change: the athlete asked for it to.
+    try {
+      await settings.client.revoke(
+        decryptSecret(connection.refresh_token_ciphertext, settings.key),
+      );
+    } catch {
+      // Best effort: the grant can also be revoked from Strava's settings.
+    }
   }
   await getDatabase()
     .deleteFrom('integration_connections')

@@ -51,6 +51,7 @@ import {
   useAdherenceView,
   useAutoSync,
   useOutcome,
+  rangeAdherence,
   type AdherenceView,
 } from '../activity-data';
 import { activityStats, OutcomeIcon, outcomeLabel } from '../components/Activity';
@@ -293,7 +294,9 @@ function TodayForPlan({ plan, today }: { plan: Plan; today: string }) {
             {adherence.connected ? (
               <WeekActual
                 adherence={adherence}
-                weekStart={days[0]!}
+                workouts={all}
+                days={days}
+                today={today}
                 measure={measure}
                 formatAmount={formatAmount}
                 units={units}
@@ -369,20 +372,22 @@ function TodayForPlan({ plan, today }: { plan: Plan; today: string }) {
  */
 function WeekActual({
   adherence,
-  weekStart,
+  workouts,
+  days,
+  today,
   measure,
   formatAmount,
   units,
 }: {
   adherence: AdherenceView;
-  weekStart: string;
+  workouts: WorkoutSummary[];
+  days: string[];
+  today: string;
   measure: 'distance' | 'time';
   formatAmount: (value: number, withUnit?: boolean) => string;
   units: Units;
 }) {
-  const week = adherence.data?.weeks.find(
-    (w) => w.startDate <= weekStart && w.endDate >= weekStart,
-  );
+  const week = rangeAdherence(adherence, workouts, days[0]!, days.at(-1)!, today);
   if (!week) return null;
   const pick = (volume: { seconds: number; metres: number }) =>
     measure === 'time' ? volume.seconds : volume.metres;

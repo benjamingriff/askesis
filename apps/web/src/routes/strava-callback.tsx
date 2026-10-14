@@ -3,7 +3,7 @@ import { ArrowRight, CheckCircle2, RefreshCw } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useLocation } from 'react-router';
 import { api } from '../api';
-import { useConnectStrava } from '../activity-data';
+import { useConnectStrava, useRefreshActivities } from '../activity-data';
 import { Button, ButtonLink, Card, ErrorState, LoadingState } from '../components/ui';
 import { result } from '../lib/result';
 
@@ -19,6 +19,7 @@ export function StravaCallbackPage() {
   const [params] = useState(() => new URLSearchParams(location.search));
   const client = useQueryClient();
   const reconnect = useConnectStrava();
+  const refresh = useRefreshActivities();
   const finish = useMutation({
     mutationFn: async () => {
       const integrations = result(
@@ -31,11 +32,10 @@ export function StravaCallbackPage() {
         }),
       );
       client.setQueryData(['integrations'], integrations);
-      const sync = result(await api.POST('/api/v1/integrations/strava/sync'));
-      client.setQueryData(['integrations'], sync.integrations);
-      await client.invalidateQueries({ queryKey: ['adherence'] });
-      return sync;
+      return result(await api.POST('/api/v1/integrations/strava/sync'));
     },
+    // A failed first sync can still have connected, or marked the grant for reauthorization.
+    onSettled: (sync) => refresh(sync?.integrations),
   });
   const code = params.get('code');
   const denied = params.get('error') === 'access_denied';

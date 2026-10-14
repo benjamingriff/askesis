@@ -6656,6 +6656,8 @@ export interface components {
                 /** Format: uuid */
                 activityId: string;
                 countsTowardPlan: boolean;
+                seconds: number;
+                metres: number;
             }[];
             weeks: components["schemas"]["WeekAdherence"][];
             toDate: {
@@ -6741,7 +6743,7 @@ export interface components {
             connected: boolean;
             outcome: components["schemas"]["WorkoutOutcome"];
             activities: (components["schemas"]["Activity"] & {
-                lapsSynced: boolean;
+                lapsPending: boolean;
                 lapCount: number;
                 efforts: components["schemas"]["EffortAnalysis"];
             })[];

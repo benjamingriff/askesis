@@ -190,11 +190,13 @@ it('syncs activities, matches them to the plan and keeps the athlete’s decisio
     matchedBy: 'auto',
   });
   const walk = await activityId(4);
-  expect(adherence.extra).toEqual([{ activityId: walk, countsTowardPlan: false }]);
+  expect(adherence.extra).toEqual([
+    { activityId: walk, countsTowardPlan: false, seconds: 3630, metres: 5000 },
+  ]);
   expect(adherence.weeks[0]).toMatchObject({ completed: 3, partial: 1, missed: 1, extra: 1 });
 
   const actual = await readWorkoutActual(owner, workout(101), now);
-  expect(actual.activities[0]).toMatchObject({ lapsSynced: true, lapCount: 2 });
+  expect(actual.activities[0]).toMatchObject({ lapsPending: false, lapCount: 2 });
   expect(actual.activities[0]!.sourceUrl).toBe('https://www.strava.com/activities/1');
 
   // "That Sunday run was Friday's session."
@@ -222,6 +224,39 @@ it('syncs activities, matches them to the plan and keeps the athlete’s decisio
   strava.activities = strava.activities.filter((a) => a.id !== 2);
   expect(await syncStrava(owner, now)).toMatchObject({ imported: 0, updated: 4, removed: 1 });
   expect(await statuses()).toMatchObject({ '102': 'missed', '104': 'completed', '105': 'missed' });
+});
+
+it('fetches laps for an interval session the athlete linked from further away', async () => {
+  // Five days before the strides session: too far for automatic matching or lap fetching.
+  strava.activities.push({
+    id: 6,
+    sport_type: 'Run',
+    date: '2026-05-06',
+    seconds: 2400,
+    metres: 6500,
+    laps: [
+      { elapsed_time: 900, distance: 2500, average_speed: 2.78 },
+      { elapsed_time: 900, distance: 2500, average_speed: 2.78 },
+      { elapsed_time: 600, distance: 1500, average_speed: 2.5 },
+    ],
+  });
+  await syncStrava(owner, now);
+  const early = await activityId(6);
+  let actual = await decideActivityLink(
+    owner,
+    workout(101),
+    { activityId: early, decision: 'link' },
+    now,
+  );
+  expect(actual.activities[0]).toMatchObject({ id: early, lapsPending: true, lapCount: 0 });
+  await syncStrava(owner, now);
+  actual = await readWorkoutActual(owner, workout(101), now);
+  expect(actual.activities[0]).toMatchObject({ id: early, lapsPending: false, lapCount: 3 });
+  // Undo: the workout goes back to its own day's run.
+  await decideActivityLink(owner, workout(101), { activityId: early, decision: 'reject' }, now);
+  strava.activities = strava.activities.filter((a) => a.id !== 6);
+  expect(await syncStrava(owner, now)).toMatchObject({ removed: 1 });
+  expect(await statuses()).toMatchObject({ '101': 'completed' });
 });
 
 it('refreshes tokens, records failures and holds one sync at a time', async () => {

@@ -108,6 +108,8 @@ export function invalidateNotification(client: QueryClient, event: string, raw: 
       invalidate('performance');
       invalidate('plan-workouts');
       invalidate('plans');
+      // Rep checks compare laps with the zones in effect on each workout's date.
+      invalidate('adherence');
       return;
     case 'plan.changed':
       if (!planId) return;

@@ -6,8 +6,11 @@ import type { ActivitySport } from './strava.mapping.js';
  * follows plan edits without stored match state going stale.
  */
 
-/** What a workout can be filled by. A brick has a cycle and a run slot; gym work shares one. */
-export type SlotKind = 'run' | 'cycle' | 'swim' | 'gym';
+/**
+ * What a workout can be filled by. A brick has a cycle and a run slot; a mixed gym session's
+ * strength and erg work share one gym slot. A pure strength session takes lifting only.
+ */
+export type SlotKind = 'run' | 'cycle' | 'swim' | 'strength' | 'gym';
 
 export type PlannedWorkout = {
   id: string;
@@ -71,8 +74,8 @@ export type WeekAdherence = PlanWeek & {
 
 export type Reconciliation = {
   workouts: WorkoutOutcome[];
-  /** Activities in the plan dates that no workout claimed. */
-  extra: { activityId: string; countsTowardPlan: boolean }[];
+  /** Activities in the plan dates that no workout claimed, with the volume each adds. */
+  extra: { activityId: string; countsTowardPlan: boolean; seconds: number; metres: number }[];
   weeks: WeekAdherence[];
   toDate: { due: Volume; actual: Volume };
 };
@@ -88,13 +91,14 @@ const ACCEPTS: Record<SlotKind, ActivitySport[]> = {
   run: ['run'],
   cycle: ['cycle'],
   swim: ['swim'],
+  strength: ['strength'],
   gym: ['strength', 'row'],
 };
 
 /** Slots for a workout: one per endurance sport in a mixed session, gym work as one. */
 export function slotsFor(sport: string, stepDisciplines: string[] = []): SlotKind[] {
-  if (sport === 'run' || sport === 'cycle' || sport === 'swim') return [sport];
-  if (sport === 'strength') return ['gym'];
+  if (sport === 'run' || sport === 'cycle' || sport === 'swim' || sport === 'strength')
+    return [sport];
   const slots = new Set<SlotKind>();
   for (const discipline of stepDisciplines)
     if (discipline === 'run' || discipline === 'cycle' || discipline === 'swim')
@@ -104,7 +108,6 @@ export function slotsFor(sport: string, stepDisciplines: string[] = []): SlotKin
 }
 
 export function accepts(slot: SlotKind, sport: ActivitySport) {
-  // A strength session done as a rowing workout is not that session; a mixed gym slot is.
   return ACCEPTS[slot].includes(sport);
 }
 
@@ -275,7 +278,12 @@ export function reconcile(input: {
     (!input.startDate || date >= input.startDate) && (!input.endDate || date <= input.endDate);
   const extra = activities
     .filter((a) => !used.has(a.id) && inPlan(a.date))
-    .map((a) => ({ activityId: a.id, countsTowardPlan: planSports.has(a.sport) }));
+    .map((a) => ({
+      activityId: a.id,
+      countsTowardPlan: planSports.has(a.sport),
+      seconds: activitySeconds(a),
+      metres: a.distanceMetres ?? 0,
+    }));
 
   const empty = (): Volume => ({ sessions: 0, seconds: 0, metres: 0 });
   const add = (volume: Volume, seconds: number, metres: number) => {
@@ -308,12 +316,11 @@ export function reconcile(input: {
       if (outcome.status === 'partial') row.partial += 1;
       if (outcome.status === 'missed') row.missed += 1;
     }
-    for (const { activityId, countsTowardPlan } of extra) {
-      const activity = activityOf.get(activityId)!;
-      if (activity.date < week.startDate || activity.date > week.endDate) continue;
+    for (const { activityId, countsTowardPlan, seconds, metres } of extra) {
+      const { date } = activityOf.get(activityId)!;
+      if (date < week.startDate || date > week.endDate) continue;
       row.extra += 1;
-      if (countsTowardPlan)
-        add(row.actual, activitySeconds(activity), activity.distanceMetres ?? 0);
+      if (countsTowardPlan) add(row.actual, seconds, metres);
     }
     return row;
   });

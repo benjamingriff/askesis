@@ -122,7 +122,15 @@ export const AdherenceSchema = z
     lastSyncedAt: instant.nullable(),
     workouts: z.array(WorkoutOutcomeSchema),
     activities: z.array(ActivitySchema),
-    extra: z.array(z.object({ activityId: DatabaseIdSchema, countsTowardPlan: z.boolean() })),
+    /** Activities no workout claimed, with the volume each adds when it counts. */
+    extra: z.array(
+      z.object({
+        activityId: DatabaseIdSchema,
+        countsTowardPlan: z.boolean(),
+        seconds: z.number().nonnegative(),
+        metres: z.number().nonnegative(),
+      }),
+    ),
     weeks: z.array(WeekAdherenceSchema),
     toDate: z.object({ due: VolumeSchema, actual: VolumeSchema }),
   })
@@ -174,8 +182,11 @@ export const WorkoutActualSchema = z
     outcome: WorkoutOutcomeSchema,
     activities: z.array(
       ActivitySchema.extend({
-        /** Laps have not been fetched from Strava yet; the next sync brings them. */
-        lapsSynced: z.boolean(),
+        /**
+         * Reps can be checked once laps arrive: an endurance activity on a workout with repeats
+         * whose laps the next sync will fetch.
+         */
+        lapsPending: z.boolean(),
         lapCount: z.number().int().nonnegative(),
         efforts: EffortAnalysisSchema.nullable(),
       }),

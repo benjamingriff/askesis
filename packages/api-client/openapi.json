@@ -2145,11 +2145,21 @@
                 },
                 "countsTowardPlan": {
                   "type": "boolean"
+                },
+                "seconds": {
+                  "type": "number",
+                  "minimum": 0
+                },
+                "metres": {
+                  "type": "number",
+                  "minimum": 0
                 }
               },
               "required": [
                 "activityId",
-                "countsTowardPlan"
+                "countsTowardPlan",
+                "seconds",
+                "metres"
               ]
             }
           },
@@ -2519,7 +2529,7 @@
                 {
                   "type": "object",
                   "properties": {
-                    "lapsSynced": {
+                    "lapsPending": {
                       "type": "boolean"
                     },
                     "lapCount": {
@@ -2531,7 +2541,7 @@
                     }
                   },
                   "required": [
-                    "lapsSynced",
+                    "lapsPending",
                     "lapCount",
                     "efforts"
                   ]

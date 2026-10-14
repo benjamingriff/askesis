@@ -85,7 +85,7 @@ Each outcome also carries `dayOffset` (negative = done early, positive = late), 
 
 **Extra activities** are those in the plan dates that no workout claimed. They count toward actual volume when their sport is one the plan trains (an extra run in a triathlon plan does; a walk doesn't).
 
-**Per week:** planned volume, **due** volume (workouts dated before today plus any already done early), **actual** volume (linked activities in their workout's week plus counting extras), and completed, partial, missed and extra counts. **Ahead or behind** is actual minus due. Within 5% (at least 10 minutes or 500 m) is "on track". Doing Thursday's long run on Tuesday makes the athlete ahead until Thursday, and missed sessions put them behind.
+**Per week:** planned volume, **due** volume (workouts dated before today plus any already done early), **actual** volume (linked activities with their workout plus counting extras on their own date), and completed, partial, missed and extra counts. The API reports these per stored training week; the web app totals the Monday–Sunday week it displays from the same outcomes, since training weeks may start midweek. **Ahead or behind** is actual minus due. Within 5% (at least 10 minutes or 500 m) is "on track". Doing Thursday's long run on Tuesday makes the athlete ahead until Thursday, and missed sessions put them behind.
 
 The web app shows:
 

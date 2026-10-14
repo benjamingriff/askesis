@@ -10,6 +10,8 @@ import {
   X,
 } from 'lucide-react';
 import { useState } from 'react';
+import { Link } from 'react-router';
+import type { PlanVersion } from '../plan-data';
 import {
   useActivityDecision,
   useConnectStrava,
@@ -157,7 +159,7 @@ function EffortChecks({
   const { pool } = useSportUnits();
   const [showAll, setShowAll] = useState(false);
   const efforts = actual.efforts;
-  if (!actual.lapsSynced)
+  if (actual.lapsPending)
     return <p className="muted small">Laps arrive with the next sync, then reps are checked.</p>;
   if (!efforts || efforts.verdict === 'not_applicable') return null;
   if (efforts.verdict !== 'aligned')
@@ -238,17 +240,19 @@ function EffortChecks({
 /** What actually happened: linked activities, rep checks and other activities to link instead. */
 export function WorkoutActualSection({
   workout,
+  version,
   units,
   today,
 }: {
   workout: WorkoutSummary;
+  version: Pick<PlanVersion, 'id' | 'editNumber'> | null | undefined;
   units: Units;
   today: string;
 }) {
   const integrations = useIntegrations().data;
   const connected = !!integrations?.strava.connection;
-  const actual = useWorkoutActual(workout.id, connected);
-  const decide = useActivityDecision(workout.id);
+  const actual = useWorkoutActual(workout.id, version, connected);
+  const decide = useActivityDecision(workout.id, version);
   const [choosing, setChoosing] = useState(false);
   const { pool } = useSportUnits();
   if (!integrations || (!connected && workout.scheduledDate > today)) return null;
@@ -257,8 +261,8 @@ export function WorkoutActualSection({
       <section className="actual-section" aria-label="What you did">
         <h3 className="steps-heading">What you did</h3>
         <p className="muted small">
-          Connect Strava in <a href="/settings#connections">Settings</a> to see whether this session
-          was done and how each rep went.
+          Connect Strava in <Link to="/settings#connections">Settings</Link> to see whether this
+          session was done and how each rep went.
         </p>
       </section>
     );
