@@ -1,6 +1,6 @@
 # Local application development
 
-Verified against package scripts, Compose and CI on 2026-10-06. Use Node 24, Docker with Compose, and pinned pnpm:
+The root commands use Node 24 and a shared foreground lifecycle. Use Node 24, Docker with Compose, and pinned pnpm:
 
 ```bash
 npm install --global pnpm@11.18.0
@@ -18,17 +18,17 @@ In a fresh worktree, after `pnpm install --frozen-lockfile`:
 
 ```bash
 pnpm dev:setup
-pnpm dev:local
+pnpm dev
 ```
 
 `dev:setup` reads only the Clerk development keys from the main checkout's ignored `.env`, writes a private ignored worktree `.env`, and chooses worktree-specific API/web/database ports and a Compose project. It does not copy provider credentials. If the keys live elsewhere, use `pnpm dev:setup /absolute/path/to/.env`. Existing worktree configuration is retained; occupied initial ports fail with a diagnostic. Change the corresponding ports, URLs and authorized origins together when overriding them.
 
-Setup starts PostgreSQL, applies migrations and creates or reuses
+Setup temporarily starts PostgreSQL, applies migrations and creates or reuses
 `askesis-verification+clerk_test@example.com` in the configured Clerk development
 instance using normal athlete provisioning. Fresh databases start empty so onboarding
 can be tested. Existing identities and data are preserved. Local verification still
 refuses production/Railway, live Clerk keys and remote/non-Askesis database URLs.
-Database URL query parameters are restricted to `sslmode`.
+Database URL query parameters are restricted to `sslmode`. Setup removes its own temporary PostgreSQL container and empty network on success, failure, or cancellation, retaining the named database volume. An already running database is reused and preserved. `example:seed` and database codegen also run with a temporary database when needed, so they work after setup has stopped.
 
 When populated screens are needed, seed manually after setup:
 
@@ -39,34 +39,29 @@ pnpm example:seed --email askesis-verification+clerk_test@example.com
 See [the example training plans](./example-plan.md) for their twelve-week content,
 relative dates, calibration estimates and rerun/preservation rules.
 
-`dev:local` starts the API and Vite together. Ctrl+C stops both process groups. The Vite URL printed on startup is the browser address; `LOCAL_WEB_URL` in `.env` records the same origin. Simulated chat is enabled for newly generated verification environments. This can validate conversation, streaming and failure UI; real coaching/plan edits still require the separately configured worker/provider.
+`pnpm dev` (also available as `pnpm dev:local`) starts PostgreSQL when needed, applies migrations, starts the API and Vite, and checks API/web readiness. PostgreSQL runs as a labelled `docker compose run --rm` container. Ctrl+C stops both application process groups, gracefully stops the owned database container, and removes its empty network. Database data remains in its named volume. SIGTERM and application/startup failures use the same cleanup path. An already running database is reused without taking ownership; it is preserved on exit.
 
-For agent sessions that may terminate child processes when the turn ends, keep the servers in a persistent terminal or a background service. On this Linux machine, the following uses the worktree's generated Compose project name as its user service name. Run from the repository root, check for an existing service/listener first, and reuse it if it is healthy:
-
-```bash
-verification_unit="$(node --env-file=.env -p 'process.env.COMPOSE_PROJECT_NAME')"
-systemctl --user is-active "$verification_unit"
-```
-
-If the service is inactive and this worktree's servers are stopped:
+Run in a foreground terminal; do not start a background service for agent handoff. If the terminal is lost or the supervisor is forcibly killed, inspect or recover only this worktree's sessions:
 
 ```bash
-docker compose up -d postgres
-systemd-run --user --collect \
-  --unit="$verification_unit" \
-  --working-directory="$PWD" \
-  --setenv="PATH=$PATH" \
-  "$(command -v pnpm)" dev:local
+pnpm dev --help          # command/dependency/stop matrix; needs no setup
+pnpm dev:marketing --help
+pnpm dev:doctor          # read-only versions, local Docker, config and port checks
+pnpm dev:doctor marketing # Docker/auth-free app diagnostics
+pnpm dev:list            # read-only inventory across registered Git worktrees
+pnpm dev:list --json     # includes container port mappings and retained volumes
+pnpm dev:status
+pnpm dev:stop            # all managed sessions in this worktree
+pnpm dev:stop local      # only the main preview
+pnpm dev:clean           # stop/recover sessions and remove empty networks, retain data
+pnpm dev:clean --data    # explicitly delete this worktree's generated development DB volume
 ```
 
-This is a transient user service, not automatic startup after a reboot. Following a reboot, start PostgreSQL and the service again; the database volume and `.env` are retained. To inspect or stop only this worktree's service:
+Private ignored `.dev/` state records process identities and container ownership, allowing recovery without signalling a reused PID or stopping another worktree. Process-group guards stop app descendants even if a launcher exits, and IPC disconnect cleans app processes if the supervisor is killed. Database cleanup cannot run after SIGKILL or power loss; use `dev:stop` after those cases. Cancellation escalates stubborn commands after 45 seconds, including one-off commands. A cleanup failure is reported and leaves its recovery state available. No command performs global Docker pruning. `dev:clean` resolves and pins the worktree's configured local Docker socket before doing anything, and refuses remote hosts/contexts. `dev:list` maps containers, networks and retained volumes to registered worktrees, flags unregistered/missing paths and ambiguous ownership, and never deletes resources. It remains useful when Docker is unavailable. `dev:doctor` with an app argument checks only the relevant prerequisites; diagnostics never start services or print keys.
 
-```bash
-journalctl --user -u "$verification_unit" -n 30 --no-pager
-systemctl --user stop "$verification_unit"
-```
+The Vite URL printed on startup is the browser address; `LOCAL_WEB_URL` in the generated `.env` records the same origin. Simulated chat is enabled for newly generated verification environments. This can validate conversation, streaming and failure UI; real coaching/plan edits require the separately configured worker/provider.
 
-Before browser verification and again before returning the result, check the configured endpoints. These commands print only the API readiness response, not environment secrets:
+Before browser verification and capturing the result, check the configured endpoints. These commands print only the API readiness response, not environment secrets:
 
 ```bash
 verification_web_url="$(node --env-file=.env -p 'process.env.LOCAL_WEB_URL')"
@@ -75,7 +70,7 @@ curl --fail --silent --output /dev/null "$verification_web_url/"
 curl --fail --silent --show-error "http://localhost:${verification_api_port}/api/ready"
 ```
 
-Leave the servers running for the user to inspect unless asked to stop them. Return the actual browser URL and, if you started a background service, its stop command. If the endpoints fail, inspect the server/container status before attributing the problem to Clerk or browser tools.
+Agents must save screenshot/video evidence, then stop every process/container they started before returning. Check `pnpm dev:status` after stopping and return the saved artifacts, actual browser URL and restart/stop commands (`pnpm dev`, then Ctrl+C, or `pnpm dev:stop local` from another terminal). Preserve any reused services owned by someone else. If the endpoints fail during verification, inspect server/container status before attributing the problem to Clerk or browser tools.
 
 In another terminal:
 
@@ -98,7 +93,7 @@ For agents in T3 Code:
 
 A hidden tab (`visible: false`) can still support automation and screenshots; that flag alone does not mean the browser is unavailable. If preview tools fail, first verify the local endpoints above, then call `preview_open` and retry navigation/inspection with the correct tab and configured URL. Opening the thread's Preview panel may help if automation still fails. Browser-tool failures are separate from application/authentication failures; do not claim browser validation until the page and interactions have actually been inspected. A normal browser on the same machine can also open the generated login URL.
 
-Stop only this worktree's database with `docker compose stop postgres`. Its volume is retained. Configuration diagnostics are available with `pnpm --filter @askesis/api verification:check`.
+Stop the managed preview with Ctrl+C or `pnpm dev:stop local`. Its database volume is retained. Configuration diagnostics are available with `pnpm --filter @askesis/api verification:check`.
 
 ## Run the complete stack with Docker
 
@@ -124,32 +119,34 @@ docker compose down
 
 For real coaching, configure agent mode/token/provider key and use the `agent` profile as described in [worker operations](./phase-5-runtime.md). Without it, execution defaults to unavailable while conversation management/history remain available. The default API Docker runtime is production and rejects simulated test execution.
 
-## Run the application processes locally
+## Run individual apps
+
+Use root commands from any worktree. `pnpm dev` is the normal main-app entry point; each app can also be explored separately:
+
+| Command                                   | Starts/requires                                         | Configuration                                                                              |
+| ----------------------------------------- | ------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| `pnpm dev` / `pnpm dev:local`             | API + web + owned temporary PostgreSQL                  | Root `.env`; readiness checked                                                             |
+| `pnpm dev:api`                            | API + owned temporary PostgreSQL                        | Root `.env`; migrations/readiness checked                                                  |
+| `pnpm dev:web`                            | Web only; requires a running API for data               | Root `.env`; `WEB_PORT`, `VITE_API_PROXY_TARGET`                                           |
+| `pnpm dev:marketing`                      | Static Astro site; no Docker/auth                       | Root `MARKETING_PORT`, `SITE_URL`, `APP_URL`, or shell overrides                           |
+| `pnpm dev:evals`                          | Local benchmark-artifact viewer; no Docker/auth         | Root `EVALS_PORT`, `EVALS_RESULTS_DIR`, or shell overrides                                 |
+| `pnpm dev:agent`                          | Worker; requires a running API and provider credentials | Separate `apps/agent/.env`; API URL derived from the worktree unless explicitly overridden |
+| `pnpm dev:mobile` / `pnpm dev:mobile:web` | Separate Expo prototype; no backend                     | Delegates to npm; first run `npm ci --prefix apps/mobile`                                  |
+
+Marketing explicitly disables Astro’s agent-triggered backgrounding with `--ignore-lock`; the root supervisor handles its session lock. All these commands stay in the foreground and stop their owned process groups on Ctrl+C or `pnpm dev:stop [app]`. App-level `pnpm --filter @askesis/<app> dev` commands remain available when manually coordinating processes. Mobile remains outside the pnpm workspace with its own npm lockfile.
+
+Worktree defaults provide separate API/web/database/marketing/evals ports. Generated `.env` stores them; existing configuration is retained. Overrides in the shell take precedence. Browser servers refuse occupied configured ports instead of silently switching to a different URL. Marketing/evals can start in a fresh worktree without `dev:setup`; they receive only their relevant root variables. Worker startup does not copy root Clerk/database/provider credentials into its separate environment.
+
+API and web dev scripts, and the web build, read root `.env`; Vite also loads normal app environment files. Root/shell values take precedence. Only `VITE_*` variables are exposed to client code. The API uses `PORT`; Docker publishes its API on `API_PORT`. Keep `WEB_PORT`, `LOCAL_WEB_URL`, `CLERK_AUTHORIZED_PARTIES`, `PORT` and `VITE_API_PROXY_TARGET` consistent when overriding generated settings.
+
+To run a one-off command with this worktree's database and automatic cleanup:
 
 ```bash
-docker compose up -d postgres migrate
+pnpm dev:exec -- pnpm --filter @askesis/api verification:check
+pnpm example:seed --email askesis-verification+clerk_test@example.com
 ```
 
-In separate terminals:
-
-```bash
-pnpm dev:api
-```
-
-```bash
-pnpm dev:web
-```
-
-Both dev scripts read root `.env`; Vite also loads its normal environment files from `apps/web`. Root/shell values take precedence over app environment files. Only `VITE_*` variables are exposed to client code. Vite defaults to <http://localhost:5173>, or `WEB_PORT` when configured, and refuses to silently move to another port. Its API proxy defaults to <http://localhost:3000>; override `VITE_API_PROXY_TARGET` when changing API port. The API's host process uses `PORT` (Compose uses `API_PORT` for the published port).
-
-Historical test fixtures can still be loaded explicitly:
-
-```bash
-docker compose --profile fixtures run --rm seed
-docker compose --profile fixtures run --rm publish-fixture
-```
-
-These historical fixtures belong to their synthetic athlete and do not automatically appear for signed-in accounts. Their publisher remains forbidden in production/Railway. Use `pnpm example:seed --email <verified-email>` for account-owned examples.
+Historical fixture jobs remain available through Compose's explicit `fixtures` profile, with `run --rm`. They belong to synthetic athletes; use `example:seed` for account-owned plans. If manually starting a detached Compose stack, its lifecycle belongs to you: use the matching `docker compose down` when finished.
 
 ## Marketing site
 
@@ -159,7 +156,7 @@ These historical fixtures belong to their synthetic athlete and do not automatic
 pnpm dev:marketing
 ```
 
-It serves on <http://localhost:4321> (or `MARKETING_PORT`). See its [README](../../apps/marketing/README.md) for refreshing the product screenshots.
+Use the printed worktree URL (`MARKETING_PORT` overrides it). Ctrl+C or `pnpm dev:stop marketing` closes it. See its [README](../../apps/marketing/README.md) for refreshing the product screenshots.
 
 ## Local simulated chat
 
@@ -170,6 +167,7 @@ For a provider-free development executor, set `CHAT_EXECUTION_MODE=test` on the 
 ```bash
 pnpm check
 pnpm test:db
+pnpm test:db test/db/example.test.ts -t 'replaces only untouched managed editions' # optional focused rerun
 pnpm test:live:upgrade
 pnpm test:performance:upgrade
 pnpm test:multisport:upgrade
@@ -178,21 +176,26 @@ pnpm smoke
 
 `check` runs formatting, lint, typecheck, unit/component/worker tests, builds, generated-contract drift, Atlas checksum and `pnpm audit --prod --audit-level=high`. It is not all Docker/database testing. CI also runs the database suite, populated Phase 5→6 upgrade rehearsal, populated athlete-performance cutover rehearsal, populated multi-sport brief migration rehearsal and disposable SDK streaming smoke in a separate job.
 
-Docker/database scripts use isolated disposable databases rather than normal development data. Set a distinct `COMPOSE_PROJECT_NAME` and `TEST_DATABASE_PORT` if another local test stack is running. Real-provider smoke is a separate, billed operation; see [worker verification](./phase-5-runtime.md#verification).
+The example-plan database regression keeps its existing timeout. A scoped PostgreSQL validation migration bounds recursive traversal to one workout and uses indexed completion/child/target probes, avoiding repeated whole-table existence scans during deferred commit checks as example editions accumulate. Deferred validation and malformed-tree rejection remain enabled.
+
+Docker/database scripts use a unique project and automatically selected available ports for each invocation; root `.env` does not select their project. They remove their containers, networks and disposable data on success/failure/cancellation. Smoke also removes its uniquely generated app images, retaining shared PostgreSQL/Atlas images. Set `TEST_DATABASE_PORT` or `SMOKE_WEB_PORT` only when an explicit port is required. If Docker reports exhausted automatic address pools, inspect `pnpm dev:list` and the machine's LAN/VPN/Docker routes. An operator-selected free IPv4 subnet can be supplied as `DEV_NETWORK_SUBNET` for managed development or `TEST_NETWORK_SUBNET` for disposable test commands. No subnet is selected automatically; Docker rejects overlapping Docker pools. These overrides do not change global Docker settings or clean other worktrees. The free-port selection is advisory; a competing bind fails normally and triggers cleanup. Real-provider smoke is a separate, billed operation; see [worker verification](./phase-5-runtime.md#verification).
 
 ## Generated types
 
 After schema changes, apply migrations and regenerate:
 
 ```bash
-docker compose run --rm migrate
 pnpm generate:db-types
 ```
 
-Database codegen reads `DATABASE_URL` from the process environment, otherwise using the default local connection. It does not itself load root `.env`; export the intended local URL securely when defaults differ. OpenAPI generation does read root `.env` through its API script:
+The root database-codegen command reads root `.env`, starts/migrates a temporary worktree database if needed, and removes its owned container when complete. The app-level codegen command still accepts an explicitly exported `DATABASE_URL`. OpenAPI generation does read root `.env` through its API script:
 
 ```bash
 pnpm generate:openapi
 ```
 
 Committed outputs are `apps/api/src/database/generated.ts`, `packages/api-client/openapi.json` and `packages/api-client/src/schema.ts`. Do not edit them manually. [Database setup](./database-setup.md) covers migrations and fixture reset.
+
+## Images and build cache
+
+Ordinary `pnpm dev:*` runs build no application Docker images. Disposable smoke runs remove their own generated image tags; shared base images and reusable build cache remain. Inspect disk use with `docker system df`. For occasional machine-level cache maintenance, the owner can run `docker builder prune --filter until=168h --keep-storage 5GB`; this has its own confirmation and affects the machine's build cache. Agents must not run global prune commands or treat unattached database volumes as unwanted.

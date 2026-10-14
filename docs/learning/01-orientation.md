@@ -75,6 +75,6 @@ Explain without reading:
 4. Are marketing and mobile part of the live product data path? **Marketing is static; mobile is a separate reference prototype.**
 5. Where do you change a route? **Web routing in `router.tsx`; HTTP endpoints in an API module's routes file.**
 
-Write your actual local browser origin and the process start command in your notes. Ctrl+C stops the `dev:local` API/web process groups; `docker compose stop postgres` stops this worktree's database while retaining its volume. Keep the servers up for the remaining exercises.
+Write your actual local browser origin and the process start command in your notes. Ctrl+C stops the `dev:local` API/web process groups and its owned temporary PostgreSQL container while retaining its volume. Keep the servers up for the remaining exercises.
 
 Optional later: [background service lifetime](../operations/local-development.md#agent-browser-verification-in-a-worktree), [architecture decisions](../adr/README.md).

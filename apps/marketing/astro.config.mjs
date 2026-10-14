@@ -7,4 +7,5 @@ export default defineConfig({
   server: {
     port: Number(process.env.MARKETING_PORT ?? 4321),
   },
+  vite: { server: { strictPort: true } },
 });

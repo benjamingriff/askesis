@@ -27,9 +27,20 @@ npm install --global pnpm@11.18.0
 pnpm install --frozen-lockfile
 ```
 
-## Run with Docker
+## Local development
 
-For agent UI verification in a fresh worktree, use `pnpm dev:setup`, `pnpm dev:local`, then `pnpm dev:login` in another terminal. This provisions an isolated local database and prepares an empty dedicated Clerk development account; manually run `pnpm example:seed --email askesis-verification+clerk_test@example.com` when sample data is useful; see the [browser verification workflow](./docs/operations/local-development.md#agent-browser-verification-in-a-worktree).
+For agent UI verification in a fresh worktree, use `pnpm dev:setup`, `pnpm dev:local`, then `pnpm dev:login` in another terminal. Setup provisions an isolated local database, prepares an empty dedicated Clerk development account and stops its temporary container. Ctrl+C on `dev:local` stops owned servers/containers while retaining data; agents capture evidence and stop before handing back. Manually run `pnpm example:seed --email askesis-verification+clerk_test@example.com` when sample data is useful; see the [browser verification workflow](./docs/operations/local-development.md#agent-browser-verification-in-a-worktree).
+
+Start the main app in the foreground:
+
+```bash
+pnpm dev:setup
+pnpm dev
+```
+
+Use the printed URL. Ctrl+C closes owned servers/containers and retains database data. `pnpm dev --help` lists commands and dependencies. `pnpm dev:doctor [app]` checks prerequisites and configuration; `pnpm dev:list` inventories worktrees and Docker resources without changing them. `pnpm dev:status` shows managed sessions; `pnpm dev:stop` stops them. Marketing and evals run independently with `pnpm dev:marketing` and `pnpm dev:evals`, without Docker or authentication setup. The [local development guide](./docs/operations/local-development.md#run-individual-apps) lists every app command.
+
+## Run with Docker
 
 Configure ignored `.env` with Clerk development keys as described in [local setup](./docs/operations/local-development.md), then build/start PostgreSQL, Atlas migrations, API and web. Real coaching additionally requires the [agent profile](./docs/operations/phase-5-runtime.md#local-setup):
 

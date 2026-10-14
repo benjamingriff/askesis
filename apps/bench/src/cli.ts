@@ -109,6 +109,7 @@ async function run() {
   const usage: { role: string; usage: ModelUsage }[] = [];
   let timeout: ReturnType<typeof setTimeout> | undefined;
   let releaseArtifacts: (() => Promise<void>) | undefined;
+  let databaseStarted = false;
   const stage = async (name: string) => {
     phase = name;
     console.log(name);
@@ -147,6 +148,7 @@ async function run() {
     );
     console.log(`Run: ${runId}\nArtifacts: ${artifacts.directory}`);
     await assertApiPortFree(environment.apiPort);
+    databaseStarted = true;
     await compose(environment, ['up', '-d', '--wait', 'postgres'], abort.signal);
     await compose(environment, ['run', '--rm', 'migrate'], abort.signal);
     configureApi(environment, credentials.secret, credentials.publishable);
@@ -159,7 +161,8 @@ async function run() {
       ...credentials.values,
       AGENT_BOOTSTRAP_TOKEN: process.env.AGENT_BOOTSTRAP_TOKEN,
       AGENT_API_URL: apiUrl,
-      OPENAI_API_KEY: credentials.values.OPENAI_API_KEY ?? 'scripted-no-provider-request',
+      // Generated development .env files deliberately leave provider keys empty.
+      OPENAI_API_KEY: credentials.values.OPENAI_API_KEY || 'scripted-no-provider-request',
     });
     await artifacts.json('configuration.json', {
       coach: {
@@ -353,9 +356,13 @@ async function run() {
           await releaseArtifacts?.();
         } finally {
           try {
-            await release();
+            if (databaseStarted) await compose(environment, ['down', '--remove-orphans']);
           } finally {
-            removeInterruptHandlers();
+            try {
+              await release();
+            } finally {
+              removeInterruptHandlers();
+            }
           }
         }
       }
@@ -480,7 +487,9 @@ async function main() {
     try {
       await compose(
         environment,
-        command === 'reset' ? ['down', '--volumes', '--remove-orphans'] : ['stop'],
+        command === 'reset'
+          ? ['down', '--volumes', '--remove-orphans']
+          : ['down', '--remove-orphans'],
       );
       if (command === 'reset') await unlink(resolve(root, '.bench', 'environment.json'));
       console.log(

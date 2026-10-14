@@ -16,6 +16,6 @@ export default defineConfig(({ mode }) => {
 
   return {
     plugins: [react(), benchmarkResults(resultsDirectory)],
-    server: { host: '127.0.0.1', port, strictPort: false },
+    server: { host: '127.0.0.1', port, strictPort: true },
   };
 });
