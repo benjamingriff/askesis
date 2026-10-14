@@ -14,6 +14,8 @@ Phase 8 remains the release-readiness checklist for invitations: access restrict
 
 ## Recent decisions
 
+- 2026-10-14: Strava activities can be connected and matched to plans ([ADR 0007](./adr/0007-activity-ingestion.md), [proposal](./product/activity-integration-proposal.md)). Strava's API policy forbids using its data in AI context and limits storage to a seven-day cache, so activities are display-only for the athlete and never reach the coach.
+
 - 2026-10-07: plans can train running, cycling, swimming and strength, alone or combined ([ADR 0006](./adr/0006-multisport-plans.md)). `cycle_power` (FTP) and `swim_pace` (CSS) join `run_pace`; strength uses reps in reserve and suggested loads without calibration; the brief holds one baseline per sport. No heart-rate zones for now. Development fixtures add an Olympic triathlon and a Hyrox plan beside Cardiff.
 - 2026-10-07: fitness calibration moved from plan versions to the athlete ([ADR 0005](./adr/0005-athlete-owned-performance.md)). An account has one athlete; every plan is for them. Results form an append-only timeline per system (`run_pace` today, designed for swim/bike/strength systems next), apply from today in every plan, and are recorded on the web Performance page or by the coach from any chat. The athlete's timezone now follows their device. The migration truncated pre-alpha plan and coaching data.
 

@@ -3,6 +3,7 @@ import { createMemoryRouter, RouterProvider } from 'react-router';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { AccountQueryProvider } from '../query-provider';
 import { api } from '../api';
+import { NO_INTEGRATIONS } from '../../test/activity-mocks';
 import { ChatPage } from './chat';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 vi.mock('../api', () => ({ api: { GET: vi.fn(), POST: vi.fn(), PATCH: vi.fn() } }));
@@ -56,6 +57,7 @@ beforeEach(() => {
   available = true;
   detail = { ...conversation };
   vi.mocked(api.GET).mockImplementation((async (path: string) => {
+    if (path === '/api/v1/integrations') return response(NO_INTEGRATIONS);
     if (path === '/api/v1/chat-capabilities')
       return response({ executionAvailable: available, mode: available ? 'test' : 'unavailable' });
     if (path === '/api/v1/conversations') return response({ conversations: [], nextCursor: null });

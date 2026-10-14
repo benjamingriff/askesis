@@ -10,6 +10,7 @@ Keep ADRs together in this folder, with one numbered document per significant te
 | [0004](./0004-live-synchronization.md)      | TanStack Query with authenticated, replayable SSE notifications          | Accepted; retrospectively recorded from Phase 6                                        |
 | [0005](./0005-athlete-owned-performance.md) | Athlete-owned, append-only performance calibration applied to every plan | Accepted; extended by 0006                                                             |
 | [0006](./0006-multisport-plans.md)          | Multi-sport plans: cycling power, swim CSS and uncalibrated strength     | Accepted                                                                               |
+| [0007](./0007-activity-ingestion.md)        | Strava activities as a seven-day cache, matched to plans on read         | Accepted for the MVP                                                                   |
 
 ## When to write an ADR
 

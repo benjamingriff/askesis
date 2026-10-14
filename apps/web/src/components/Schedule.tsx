@@ -41,6 +41,7 @@ import { WorkoutChangesContext } from './PlanChanges';
 import { EffortLegend, Stat, WeekChart } from './PlanWidgets';
 import { DayRow, WorkoutCard, WorkoutDialog } from './Workout';
 import { Button, Card, EmptyState, IconButton, Pill, Segmented, Notice, cx } from './ui';
+import { AdherenceContext, useAdherence, useAdherenceView } from '../activity-data';
 
 type Mode = 'weeks' | 'calendar';
 export type SchedulePresentation = 'interactive' | 'week-list';
@@ -101,6 +102,11 @@ export function Schedule({
   const isCutback = (range: { startDate: string; endDate: string }) =>
     cutbackIn(storedWeeks, range);
   const weekBlock = week ? blockOf(week) : null;
+  const adherence = useAdherenceView(useAdherence(version).data);
+  const weekActual =
+    adherence.connected && week
+      ? adherence.data?.weeks.find((w) => w.startDate === week.startDate)
+      : undefined;
   const dayStatus = (date: string) =>
     (startDate && date < startDate) || (endDate && date > endDate)
       ? ('outside' as const)
@@ -116,165 +122,178 @@ export function Schedule({
     );
 
   return (
-    <section className="schedule" aria-labelledby="schedule-heading">
-      <div className="schedule-header">
-        <h2 id="schedule-heading">Schedule</h2>
-        {presentation === 'interactive' ? (
-          <Segmented<Mode>
-            label="Schedule view"
-            value={mode}
-            onChange={(next) => {
-              setMode(next);
-              writeStorage(MODE_KEY, next);
-            }}
-            options={[
-              { value: 'weeks', label: 'Weeks', icon: List },
-              { value: 'calendar', label: 'Calendar', icon: CalendarDays },
-            ]}
-          />
-        ) : null}
-      </div>
-
-      {mode === 'weeks' ? (
-        <>
-          <Card className="week-chart-card">
-            <WeekChart
-              weeks={weeks}
-              selected={week.number}
-              current={current}
-              onSelect={setSelectedWeek}
-              units={units}
-              measure={measure}
-              blockOf={blocks.length ? blockOf : undefined}
-              isCutback={storedWeeks.some((w) => w.cutback) ? isCutback : undefined}
+    <AdherenceContext.Provider value={adherence}>
+      <section className="schedule" aria-labelledby="schedule-heading">
+        <div className="schedule-header">
+          <h2 id="schedule-heading">Schedule</h2>
+          {presentation === 'interactive' ? (
+            <Segmented<Mode>
+              label="Schedule view"
+              value={mode}
+              onChange={(next) => {
+                setMode(next);
+                writeStorage(MODE_KEY, next);
+              }}
+              options={[
+                { value: 'weeks', label: 'Weeks', icon: List },
+                { value: 'calendar', label: 'Calendar', icon: CalendarDays },
+              ]}
             />
-          </Card>
-          <div className="week-heading">
-            <div>
-              <h3>
-                Week {week.number}
-                {weekBlock ? (
-                  <span
-                    className="pill phase-pill"
-                    style={{ '--phase': weekBlock.color } as CSSProperties}
-                    title={weekBlock.description ?? undefined}
-                  >
-                    {weekBlock.label}
-                  </span>
-                ) : null}
-                {isCutback(week) ? (
-                  <Pill
-                    tone="neutral"
-                    title="Deliberately lighter, so the training before it is absorbed."
-                  >
-                    Cutback
-                  </Pill>
-                ) : null}
-                {week.number === current ? <Pill tone="accent">This week</Pill> : null}
-              </h3>
-              <span className="muted">
-                {formatRange(week.startDate, week.endDate)}
-                {weekBlock && weekBlock.title !== weekBlock.label ? ` · ${weekBlock.title}` : ''}
-              </span>
-            </div>
-            <div className="week-nav">
-              <IconButton
-                icon={ChevronLeft}
-                label="Previous week"
-                tone="filled"
-                disabled={week.number <= 1}
-                onClick={() => setSelectedWeek(week.number - 1)}
+          ) : null}
+        </div>
+
+        {mode === 'weeks' ? (
+          <>
+            <Card className="week-chart-card">
+              <WeekChart
+                weeks={weeks}
+                selected={week.number}
+                current={current}
+                onSelect={setSelectedWeek}
+                units={units}
+                measure={measure}
+                blockOf={blocks.length ? blockOf : undefined}
+                isCutback={storedWeeks.some((w) => w.cutback) ? isCutback : undefined}
               />
-              <IconButton
-                icon={ChevronRight}
-                label="Next week"
-                tone="filled"
-                disabled={week.number >= weeks.length}
-                onClick={() => setSelectedWeek(week.number + 1)}
-              />
+            </Card>
+            <div className="week-heading">
+              <div>
+                <h3>
+                  Week {week.number}
+                  {weekBlock ? (
+                    <span
+                      className="pill phase-pill"
+                      style={{ '--phase': weekBlock.color } as CSSProperties}
+                      title={weekBlock.description ?? undefined}
+                    >
+                      {weekBlock.label}
+                    </span>
+                  ) : null}
+                  {isCutback(week) ? (
+                    <Pill
+                      tone="neutral"
+                      title="Deliberately lighter, so the training before it is absorbed."
+                    >
+                      Cutback
+                    </Pill>
+                  ) : null}
+                  {week.number === current ? <Pill tone="accent">This week</Pill> : null}
+                </h3>
+                <span className="muted">
+                  {formatRange(week.startDate, week.endDate)}
+                  {weekBlock && weekBlock.title !== weekBlock.label ? ` · ${weekBlock.title}` : ''}
+                </span>
+              </div>
+              <div className="week-nav">
+                <IconButton
+                  icon={ChevronLeft}
+                  label="Previous week"
+                  tone="filled"
+                  disabled={week.number <= 1}
+                  onClick={() => setSelectedWeek(week.number - 1)}
+                />
+                <IconButton
+                  icon={ChevronRight}
+                  label="Next week"
+                  tone="filled"
+                  disabled={week.number >= weeks.length}
+                  onClick={() => setSelectedWeek(week.number + 1)}
+                />
+              </div>
             </div>
-          </div>
-          {week.planned ? (
-            <>
-              <Card className="week-stats">
-                {measure === 'distance' ? (
-                  <Stat
-                    label="Distance"
-                    value={formatDistance(week.metres, units, false)}
-                    unit={units}
-                  />
-                ) : null}
-                <Stat label="Time" value={formatDuration(week.seconds)} />
-                <Stat label="Sessions" value={String(week.workouts.length)} />
-              </Card>
-              <ol className="day-list">
-                {Array.from({ length: 7 }, (_, i) => addDays(week.startDate, i)).map((date) => (
-                  <DayRow
-                    key={date}
-                    date={date}
-                    today={today}
-                    workouts={workoutsOn(week.workouts, date)}
-                    status={dayStatus(date)}
-                    units={units}
-                    onOpen={dialog.open}
-                  />
-                ))}
-              </ol>
-            </>
-          ) : (
-            <EmptyState
-              icon={Sparkles}
-              title="Not planned yet"
-              dashed
-              action={
-                onPlanRest ? (
-                  <Button variant="primary" icon={MessageSquare} onClick={onPlanRest}>
-                    Plan it with your coach
-                  </Button>
-                ) : undefined
-              }
-            >
-              Week {week.number} is inside your plan dates but hasn’t been prescribed yet. You can
-              still lock what’s planned and extend it later from a new draft.
-            </EmptyState>
-          )}
-        </>
-      ) : (
-        <CalendarView
-          workouts={workouts}
-          today={today}
-          startDate={startDate}
-          endDate={endDate}
+            {week.planned ? (
+              <>
+                <Card className="week-stats">
+                  {measure === 'distance' ? (
+                    <Stat
+                      label="Distance"
+                      value={formatDistance(week.metres, units, false)}
+                      unit={units}
+                    />
+                  ) : null}
+                  <Stat label="Time" value={formatDuration(week.seconds)} />
+                  <Stat label="Sessions" value={String(week.workouts.length)} />
+                  {weekActual && weekActual.startDate <= today ? (
+                    <Stat
+                      label="Done"
+                      value={`${weekActual.completed + weekActual.partial} / ${weekActual.planned.sessions}`}
+                      sub={`${formatDuration(weekActual.actual.seconds)}${
+                        measure === 'distance'
+                          ? ` · ${formatDistance(weekActual.actual.metres, units)}`
+                          : ''
+                      }${weekActual.missed ? ` · ${weekActual.missed} missed` : ''}`}
+                    />
+                  ) : null}
+                </Card>
+                <ol className="day-list">
+                  {Array.from({ length: 7 }, (_, i) => addDays(week.startDate, i)).map((date) => (
+                    <DayRow
+                      key={date}
+                      date={date}
+                      today={today}
+                      workouts={workoutsOn(week.workouts, date)}
+                      status={dayStatus(date)}
+                      units={units}
+                      onOpen={dialog.open}
+                    />
+                  ))}
+                </ol>
+              </>
+            ) : (
+              <EmptyState
+                icon={Sparkles}
+                title="Not planned yet"
+                dashed
+                action={
+                  onPlanRest ? (
+                    <Button variant="primary" icon={MessageSquare} onClick={onPlanRest}>
+                      Plan it with your coach
+                    </Button>
+                  ) : undefined
+                }
+              >
+                Week {week.number} is inside your plan dates but hasn’t been prescribed yet. You can
+                still lock what’s planned and extend it later from a new draft.
+              </EmptyState>
+            )}
+          </>
+        ) : (
+          <CalendarView
+            workouts={workouts}
+            today={today}
+            startDate={startDate}
+            endDate={endDate}
+            units={units}
+            onOpen={dialog.open}
+          />
+        )}
+        {dialog.missing ? (
+          <Notice
+            action={
+              <Button size="sm" variant="ghost" onClick={dialog.close}>
+                Back to schedule
+              </Button>
+            }
+          >
+            The workout you had open was removed from this draft.
+          </Notice>
+        ) : null}
+        <WorkoutDialog
+          workout={dialog.workout}
+          version={version}
           units={units}
-          onOpen={dialog.open}
-        />
-      )}
-      {dialog.missing ? (
-        <Notice
-          action={
-            <Button size="sm" variant="ghost" onClick={dialog.close}>
-              Back to schedule
-            </Button>
+          onClose={dialog.close}
+          onAskCoach={
+            onAskCoach
+              ? (workout) => {
+                  dialog.close();
+                  onAskCoach(workout);
+                }
+              : undefined
           }
-        >
-          The workout you had open was removed from this draft.
-        </Notice>
-      ) : null}
-      <WorkoutDialog
-        workout={dialog.workout}
-        version={version}
-        units={units}
-        onClose={dialog.close}
-        onAskCoach={
-          onAskCoach
-            ? (workout) => {
-                dialog.close();
-                onAskCoach(workout);
-              }
-            : undefined
-        }
-      />
-    </section>
+        />
+      </section>
+    </AdherenceContext.Provider>
   );
 }
 
@@ -303,6 +322,7 @@ function CalendarView({
     (!startDate || date >= startDate) && (!endDate || date <= endDate);
   const selectedWorkouts = workoutsOn(workouts, selected);
   const changes = useContext(WorkoutChangesContext);
+  const adherence = useContext(AdherenceContext);
   const changed = (workout: WorkoutSummary) =>
     changes.some((change) => change.workoutId === workout.id);
   return (
@@ -357,7 +377,10 @@ function CalendarView({
                 {items.map((workout) => (
                   <i
                     key={workout.id}
-                    className={changed(workout) ? 'changed' : undefined}
+                    className={cx(
+                      changed(workout) && 'changed',
+                      adherence.connected && adherence.outcomes.get(workout.id)?.status,
+                    )}
                     style={{ '--kind': workoutLook(workout).color } as CSSProperties}
                   />
                 ))}

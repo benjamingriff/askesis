@@ -158,6 +158,8 @@ function optionalNumber(value: string | null): number | null {
 export async function getWorkoutDetail(
   athleteId: string,
   workoutId: string,
+  /** Canonical units keep paces per kilometre whatever the brief displays. */
+  options: { canonicalUnits?: boolean } = {},
 ): Promise<WorkoutDetail | null> {
   const database = getDatabase();
   const workoutRow = await database
@@ -191,7 +193,7 @@ export async function getWorkoutDetail(
     .select('distance_unit')
     .where('plan_version_id', '=', workoutRow.plan_version_id)
     .executeTakeFirst();
-  const paceFactor = brief?.distance_unit === 'miles' ? 1.609344 : 1;
+  const paceFactor = brief?.distance_unit === 'miles' && !options.canonicalUnits ? 1.609344 : 1;
 
   const [stepRows, targetRows, tagRows, calibrations] = await Promise.all([
     database

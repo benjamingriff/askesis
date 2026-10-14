@@ -1963,6 +1963,808 @@
             "additionalProperties": false
           }
         ]
+      },
+      "IntegrationsState": {
+        "type": "object",
+        "properties": {
+          "strava": {
+            "type": "object",
+            "properties": {
+              "available": {
+                "type": "boolean"
+              },
+              "connection": {
+                "$ref": "#/components/schemas/StravaConnection"
+              }
+            },
+            "required": [
+              "available",
+              "connection"
+            ]
+          }
+        },
+        "required": [
+          "strava"
+        ]
+      },
+      "StravaConnection": {
+        "type": "object",
+        "nullable": true,
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "active",
+              "reauthorization_required"
+            ]
+          },
+          "displayName": {
+            "type": "string",
+            "nullable": true
+          },
+          "connectedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "lastSyncedAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "lastSyncError": {
+            "type": "string",
+            "nullable": true
+          },
+          "syncing": {
+            "type": "boolean"
+          },
+          "activityCount": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "status",
+          "displayName",
+          "connectedAt",
+          "lastSyncedAt",
+          "lastSyncError",
+          "syncing",
+          "activityCount"
+        ]
+      },
+      "StartStravaConnection": {
+        "type": "object",
+        "properties": {
+          "redirectUri": {
+            "type": "string",
+            "maxLength": 500,
+            "format": "uri"
+          }
+        },
+        "required": [
+          "redirectUri"
+        ]
+      },
+      "CompleteStravaConnection": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500
+          },
+          "state": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1000
+          },
+          "scope": {
+            "type": "string",
+            "maxLength": 500,
+            "default": ""
+          }
+        },
+        "required": [
+          "code",
+          "state"
+        ]
+      },
+      "StravaSyncResult": {
+        "type": "object",
+        "properties": {
+          "imported": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "updated": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "removed": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "lapsFetched": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "integrations": {
+            "$ref": "#/components/schemas/IntegrationsState"
+          }
+        },
+        "required": [
+          "imported",
+          "updated",
+          "removed",
+          "lapsFetched",
+          "integrations"
+        ]
+      },
+      "Adherence": {
+        "type": "object",
+        "properties": {
+          "planVersionId": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i"
+          },
+          "today": {
+            "type": "string",
+            "format": "date"
+          },
+          "connected": {
+            "type": "boolean"
+          },
+          "lastSyncedAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "workouts": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/WorkoutOutcome"
+            }
+          },
+          "activities": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Activity"
+            }
+          },
+          "extra": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "activityId": {
+                  "type": "string",
+                  "format": "uuid",
+                  "pattern": "^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i"
+                },
+                "countsTowardPlan": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "activityId",
+                "countsTowardPlan"
+              ]
+            }
+          },
+          "weeks": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/WeekAdherence"
+            }
+          },
+          "toDate": {
+            "type": "object",
+            "properties": {
+              "due": {
+                "type": "object",
+                "properties": {
+                  "sessions": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "seconds": {
+                    "type": "number",
+                    "minimum": 0
+                  },
+                  "metres": {
+                    "type": "number",
+                    "minimum": 0
+                  }
+                },
+                "required": [
+                  "sessions",
+                  "seconds",
+                  "metres"
+                ]
+              },
+              "actual": {
+                "type": "object",
+                "properties": {
+                  "sessions": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "seconds": {
+                    "type": "number",
+                    "minimum": 0
+                  },
+                  "metres": {
+                    "type": "number",
+                    "minimum": 0
+                  }
+                },
+                "required": [
+                  "sessions",
+                  "seconds",
+                  "metres"
+                ]
+              }
+            },
+            "required": [
+              "due",
+              "actual"
+            ]
+          }
+        },
+        "required": [
+          "planVersionId",
+          "today",
+          "connected",
+          "lastSyncedAt",
+          "workouts",
+          "activities",
+          "extra",
+          "weeks",
+          "toDate"
+        ]
+      },
+      "WorkoutOutcome": {
+        "type": "object",
+        "properties": {
+          "workoutId": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "completed",
+              "partial",
+              "missed",
+              "planned"
+            ]
+          },
+          "activityIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i"
+            }
+          },
+          "matchedBy": {
+            "type": "string",
+            "nullable": true,
+            "enum": [
+              "auto",
+              "manual",
+              null
+            ]
+          },
+          "completion": {
+            "type": "number",
+            "nullable": true
+          },
+          "dayOffset": {
+            "type": "integer",
+            "nullable": true
+          },
+          "actualSeconds": {
+            "type": "number",
+            "minimum": 0
+          },
+          "actualMetres": {
+            "type": "number",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "workoutId",
+          "status",
+          "activityIds",
+          "matchedBy",
+          "completion",
+          "dayOffset",
+          "actualSeconds",
+          "actualMetres"
+        ]
+      },
+      "Activity": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i"
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "strava"
+            ]
+          },
+          "sourceUrl": {
+            "type": "string",
+            "format": "uri"
+          },
+          "name": {
+            "type": "string"
+          },
+          "sport": {
+            "type": "string",
+            "enum": [
+              "run",
+              "cycle",
+              "swim",
+              "strength",
+              "row",
+              "other"
+            ]
+          },
+          "sourceSportType": {
+            "type": "string"
+          },
+          "date": {
+            "type": "string",
+            "format": "date"
+          },
+          "startedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "elapsedSeconds": {
+            "type": "integer"
+          },
+          "movingSeconds": {
+            "type": "integer",
+            "nullable": true
+          },
+          "distanceMetres": {
+            "type": "number",
+            "nullable": true
+          },
+          "elevationGainMetres": {
+            "type": "number",
+            "nullable": true
+          },
+          "averageSpeed": {
+            "type": "number",
+            "nullable": true
+          },
+          "averageWatts": {
+            "type": "number",
+            "nullable": true
+          },
+          "trainer": {
+            "type": "boolean"
+          },
+          "manual": {
+            "type": "boolean"
+          },
+          "race": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "source",
+          "sourceUrl",
+          "name",
+          "sport",
+          "sourceSportType",
+          "date",
+          "startedAt",
+          "elapsedSeconds",
+          "movingSeconds",
+          "distanceMetres",
+          "elevationGainMetres",
+          "averageSpeed",
+          "averageWatts",
+          "trainer",
+          "manual",
+          "race"
+        ]
+      },
+      "WeekAdherence": {
+        "type": "object",
+        "properties": {
+          "weekNumber": {
+            "type": "integer",
+            "minimum": 0,
+            "exclusiveMinimum": true
+          },
+          "startDate": {
+            "type": "string",
+            "format": "date"
+          },
+          "endDate": {
+            "type": "string",
+            "format": "date"
+          },
+          "planned": {
+            "type": "object",
+            "properties": {
+              "sessions": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "seconds": {
+                "type": "number",
+                "minimum": 0
+              },
+              "metres": {
+                "type": "number",
+                "minimum": 0
+              }
+            },
+            "required": [
+              "sessions",
+              "seconds",
+              "metres"
+            ]
+          },
+          "due": {
+            "type": "object",
+            "properties": {
+              "sessions": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "seconds": {
+                "type": "number",
+                "minimum": 0
+              },
+              "metres": {
+                "type": "number",
+                "minimum": 0
+              }
+            },
+            "required": [
+              "sessions",
+              "seconds",
+              "metres"
+            ]
+          },
+          "actual": {
+            "type": "object",
+            "properties": {
+              "sessions": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "seconds": {
+                "type": "number",
+                "minimum": 0
+              },
+              "metres": {
+                "type": "number",
+                "minimum": 0
+              }
+            },
+            "required": [
+              "sessions",
+              "seconds",
+              "metres"
+            ]
+          },
+          "completed": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "partial": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "missed": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "extra": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "weekNumber",
+          "startDate",
+          "endDate",
+          "planned",
+          "due",
+          "actual",
+          "completed",
+          "partial",
+          "missed",
+          "extra"
+        ]
+      },
+      "WorkoutActual": {
+        "type": "object",
+        "properties": {
+          "workoutId": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i"
+          },
+          "connected": {
+            "type": "boolean"
+          },
+          "outcome": {
+            "$ref": "#/components/schemas/WorkoutOutcome"
+          },
+          "activities": {
+            "type": "array",
+            "items": {
+              "allOf": [
+                {
+                  "$ref": "#/components/schemas/Activity"
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "lapsSynced": {
+                      "type": "boolean"
+                    },
+                    "lapCount": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "efforts": {
+                      "$ref": "#/components/schemas/EffortAnalysis"
+                    }
+                  },
+                  "required": [
+                    "lapsSynced",
+                    "lapCount",
+                    "efforts"
+                  ]
+                }
+              ]
+            }
+          },
+          "candidates": {
+            "type": "array",
+            "items": {
+              "allOf": [
+                {
+                  "$ref": "#/components/schemas/Activity"
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "linkedWorkoutId": {
+                      "type": "string",
+                      "nullable": true,
+                      "format": "uuid",
+                      "pattern": "^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i"
+                    }
+                  },
+                  "required": [
+                    "linkedWorkoutId"
+                  ]
+                }
+              ]
+            }
+          }
+        },
+        "required": [
+          "workoutId",
+          "connected",
+          "outcome",
+          "activities",
+          "candidates"
+        ]
+      },
+      "EffortAnalysis": {
+        "type": "object",
+        "nullable": true,
+        "properties": {
+          "verdict": {
+            "type": "string",
+            "enum": [
+              "aligned",
+              "no_laps",
+              "auto_laps",
+              "unaligned",
+              "not_applicable"
+            ]
+          },
+          "segments": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/EffortSegment"
+            }
+          },
+          "work": {
+            "type": "object",
+            "properties": {
+              "planned": {
+                "type": "integer"
+              },
+              "done": {
+                "type": "integer"
+              },
+              "onTarget": {
+                "type": "integer"
+              },
+              "checked": {
+                "type": "integer"
+              }
+            },
+            "required": [
+              "planned",
+              "done",
+              "onTarget",
+              "checked"
+            ]
+          }
+        },
+        "required": [
+          "verdict",
+          "segments",
+          "work"
+        ]
+      },
+      "EffortSegment": {
+        "type": "object",
+        "properties": {
+          "stepId": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          },
+          "role": {
+            "type": "string",
+            "nullable": true
+          },
+          "measure": {
+            "type": "string",
+            "enum": [
+              "duration",
+              "distance",
+              "open"
+            ]
+          },
+          "amount": {
+            "type": "number",
+            "nullable": true
+          },
+          "band": {
+            "type": "object",
+            "nullable": true,
+            "properties": {
+              "metric": {
+                "type": "string",
+                "enum": [
+                  "speed",
+                  "power"
+                ]
+              },
+              "low": {
+                "type": "number"
+              },
+              "high": {
+                "type": "number"
+              }
+            },
+            "required": [
+              "metric",
+              "low",
+              "high"
+            ]
+          },
+          "repeat": {
+            "type": "object",
+            "nullable": true,
+            "properties": {
+              "index": {
+                "type": "integer"
+              },
+              "count": {
+                "type": "integer"
+              }
+            },
+            "required": [
+              "index",
+              "count"
+            ]
+          },
+          "lapIndexes": {
+            "type": "array",
+            "items": {
+              "type": "integer"
+            }
+          },
+          "actualSeconds": {
+            "type": "number",
+            "nullable": true
+          },
+          "actualMetres": {
+            "type": "number",
+            "nullable": true
+          },
+          "actualIntensity": {
+            "type": "number",
+            "nullable": true
+          },
+          "completion": {
+            "type": "number",
+            "nullable": true
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "done",
+              "short",
+              "not_found"
+            ]
+          },
+          "intensity": {
+            "type": "string",
+            "nullable": true,
+            "enum": [
+              "on_target",
+              "above",
+              "below",
+              null
+            ]
+          }
+        },
+        "required": [
+          "stepId",
+          "label",
+          "role",
+          "measure",
+          "amount",
+          "band",
+          "repeat",
+          "lapIndexes",
+          "actualSeconds",
+          "actualMetres",
+          "actualIntensity",
+          "completion",
+          "status",
+          "intensity"
+        ]
+      },
+      "ActivityLinkDecision": {
+        "type": "object",
+        "properties": {
+          "activityId": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i"
+          },
+          "decision": {
+            "type": "string",
+            "enum": [
+              "link",
+              "reject"
+            ]
+          }
+        },
+        "required": [
+          "activityId",
+          "decision"
+        ]
       }
     },
     "parameters": {}
@@ -12833,6 +13635,800 @@
             }
           },
           "422": {
+            "description": "Request rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/integrations": {
+      "get": {
+        "tags": [
+          "Activities"
+        ],
+        "responses": {
+          "200": {
+            "description": "Connected activity providers.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IntegrationsState"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Request rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Request rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Request rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Request rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Request rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Request rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Request rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/integrations/strava/authorize": {
+      "post": {
+        "tags": [
+          "Activities"
+        ],
+        "description": "Start connecting Strava: returns the Strava consent page to open.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StartStravaConnection"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The Strava authorization address.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "url": {
+                      "type": "string",
+                      "format": "uri"
+                    }
+                  },
+                  "required": [
+                    "url"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Request rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Request rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Request rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Request rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Request rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Request rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Request rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/integrations/strava/connect": {
+      "post": {
+        "tags": [
+          "Activities"
+        ],
+        "description": "Finish connecting with the code Strava returned to the web callback.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CompleteStravaConnection"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Connected activity providers.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IntegrationsState"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Request rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Request rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Request rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Request rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Request rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Request rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Request rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/integrations/strava/sync": {
+      "post": {
+        "tags": [
+          "Activities"
+        ],
+        "description": "Refresh activities from a week before the earliest active plan. Strava data is a seven-day cache, so each sync re-reads the window and drops anything deleted on Strava.",
+        "responses": {
+          "200": {
+            "description": "What changed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StravaSyncResult"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Request rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Request rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Request rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Request rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Request rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Request rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Request rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/integrations/strava": {
+      "delete": {
+        "tags": [
+          "Activities"
+        ],
+        "description": "Revoke access at Strava and delete every activity and link decision from it.",
+        "responses": {
+          "200": {
+            "description": "Connected activity providers.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IntegrationsState"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Request rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Request rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Request rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Request rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Request rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Request rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Request rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/adherence": {
+      "get": {
+        "tags": [
+          "Activities"
+        ],
+        "description": "Planned versus actual for one plan version: each workout’s outcome, extra activities and weekly totals.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i"
+            },
+            "required": true,
+            "name": "planVersionId",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Plan adherence.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Adherence"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Request rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Request rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Request rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Request rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Request rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Request rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Request rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/workouts/{workoutId}/actual": {
+      "get": {
+        "tags": [
+          "Activities"
+        ],
+        "description": "The activities linked to a workout, rep-by-rep effort checks and other candidates.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i"
+            },
+            "required": true,
+            "name": "workoutId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "What happened for this workout.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkoutActual"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Request rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Request rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Request rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Request rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Request rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Request rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Request rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/workouts/{workoutId}/activity-links": {
+      "post": {
+        "tags": [
+          "Activities"
+        ],
+        "description": "Link an activity to this workout, or reject a suggested match.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i"
+            },
+            "required": true,
+            "name": "workoutId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ActivityLinkDecision"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The workout’s updated actuals.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkoutActual"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Request rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Request rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Request rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Request rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Request rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Request rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
             "description": "Request rejected.",
             "content": {
               "application/json": {

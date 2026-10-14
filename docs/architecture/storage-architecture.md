@@ -17,6 +17,7 @@ Verified against the applied migration sequence and generated types on 2026-10-0
 | Execution                       | `agent_runs`, `agent_run_events`, `agent_workers`, `agent_tool_receipts`, `agent_tool_changes`, `agent_run_finishes` |
 | Visible output and measurements | `agent_run_outputs`, `agent_progress_batches`, `agent_run_measurements`                                              |
 | Live delivery                   | `live_event_heads`, `live_events`                                                                                    |
+| Activities                      | `integration_connections`, `activities`, `activity_laps`, `activity_match_overrides`                                 |
 | Command and fixture bookkeeping | `api_idempotency_keys`, `seed_runs`                                                                                  |
 
 Atlas also maintains `atlas_schema_revisions`. Derived views are `workout_prescription_totals` and `weekly_plan_summary`. SQL definitions, constraints and exact nullable fields are in [migrations](../../database/migrations/) and [generated types](../../apps/api/src/database/generated.ts).

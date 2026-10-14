@@ -22,6 +22,8 @@ import { effortColor } from '../theme/palette';
 import { useWorkoutDetail, type PlanVersion } from '../plan-data';
 import { useSportUnits, type Units } from '../settings';
 import { WorkoutChangeBadge } from './PlanChanges';
+import { OutcomeBadge, WorkoutActualSection } from './Activity';
+import { useLocalToday } from '../lib/use-local-today';
 import { IntensityChart } from './IntensityChart';
 import { Stat } from './PlanWidgets';
 import { Button, Dialog, ErrorState, KindIcon, LoadingState, cx } from './ui';
@@ -149,6 +151,7 @@ export function WorkoutCard({
             <em>Key session</em>
           ) : null}
           <WorkoutChangeBadge id={workout.id} />
+          <OutcomeBadge workoutId={workout.id} />
         </span>
         <strong>{workout.title}</strong>
         <small>{workoutMeta(workout, units, pool)}</small>
@@ -339,6 +342,7 @@ export function WorkoutDialog({
 }) {
   const detail = useWorkoutDetail(workout?.id, version);
   const { pool } = useSportUnits();
+  const today = useLocalToday();
   if (!workout) return null;
   const look = workoutLook(workout);
   return (
@@ -374,6 +378,9 @@ export function WorkoutDialog({
         </div>
         {workout.purpose ? <p className="workout-purpose">{workout.purpose}</p> : null}
         {workout.description ? <p className="muted">{workout.description}</p> : null}
+        {workout.scheduledDate <= today ? (
+          <WorkoutActualSection workout={workout} units={units} today={today} />
+        ) : null}
         {detail.isPending ? <LoadingState>Loading prescription…</LoadingState> : null}
         {detail.error ? (
           <ErrorState message={detail.error.message} onRetry={() => void detail.refetch()} />

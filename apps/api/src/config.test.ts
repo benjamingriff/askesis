@@ -31,6 +31,22 @@ describe('parseApiConfig', () => {
     ]);
   });
 
+  it('leaves Strava unconfigured by default and requires HTTPS providers in production', () => {
+    const config = parseApiConfig({ ...validEnvironment, STRAVA_CLIENT_ID: '' });
+    expect(config.STRAVA_CLIENT_ID).toBeUndefined();
+    expect(config.STRAVA_API_BASE_URL).toBe('https://www.strava.com/api/v3');
+    expect(() =>
+      parseApiConfig({ ...validEnvironment, INTEGRATION_ENCRYPTION_KEY: 'too-short' }),
+    ).toThrow('INTEGRATION_ENCRYPTION_KEY');
+    expect(() =>
+      parseApiConfig({
+        ...validEnvironment,
+        NODE_ENV: 'production',
+        STRAVA_API_BASE_URL: 'http://localhost:4010/api/v3',
+      }),
+    ).toThrow('STRAVA_API_BASE_URL');
+  });
+
   it('reports invalid field names without exposing values', () => {
     expect(() =>
       parseApiConfig({ ...validEnvironment, DATABASE_URL: 'not-a-database-url' }),

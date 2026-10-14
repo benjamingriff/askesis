@@ -1,0 +1,311 @@
+/* Recorded activities against the plan. Status colours reuse the theme's status tokens:
+   done is the locked green, partial the warning amber, missed the danger red. */
+.small {
+  font-size: 13px;
+}
+
+/* Outcome chips */
+.outcome-badge {
+  --outcome: var(--text-dim);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 1px 7px;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--outcome) 16%, transparent);
+  color: var(--outcome);
+  font-style: normal;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.workout-card-kind em.outcome-badge {
+  background: color-mix(in srgb, var(--outcome) 16%, transparent);
+  color: var(--outcome);
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+.outcome-badge.completed,
+.hero-outcome.completed {
+  --outcome: var(--locked);
+}
+.outcome-badge.partial,
+.hero-outcome.partial {
+  --outcome: var(--warning);
+}
+.outcome-badge.missed,
+.hero-outcome.missed {
+  --outcome: var(--danger);
+}
+.hero-outcome {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--outcome);
+  font-size: 14px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Week strip and calendar: a ring shows done, a hollow dot shows missed. */
+.strip-day.done i,
+.calendar-dots i.completed {
+  box-shadow:
+    0 0 0 2px var(--surface),
+    0 0 0 3.5px var(--locked);
+}
+.strip-day.partial i,
+.calendar-dots i.partial {
+  box-shadow:
+    0 0 0 2px var(--surface),
+    0 0 0 3.5px var(--warning);
+}
+.strip-day.missed i,
+.calendar-dots i.missed {
+  background: transparent;
+  box-shadow: inset 0 0 0 1.5px var(--kind);
+}
+.strip-day.selected.done i,
+.strip-day.selected.partial i {
+  box-shadow:
+    0 0 0 2px var(--accent-fill),
+    0 0 0 3.5px var(--on-accent);
+}
+.week-pace {
+  margin-top: 10px;
+  font-size: 13px;
+}
+.today-side .progress {
+  margin-top: 14px;
+}
+
+/* Workout dialog: what you did */
+.actual-section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px 16px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--surface-raised);
+}
+.actual-section.completed {
+  border-color: color-mix(in srgb, var(--locked) 35%, var(--border));
+}
+.actual-section.partial {
+  border-color: color-mix(in srgb, var(--warning) 35%, var(--border));
+}
+.actual-section.missed {
+  border-color: color-mix(in srgb, var(--danger) 30%, var(--border));
+}
+.actual-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.actual-heading .steps-heading {
+  margin: 0;
+}
+.actual-activity {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+}
+.actual-activity header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+}
+.actual-activity header > div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.actual-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 22px;
+}
+.actual-stats span {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.actual-stats strong {
+  font-size: 17px;
+  font-variant-numeric: tabular-nums;
+}
+.strava-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex: none;
+  color: #fc5200;
+  font-size: 13px;
+  font-weight: 700;
+}
+.strava-link:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+/* Rep-by-rep checks */
+.effort-checks {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+}
+.effort-summary {
+  font-size: 14px;
+}
+.effort-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 0;
+  list-style: none;
+}
+.effort-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto 110px;
+  align-items: center;
+  gap: 12px;
+  padding: 6px 10px;
+  border-radius: var(--radius-xs);
+  background: var(--surface);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+.effort-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.effort-name small {
+  color: var(--text-muted);
+}
+.effort-amount {
+  color: var(--text-dim);
+}
+.effort-intensity {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 5px;
+  font-weight: 700;
+}
+.effort-row.on_target .effort-intensity {
+  color: var(--locked);
+}
+.effort-row.above .effort-intensity,
+.effort-row.below .effort-intensity {
+  color: var(--warning);
+}
+.effort-row.short .effort-amount {
+  color: var(--warning);
+}
+.effort-row.not_found {
+  opacity: 0.7;
+}
+.effort-row.not_found .effort-amount {
+  color: var(--danger);
+}
+
+.actual-section > .text-link,
+.effort-checks > .text-link {
+  align-self: flex-start;
+}
+
+/* Linking another activity */
+.candidate-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.candidate {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 10px;
+  border-radius: var(--radius-xs);
+  background: var(--surface);
+}
+.candidate > span {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+/* Settings: connections */
+.strava-connection {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px 0;
+}
+.strava-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px 16px;
+}
+.strava-mark {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  flex: none;
+  border-radius: 10px;
+  background: #fc5200;
+  color: #fff;
+  font-weight: 800;
+}
+.strava-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-width: 200px;
+}
+/* Production should use Strava's official "Connect with Strava" button asset. */
+.strava-connect {
+  height: 40px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 8px;
+  background: #fc5200;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 700;
+}
+.strava-connect:hover {
+  background: #e34a00;
+}
+.strava-connect:disabled {
+  opacity: 0.6;
+}
+.strava-callback {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.strava-callback .button-row {
+  justify-content: flex-start;
+}
+.strava-done {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--locked);
+  font-weight: 700;
+}
