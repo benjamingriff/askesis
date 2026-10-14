@@ -3,7 +3,7 @@ import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { resolve } from 'node:path';
 import {
   root,
-  readEnvironment,
+  developmentEnvironment,
   localEnvironment,
   worktreeDefaults,
   resolveLocalDockerHost,
@@ -250,7 +250,7 @@ export function developmentInventory(json = false) {
     .filter((line) => line.startsWith('worktree '))
     .map((line) => line.slice(9));
   const worktrees = paths.map((path) => {
-    const environment = { ...worktreeDefaults(path), ...readEnvironment(resolve(path, '.env')) };
+    const environment = developmentEnvironment(path);
     return {
       path,
       exists: existsSync(path),

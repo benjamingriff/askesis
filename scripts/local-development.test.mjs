@@ -6,7 +6,7 @@ import { tmpdir } from 'node:os';
 import { resolve } from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
 import { test } from 'node:test';
-import { worktreeDefaults } from './lib/local-runtime.mjs';
+import { developmentEnvironment, worktreeDefaults } from './lib/local-runtime.mjs';
 
 const repository = resolve(import.meta.dirname, '..');
 const fake = `#!/usr/bin/env node
@@ -486,4 +486,113 @@ test('doctor for marketing uses no Docker/auth services and prints no credential
   assert.ok(!(await f.records()).some((item) => item.name === 'docker'));
   assert.ok(!child.output.includes('root-test-secret'));
   assert.ok(!(await f.records()).some((item) => item.event === 'app'));
+});
+
+for (const reuse of [false, true])
+  test(
+    `legacy implicit project ${reuse ? 'reuses running database' : 'opens the original volume project'}`,
+    { timeout: 15000 },
+    async (t) => {
+      const f = await fixture(t, reuse ? { DEV_TEST_REUSE: '1' } : {});
+      const envPath = resolve(f.directory, '.env');
+      const old = (await readFile(envPath, 'utf8')).replace(/^COMPOSE_PROJECT_NAME=.*\n?/m, '');
+      await writeFile(envPath, old);
+      const child = f.start();
+      await f.wait((records) => records.filter((item) => item.event === 'listening').length === 2);
+      child.kill('SIGTERM');
+      assert.equal((await child.completion).code, 0, child.output);
+      const records = await f.records();
+      const compose = records.filter(
+        (item) => item.name === 'docker' && item.args[0] === 'compose',
+      );
+      assert.ok(compose.length > 0);
+      assert.ok(
+        compose.every((item) => item.args[item.args.indexOf('--project-name') + 1] === 'askesis'),
+      );
+      assert.ok(
+        records.some((item) => item.args.includes('label=com.docker.compose.project=askesis')),
+      );
+      if (reuse) assert.ok(!records.some((item) => item.args[0] === 'stop'));
+    },
+  );
+
+test(
+  'legacy setup and database one-off jobs keep the same Compose project',
+  { timeout: 15000 },
+  async (t) => {
+    const f = await fixture(t);
+    const envPath = resolve(f.directory, '.env');
+    const old = (await readFile(envPath, 'utf8')).replace(/^COMPOSE_PROJECT_NAME=.*\n?/m, '');
+    await writeFile(envPath, old);
+    for (const [file, args] of [
+      ['scripts/dev-setup.mjs', []],
+      ['scripts/dev-local.mjs', ['exec', '--', 'pnpm', '--filter', '@askesis/api', 'example:seed']],
+      [
+        'scripts/dev-local.mjs',
+        ['exec', '--', 'pnpm', '--filter', '@askesis/api', 'generate:db-types'],
+      ],
+    ]) {
+      const child = f.start(file, args);
+      assert.equal((await child.completion).code, 0, child.output);
+    }
+    assert.equal(await readFile(envPath, 'utf8'), old, 'existing configuration must remain intact');
+    const compose = (await f.records()).filter(
+      (item) => item.name === 'docker' && item.args[0] === 'compose',
+    );
+    assert.ok(compose.length > 0);
+    assert.ok(
+      compose.every((item) => item.args[item.args.indexOf('--project-name') + 1] === 'askesis'),
+    );
+    const clean = f.start('scripts/dev-local.mjs', ['clean', '--data']);
+    assert.equal((await clean.completion).code, 1);
+    assert.match(clean.output, /generated Compose project/);
+    assert.ok(
+      !(await f.records()).some((item) => item.args[0] === 'volume' && item.args[1] === 'rm'),
+    );
+  },
+);
+
+test('configuration defaults distinguish fresh worktrees from existing implicit Compose files', async (t) => {
+  const directory = await mkdtemp(resolve(tmpdir(), 'askesis-defaults-'));
+  t.after(() => rm(directory, { recursive: true, force: true }));
+  assert.deepEqual(developmentEnvironment(directory), worktreeDefaults(directory));
+  await writeFile(resolve(directory, '.env'), 'CLERK_SECRET_KEY=sk_test_placeholder\n');
+  const legacy = developmentEnvironment(directory);
+  assert.equal(legacy.COMPOSE_PROJECT_NAME, 'askesis');
+  assert.equal(legacy.API_PORT, '3000');
+  assert.equal(legacy.PORT, '3000');
+  assert.equal(legacy.WEB_PORT, '8080');
+  assert.equal(legacy.POSTGRES_PORT, '5432');
+  assert.equal(
+    developmentEnvironment(directory, {
+      COMPOSE_PROJECT_NAME: 'askesis-override',
+      API_PORT: '3100',
+    }).COMPOSE_PROJECT_NAME,
+    'askesis-override',
+  );
+  assert.equal(developmentEnvironment(directory, { API_PORT: '3100' }).PORT, '3100');
+  await writeFile(
+    resolve(directory, '.env'),
+    Object.entries(worktreeDefaults(directory))
+      .map(([key, value]) => `${key}=${value}`)
+      .join('\n'),
+  );
+  assert.deepEqual(developmentEnvironment(directory), worktreeDefaults(directory));
+});
+
+test('inventory resolves existing implicit projects using the same defaults as startup', async (t) => {
+  const f = await fixture(t, { DEV_TEST_INVENTORY: '1' });
+  const envPath = resolve(f.directory, '.env');
+  await writeFile(
+    envPath,
+    (await readFile(envPath, 'utf8')).replace(/^COMPOSE_PROJECT_NAME=.*\n?/m, ''),
+  );
+  await writeFile(resolve(f.directory, 'bin/git'), `#!/bin/sh\nprintf 'worktree %s\n' "$PWD"\n`, {
+    mode: 0o755,
+  });
+  const child = f.start('scripts/dev-local.mjs', ['list', '--json']);
+  assert.equal((await child.completion).code, 0, child.output);
+  const report = JSON.parse(child.output);
+  assert.equal(report.worktrees[0].project, 'askesis');
+  assert.equal(report.worktrees[0].ports.PORT, String(f.configuration.PORT));
 });

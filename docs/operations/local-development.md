@@ -21,7 +21,7 @@ pnpm dev:setup
 pnpm dev
 ```
 
-`dev:setup` reads only the Clerk development keys from the main checkout's ignored `.env`, writes a private ignored worktree `.env`, and chooses worktree-specific API/web/database ports and a Compose project. It does not copy provider credentials. If the keys live elsewhere, use `pnpm dev:setup /absolute/path/to/.env`. Existing worktree configuration is retained; occupied initial ports fail with a diagnostic. Change the corresponding ports, URLs and authorized origins together when overriding them.
+`dev:setup` reads only the Clerk development keys from the main checkout's ignored `.env`, writes a private ignored worktree `.env`, and chooses worktree-specific API/web/database ports and a Compose project. It does not copy provider credentials. If the keys live elsewhere, use `pnpm dev:setup /absolute/path/to/.env`. Existing worktree configuration is retained; occupied initial ports fail with a diagnostic. An existing `.env` without an explicit `COMPOSE_PROJECT_NAME` keeps the legacy `askesis` project and `askesis_postgres_data` volume, with Compose-compatible API/web/database port defaults. New setup files explicitly store an isolated project and ports; the same `.env` selects the same database for managed commands and direct Compose. Multiple legacy worktrees can share that project: inventory marks ambiguous ownership and automatic data deletion refuses it. Change the corresponding ports, URLs and authorized origins together when overriding them.
 
 Setup temporarily starts PostgreSQL, applies migrations and creates or reuses
 `askesis-verification+clerk_test@example.com` in the configured Clerk development

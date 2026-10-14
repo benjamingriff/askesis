@@ -47,10 +47,29 @@ export function worktreeDefaults(path = root) {
   };
 }
 
+export function developmentEnvironment(path = root, overrides = {}) {
+  const file = readEnvironment(resolve(path, '.env'));
+  const defaults = worktreeDefaults(path);
+  if (existsSync(resolve(path, '.env'))) {
+    // Existing configurations historically used compose.yaml's implicit project
+    // and ports. Keep the same volume; fresh setup writes its isolated values.
+    Object.assign(defaults, {
+      COMPOSE_PROJECT_NAME: 'askesis',
+      PORT: '3000',
+      API_PORT: '3000',
+      WEB_PORT: '8080',
+      POSTGRES_PORT: '5432',
+    });
+  }
+  const environment = { ...defaults, ...file, ...overrides };
+  environment.COMPOSE_PROJECT_NAME =
+    overrides.COMPOSE_PROJECT_NAME || file.COMPOSE_PROJECT_NAME || defaults.COMPOSE_PROJECT_NAME;
+  environment.PORT = overrides.PORT ?? file.PORT ?? environment.API_PORT;
+  return environment;
+}
+
 export function localEnvironment() {
-  const file = readEnvironment();
-  const environment = { ...worktreeDefaults(), ...file, ...process.env };
-  environment.PORT = process.env.PORT ?? file.PORT ?? environment.API_PORT;
+  const environment = developmentEnvironment(root, process.env);
   if (!/^askesis[a-z0-9_-]*$/.test(environment.COMPOSE_PROJECT_NAME))
     throw new Error('Local Compose projects must have an askesis-prefixed name.');
   for (const key of [
