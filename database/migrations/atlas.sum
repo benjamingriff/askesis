@@ -1,4 +1,4 @@
-h1:o9Cf60Ij51RzI5e/PNeCx0PyiICfdvUx6Y0Erz3Gyis=
+h1:BkKyS+ZnXPozBgucq7fhjgs8EAEoPT2nTZGuydaN/04=
 20260318120000_initial_schema.sql h1:MbXNJ0M+x3PLnNTdaTG8cvpU2rBCnNk0xWUovu3fgUQ=
 20260722153000_auth_identities.sql h1:19sniiRUiZhRCTgVPObJFlC/QWk+jrhMoDVnq6p8riY=
 20260907120000_plan_versions.sql h1:y0idcRC1x5Umd86vNv9EHRqqZkGdkZQmG4js/z68Ty4=
@@ -14,4 +14,5 @@ h1:o9Cf60Ij51RzI5e/PNeCx0PyiICfdvUx6Y0Erz3Gyis=
 20261008180000_training_block_phases.sql h1:IkCnFdku9deqk45B6R+lL8lExDSY+zzeHDy4HR2JyPY=
 20261008190000_race_priority_and_cutback_weeks.sql h1:0pu8XEYUF5BkaWSDhtq4z1/wmyPnUm0ugEBIDq4HRyA=
 20261013120000_agent_provider_anthropic.sql h1:/J/0hbuq0xDssRZ7GSkg49tfK2WOYLtEY6gNsyueLYQ=
-20261014120000_agent_prompt_hash_and_output_times.sql h1:P0nKLOni0F4k/epfhMl0Nh2M71+BGgn5wF4XRgbsWAg=
+20261014120000_workout_structure_scope.sql h1:QP6WFc8+IlY15FHFPC73OUeyZRzz2Dm97gpmlJprln0=
+20261014130000_agent_prompt_hash_and_output_times.sql h1:P6YNI8kPV8kVFZByoNZWjneIhez4K6+ufIOvmMmaTiY=

@@ -19,7 +19,7 @@ Askesis-specific choices:
 ## Commands
 
 ```bash
-pnpm dev:marketing                               # http://localhost:4321, or MARKETING_PORT
+pnpm dev:marketing                               # printed worktree URL, or MARKETING_PORT
 pnpm --filter @askesis/marketing build           # static output in apps/marketing/dist
 pnpm --filter @askesis/marketing typecheck       # astro check
 pnpm --filter @askesis/marketing test            # motion gating
@@ -27,6 +27,8 @@ pnpm --filter @askesis/marketing test            # motion gating
 
 Set `SITE_URL` at build time once the site has a domain; canonical and social-card URLs are
 absolute. Links to the app use `APP_URL` in `src/lib/site.ts`.
+
+The dev script uses `--ignore-lock` to keep Astro in the foreground even when it detects an agent. Root lifecycle commands provide their own session lock and occupied-port check. Ctrl+C stops the server.
 
 ## Screenshots
 
