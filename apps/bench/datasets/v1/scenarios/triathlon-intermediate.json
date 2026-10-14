@@ -1,0 +1,65 @@
+{
+  "schemaVersion": 1,
+  "id": "triathlon-intermediate",
+  "version": 1,
+  "persona": {
+    "id": "triathlon-intermediate",
+    "version": 1
+  },
+  "mode": "conversation_to_plan",
+  "split": "development",
+  "reviewStatus": "exploratory",
+  "goal": "I want to prepare for my Olympic-distance triathlon, an A-priority event, using running, cycling and swimming. Do not add strength.",
+  "openingMessage": "I'd like a {{planSpanWeeks}}-week Olympic-triathlon plan, with only the first {{prescriptionWeeks}} weeks fully prescribed now.",
+  "openingFactIds": ["goal", "horizon"],
+  "planSpanWeeks": 12,
+  "prescriptionWeeks": 4,
+  "startPolicy": "next_monday",
+  "events": [
+    {
+      "label": "Olympic triathlon",
+      "week": 12,
+      "weekday": 7,
+      "priority": "A"
+    }
+  ],
+  "expectations": {
+    "outcome": "saved_draft",
+    "frequencyPolicy": "sport_exposures",
+    "requiredDiscovery": [
+      "goal",
+      "dates",
+      "horizon",
+      "training",
+      "frequency",
+      "availability",
+      "equipment",
+      "fitness",
+      "access"
+    ],
+    "checks": [
+      "saved_plan",
+      "plan_dates",
+      "coverage",
+      "sports",
+      "baseline",
+      "availability",
+      "time_budgets",
+      "daily_limit",
+      "prescriptions",
+      "performance_provenance"
+    ],
+    "reviewAnchors": {
+      "goal_fit": "Support the specified Olympic triathlon and exact three trained sports.",
+      "progression": "Progress from separate run, ride and swim baselines; no cross-sport volume substitution.",
+      "recovery": "Consider combined fatigue, brick placement and a feasible shared weekly time budget.",
+      "prescriptions": "Actionable sport-specific prescriptions and a valid cycle/run brick with per-effort disciplines and zones.",
+      "personalization": "Swimming only Monday/Friday within 45-minute pool slots; respect daily limits and exposure-count semantics.",
+      "conversation": "Discover relevant facts without unrelated sport questions; distinguish unknowns from unanswered facts, explain assumptions, and accurately describe what is saved and what remains unprescribed. Use all three supplied tests and their dates with measured provenance."
+    }
+  },
+  "limits": {
+    "maxAthleteMessages": 18,
+    "maxElapsedMinutes": 30
+  }
+}

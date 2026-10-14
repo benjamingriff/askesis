@@ -4,6 +4,8 @@ The proof of concept starts a dedicated local PostgreSQL database, the current A
 
 ## Run a scenario
 
+The [versioned athlete datasets](../../apps/bench/datasets/README.md) contain the next eight-case pilot and a complete coverage tracker. Validate their authoring data without starting services or making provider calls with `pnpm --filter @askesis/bench datasets:validate`. The current execution command below still accepts only `running-poc`; the new suite is not executable yet.
+
 Requirements: Node 24, the repository's pnpm version, Docker with a local daemon, development Clerk keys and a valid OpenAI API key. Model requests use the provider and incur its normal charges. PostgreSQL, API and worker run locally.
 
 ```sh

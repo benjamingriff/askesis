@@ -1,0 +1,148 @@
+{
+  "schemaVersion": 1,
+  "id": "triathlon-intermediate",
+  "version": 1,
+  "category": "triathlon",
+  "experience": "intermediate",
+  "label": "Olympic triathlon with established per-sport baselines",
+  "reviewStatus": "exploratory",
+  "age": 32,
+  "timezone": "Europe/London",
+  "communication": {
+    "style": "numerical and familiar with triathlon terminology",
+    "disclosurePolicy": "answer_requested_facts",
+    "unknownResponse": "I don't know anything else about that. Please explain any material assumptions."
+  },
+  "sports": [
+    {
+      "sport": "run",
+      "experience": "intermediate",
+      "historyYears": 3,
+      "recentBaselineWeeks": 6,
+      "currentSessions": 3,
+      "desiredSessions": 3,
+      "weeklyDistanceMetres": 22000,
+      "longestDistanceMetres": 9000
+    },
+    {
+      "sport": "cycle",
+      "experience": "intermediate",
+      "historyYears": 3,
+      "recentBaselineWeeks": 6,
+      "currentSessions": 3,
+      "desiredSessions": 3,
+      "weeklyDurationSeconds": 14400,
+      "longestDurationSeconds": 7200
+    },
+    {
+      "sport": "swim",
+      "experience": "intermediate",
+      "historyYears": 2,
+      "recentBaselineWeeks": 6,
+      "currentSessions": 2,
+      "desiredSessions": 2,
+      "weeklyDistanceMetres": 2200,
+      "longestDistanceMetres": 1200
+    }
+  ],
+  "availability": [
+    {
+      "weekday": 1,
+      "maxMinutes": 60,
+      "preferred": false
+    },
+    {
+      "weekday": 2,
+      "maxMinutes": 90,
+      "preferred": false
+    },
+    {
+      "weekday": 3,
+      "maxMinutes": 60,
+      "preferred": false
+    },
+    {
+      "weekday": 4,
+      "maxMinutes": 90,
+      "preferred": false
+    },
+    {
+      "weekday": 5,
+      "maxMinutes": 60,
+      "preferred": false
+    },
+    {
+      "weekday": 6,
+      "maxMinutes": 150,
+      "preferred": true
+    },
+    {
+      "weekday": 7,
+      "maxMinutes": 90,
+      "preferred": false
+    }
+  ],
+  "equipment": [
+    "road bike and indoor trainer with power measurement",
+    "25-metre pool",
+    "flat roads for running"
+  ],
+  "constraints": [
+    "No current injuries or health restrictions",
+    "At most two scheduled workouts on any day"
+  ],
+  "preferences": [
+    "Distances in kilometres and swim metres",
+    "A bike/run brick can count as one cycle exposure and one run exposure",
+    "Include a manageable brick; do not add strength to this plan"
+  ],
+  "performanceEvidence": [
+    {
+      "system": "run_pace",
+      "input": {
+        "method": "race_result",
+        "distanceMetres": 5000,
+        "durationSeconds": 1500
+      },
+      "observedDaysAgo": 14,
+      "provenance": "user_supplied"
+    },
+    {
+      "system": "cycle_power",
+      "input": {
+        "method": "ftp",
+        "watts": 200
+      },
+      "observedDaysAgo": 14,
+      "provenance": "user_supplied"
+    },
+    {
+      "system": "swim_pace",
+      "input": {
+        "method": "css_test",
+        "t400Seconds": 480,
+        "t200Seconds": 220
+      },
+      "observedDaysAgo": 14,
+      "provenance": "user_supplied"
+    }
+  ],
+  "factTemplates": {
+    "availability": "I can train only on these days: {{availability}}",
+    "equipment": "I have access to: {{equipment}}.",
+    "constraints": "I'm {{age}}. {{constraints}}.",
+    "preferences": "{{preferences}}.",
+    "training": "For the last six weeks I have run {{runCurrentSessions}} times and {{runWeeklyKm}} km per week, longest run {{runLongestKm}} km; cycled {{cycleCurrentSessions}} times and {{cycleWeeklyMinutes}} minutes per week, longest ride {{cycleLongestMinutes}} minutes; and swum {{swimCurrentSessions}} times and {{swimWeeklyMetres}} metres per week, longest swim session {{swimLongestMetres}} metres.",
+    "frequency": "I want {{runDesiredSessions}} run, {{cycleDesiredSessions}} cycle and {{swimDesiredSessions}} swim exposures per week. A bike/run brick is one scheduled workout but counts once toward both run and cycle exposure targets.",
+    "fitness": "My recent measured evidence reflects current fitness: an all-out flat 5 km race in {{runEvidenceMinutes}} minutes on {{runObservedOn}}; tested FTP {{cycleEvidenceWatts}} watts on {{cycleObservedOn}}; and an all-out CSS test of 400 m in {{swim400Seconds}} seconds and 200 m in {{swim200Seconds}} seconds on {{swimObservedOn}}. All were in fair conditions.",
+    "access": "I have access to {{facilityAccess}}. Saturday is best for the longer ride or brick."
+  },
+  "accessRestrictions": [
+    {
+      "sport": "swim",
+      "facility": "25-metre pool",
+      "weekdays": [1, 5],
+      "maxMinutes": 45
+    }
+  ]
+}
