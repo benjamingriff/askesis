@@ -31,7 +31,7 @@ import { formatShortYear, METRES_PER_YARD, WEEKDAYS_LONG } from '../lib/format';
 import { BRIEF_SPORTS, SPORT_META, type BriefSport } from '../lib/sports';
 import { result } from '../lib/result';
 import { useRequestKey } from '../lib/use-request-key';
-import { type BriefState } from '../plan-data';
+import { readBrief, type BriefState } from '../plan-data';
 import { useSportUnits, useUnits } from '../settings';
 
 type State = BriefState;
@@ -66,16 +66,8 @@ export function PlanBriefPage() {
   const query = useQuery({
     queryKey: ['plans', planId, 'brief', revisionId],
     refetchOnWindowFocus: false,
-    queryFn: async () =>
-      revisionId
-        ? result(
-            await api.GET('/api/v1/plans/{planId}/revisions/{revisionId}/brief', {
-              params: { path: { planId, revisionId } },
-            }),
-          )
-        : result(
-            await api.GET('/api/v1/plans/{planId}/draft/brief', { params: { path: { planId } } }),
-          ),
+    queryFn: () =>
+      readBrief(planId, revisionId ? { kind: 'revision', revisionId } : { kind: 'draft' }),
   });
   return (
     <div className="page brief-page">

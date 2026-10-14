@@ -91,7 +91,10 @@ services:
       NODE_ENV: test
       AGENT_API_URL: http://api:3000
       AGENT_BOOTSTRAP_TOKEN: askesis-smoke-bootstrap-token-32-characters
+      # The scripted worker replays one script through the selected provider's runtime.
+      AGENT_PROVIDER: ${SMOKE_AGENT_PROVIDER:-openai}
       OPENAI_API_KEY: scripted-smoke-no-provider-request
+      ANTHROPIC_API_KEY: scripted-smoke-no-provider-request
     command: ['node', 'apps/agent/dist/smoke.js']
     depends_on:
       api:

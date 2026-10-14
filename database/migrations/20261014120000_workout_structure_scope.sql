@@ -30,4 +30,3 @@ BEGIN
         )
     ) THEN RAISE EXCEPTION 'Invalid effort or container prescription' USING ERRCODE = '23514'; END IF;
 END $$;
-

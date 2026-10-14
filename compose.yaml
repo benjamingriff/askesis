@@ -121,9 +121,11 @@ services:
       AGENT_API_URL: http://api:3000
       AGENT_BOOTSTRAP_TOKEN: ${AGENT_BOOTSTRAP_TOKEN:-}
       AGENT_PROVIDER: ${AGENT_PROVIDER:-openai}
-      AGENT_MODEL: ${AGENT_MODEL:-gpt-6.1-sol}
+      # Empty selects the provider's default model.
+      AGENT_MODEL: ${AGENT_MODEL:-}
       AGENT_REASONING: ${AGENT_REASONING:-medium}
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
     depends_on:
       api:
         condition: service_healthy

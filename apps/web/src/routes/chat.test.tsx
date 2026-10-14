@@ -400,6 +400,57 @@ it('shows a plan-wide run from another chat in an empty conversation', async () 
   );
 });
 
+it('tells the user when the coaching model declines a request', async () => {
+  const original = vi.mocked(api.GET).getMockImplementation()!;
+  vi.mocked(api.GET).mockImplementation((async (
+    path: string,
+    options?: { params?: { path?: { runId?: string } } },
+  ) => {
+    if (path.endsWith('/runs'))
+      return response({
+        runs: [
+          {
+            id: 'declined',
+            status: 'failed',
+            userMessageId: 'm1',
+            conversationId: 'c1',
+            planId: null,
+            context: null,
+            failureCode: 'MODEL_REFUSAL',
+            createdAt: '2026-10-05T10:00:00Z',
+            startedAt: '2026-10-05T10:00:00Z',
+            finishedAt: '2026-10-05T10:00:01Z',
+            ...turnFields,
+            output: [],
+          },
+        ],
+        nextBeforeSequence: null,
+      });
+    if (path.endsWith('/messages'))
+      return response({
+        messages: [
+          {
+            id: 'm1',
+            sequence: 1,
+            role: 'user',
+            content: 'Question 1',
+            producingRunId: null,
+            context: null,
+          },
+        ],
+        nextBeforeSequence: null,
+      });
+    return Reflect.apply(original, api, [path, options]);
+  }) as typeof api.GET);
+  mount('/chat/c1');
+  expect(
+    await screen.findByText(
+      'The coaching model declined to respond to this request. Try rephrasing it.',
+    ),
+  ).toBeInTheDocument();
+  expect(screen.queryByText('Execution stopped. You can send another message.')).toBeNull();
+});
+
 it('recovers older interrupted turns and renders the durable final message once', async () => {
   const original = vi.mocked(api.GET).getMockImplementation()!;
   const run = (id: string, status: string, userMessageId: string) => ({

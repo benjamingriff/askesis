@@ -1,0 +1,74 @@
+{
+  "schemaVersion": 1,
+  "id": "running-poc",
+  "version": 1,
+  "category": "running",
+  "experience": "improver",
+  "label": "First half marathon on three running days",
+  "reviewStatus": "exploratory",
+  "age": 35,
+  "timezone": "Europe/London",
+  "communication": {
+    "style": "plain, specific answers",
+    "disclosurePolicy": "answer_requested_facts",
+    "unknownResponse": "I don't know anything else about that. Please explain any material assumptions."
+  },
+  "sports": [
+    {
+      "sport": "run",
+      "experience": "improver",
+      "historyYears": 1,
+      "recentBaselineWeeks": 6,
+      "currentSessions": 3,
+      "desiredSessions": 3,
+      "weeklyDistanceMetres": 22000,
+      "longestDistanceMetres": 9000
+    }
+  ],
+  "availability": [
+    {
+      "weekday": 2,
+      "maxMinutes": 60,
+      "preferred": false
+    },
+    {
+      "weekday": 4,
+      "maxMinutes": 60,
+      "preferred": false
+    },
+    {
+      "weekday": 7,
+      "maxMinutes": 100,
+      "preferred": true
+    }
+  ],
+  "equipment": ["flat roads and paths"],
+  "constraints": ["No current injuries or health restrictions"],
+  "preferences": [
+    "Distances in kilometres",
+    "Sunday is best for my long run",
+    "No preferred methodology; explain useful assumptions"
+  ],
+  "performanceEvidence": [
+    {
+      "system": "run_pace",
+      "input": {
+        "method": "race_result",
+        "distanceMetres": 5000,
+        "durationSeconds": 1680
+      },
+      "observedDaysAgo": 14,
+      "provenance": "user_supplied"
+    }
+  ],
+  "factTemplates": {
+    "availability": "I can train only on these days: {{availability}}",
+    "equipment": "I have access to: {{equipment}}.",
+    "constraints": "I'm {{age}}. {{constraints}}.",
+    "preferences": "{{preferences}}.",
+    "training": "For the last {{runBaselineWeeks}} weeks I have run {{runCurrentSessions}} times per week, about {{runWeeklyKm}} km total per week. My longest recent run is {{runLongestKm}} km, which felt comfortable. Running is the only sport this plan should train.",
+    "frequency": "I want exactly {{runDesiredSessions}} runs per week.",
+    "fitness": "I ran an all-out, flat {{runEvidenceKm}} km race in {{runEvidenceMinutes}} minutes on {{runObservedOn}} in fair conditions. That reflects my current fitness."
+  },
+  "accessRestrictions": []
+}

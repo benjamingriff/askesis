@@ -1,0 +1,42 @@
+{
+  "schemaVersion": 1,
+  "id": "pilot-v1",
+  "version": 1,
+  "label": "Seven sport categories plus a matched annual hybrid variant",
+  "scenarios": [
+    {
+      "id": "running-poc",
+      "version": 1
+    },
+    {
+      "id": "cycle-beginner",
+      "version": 1
+    },
+    {
+      "id": "triathlon-intermediate",
+      "version": 1
+    },
+    {
+      "id": "swim-beginner",
+      "version": 1
+    },
+    {
+      "id": "strength-beginner",
+      "version": 1
+    },
+    {
+      "id": "gym-experienced",
+      "version": 1
+    },
+    {
+      "id": "hybrid-improver",
+      "version": 1
+    },
+    {
+      "id": "hybrid-improver-annual",
+      "version": 1
+    }
+  ],
+  "coachPrompt": "current_production",
+  "evaluationPolicy": "fixed_simulator_and_reviewer_required"
+}
