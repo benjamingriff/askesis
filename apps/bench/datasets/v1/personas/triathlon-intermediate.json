@@ -132,9 +132,9 @@
     "equipment": "I have access to: {{equipment}}.",
     "constraints": "I'm {{age}}. {{constraints}}.",
     "preferences": "{{preferences}}.",
-    "training": "For the last six weeks I have run {{runCurrentSessions}} times and {{runWeeklyKm}} km per week, longest run {{runLongestKm}} km; cycled {{cycleCurrentSessions}} times and {{cycleWeeklyMinutes}} minutes per week, longest ride {{cycleLongestMinutes}} minutes; and swum {{swimCurrentSessions}} times and {{swimWeeklyMetres}} metres per week, longest swim session {{swimLongestMetres}} metres.",
+    "training": "Running: for the last {{runBaselineWeeks}} weeks I have run {{runCurrentSessions}} times and {{runWeeklyKm}} km per week, longest run {{runLongestKm}} km. Cycling: for the last {{cycleBaselineWeeks}} weeks I have cycled {{cycleCurrentSessions}} times and {{cycleWeeklyMinutes}} minutes per week, longest ride {{cycleLongestMinutes}} minutes. Swimming: for the last {{swimBaselineWeeks}} weeks I have swum {{swimCurrentSessions}} times and {{swimWeeklyMetres}} metres per week, longest swim session {{swimLongestMetres}} metres.",
     "frequency": "I want {{runDesiredSessions}} run, {{cycleDesiredSessions}} cycle and {{swimDesiredSessions}} swim exposures per week. A bike/run brick is one scheduled workout but counts once toward both run and cycle exposure targets.",
-    "fitness": "My recent measured evidence reflects current fitness: an all-out flat 5 km race in {{runEvidenceMinutes}} minutes on {{runObservedOn}}; tested FTP {{cycleEvidenceWatts}} watts on {{cycleObservedOn}}; and an all-out CSS test of 400 m in {{swim400Seconds}} seconds and 200 m in {{swim200Seconds}} seconds on {{swimObservedOn}}. All were in fair conditions.",
+    "fitness": "My recent measured evidence reflects current fitness: an all-out flat {{runEvidenceKm}} km race in {{runEvidenceMinutes}} minutes on {{runObservedOn}}; tested FTP {{cycleEvidenceWatts}} watts on {{cycleObservedOn}}; and an all-out CSS test of 400 m in {{swim400Seconds}} seconds and 200 m in {{swim200Seconds}} seconds on {{swimObservedOn}}. All were in fair conditions.",
     "access": "I have access to {{facilityAccess}}. Saturday is best for the longer ride or brick."
   },
   "accessRestrictions": [

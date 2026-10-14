@@ -79,7 +79,7 @@
     "equipment": "I have access to: {{equipment}}.",
     "constraints": "I'm {{age}}. {{constraints}}.",
     "preferences": "{{preferences}}.",
-    "training": "For the last {{runBaselineWeeks}} weeks I have done {{runCurrentSessions}} runs, about {{runWeeklyKm}} km total per week, longest {{runLongestKm}} km, plus {{strengthCurrentSessions}} strength sessions. Some strength sessions include simple circuits. I have no written lifting loads.",
+    "training": "For the last {{runBaselineWeeks}} weeks I have done {{runCurrentSessions}} runs, about {{runWeeklyKm}} km total per week, longest {{runLongestKm}} km. For the last {{strengthBaselineWeeks}} weeks I have done {{strengthCurrentSessions}} strength sessions per week. Some strength sessions include simple circuits. I have no written lifting loads.",
     "frequency": "I want {{runDesiredSessions}} runs and {{strengthDesiredSessions}} strength sessions per week. A circuit belongs inside a strength session; do not add another separate workout just to include variety.",
     "fitness": "I ran an all-out flat {{runEvidenceKm}} km in {{runEvidenceMinutes}} minutes on {{runObservedOn}} in fair conditions; that reflects current fitness. I have no measured working weights for lifting."
   },

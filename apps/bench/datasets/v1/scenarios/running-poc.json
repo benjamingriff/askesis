@@ -10,7 +10,7 @@
   "split": "development",
   "reviewStatus": "exploratory",
   "goal": "My goal is to finish my first half marathon comfortably. I don't have a target finish time.",
-  "openingMessage": "I'd like help creating a running plan for my first half marathon. I want to prescribe the first four weeks now, then extend the plan after feedback.",
+  "openingMessage": "I'd like help creating a running plan for my first half marathon. I want to prescribe the first {{prescriptionWeeks}} weeks now, then extend the plan after feedback.",
   "openingFactIds": ["goal", "horizon"],
   "planSpanWeeks": 12,
   "prescriptionWeeks": 4,

@@ -75,7 +75,7 @@
     "equipment": "I have access to: {{equipment}}.",
     "constraints": "I'm {{age}}. {{constraints}}.",
     "preferences": "{{preferences}}.",
-    "training": "I've been going to the gym for years. For the last six weeks I have done {{strengthCurrentSessions}} resistance sessions plus {{cycleCurrentSessions}} bike sessions each week. Bike time is about {{cycleWeeklyMinutes}} minutes weekly, longest {{cycleLongestMinutes}} minutes. I use manageable weights but have not written them down.",
+    "training": "I've been going to the gym for years. For the last {{strengthBaselineWeeks}} weeks I have done {{strengthCurrentSessions}} resistance sessions per week. For the last {{cycleBaselineWeeks}} weeks I have done {{cycleCurrentSessions}} bike sessions per week, about {{cycleWeeklyMinutes}} minutes weekly, longest {{cycleLongestMinutes}} minutes. I use manageable weights but have not written them down.",
     "frequency": "I'd like {{strengthDesiredSessions}} lifting sessions and {{cycleDesiredSessions}} bike sessions a week. Keep it practical rather than chasing records.",
     "fitness": "I don't know FTP or have a bike power test. I have no recorded lifting numbers. I want effort-based instructions I can follow on the gym bike and familiar resistance exercises."
   },

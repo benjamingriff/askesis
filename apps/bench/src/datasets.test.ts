@@ -87,6 +87,42 @@ describe('versioned athlete datasets', () => {
     ).toHaveLength(2);
   });
 
+  it('keeps changeable evidence, per-sport baseline periods and opening horizons consistent', async () => {
+    const dataset = await loadDataset();
+    const now = new Date('2026-10-13T12:00:00Z');
+    for (const id of ['triathlon-intermediate', 'gym-experienced', 'hybrid-improver']) {
+      const persona = dataset.personas.find((item) => item.id === id)!;
+      const scenario = structuredClone(dataset.scenarios.find((item) => item.id === id)!);
+      const sports = structuredClone(persona.sports);
+      sports.forEach((sport, index) => {
+        sport.recentBaselineWeeks = 8 + index;
+      });
+      const performanceEvidence = structuredClone(persona.performanceEvidence);
+      const running = performanceEvidence.find((item) => item.system === 'run_pace');
+      if (running?.system === 'run_pace') {
+        running.input.distanceMetres = 10000;
+        running.input.durationSeconds = 3600;
+      }
+      scenario.personaOverrides = { sports, performanceEvidence };
+      const resolved = resolveDatasetScenario(persona, scenario, now);
+      for (const sport of sports)
+        expect(resolved.facts.training).toContain(`last ${sport.recentBaselineWeeks} weeks`);
+      expect(resolved.facts.training).not.toContain('last six weeks');
+      if (running) {
+        expect(resolved.facts.fitness).toContain('10 km');
+        expect(resolved.facts.fitness).toContain('60 minutes');
+        expect(resolved.facts.fitness).not.toContain('5 km');
+      }
+    }
+    const scenario = structuredClone(dataset.scenarios.find((item) => item.id === 'running-poc')!);
+    scenario.prescriptionWeeks = 8;
+    const persona = dataset.personas.find((item) => item.id === 'running-poc')!;
+    const resolved = resolveDatasetScenario(persona, scenario, now);
+    expect(resolved.openingMessage).toContain('first 8 weeks');
+    expect(resolved.facts.horizon).toContain('first 8 weeks');
+    expect(resolved.openingMessage).not.toContain('four weeks');
+  });
+
   it('rejects broken references, missing facts and impossible horizons or access slots', async () => {
     const source = await loadDataset();
     const broken = structuredClone(source);
