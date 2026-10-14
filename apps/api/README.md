@@ -21,9 +21,9 @@ pnpm install
 pnpm dev:api
 ```
 
-The API listens on `http://localhost:3000`. Development reads the repository-root `.env` when present. Typed startup validation requires PostgreSQL and Clerk configuration; see `.env.example`. `/api/health` reports process liveness, while `/api/ready` queries the required migration checkpoint; missing checkpoint returns 503 and database query errors return 500.
+Use the printed worktree URL. The root `dev:api` command starts/migrates a temporary PostgreSQL container when needed; Ctrl+C stops owned resources and retains data. Development reads the repository-root `.env` when present. Typed startup validation requires PostgreSQL and Clerk configuration; see `.env.example`. `/api/health` reports process liveness, while `/api/ready` queries the required migration checkpoint; missing checkpoint returns 503 and database query errors return 500.
 
-Regenerate database and API types after their respective sources change. Database codegen needs the intended process-level `DATABASE_URL` and does not itself load root `.env`:
+Regenerate database and API types after their respective sources change. Root database codegen loads `.env` and manages a temporary database; app-level codegen accepts an explicit process-level `DATABASE_URL`:
 
 ```bash
 pnpm generate:db-types

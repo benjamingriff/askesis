@@ -136,9 +136,9 @@ This uses a deliberately permissive stand-in that passes every existing plan and
 pnpm bench run --scenario running-poc --keep-alive
 ```
 
-After reporting, the command keeps its API listening on the printed loopback URL until Ctrl+C. The coaching worker stops after execution; the database remains available. Public API endpoints retain normal authentication, and the synthetic athlete is not provisioned into a browser account. This mode supports API/service inspection; viewing the Markdown/JSON artifacts is the first proof-of-concept review interface.
+After reporting, the command keeps its API listening on the printed loopback URL until Ctrl+C. The coaching worker stops after execution; the database remains available until Ctrl+C, which removes the containers/network while retaining data. Agents must not leave this mode running when handing back. Public API endpoints retain normal authentication, and the synthetic athlete is not provisioned into a browser account. This mode supports API/service inspection; viewing the Markdown/JSON artifacts is the first proof-of-concept review interface.
 
-Ctrl+C during execution requests cancellation through the normal run lifecycle, waits for accepted partial output to persist, stops the worker/API and retains the database and artifacts. It never automatically resumes a failed model session. Without `--keep-alive`, API and worker stop after reporting. PostgreSQL persists until:
+Ctrl+C during execution requests cancellation through the normal run lifecycle, waits for accepted partial output to persist, stops the worker/API and removes the benchmark containers/network, retaining the database volume and artifacts. It never automatically resumes a failed model session. Without `--keep-alive`, API, worker and PostgreSQL stop after reporting; containers and the empty network are removed. Database data and reports remain. To recover a stack after an uncatchable termination:
 
 ```sh
 pnpm bench stop

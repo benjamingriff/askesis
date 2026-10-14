@@ -1,16 +1,13 @@
 #!/usr/bin/env sh
 set -eu
 
-# Uses only the isolated postgres-test container, never the development service.
-docker compose --profile test up -d --wait postgres-test
-docker compose exec -T postgres-test createdb -U askesis_test askesis_cutover_test
-cleanup() {
-  docker compose exec -T postgres-test dropdb -U askesis_test askesis_cutover_test
-}
-trap cleanup EXIT INT TERM
+# Uses only this invocation’s disposable project, never the development service.
+. ./scripts/lib/disposable-compose.sh
+test_compose --profile test up -d --wait postgres-test
+test_compose exec -T postgres-test createdb -U askesis_test askesis_cutover_test
 
 run_sql() {
-  docker compose exec -T postgres-test psql -U askesis_test -d askesis_cutover_test \
+  test_compose exec -T postgres-test psql -U askesis_test -d askesis_cutover_test \
     --set ON_ERROR_STOP=1 --quiet
 }
 run_sql < database/migrations/20260318120000_initial_schema.sql

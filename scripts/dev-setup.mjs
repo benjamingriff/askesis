@@ -1,22 +1,11 @@
-import { createHash } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
-import { createServer } from 'node:net';
 import { dirname, resolve } from 'node:path';
 import { parseEnv } from 'node:util';
 
-const root = resolve(import.meta.dirname, '..');
-const run = (command, args) => execFileSync(command, args, { cwd: root, stdio: 'inherit' });
+import { LocalSession, assertPortAvailable, worktreeDefaults } from './lib/local-runtime.mjs';
 
-async function assertPortAvailable(port) {
-  await new Promise((resolve, reject) => {
-    const server = createServer();
-    server.once('error', () =>
-      reject(new Error(`Port ${port} is occupied; choose another in .env.`)),
-    );
-    server.listen(port, '0.0.0.0', () => server.close(resolve));
-  });
-}
+const root = resolve(import.meta.dirname, '..');
 
 try {
   if (!existsSync(resolve(root, '.env'))) {
@@ -45,17 +34,20 @@ try {
       throw new Error(
         'Local verification requires real Clerk development keys (pk_test_/sk_test_).',
       );
-    const hash = createHash('sha256').update(root).digest('hex');
-    // Keep Vite below 6000, which Chromium blocks as an unsafe browser port.
-    const offset = 1 + (Number.parseInt(hash.slice(0, 6), 16) % 799);
-    const apiPort = 3000 + offset;
-    const webPort = 5173 + offset;
-    const databasePort = 55000 + offset;
-    await Promise.all([apiPort, webPort, databasePort].map(assertPortAvailable));
+    const defaults = worktreeDefaults();
+    const apiPort = Number(defaults.API_PORT);
+    const webPort = Number(defaults.WEB_PORT);
+    const databasePort = Number(defaults.POSTGRES_PORT);
+    await Promise.all(
+      [apiPort, webPort, databasePort, defaults.MARKETING_PORT, defaults.EVALS_PORT].map(
+        assertPortAvailable,
+      ),
+    );
     const environment = {
       ...parseEnv(readFileSync(resolve(root, '.env.example'), 'utf8')),
+      ...defaults,
       NODE_ENV: 'development',
-      COMPOSE_PROJECT_NAME: `askesis-local-${hash.slice(0, 12)}`,
+      AGENT_API_URL: `http://127.0.0.1:${apiPort}`,
       POSTGRES_PORT: String(databasePort),
       API_PORT: String(apiPort),
       PORT: String(apiPort),
@@ -77,12 +69,18 @@ try {
     );
     console.log('Created private .env with development Clerk keys and worktree-specific ports.');
   }
-  // Validate before running any database jobs, including on repeat invocations.
-  run('pnpm', ['--filter', '@askesis/api', 'verification:check']);
-  run('docker', ['compose', 'up', '-d', 'postgres']);
-  run('docker', ['compose', 'run', '--rm', 'migrate']);
-  run('pnpm', ['--filter', '@askesis/api', 'verification:prepare']);
-  console.log('Ready. Run pnpm dev:local, then pnpm dev:login in another terminal.');
+  const session = new LocalSession('setup');
+  try {
+    await session.run('pnpm', ['--filter', '@askesis/api', 'verification:check']);
+    await session.database();
+    await session.compose(['run', '--rm', '--no-deps', 'migrate']);
+    await session.run('pnpm', ['--filter', '@askesis/api', 'verification:prepare']);
+  } finally {
+    await session.close();
+  }
+  console.log(
+    'Ready. Setup containers stopped; database data retained. Run pnpm dev, then pnpm dev:login in another terminal.',
+  );
 } catch (error) {
   console.error(error instanceof Error ? error.message : 'Local setup failed.');
   process.exitCode = 1;

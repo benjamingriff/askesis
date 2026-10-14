@@ -35,6 +35,8 @@ export default tseslint.config(
       'apps/evals/*.ts',
       '*.js',
       'scripts/dev-*.mjs',
+      'scripts/lib/*.mjs',
+      'scripts/*.test.mjs',
       'scripts/bench.mjs',
     ],
     languageOptions: {
