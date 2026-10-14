@@ -230,6 +230,44 @@ describe('saved completion and assessment', () => {
     });
     expect(() => validateReview(missing, absent)).toThrow('missing saved plan');
   });
+  it('accepts timed strength rests but still requires an effort target for the lifts', () => {
+    const strength = datasetCase('strength-beginner');
+    strength.expectations.checks = ['prescriptions'];
+    const lift = {
+      kind: 'effort',
+      role: 'main',
+      discipline: 'strength',
+      completion: { type: 'repetitions', value: 10 },
+      targets: [{ type: 'rir', targetValue: 2 }],
+    };
+    const rest = {
+      kind: 'effort',
+      role: 'recovery',
+      discipline: 'strength',
+      completion: { type: 'duration', value: 60 },
+      targets: [],
+    };
+    const value = {
+      plan: {
+        findings: [],
+        workouts: [
+          {
+            workout: {
+              id: 'lift',
+              scheduledDate: strength.dates.startDate,
+              discipline: 'strength',
+            },
+            prescription: { kind: 'repeat', steps: [lift, rest] },
+          },
+        ],
+      },
+    } as unknown as BenchmarkSnapshot;
+    const result = () =>
+      checkPlan(value, strength, []).find((check) => check.id === 'prescriptions')!.status;
+    expect(result()).toBe('pass');
+    lift.targets = [];
+    expect(result()).toBe('fail');
+  });
 });
 
 describe('local isolation and portable evidence', () => {

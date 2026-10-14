@@ -133,7 +133,7 @@ export function scriptedCoach(scenario: Scenario): ScriptedTurn[] {
   const reply = (text: string): ScriptedTurn => ({ type: 'reply', text });
   const call = (name: string, input: Record<string, unknown>): ScriptedTurn => ({
     type: 'tools',
-    calls: [{ name, input, id: `scripted-${name}` }],
+    calls: [{ name, input }],
   });
   const weeks = Array.from({ length: scenario.prescriptionWeeks }, (_, i) => ({
     key: `week-${i}`,

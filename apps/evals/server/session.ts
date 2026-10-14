@@ -7,21 +7,22 @@ import type {
   Disclosure,
   FieldChange,
   PlanFitness,
+  PlanLoad,
   PlanWeek,
   SessionFlag,
   SummaryClaim,
   ToolCall,
+  TurnStep,
 } from '../src/types';
 import { asArray, asNumber, asString, isObject, objects, type Json } from './json';
+import { buildLoad } from './load';
+import { normalizeScenario, requiredFacts } from './scenario';
 
 // Derives what happened in one benchmark conversation from its raw artifacts:
 // coach turns joined to their tool calls, what the athlete disclosed and when,
 // what the coach recorded about the athlete, and how the saved plan measures up
 // against the scenario. Everything is a pure function of the files so it can be
 // unit-tested against fixtures.
-
-/** Facts the benchmark's `required_discovery` check expects before completion. */
-export const REQUIRED_FACTS = ['dates', 'training', 'frequency', 'availability', 'fitness'];
 
 const WEEKDAY_NAMES = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 const NUDGE = 'Please go ahead and create';
@@ -32,6 +33,8 @@ export interface SessionInput {
   tools: Json[];
   snapshot: Json | null;
   disclosures: Json[];
+  /** One row per simulated athlete message: selected facts, intent and voice attempts. */
+  actions?: Json[];
   plan: Json | null;
   scenario: Json | null;
   metrics: Json | null;
@@ -48,6 +51,7 @@ export interface Session {
   beliefs: BeliefRow[];
   decisions: Decision[];
   fitness: PlanFitness | null;
+  load: PlanLoad | null;
   claims: SummaryClaim[];
   stats: ConversationStats | null;
   flags: SessionFlag[];
@@ -126,23 +130,52 @@ function toMessages(raw: Json[]): ConversationMessage[] {
     .sort((a, b) => a.sequence - b.sequence);
 }
 
-function toDisclosures(raw: Json[], messages: ConversationMessage[]): Disclosure[] {
+function toDisclosures(
+  raw: Json[],
+  messages: ConversationMessage[],
+  actions: Json[],
+): Disclosure[] {
   const recorded = new Map(
     raw.map((entry) => [
       asNumber(entry.sequence) ?? -1,
       asArray(entry.factIds).filter((id): id is string => typeof id === 'string'),
     ]),
   );
+  const actionAt = new Map(actions.map((action) => [asNumber(action.sequence) ?? -1, action]));
   return messages
-    .filter((message) => message.role === 'user' && message.sequence > 1)
+    .filter(
+      (message) =>
+        message.role === 'user' && (message.sequence > 1 || recorded.has(message.sequence)),
+    )
     .map((message) => {
       const factIds = recorded.get(message.sequence) ?? [];
-      const kind: Disclosure['kind'] = message.content.includes(NUDGE)
-        ? 'nudge'
-        : message.content.includes(UNKNOWN) || factIds.length === 0
-          ? 'unknown'
-          : 'answer';
-      return { sequence: message.sequence, factIds, kind };
+      const action = actionAt.get(message.sequence);
+      const voice = isObject(action?.voice) ? action.voice : null;
+      const status = asString(voice?.status);
+      // Recorded intent is authoritative; older runs only show it through fixed phrases.
+      const intent = asString(action?.intent);
+      const kind: Disclosure['kind'] =
+        intent === 'generate' || (!intent && message.content.includes(NUDGE))
+          ? 'nudge'
+          : intent === 'unknown' ||
+              (!intent && message.content.includes(UNKNOWN)) ||
+              factIds.length === 0
+            ? 'unknown'
+            : 'answer';
+      return {
+        sequence: message.sequence,
+        factIds,
+        kind,
+        voice:
+          voice && (status === 'voiced' || status === 'fallback' || status === 'skipped')
+            ? {
+                id: asString(voice.id) ?? 'voice',
+                status,
+                attempts: objects(voice.attempts).length,
+                authored: asString(action?.authored),
+              }
+            : null,
+      };
     });
 }
 
@@ -284,6 +317,38 @@ function buildTurns(
       const finished = time(run.finished_at);
       const numbers = (key: string) =>
         asArray(timings[key]).filter((value): value is number => typeof value === 'number');
+      const ownTools = tools
+        .filter((tool) => tool.runId === runId)
+        .map(({ runId: _runId, ...tool }) => tool);
+      // Text the coach wrote before or between tool calls; the final segment is the reply.
+      const segments = objects(output?.items)
+        .filter((item) => item.isFinal !== true && (asString(item.content) ?? '').trim() !== '')
+        .map((item) => ({
+          itemId: asString(item.itemId) ?? '',
+          position: asNumber(item.position) ?? 0,
+          content: asString(item.content) ?? '',
+          at: asString(item.startedAt),
+        }));
+      const ordered = segments.every((segment) => segment.at !== null);
+      const steps: TurnStep[] = [
+        ...segments.map((segment) => ({
+          kind: 'text' as const,
+          at: segment.at,
+          position: segment.position,
+          content: segment.content,
+        })),
+        ...ownTools.map((tool) => ({
+          kind: 'tool' as const,
+          at: tool.at || null,
+          position: 0,
+          operationId: tool.operationId,
+        })),
+      ].sort((a, b) =>
+        ordered
+          ? (a.at ?? '').localeCompare(b.at ?? '')
+          : // Without saved times, text segments are shown first in position order.
+            Number(a.kind === 'tool') - Number(b.kind === 'tool') || a.position - b.position,
+      );
       return {
         index: index + 1,
         runId,
@@ -305,9 +370,9 @@ function buildTurns(
         outputTokens: asNumber(run.output_tokens) ?? 0,
         questions: reply ? countQuestions(reply.content) : 0,
         words: reply ? words(reply.content) : 0,
-        tools: tools
-          .filter((tool) => tool.runId === runId)
-          .map(({ runId: _runId, ...tool }) => tool),
+        tools: ownTools,
+        steps,
+        stepsOrdered: ordered,
       };
     });
 }
@@ -771,7 +836,13 @@ function buildFitness(input: SessionInput): PlanFitness | null {
       (day): day is number => typeof day === 'number',
     ),
     weekdayCounts,
-    dayLimits: parseDayLimits(asString(facts.availability) ?? ''),
+    dayLimits: isObject(expectations.dayLimits)
+      ? Object.fromEntries(
+          Object.entries(expectations.dayLimits).filter(
+            (entry): entry is [string, number] => typeof entry[1] === 'number',
+          ),
+        )
+      : parseDayLimits(asString(facts.availability) ?? ''),
     workouts,
     zoneCounts,
     findings: objects(plan.findings).map((finding) => ({
@@ -815,6 +886,7 @@ function buildFlags(
   fitness: PlanFitness | null,
   claims: SummaryClaim[],
   factsAvailable: string[],
+  required: string[],
   stoppedEarly: boolean,
 ): SessionFlag[] {
   const flags: SessionFlag[] = [];
@@ -840,7 +912,7 @@ function buildFlags(
 
   // When execution stopped early, missing facts and fields are symptoms of the
   // stop, which is reported on its own; listing them would bury the cause.
-  for (const fact of stoppedEarly ? [] : REQUIRED_FACTS) {
+  for (const fact of stoppedEarly ? [] : required) {
     if (factsAvailable.includes(fact) && !disclosed.has(fact)) {
       add(
         `undisclosed:${fact}`,
@@ -1030,9 +1102,11 @@ function truncate(text: string | null, max = 80): string {
   return text.length > max ? `${text.slice(0, max - 1)}…` : text;
 }
 
-export function analyzeSession(input: SessionInput): Session {
+export function analyzeSession(source: SessionInput): Session {
+  const input = { ...source, scenario: normalizeScenario(source.scenario) };
   const messages = toMessages(input.messages);
-  const disclosures = toDisclosures(input.disclosures, messages);
+  const disclosures = toDisclosures(input.disclosures, messages, input.actions ?? []);
+  const required = requiredFacts(input.scenario);
   const raw: RawPayloads = new Map();
   const tools = groupToolCalls(input.tools, raw);
   const turns = buildTurns(input, messages, tools);
@@ -1059,6 +1133,7 @@ export function analyzeSession(input: SessionInput): Session {
     fitness,
     claims,
     facts,
+    required,
     stoppedEarly,
   );
 
@@ -1091,9 +1166,7 @@ export function analyzeSession(input: SessionInput): Session {
           nudges: disclosures.filter((entry) => entry.kind === 'nudge').length,
           factsDisclosed: [...new Set(disclosedAll)],
           factsAvailable: facts,
-          requiredFacts: REQUIRED_FACTS.filter(
-            (fact) => facts.length === 0 || facts.includes(fact),
-          ),
+          requiredFacts: required.filter((fact) => facts.length === 0 || facts.includes(fact)),
           repeatedFacts: disclosedAll.length - new Set(disclosedAll).size,
           turnsToPlan:
             planTurn?.triggerSequence === undefined || planTurn.triggerSequence === null
@@ -1121,5 +1194,18 @@ export function analyzeSession(input: SessionInput): Session {
           coachWords: turns.reduce((sum, turn) => sum + turn.words, 0),
         };
 
-  return { messages, turns, disclosures, beliefs, decisions, fitness, claims, stats, flags };
+  const performance = isObject(input.snapshot?.performance) ? input.snapshot.performance : null;
+  const load = buildLoad(input.plan, performance, input.scenario);
+  return {
+    messages,
+    turns,
+    disclosures,
+    beliefs,
+    decisions,
+    fitness,
+    load,
+    claims,
+    stats,
+    flags,
+  };
 }

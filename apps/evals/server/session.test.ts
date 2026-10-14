@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { saveReview } from './results';
-import { parseReview } from './review';
+import { parseHighlights, parseReview } from './review';
 import { analyzeSession, countQuestions, parseDayLimits, type SessionInput } from './session';
 
 const scenario = {
@@ -395,5 +395,72 @@ describe('human reviews', () => {
     } finally {
       await rm(root, { recursive: true, force: true });
     }
+  });
+});
+
+describe('turn order and simulated athlete actions', () => {
+  it('orders interim text and tool calls by when they happened', () => {
+    const at = (seconds: number) => new Date(Date.UTC(2026, 9, 9, 14, 0, seconds)).toISOString();
+    const base = input();
+    const session = analyzeSession(
+      input({
+        snapshot: {
+          ...base.snapshot,
+          outputs: [
+            {
+              runId: 'r3',
+              items: [
+                { itemId: 'a', position: 0, content: 'Let me save that.', startedAt: at(30) },
+                { itemId: 'b', position: 1, content: 'Checked it.', startedAt: at(45) },
+                { itemId: 'c', position: 2, content: 'Weeks total 22 km, 23 km.', isFinal: true },
+              ],
+            },
+          ],
+        },
+      }),
+    );
+    const turn = session.turns.find((entry) => entry.runId === 'r3')!;
+    expect(turn.stepsOrdered).toBe(true);
+    expect(
+      turn.steps.map((step) => (step.kind === 'text' ? step.content : step.operationId)),
+    ).toEqual(['Let me save that.', 'b', 'Checked it.']);
+  });
+
+  it('uses the recorded intent and voice instead of fixed phrases', () => {
+    const session = analyzeSession(
+      input({
+        actions: [
+          {
+            sequence: 5,
+            intent: 'generate',
+            voice: { id: 'terse', status: 'voiced', attempts: [{}] },
+            authored: 'Please go ahead and create the agreed first 4 weeks of my plan.',
+          },
+        ],
+        messages: input().messages.map((message) =>
+          message.sequence === 5 ? { ...message, content: 'Just build it.' } : message,
+        ),
+      }),
+    );
+    const disclosure = session.disclosures.find((entry) => entry.sequence === 5)!;
+    expect(disclosure.kind).toBe('nudge');
+    expect(disclosure.voice).toMatchObject({ id: 'terse', status: 'voiced', attempts: 1 });
+    expect(session.stats?.nudges).toBe(1);
+  });
+});
+
+describe('communication review', () => {
+  it('keeps whole 1–5 ratings and valid phrase highlights only', () => {
+    expect(
+      parseReview({ communication: { tone: 4, clarity: 6, adaptation: 2.5 } })?.communication,
+    ).toEqual({ tone: 4, clarity: null, adaptation: null });
+    expect(
+      parseHighlights([
+        { sequence: 4, quote: '  Absolutely!  ', tag: 'Sycophantic' },
+        { sequence: 'x', quote: 'no', tag: 'jargon' },
+        { sequence: 6, quote: '', tag: 'unclear' },
+      ])?.map(({ sequence, quote, tag }) => ({ sequence, quote, tag })),
+    ).toEqual([{ sequence: 4, quote: 'Absolutely!', tag: 'sycophantic' }]);
+    expect(parseHighlights({})).toBeNull();
   });
 });

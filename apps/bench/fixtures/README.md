@@ -2,7 +2,7 @@
 
 These twelve synthetic cases test the existing plan reviewer directly. They do not run a coach, API, database or deterministic plan checks. A model reviewer missing an unavailable day remains visible even if the end-to-end benchmark's code check would catch it.
 
-`running-base.json` is selected evidence from the successful synthetic `running-poc` run on 9 October 2026. It contains a four-week draft and conversation, not credentials or production athlete data. The athlete's third message was deliberately extended to explicitly state comfortable completion with no finish-time target. This removes the original goal ambiguity from the positive control. Dates are fixed so repeated tests use identical evidence.
+`running-base.json` is selected evidence from the successful synthetic run of the retired `running-poc` scenario (now `running-improver`) on 9 October 2026. It contains a four-week draft and conversation, not credentials or production athlete data. The athlete's third message was deliberately extended to explicitly state comfortable completion with no finish-time target. This removes the original goal ambiguity from the positive control. Dates are fixed so repeated tests use identical evidence.
 
 `calibration.json` contains the descriptions, split and expected findings. `src/fixtures.ts` clones the base and makes the named mutation. The resulting inputs and expected labels are saved separately for every suite run. The reviewer receives only the same selected plan, conversation, performance and disclosed fact IDs as ordinary grading; fixture names, mutation descriptions, split and expected labels are withheld.
 

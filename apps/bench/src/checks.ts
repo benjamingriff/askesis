@@ -82,8 +82,9 @@ function prescriptionComplete(workout: Workout, prescription: Step) {
         );
       if (sport === 'strength')
         return (
-          effort.completion.type === 'repetitions' &&
-          effort.targets.some((target) => target.type === 'rir' || target.type === 'rpe')
+          (effort.role === 'recovery' && effort.completion.type === 'duration') ||
+          (effort.completion.type === 'repetitions' &&
+            effort.targets.some((target) => target.type === 'rir' || target.type === 'rpe'))
         );
       return effort.targets.length > 0;
     })
@@ -218,7 +219,7 @@ export function checkPlan(
       return check(
         'prescriptions',
         !incomplete.length,
-        'Every effort needs a completion; run, ride and swim efforts a resolved zone; strength efforts reps with RIR or RPE.',
+        'Every effort needs a completion; run, ride and swim efforts a resolved zone; strength work reps with RIR or RPE, with timed rests allowed.',
         refs(incomplete),
       );
     },

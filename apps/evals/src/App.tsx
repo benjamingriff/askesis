@@ -80,7 +80,9 @@ function viewTabs(route: Route): ViewTab[] {
       { id: 'decisions', label: 'Decisions' },
       'divider',
       { id: 'plan', label: 'Plan' },
+      { id: 'load', label: 'Load' },
       { id: 'assessment', label: 'Assessment' },
+      { id: 'prompts', label: 'Prompts' },
     ];
   }
   if (route.section === 'conversations') {

@@ -144,6 +144,130 @@ export function Conversations({
       </div>
 
       <Section
+        id="conversation-list"
+        title="Conversations"
+        description="Newest first. Open one to read the conversation, its tool calls and the saved plan."
+        aside={
+          activeMode && (
+            <button type="button" className="filter-chip" onClick={() => setMode(null)}>
+              {activeMode.label} ×
+            </button>
+          )
+        }
+      >
+        <div className="table-wrap">
+          <table className="runs-table conversation-table">
+            <thead>
+              <tr>
+                <th>Verdict</th>
+                <th>Started</th>
+                <th>Coach · prompt</th>
+                <th>Scenario · voice</th>
+                <th className="numeric">Turns</th>
+                <th className="numeric">Questions</th>
+                <th>Facts</th>
+                <th className="numeric">Assumed</th>
+                <th>Flags</th>
+                <th className="numeric">To plan</th>
+                <th>You</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((run) => {
+                const c = run.conversation;
+                const requiredFound = c
+                  ? c.requiredFacts.filter((fact) => c.factsDisclosed.includes(fact)).length
+                  : 0;
+                const severity = (level: string) =>
+                  run.flags.filter((flag) => flag.severity === level).length;
+                return (
+                  <tr key={run.id} onClick={() => open(run.id)}>
+                    <td>
+                      <a
+                        href={href('conversations', run.id)}
+                        onClick={(event) => event.stopPropagation()}
+                      >
+                        <VerdictBadge verdict={run.verdict} />
+                      </a>
+                    </td>
+                    <td className="muted nowrap">{formatDateTime(run.startedAt)}</td>
+                    <td className="nowrap">
+                      <i className="model-dot" style={{ background: colors.get(run.coachModel) }} />
+                      {modelName(run.coachModel)}
+                      <span className="effort">{reasoningShort(run.reasoning)}</span>
+                      <span className="prompt-label">{promptKey(run)}</span>
+                    </td>
+                    <td className="nowrap">
+                      {run.scenarioId}
+                      {run.voiceId && run.voiceId !== 'persona' && (
+                        <span className="muted"> · {run.voiceId}</span>
+                      )}
+                    </td>
+                    <td className="numeric">{c ? c.athleteTurns : '—'}</td>
+                    <td className="numeric">
+                      {c ? c.questions : '—'}
+                      {c && c.maxQuestionsPerTurn > 1 && (
+                        <span className="muted"> (max {c.maxQuestionsPerTurn})</span>
+                      )}
+                    </td>
+                    <td>
+                      {c ? (
+                        <span
+                          className="fact-pips"
+                          title={`Disclosed: ${c.factsDisclosed.join(', ') || 'none'}`}
+                        >
+                          {c.factsAvailable.map((fact) => (
+                            <i
+                              key={fact}
+                              className={`fact-pip${c.factsDisclosed.includes(fact) ? ' on' : ''}${c.requiredFacts.includes(fact) ? ' required' : ''}`}
+                            />
+                          ))}
+                          <span className="muted">
+                            {requiredFound}/{c.requiredFacts.length}
+                          </span>
+                        </span>
+                      ) : (
+                        '—'
+                      )}
+                    </td>
+                    <td className="numeric">{c ? c.assumptions : '—'}</td>
+                    <td>
+                      <span className="flag-counts">
+                        {severity('critical') > 0 && (
+                          <span className="flag-count flag-critical">{severity('critical')}</span>
+                        )}
+                        {severity('warning') > 0 && (
+                          <span className="flag-count flag-warning">{severity('warning')}</span>
+                        )}
+                        {severity('info') > 0 && (
+                          <span className="flag-count flag-info">{severity('info')}</span>
+                        )}
+                        {run.flags.length === 0 && <span className="muted">—</span>}
+                      </span>
+                    </td>
+                    <td className="numeric">{c?.turnsToPlan ?? '—'}</td>
+                    <td>
+                      {run.review?.verdict ? (
+                        <span className={`human-verdict human-${run.review.verdict}`}>
+                          {humanize(run.review.verdict)}
+                        </span>
+                      ) : run.demo ? (
+                        <Tag tone="accent">demo</Tag>
+                      ) : run.scripted ? (
+                        <Tag>scripted</Tag>
+                      ) : (
+                        <span className="muted">—</span>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </Section>
+
+      <Section
         id="failure-modes"
         title="What goes wrong"
         description="Each problem counted once per conversation, from exact checks, the reviewer, transcript flags and your reviews. Click one to filter the list."
@@ -291,123 +415,6 @@ export function Conversations({
         }
       >
         <ReliabilityTable runs={finished} dimension={reliabilityBy} />
-      </Section>
-
-      <Section
-        id="conversation-list"
-        title="Conversations"
-        description="Newest first. Open one to step through the transcript, decisions and plan."
-        aside={
-          activeMode && (
-            <button type="button" className="filter-chip" onClick={() => setMode(null)}>
-              {activeMode.label} ×
-            </button>
-          )
-        }
-      >
-        <div className="table-wrap">
-          <table className="runs-table conversation-table">
-            <thead>
-              <tr>
-                <th>Verdict</th>
-                <th>Started</th>
-                <th>Coach · prompt</th>
-                <th className="numeric">Turns</th>
-                <th className="numeric">Questions</th>
-                <th>Facts</th>
-                <th className="numeric">Assumed</th>
-                <th>Flags</th>
-                <th className="numeric">To plan</th>
-                <th>You</th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((run) => {
-                const c = run.conversation;
-                const requiredFound = c
-                  ? c.requiredFacts.filter((fact) => c.factsDisclosed.includes(fact)).length
-                  : 0;
-                const severity = (level: string) =>
-                  run.flags.filter((flag) => flag.severity === level).length;
-                return (
-                  <tr key={run.id} onClick={() => open(run.id)}>
-                    <td>
-                      <a
-                        href={href('conversations', run.id)}
-                        onClick={(event) => event.stopPropagation()}
-                      >
-                        <VerdictBadge verdict={run.verdict} />
-                      </a>
-                    </td>
-                    <td className="muted nowrap">{formatDateTime(run.startedAt)}</td>
-                    <td className="nowrap">
-                      <i className="model-dot" style={{ background: colors.get(run.coachModel) }} />
-                      {modelName(run.coachModel)}
-                      <span className="effort">{reasoningShort(run.reasoning)}</span>
-                      <span className="prompt-label">{promptKey(run)}</span>
-                    </td>
-                    <td className="numeric">{c ? c.athleteTurns : '—'}</td>
-                    <td className="numeric">
-                      {c ? c.questions : '—'}
-                      {c && c.maxQuestionsPerTurn > 1 && (
-                        <span className="muted"> (max {c.maxQuestionsPerTurn})</span>
-                      )}
-                    </td>
-                    <td>
-                      {c ? (
-                        <span
-                          className="fact-pips"
-                          title={`Disclosed: ${c.factsDisclosed.join(', ') || 'none'}`}
-                        >
-                          {c.factsAvailable.map((fact) => (
-                            <i
-                              key={fact}
-                              className={`fact-pip${c.factsDisclosed.includes(fact) ? ' on' : ''}${c.requiredFacts.includes(fact) ? ' required' : ''}`}
-                            />
-                          ))}
-                          <span className="muted">
-                            {requiredFound}/{c.requiredFacts.length}
-                          </span>
-                        </span>
-                      ) : (
-                        '—'
-                      )}
-                    </td>
-                    <td className="numeric">{c ? c.assumptions : '—'}</td>
-                    <td>
-                      <span className="flag-counts">
-                        {severity('critical') > 0 && (
-                          <span className="flag-count flag-critical">{severity('critical')}</span>
-                        )}
-                        {severity('warning') > 0 && (
-                          <span className="flag-count flag-warning">{severity('warning')}</span>
-                        )}
-                        {severity('info') > 0 && (
-                          <span className="flag-count flag-info">{severity('info')}</span>
-                        )}
-                        {run.flags.length === 0 && <span className="muted">—</span>}
-                      </span>
-                    </td>
-                    <td className="numeric">{c?.turnsToPlan ?? '—'}</td>
-                    <td>
-                      {run.review?.verdict ? (
-                        <span className={`human-verdict human-${run.review.verdict}`}>
-                          {humanize(run.review.verdict)}
-                        </span>
-                      ) : run.demo ? (
-                        <Tag tone="accent">demo</Tag>
-                      ) : run.scripted ? (
-                        <Tag>scripted</Tag>
-                      ) : (
-                        <span className="muted">—</span>
-                      )}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
       </Section>
     </div>
   );

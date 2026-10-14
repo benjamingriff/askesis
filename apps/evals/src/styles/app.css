@@ -1733,3 +1733,7 @@ main > footer {
     scroll-behavior: auto !important;
   }
 }
+
+.load-table tbody tr {
+  cursor: default;
+}

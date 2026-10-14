@@ -1,9 +1,24 @@
+import { useState } from 'react';
 import Markdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { ResultBadge } from '../../components/Badges';
 import { JsonView } from '../../components/JsonView';
 import { formatDuration, formatTokens, humanize } from '../../lib/format';
-import type { CoachTurn, Decision, RunDetail } from '../../types';
+import { saveHighlights } from '../../lib/data';
+import type { CoachTurn, Decision, Disclosure, Highlight, RunDetail } from '../../types';
+
+// Labels for phrases in coach replies; your judgement of tone, not a model's.
+const HIGHLIGHT_TAGS = [
+  'great question',
+  'warm',
+  'clear explanation',
+  'too long',
+  'sycophantic',
+  'jargon',
+  'unclear',
+  'robotic',
+  'pushy',
+];
 
 /** Criteria whose evidence cites each reference, e.g. "message:12" → ["progression"]. */
 export function citationsByRef(
@@ -38,6 +53,27 @@ export function Transcript({
   );
   const disclosures = new Map(run.disclosures.map((entry) => [entry.sequence, entry]));
   const turn = run.turns.find((entry) => entry.index === selectedTurn) ?? null;
+  const [highlights, setHighlights] = useState<Highlight[]>(run.highlights);
+  const [pending, setPending] = useState<{ sequence: number; quote: string } | null>(null);
+  const [saveFailed, setSaveFailed] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const persist = (next: Highlight[]) => {
+    setHighlights(next);
+    setSaveFailed(false);
+    if (!run.demo) {
+      setSaving(true);
+      saveHighlights(run.id, next)
+        .then(setHighlights)
+        .catch(() => setSaveFailed(true))
+        .finally(() => setSaving(false));
+    }
+  };
+  const capture = (sequence: number, element: HTMLElement) => {
+    const selection = window.getSelection();
+    const quote = selection?.toString().replace(/\s+/g, ' ').trim() ?? '';
+    if (!quote || !selection?.anchorNode || !element.contains(selection.anchorNode)) return;
+    setPending({ sequence, quote: quote.slice(0, 600) });
+  };
   const unreplied = run.turns.filter((entry) => entry.replySequence === null);
 
   if (run.messages.length === 0) return <p className="muted">No conversation recorded.</p>;
@@ -45,6 +81,14 @@ export function Transcript({
   return (
     <div className="transcript-layout">
       <ol className="transcript">
+        {saveFailed && (
+          <li className="error-text small">
+            Saving highlights failed. Check the dev server.{' '}
+            <button type="button" disabled={saving} onClick={() => persist(highlights)}>
+              Retry
+            </button>
+          </li>
+        )}
         {run.messages.map((message) => {
           const coachTurn =
             message.role === 'assistant' ? turnByReply.get(message.sequence) : undefined;
@@ -80,6 +124,7 @@ export function Transcript({
                   {disclosure?.kind === 'unknown' && (
                     <span className="fact-chip muted">couldn&apos;t answer</span>
                   )}
+                  {disclosure?.voice && <VoiceChip voice={disclosure.voice} />}
                   {message.sequence === 1 && message.role === 'user' && (
                     <span className="fact-chip muted">opening</span>
                   )}
@@ -103,21 +148,68 @@ export function Transcript({
                   )}
                 </div>
               )}
-              <div className="message-body">
+              {coachTurn && coachTurn.steps.length > 0 && <TurnSteps turn={coachTurn} />}
+              <div
+                className="message-body"
+                onMouseUp={
+                  message.role === 'assistant'
+                    ? (event) => capture(message.sequence, event.currentTarget)
+                    : undefined
+                }
+              >
                 <Markdown remarkPlugins={[remarkGfm]}>{message.content}</Markdown>
               </div>
-              {coachTurn && coachTurn.tools.length > 0 && (
-                <div className="tool-chips">
-                  {coachTurn.tools.map((tool) => (
-                    <span
-                      key={tool.operationId}
-                      className={`tool-chip tool-${tool.kind}${tool.status === 'failed' ? ' failed' : ''}`}
-                      title={tool.summary}
+              {pending?.sequence === message.sequence && (
+                <div className="highlight-bar" onClick={(event) => event.stopPropagation()}>
+                  <q>{pending.quote}</q>
+                  {HIGHLIGHT_TAGS.map((tag) => (
+                    <button
+                      key={tag}
+                      type="button"
+                      disabled={saving}
+                      className="chip-button"
+                      onClick={() => {
+                        persist([
+                          ...highlights,
+                          { ...pending, tag, createdAt: new Date().toISOString() },
+                        ]);
+                        setPending(null);
+                        window.getSelection()?.removeAllRanges();
+                      }}
                     >
-                      {tool.name}
-                    </span>
+                      {tag}
+                    </button>
                   ))}
+                  <button type="button" className="muted" onClick={() => setPending(null)}>
+                    Cancel
+                  </button>
                 </div>
+              )}
+              {highlights.some((highlight) => highlight.sequence === message.sequence) && (
+                <ul className="highlights" onClick={(event) => event.stopPropagation()}>
+                  {highlights
+                    .filter((highlight) => highlight.sequence === message.sequence)
+                    .map((highlight) => (
+                      <li key={`${highlight.createdAt}-${highlight.quote}`}>
+                        <span className="fact-chip muted">{highlight.tag}</span>
+                        <q>{highlight.quote}</q>
+                        <button
+                          type="button"
+                          disabled={saving}
+                          aria-label={`Remove ${highlight.tag} highlight`}
+                          onClick={() => persist(highlights.filter((item) => item !== highlight))}
+                        >
+                          ×
+                        </button>
+                      </li>
+                    ))}
+                </ul>
+              )}
+              {disclosure?.voice?.status === 'voiced' && disclosure.voice.authored && (
+                <details className="authored-facts">
+                  <summary>Facts this message had to convey</summary>
+                  <p>{disclosure.voice.authored}</p>
+                </details>
               )}
               {cited.length > 0 && (
                 <div className="citations">
@@ -143,6 +235,7 @@ export function Transcript({
               <span className="message-who">Coach · turn {entry.index}</span>
               <span className="muted">{entry.status}</span>
             </div>
+            {entry.steps.length > 0 && <TurnSteps turn={entry} />}
             <div className="message-body muted">
               No reply was saved for this turn{entry.failureCode ? ` (${entry.failureCode})` : ''}.
             </div>
@@ -160,6 +253,62 @@ export function Transcript({
         )}
       </aside>
     </div>
+  );
+}
+
+const VOICE_STATUS: Record<NonNullable<Disclosure['voice']>['status'], string> = {
+  voiced: 'voiced',
+  fallback: 'authored text (voice rejected)',
+  skipped: 'authored text (scripted)',
+};
+
+function VoiceChip({ voice }: { voice: NonNullable<Disclosure['voice']> }) {
+  return (
+    <span
+      className={`fact-chip ${voice.status === 'fallback' ? 'warn' : 'muted'}`}
+      title={`${voice.attempts} voice attempt${voice.attempts === 1 ? '' : 's'}`}
+    >
+      {voice.id} · {VOICE_STATUS[voice.status]}
+    </span>
+  );
+}
+
+/** What the coach wrote and called before its reply, in the order it happened. */
+function TurnSteps({ turn }: { turn: CoachTurn }) {
+  const tools = new Map(turn.tools.map((tool) => [tool.operationId, tool]));
+  return (
+    <ol className="turn-steps" onClick={(event) => event.stopPropagation()}>
+      {!turn.stepsOrdered && (
+        <li className="small muted">
+          This run predates saved text times, so text is shown before its tool calls.
+        </li>
+      )}
+      {turn.steps.map((step, index) => {
+        if (step.kind === 'text')
+          return (
+            <li key={`text-${index}`} className="turn-step-text">
+              <Markdown remarkPlugins={[remarkGfm]}>{step.content}</Markdown>
+            </li>
+          );
+        const tool = tools.get(step.operationId);
+        if (!tool) return null;
+        return (
+          <li key={step.operationId}>
+            <details className={`tool-card${tool.status === 'failed' ? ' failed' : ''}`}>
+              <summary>
+                <code className={`tool-${tool.kind}`}>{tool.name}</code>
+                <span className="tool-card-summary">{tool.summary}</span>
+                <span className="muted mono small">
+                  {tool.elapsedMs !== null ? `${Math.round(tool.elapsedMs)} ms` : tool.status}
+                </span>
+              </summary>
+              <JsonView label="Input" value={tool.input} />
+              <JsonView label="Result" value={tool.result} />
+            </details>
+          </li>
+        );
+      })}
+    </ol>
   );
 }
 

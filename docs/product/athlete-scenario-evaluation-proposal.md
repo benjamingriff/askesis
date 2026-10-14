@@ -2,6 +2,8 @@
 
 Status: proposal, 2026-10-12. This document defines an expansion of the existing local benchmark and validation dashboard. Broader scenario execution, suite commands and new grading behavior below remain proposed. Training-quality expectations remain provisional until reviewed.
 
+Runner update, 2026-10-14: every authored scenario now runs through the general runner with per-sport checks, a sport-neutral reviewer (`training-plan-v3`), optional athlete voices and the `pilot-v1` suite command; see the [benchmark guide](../operations/training-plan-benchmarks.md). The retired `running-poc` scenario was renamed `running-improver` in the dataset; references to `running-poc` below mean that family.
+
 Dataset update, 2026-10-13: the [first dataset edition](../../apps/bench/datasets/README.md) now contains seven authored personas, eight pilot scenarios and a version-pinned suite. The [coverage tracker](../../apps/bench/datasets/COVERAGE.md) distinguishes authored files from the remaining 61-case inventory and execution/review work. Provider-free authoring validation is implemented; general scenario execution, suite/model experiments and new grading/dashboard behavior remain proposed.
 
 ## Recommendation

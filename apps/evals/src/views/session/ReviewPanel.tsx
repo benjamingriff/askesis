@@ -3,7 +3,20 @@ import { ResultBadge } from '../../components/Badges';
 import { saveReview } from '../../lib/data';
 import { formatDateTime, humanize } from '../../lib/format';
 import { href } from '../../lib/route';
-import { CRITERIA, type HumanReview, type HumanVerdict, type RunSummary } from '../../types';
+import {
+  COMMUNICATION_ASPECTS,
+  CRITERIA,
+  type CommunicationAspect,
+  type HumanReview,
+  type HumanVerdict,
+  type RunSummary,
+} from '../../types';
+
+const ASPECTS: Record<CommunicationAspect, { label: string; hint: string }> = {
+  tone: { label: 'Tone', hint: 'Warm and direct, without flattery or lecturing' },
+  clarity: { label: 'Clarity', hint: 'Easy to follow; length suits the message' },
+  adaptation: { label: 'Adaptation', hint: 'Responds to how this athlete talks and feels' },
+};
 
 // A failure taxonomy to label runs consistently; free-text tags are allowed too.
 const SUGGESTED_TAGS = [
@@ -33,6 +46,11 @@ function empty(review: HumanReview | null): Draft {
     criteria: { ...(review?.criteria ?? {}) },
     tags: [...(review?.tags ?? [])],
     notes: review?.notes ?? '',
+    communication: {
+      tone: review?.communication?.tone ?? null,
+      clarity: review?.communication?.clarity ?? null,
+      adaptation: review?.communication?.adaptation ?? null,
+    },
   };
 }
 
@@ -147,6 +165,46 @@ export function ReviewPanel({ run, queue }: { run: RunSummary; queue: RunSummary
               </li>
             );
           })}
+        </ul>
+      </div>
+
+      <div className="review-block">
+        <h3>How did the coach communicate?</h3>
+        <p className="muted small">
+          Your judgement only; no model grades tone. Tag phrases by selecting text in a coach
+          message.
+        </p>
+        <ul className="rating-list">
+          {COMMUNICATION_ASPECTS.map((aspect) => (
+            <li key={aspect}>
+              <span title={ASPECTS[aspect].hint}>{ASPECTS[aspect].label}</span>
+              <span
+                className="rating-scale"
+                role="group"
+                aria-label={`${ASPECTS[aspect].label} rating`}
+              >
+                {[1, 2, 3, 4, 5].map((rating) => (
+                  <button
+                    key={rating}
+                    type="button"
+                    aria-pressed={draft.communication[aspect] === rating}
+                    aria-label={`${ASPECTS[aspect].label} ${rating} of 5`}
+                    onClick={() =>
+                      setDraft({
+                        ...draft,
+                        communication: {
+                          ...draft.communication,
+                          [aspect]: draft.communication[aspect] === rating ? null : rating,
+                        },
+                      })
+                    }
+                  >
+                    {rating}
+                  </button>
+                ))}
+              </span>
+            </li>
+          ))}
         </ul>
       </div>
 

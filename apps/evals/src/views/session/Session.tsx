@@ -8,7 +8,9 @@ import { Assessment } from './Assessment';
 import { BeliefLedger, DecisionLog, FactMatrix } from './Discovery';
 import { PlanFitness } from './PlanFitness';
 import { FlagList, Scorecard, SessionHeader } from './Summary';
+import { Prompts } from './Prompts';
 import { Timeline } from './Timeline';
+import { TrainingLoad } from './TrainingLoad';
 import { Transcript } from './Transcript';
 
 export function Session({
@@ -135,6 +137,14 @@ function SessionBody({ run, color }: { run: RunDetail; color: string | undefined
       </Section>
 
       <Section
+        id="load"
+        title="Training load"
+        description="Time, distance and training stress of the saved prescriptions on one date axis, with fitness and fatigue seeded from the athlete's stated training."
+      >
+        <TrainingLoad load={run.load} />
+      </Section>
+
+      <Section
         id="assessment"
         title="Reviewer assessment"
         aside={
@@ -143,6 +153,16 @@ function SessionBody({ run, color }: { run: RunDetail; color: string | undefined
       >
         <Assessment run={run} onSelectRef={onSelectRef} />
       </Section>
+
+      {run.prompts.length > 0 && (
+        <Section
+          id="prompts"
+          title="Prompts"
+          description="The exact prompt texts this run used, with their version names and SHA-256 hashes."
+        >
+          <Prompts prompts={run.prompts} />
+        </Section>
+      )}
     </div>
   );
 }
