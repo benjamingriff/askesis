@@ -160,7 +160,7 @@ export function WorkoutCard({
 
 // ---- Prescription ------------------------------------------------------------------------------
 
-type Display = { units: Units; pool: PoolUnits; load: LoadUnits };
+export type Display = { units: Units; pool: PoolUnits; load: LoadUnits };
 
 function formatValue(
   value: number | null,
@@ -183,7 +183,7 @@ function formatValue(
   return formatZoneValue(value, unit, display);
 }
 
-function formatCompletion(step: WorkoutStep, display: Display): string | null {
+export function formatCompletion(step: WorkoutStep, display: Display): string | null {
   const completion = step.completion;
   if (completion === null) return null;
   if (completion.value !== null)
@@ -199,7 +199,11 @@ export function compactRange(low: string, high: string): string {
   return unit && low.endsWith(unit) ? `${low.slice(0, -unit.length)}–${high}` : `${low}–${high}`;
 }
 
-function formatTarget(target: StepTarget, display: Display, discipline: string | null): string {
+export function formatTarget(
+  target: StepTarget,
+  display: Display,
+  discipline: string | null,
+): string {
   if (target.type === 'zone' && target.zoneKey !== null) {
     const zone = target.resolvedZone;
     const name = zoneLabel(target.zoneKey, target.zoneSystem);

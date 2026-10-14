@@ -1230,60 +1230,6 @@
 }
 
 /* Today */
-.today-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  align-self: flex-start;
-  margin-top: -8px;
-  font-size: 13px;
-}
-.week-strip {
-  display: grid;
-  grid-template-columns: repeat(7, 1fr);
-  gap: 6px;
-  max-width: 640px;
-}
-.strip-day {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 4px;
-  padding: 10px 0;
-  border-radius: 18px;
-  border: 1px solid var(--border);
-  background: var(--surface);
-  transition: transform 0.12s ease;
-}
-.strip-day:active {
-  transform: scale(0.95);
-}
-.strip-day strong {
-  font-size: 16px;
-  font-weight: 800;
-  font-variant-numeric: tabular-nums;
-}
-.strip-day i {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--kind);
-}
-.strip-day.today {
-  border-color: var(--accent-border);
-}
-.strip-day.selected {
-  background: var(--accent-fill);
-  border-color: transparent;
-  color: var(--on-accent);
-}
-.strip-day.selected .label {
-  color: var(--on-accent);
-  opacity: 0.7;
-}
-.strip-day.selected i {
-  box-shadow: 0 0 0 1.5px var(--on-accent);
-}
 .today-grid {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 360px;
@@ -1296,40 +1242,6 @@
   flex-direction: column;
   gap: 14px;
   min-width: 0;
-}
-/* Today's session: a cover band in the session's colour with its effort profile rising from the
-   lower edge, then plain copy on the card surface. The kind colour stays in the cover. */
-.hero-workout {
-  display: flex;
-  flex-direction: column;
-  width: 100%;
-  padding: 0;
-  border-radius: var(--radius-xl);
-  border: 1px solid var(--border);
-  background: var(--surface);
-  color: var(--text);
-  text-align: left;
-  overflow: hidden;
-  transition:
-    transform 0.12s ease,
-    border-color 0.15s ease;
-}
-.hero-workout:hover {
-  border-color: color-mix(in srgb, var(--kind) 40%, var(--border));
-}
-.hero-workout:active {
-  transform: scale(0.99);
-}
-.hero-cover {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  gap: 20px;
-  min-height: 150px;
-  padding: 18px 22px 0;
-  background: color-mix(in srgb, var(--kind) 15%, var(--surface));
-  color: var(--kind);
 }
 .hero-kind {
   position: relative;
@@ -1344,21 +1256,6 @@
   font-size: 13px;
   font-weight: 700;
 }
-.hero-cover .intensity-chart {
-  position: relative;
-  width: calc(100% + 44px);
-  margin: 0 -22px;
-}
-/* The effort profile stands on the cover's lower edge, so its bars meet the body squarely. */
-.hero-cover .intensity-chart span {
-  border-radius: 3px 3px 0 0;
-}
-.hero-body {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  padding: 20px 22px 22px;
-}
 .hero-title {
   font-size: 30px;
   line-height: 1.15;
@@ -1369,14 +1266,6 @@
 .hero-purpose {
   max-width: 62ch;
   color: var(--text-dim);
-}
-.hero-footer {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 16px 28px;
-  margin-top: 10px;
 }
 .hero-stats {
   display: flex;
@@ -1394,9 +1283,6 @@
   font-size: 15px;
   font-weight: 800;
   transition: filter 0.15s ease;
-}
-.hero-workout:hover .hero-cta {
-  filter: brightness(1.06);
 }
 .rest-hero {
   display: flex;
@@ -1447,43 +1333,6 @@
   border-radius: 50%;
   background: var(--accent-fill);
   color: var(--on-accent);
-}
-.week-summary {
-  display: flex;
-  justify-content: space-between;
-  gap: 16px;
-}
-.day-bars {
-  display: flex;
-  align-items: flex-end;
-  gap: 8px;
-  height: 72px;
-  margin-top: 18px;
-}
-.day-bars > span {
-  flex: 1;
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 6px;
-}
-.day-bars i {
-  width: 100%;
-  border-radius: 6px;
-  background: var(--kind);
-}
-.day-bars .past i {
-  opacity: 0.45;
-}
-.day-bars .today i {
-  box-shadow: 0 0 0 2px var(--text);
-}
-.day-bars small {
-  color: var(--text-muted);
-  font-size: 10px;
-  font-weight: 700;
 }
 
 @media (max-width: 1100px) {

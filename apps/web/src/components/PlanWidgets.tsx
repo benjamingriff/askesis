@@ -414,17 +414,24 @@ export function ZoneGuides({
   calibration,
   units,
   compact,
+  highlight,
+  only = false,
 }: {
   calibration: Calibration;
   units: Units;
   compact?: boolean | undefined;
+  /** Zone keys to pick out, such as those today's session uses; the rest recede. */
+  highlight?: ReadonlySet<string> | undefined;
+  /** Show only the highlighted zones. */
+  only?: boolean | undefined;
 }) {
   const { pool } = useSportUnits();
   const display = { units, pool };
   const meta = SYSTEM_META[calibration.system];
   const zones = Object.keys(meta.zones)
     .map((key) => calibration.zones.find((z) => z.key === key))
-    .filter((zone): zone is NonNullable<typeof zone> => !!zone);
+    .filter((zone): zone is NonNullable<typeof zone> => !!zone)
+    .filter((zone) => !only || !highlight || highlight.has(zone.key));
   const bare = (value: number, unit: string) =>
     formatZoneValue(value, unit, display).replace(/\/.*$/, '').replace(/ W$/, '');
   return (
@@ -433,7 +440,10 @@ export function ZoneGuides({
         const zoneMeta = meta.zones[zone.key];
         return (
           <div
-            className="pace-card"
+            className={cx(
+              'pace-card',
+              highlight && (highlight.has(zone.key) ? 'highlighted' : 'receded'),
+            )}
             key={zone.key}
             style={{ '--zone': effortColor(zoneEffort(zone.key)) } as CSSProperties}
           >
@@ -527,14 +537,22 @@ export function PlanZones({
   units,
   compact,
   showSource = true,
+  highlight,
+  only = false,
 }: {
   sports: string[];
   units: Units;
   compact?: boolean | undefined;
   showSource?: boolean | undefined;
+  /** Zones to pick out in each system, keyed by system. */
+  highlight?: ReadonlyMap<string, ReadonlySet<string>> | undefined;
+  /** Show only the highlighted zones, and only the systems they belong to. */
+  only?: boolean | undefined;
 }) {
   const performance = usePerformance();
-  const systems = systemsForSports(sports.length ? sports : ['run']);
+  const systems = systemsForSports(sports.length ? sports : ['run']).filter(
+    (system) => !only || !highlight || highlight.has(system),
+  );
   return (
     <div className="plan-zones">
       {systems.map((system) => {
@@ -545,7 +563,13 @@ export function PlanZones({
             {systems.length > 1 ? <h3 className="label">{meta.title}</h3> : null}
             {entry ? (
               <>
-                <ZoneGuides calibration={entry} units={units} compact={compact} />
+                <ZoneGuides
+                  calibration={entry}
+                  units={units}
+                  compact={compact}
+                  highlight={highlight ? (highlight.get(system) ?? new Set()) : undefined}
+                  only={only}
+                />
                 {showSource ? <CalibrationSource calibration={entry} units={units} /> : null}
               </>
             ) : performance.isPending ? null : (
