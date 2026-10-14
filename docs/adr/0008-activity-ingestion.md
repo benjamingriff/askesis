@@ -1,4 +1,4 @@
-# 0007. Activity ingestion and plan adherence
+# 0008. Activity ingestion and plan adherence
 
 **Status:** Accepted for the MVP. **Date:** 2026-10-14.
 
@@ -32,4 +32,4 @@ Adherence is display-only for Strava-sourced data. A later provider can share th
 
 ## Evidence
 
-[Proposal](../product/activity-integration-proposal.md), [migration](../../database/migrations/20261013120000_activity_ingestion.sql), [matching](../../apps/api/src/modules/activities/activity.matching.ts), [effort analysis](../../apps/api/src/modules/activities/effort.analysis.ts), [integration service](../../apps/api/src/modules/activities/integration.service.ts), [database tests](../../apps/api/test/db/activities.test.ts) and [operations guide](../operations/activity-connections.md).
+[Proposal](../product/activity-integration-proposal.md), [migration](../../database/migrations/20261014120000_activity_ingestion.sql), [matching](../../apps/api/src/modules/activities/activity.matching.ts), [effort analysis](../../apps/api/src/modules/activities/effort.analysis.ts), [integration service](../../apps/api/src/modules/activities/integration.service.ts), [database tests](../../apps/api/test/db/activities.test.ts) and [operations guide](../operations/activity-connections.md).

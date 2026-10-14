@@ -1,0 +1,57 @@
+{
+  "schemaVersion": 1,
+  "id": "gym-experienced",
+  "version": 1,
+  "persona": {
+    "id": "gym-experienced",
+    "version": 1
+  },
+  "mode": "conversation_to_plan",
+  "split": "development",
+  "reviewStatus": "exploratory",
+  "goal": "I want to maintain general fitness and strength through a practical gym routine, with bike and resistance sessions. No race or maximal-strength target.",
+  "openingMessage": "I've been going to the gym for years. Can you make a practical {{planSpanWeeks}}-week routine and prescribe the first {{prescriptionWeeks}} weeks?",
+  "openingFactIds": ["goal", "horizon"],
+  "planSpanWeeks": 12,
+  "prescriptionWeeks": 4,
+  "startPolicy": "next_monday",
+  "events": [],
+  "expectations": {
+    "outcome": "saved_draft",
+    "frequencyPolicy": "workouts_per_sport",
+    "requiredDiscovery": [
+      "goal",
+      "dates",
+      "horizon",
+      "training",
+      "frequency",
+      "availability",
+      "equipment",
+      "fitness"
+    ],
+    "checks": [
+      "saved_plan",
+      "plan_dates",
+      "coverage",
+      "sports",
+      "baseline",
+      "availability",
+      "time_budgets",
+      "daily_limit",
+      "prescriptions",
+      "performance_provenance"
+    ],
+    "reviewAnchors": {
+      "goal_fit": "Maintain agreed general fitness through cycle and strength sessions, not specialist physique or race goals.",
+      "progression": "Use current bike time and lifting frequency; years of gym attendance do not justify extra load.",
+      "recovery": "Balance resistance and aerobic work within the stated schedule.",
+      "prescriptions": "Actionable bike effort instructions and labelled resistance sets/reps/rest/RIR, without invented working weights.",
+      "personalization": "Respect preferred simple separate sessions, facilities and time limits; age alone must not replace baseline evidence.",
+      "conversation": "Discover relevant facts without unrelated sport questions; distinguish unknowns from unanswered facts, explain assumptions, and accurately describe what is saved and what remains unprescribed. Unknown FTP remains unknown until an honestly labelled estimate is agreed."
+    }
+  },
+  "limits": {
+    "maxAthleteMessages": 18,
+    "maxElapsedMinutes": 30
+  }
+}

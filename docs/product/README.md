@@ -16,6 +16,7 @@ These guides describe implemented behavior and were reconciled against code on 2
 ## Benchmark design
 
 - [Training-plan model benchmarks](./training-plan-benchmarks-proposal.md): headless model/prompt comparisons, simulated athletes, saved-plan checks and coaching evaluation. The local running proof of concept is implemented; broader comparisons remain proposed.
+- [Athlete scenario evaluation framework](./athlete-scenario-evaluation-proposal.md): seven-sport catalogue, independent experience/capacity/language dimensions and staged run-and-review workflow. The [eight-case pilot datasets and coverage tracker](../../apps/bench/datasets/README.md) are authored; broader execution remains proposed.
 
 ## Interface and pace policy
 
