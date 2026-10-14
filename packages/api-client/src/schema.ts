@@ -5378,6 +5378,818 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/integrations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Connected activity providers. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["IntegrationsState"];
+                    };
+                };
+                /** @description Request rejected. */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Request rejected. */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Request rejected. */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Request rejected. */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Request rejected. */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Request rejected. */
+                502: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Request rejected. */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/integrations/strava/authorize": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Start connecting Strava: returns the Strava consent page to open. */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["StartStravaConnection"];
+                };
+            };
+            responses: {
+                /** @description The Strava authorization address. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** Format: uri */
+                            url: string;
+                        };
+                    };
+                };
+                /** @description Request rejected. */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Request rejected. */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Request rejected. */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Request rejected. */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Request rejected. */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Request rejected. */
+                502: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Request rejected. */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/integrations/strava/connect": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Finish connecting with the code Strava returned to the web callback. */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["CompleteStravaConnection"];
+                };
+            };
+            responses: {
+                /** @description Connected activity providers. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["IntegrationsState"];
+                    };
+                };
+                /** @description Request rejected. */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Request rejected. */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Request rejected. */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Request rejected. */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Request rejected. */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Request rejected. */
+                502: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Request rejected. */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/integrations/strava/sync": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Refresh activities from a week before the earliest active plan. Strava data is a seven-day cache, so each sync re-reads the window and drops anything deleted on Strava. */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description What changed. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["StravaSyncResult"];
+                    };
+                };
+                /** @description Request rejected. */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Request rejected. */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Request rejected. */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Request rejected. */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Request rejected. */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Request rejected. */
+                502: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Request rejected. */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/integrations/strava": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** @description Revoke access at Strava and delete every activity and link decision from it. */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Connected activity providers. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["IntegrationsState"];
+                    };
+                };
+                /** @description Request rejected. */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Request rejected. */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Request rejected. */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Request rejected. */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Request rejected. */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Request rejected. */
+                502: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Request rejected. */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/adherence": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Planned versus actual for one plan version: each workout’s outcome, extra activities and weekly totals. */
+        get: {
+            parameters: {
+                query: {
+                    planVersionId: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Plan adherence. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Adherence"];
+                    };
+                };
+                /** @description Request rejected. */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Request rejected. */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Request rejected. */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Request rejected. */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Request rejected. */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Request rejected. */
+                502: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Request rejected. */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workouts/{workoutId}/actual": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description The activities linked to a workout, rep-by-rep effort checks and other candidates. */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    workoutId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description What happened for this workout. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["WorkoutActual"];
+                    };
+                };
+                /** @description Request rejected. */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Request rejected. */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Request rejected. */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Request rejected. */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Request rejected. */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Request rejected. */
+                502: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Request rejected. */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workouts/{workoutId}/activity-links": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Link an activity to this workout, or reject a suggested match. */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    workoutId: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["ActivityLinkDecision"];
+                };
+            };
+            responses: {
+                /** @description The workout’s updated actuals. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["WorkoutActual"];
+                    };
+                };
+                /** @description Request rejected. */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Request rejected. */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Request rejected. */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Request rejected. */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Request rejected. */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Request rejected. */
+                502: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Request rejected. */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -5794,6 +6606,195 @@ export interface components {
             /** @enum {string} */
             system: "swim_pace";
             input: components["schemas"]["SwimInput"];
+        };
+        IntegrationsState: {
+            strava: {
+                available: boolean;
+                connection: components["schemas"]["StravaConnection"];
+            };
+        };
+        StravaConnection: {
+            /** @enum {string} */
+            status: "active" | "reauthorization_required";
+            displayName: string | null;
+            /** Format: date-time */
+            connectedAt: string;
+            /** Format: date-time */
+            lastSyncedAt: string | null;
+            lastSyncError: string | null;
+            syncing: boolean;
+            activityCount: number;
+        } | null;
+        StartStravaConnection: {
+            /** Format: uri */
+            redirectUri: string;
+        };
+        CompleteStravaConnection: {
+            code: string;
+            state: string;
+            /** @default  */
+            scope: string;
+        };
+        StravaSyncResult: {
+            imported: number;
+            updated: number;
+            removed: number;
+            lapsFetched: number;
+            integrations: components["schemas"]["IntegrationsState"];
+        };
+        Adherence: {
+            /** Format: uuid */
+            planVersionId: string;
+            /** Format: date */
+            today: string;
+            connected: boolean;
+            /** Format: date-time */
+            lastSyncedAt: string | null;
+            workouts: components["schemas"]["WorkoutOutcome"][];
+            activities: components["schemas"]["Activity"][];
+            extra: {
+                /** Format: uuid */
+                activityId: string;
+                countsTowardPlan: boolean;
+                seconds: number;
+                metres: number;
+            }[];
+            weeks: components["schemas"]["WeekAdherence"][];
+            toDate: {
+                due: {
+                    sessions: number;
+                    seconds: number;
+                    metres: number;
+                };
+                actual: {
+                    sessions: number;
+                    seconds: number;
+                    metres: number;
+                };
+            };
+        };
+        WorkoutOutcome: {
+            /** Format: uuid */
+            workoutId: string;
+            /** @enum {string} */
+            status: "completed" | "partial" | "missed" | "planned";
+            activityIds: string[];
+            /** @enum {string|null} */
+            matchedBy: "auto" | "manual" | null;
+            completion: number | null;
+            dayOffset: number | null;
+            actualSeconds: number;
+            actualMetres: number;
+        };
+        Activity: {
+            /** Format: uuid */
+            id: string;
+            /** @enum {string} */
+            source: "strava";
+            /** Format: uri */
+            sourceUrl: string;
+            name: string;
+            /** @enum {string} */
+            sport: "run" | "cycle" | "swim" | "strength" | "row" | "other";
+            sourceSportType: string;
+            /** Format: date */
+            date: string;
+            /** Format: date-time */
+            startedAt: string;
+            elapsedSeconds: number;
+            movingSeconds: number | null;
+            distanceMetres: number | null;
+            elevationGainMetres: number | null;
+            averageSpeed: number | null;
+            averageWatts: number | null;
+            trainer: boolean;
+            manual: boolean;
+            race: boolean;
+        };
+        WeekAdherence: {
+            weekNumber: number;
+            /** Format: date */
+            startDate: string;
+            /** Format: date */
+            endDate: string;
+            planned: {
+                sessions: number;
+                seconds: number;
+                metres: number;
+            };
+            due: {
+                sessions: number;
+                seconds: number;
+                metres: number;
+            };
+            actual: {
+                sessions: number;
+                seconds: number;
+                metres: number;
+            };
+            completed: number;
+            partial: number;
+            missed: number;
+            extra: number;
+        };
+        WorkoutActual: {
+            /** Format: uuid */
+            workoutId: string;
+            connected: boolean;
+            outcome: components["schemas"]["WorkoutOutcome"];
+            activities: (components["schemas"]["Activity"] & {
+                lapsPending: boolean;
+                lapCount: number;
+                efforts: components["schemas"]["EffortAnalysis"];
+            })[];
+            candidates: (components["schemas"]["Activity"] & {
+                /** Format: uuid */
+                linkedWorkoutId: string | null;
+            })[];
+        };
+        EffortAnalysis: {
+            /** @enum {string} */
+            verdict: "aligned" | "no_laps" | "auto_laps" | "unaligned" | "not_applicable";
+            segments: components["schemas"]["EffortSegment"][];
+            work: {
+                planned: number;
+                done: number;
+                onTarget: number;
+                checked: number;
+            };
+        } | null;
+        EffortSegment: {
+            stepId: string;
+            label: string;
+            role: string | null;
+            /** @enum {string} */
+            measure: "duration" | "distance" | "open";
+            amount: number | null;
+            band: {
+                /** @enum {string} */
+                metric: "speed" | "power";
+                low: number;
+                high: number;
+            } | null;
+            repeat: {
+                index: number;
+                count: number;
+            } | null;
+            lapIndexes: number[];
+            actualSeconds: number | null;
+            actualMetres: number | null;
+            actualIntensity: number | null;
+            completion: number | null;
+            /** @enum {string} */
+            status: "done" | "short" | "not_found";
+            /** @enum {string|null} */
+            intensity: "on_target" | "above" | "below" | null;
+        };
+        ActivityLinkDecision: {
+            /** Format: uuid */
+            activityId: string;
+            /** @enum {string} */
+            decision: "link" | "reject";
         };
     };
     responses: never;

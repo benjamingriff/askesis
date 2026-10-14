@@ -1,6 +1,7 @@
 import type { WorkoutSummary } from '@askesis/api-client';
 import { ArrowRight, CalendarDays, Library, MessageSquare, Moon, Sparkles } from 'lucide-react';
 import { useMemo, type CSSProperties } from 'react';
+import { ProgressBar } from '../components/ui';
 import { Link, useNavigate } from 'react-router';
 import { IntensityChart } from '../components/IntensityChart';
 import { useOpenPlanChat, PlanChatError } from '../components/PlanLifecycle';
@@ -44,6 +45,17 @@ import {
 import { usePlanPreferences } from '../plan-selection';
 import { useSportUnits, useUnits, type Units } from '../settings';
 import { useActivePlans } from './active-plans';
+import {
+  AdherenceContext,
+  useAdherence,
+  useAdherenceView,
+  useAutoSync,
+  useOutcome,
+  rangeAdherence,
+  type AdherenceView,
+} from '../activity-data';
+import { activityStats, OutcomeIcon, outcomeLabel } from '../components/Activity';
+import { useContext } from 'react';
 import { useFollowingState } from '../lib/use-following-state';
 import { useLocalToday } from '../lib/use-local-today';
 import { useWorkoutSelection } from '../lib/use-workout-selection';
@@ -135,9 +147,18 @@ function TodayForPlan({ plan, today }: { plan: Plan; today: string }) {
   // Legacy plans have no recorded coverage; only flag gaps when coverage is known.
   const coverage = brief.data ? knownCoverage(brief.data) : null;
   const unplanned = !outsidePlan && !!coverage && !isCovered(selected, coverage);
+  useAutoSync();
+  const adherence = useAdherenceView(useAdherence(version).data);
+  const dayOutcome = (date: string) => {
+    const outcomes = workoutsOn(all, date).flatMap((w) => adherence.outcomes.get(w.id) ?? []);
+    if (!adherence.connected || !outcomes.length) return null;
+    if (outcomes.every((o) => o.status === 'completed')) return 'done';
+    if (outcomes.some((o) => o.status === 'completed' || o.status === 'partial')) return 'partial';
+    return outcomes.some((o) => o.status === 'missed') ? 'missed' : null;
+  };
 
   return (
-    <>
+    <AdherenceContext.Provider value={adherence}>
       <Link className="today-chip" to="/plan">
         <Pill tone="accent" icon={CalendarDays}>
           {progress?.text ?? plan.displayName}
@@ -161,7 +182,7 @@ function TodayForPlan({ plan, today }: { plan: Plan; today: string }) {
               type="button"
               aria-pressed={date === selected}
               aria-label={formatLong(date)}
-              className={`strip-day${date === selected ? ' selected' : ''}${date === today ? ' today' : ''}`}
+              className={`strip-day${date === selected ? ' selected' : ''}${date === today ? ' today' : ''}${dayOutcome(date) ? ` ${dayOutcome(date)}` : ''}`}
               onClick={() => setSelected(date)}
             >
               <span className="label">{WEEKDAYS_SHORT[index]!.slice(0, 1)}</span>
@@ -270,16 +291,28 @@ function TodayForPlan({ plan, today }: { plan: Plan; today: string }) {
                 </Link>
               }
             />
-            <div className="week-summary">
-              <Stat
-                label={measure === 'time' ? 'Planned time' : 'Planned distance'}
-                value={formatAmount(weekAmount, false)}
-                unit={measure === 'time' ? undefined : units}
-                sub={`${formatAmount(weekAmount - plannedSoFar)} to go from today`}
-                large
+            {adherence.connected ? (
+              <WeekActual
+                adherence={adherence}
+                workouts={all}
+                days={days}
+                today={today}
+                measure={measure}
+                formatAmount={formatAmount}
+                units={units}
               />
-              <Stat label="Sessions" value={String(week.length)} large />
-            </div>
+            ) : (
+              <div className="week-summary">
+                <Stat
+                  label={measure === 'time' ? 'Planned time' : 'Planned distance'}
+                  value={formatAmount(weekAmount, false)}
+                  unit={measure === 'time' ? undefined : units}
+                  sub={`${formatAmount(weekAmount - plannedSoFar)} to go from today`}
+                  large
+                />
+                <Stat label="Sessions" value={String(week.length)} large />
+              </div>
+            )}
             <div className="day-bars" aria-hidden="true">
               {days.map((date, index) => {
                 const items = workoutsOn(week, date);
@@ -329,6 +362,64 @@ function TodayForPlan({ plan, today }: { plan: Plan; today: string }) {
           chat.mutate(`About “${workout.title}” on ${workout.scheduledDate}: `);
         }}
       />
+    </AdherenceContext.Provider>
+  );
+}
+
+/**
+ * The mobile prototype's week card with recorded training: done against planned, sessions, and
+ * whether the athlete is ahead of or behind what was due by today.
+ */
+function WeekActual({
+  adherence,
+  workouts,
+  days,
+  today,
+  measure,
+  formatAmount,
+  units,
+}: {
+  adherence: AdherenceView;
+  workouts: WorkoutSummary[];
+  days: string[];
+  today: string;
+  measure: 'distance' | 'time';
+  formatAmount: (value: number, withUnit?: boolean) => string;
+  units: Units;
+}) {
+  const week = rangeAdherence(adherence, workouts, days[0]!, days.at(-1)!, today);
+  if (!week) return null;
+  const pick = (volume: { seconds: number; metres: number }) =>
+    measure === 'time' ? volume.seconds : volume.metres;
+  const done = week.completed + week.partial;
+  const difference = pick(week.actual) - pick(week.due);
+  // Within five per cent of what was due counts as on track.
+  const tolerance = Math.max(pick(week.due) * 0.05, measure === 'time' ? 600 : 500);
+  return (
+    <>
+      <div className="week-summary">
+        <Stat
+          label={measure === 'time' ? 'Time done' : 'Distance done'}
+          value={formatAmount(pick(week.actual), false)}
+          unit={measure === 'time' ? undefined : units}
+          sub={`of ${formatAmount(pick(week.planned))} planned`}
+          large
+        />
+        <Stat label="Sessions" value={`${done} / ${week.planned.sessions}`} large />
+      </div>
+      <ProgressBar
+        value={pick(week.planned) ? pick(week.actual) / pick(week.planned) : 0}
+        label="Planned volume done this week"
+      />
+      <p className="week-pace muted">
+        {Math.abs(difference) <= tolerance
+          ? 'On track with what was due by today'
+          : difference > 0
+            ? `${formatAmount(difference)} ahead of what was due by today`
+            : `${formatAmount(-difference)} behind what was due by today`}
+        {week.missed ? ` · ${week.missed} missed` : ''}
+        {week.extra ? ` · ${week.extra} extra` : ''}
+      </p>
     </>
   );
 }
@@ -347,6 +438,8 @@ function HeroWorkout({
   const kind = workoutLook(workout);
   const detail = useWorkoutDetail(workout.id, version);
   const { pool } = useSportUnits();
+  const outcome = useOutcome(workout.id);
+  const activity = useContext(AdherenceContext).activities.get(outcome?.activityIds[0] ?? '');
   return (
     <button
       type="button"
@@ -364,6 +457,17 @@ function HeroWorkout({
       </span>
       <span className="hero-body">
         <strong className="hero-title">{workout.title}</strong>
+        {outcome && outcome.status !== 'planned' ? (
+          <span className={`hero-outcome ${outcome.status}`}>
+            <OutcomeIcon outcome={outcome} size={14} /> {outcomeLabel(outcome)}
+            {activity
+              ? ` · ${activityStats(activity, units, pool)
+                  .slice(0, 2)
+                  .map((stat) => stat.value)
+                  .join(' · ')}`
+              : ''}
+          </span>
+        ) : null}
         {workout.purpose ? <span className="hero-purpose">{workout.purpose}</span> : null}
         <span className="hero-footer">
           <span className="hero-stats">

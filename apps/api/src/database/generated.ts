@@ -27,6 +27,50 @@ export type Numeric = ColumnType<string, number | string, number | string>;
 
 export type Timestamp = ColumnType<Date, Date | string, Date | string>;
 
+export interface Activities {
+  athlete_id: string;
+  average_speed_mps: Numeric | null;
+  average_watts: Numeric | null;
+  connection_id: string;
+  distance_metres: Numeric | null;
+  elapsed_seconds: number;
+  elevation_gain_metres: Numeric | null;
+  fetched_at: Timestamp;
+  id: Generated<string>;
+  laps_fetched_at: Timestamp | null;
+  local_date: Timestamp;
+  manual: Generated<boolean>;
+  moving_seconds: number | null;
+  name: string;
+  race: Generated<boolean>;
+  source_activity_id: string;
+  source_sport_type: string;
+  sport: string;
+  started_at: Timestamp;
+  trainer: Generated<boolean>;
+}
+
+export interface ActivityLaps {
+  activity_id: string;
+  average_speed_mps: Numeric | null;
+  average_watts: Numeric | null;
+  distance_metres: Numeric | null;
+  elapsed_seconds: number;
+  lap_index: number;
+  moving_seconds: number | null;
+}
+
+export interface ActivityMatchOverrides {
+  athlete_id: string;
+  connection_id: string;
+  decided_at: Generated<Timestamp>;
+  decision: string;
+  id: Generated<string>;
+  plan_id: string;
+  source_activity_id: string;
+  workout_lineage_id: string;
+}
+
 export interface AgentProgressBatches {
   input_hash: string;
   run_id: string;
@@ -227,6 +271,23 @@ export interface ExamplePlanEditions {
   plan_id: string;
   published_content_hash: string;
   published_state_version: number;
+}
+
+export interface IntegrationConnections {
+  access_token_ciphertext: string;
+  access_token_expires_at: Timestamp;
+  athlete_id: string;
+  connected_at: Generated<Timestamp>;
+  display_name: string | null;
+  id: Generated<string>;
+  last_sync_error: string | null;
+  last_synced_at: Timestamp | null;
+  provider: string;
+  provider_athlete_id: string;
+  refresh_token_ciphertext: string;
+  scopes: string[];
+  status: Generated<string>;
+  sync_started_at: Timestamp | null;
 }
 
 export interface LiveEventHeads {
@@ -474,6 +535,9 @@ export interface WorkoutTags {
 }
 
 export interface DB {
+  activities: Activities;
+  activity_laps: ActivityLaps;
+  activity_match_overrides: ActivityMatchOverrides;
   agent_progress_batches: AgentProgressBatches;
   agent_run_events: AgentRunEvents;
   agent_run_finishes: AgentRunFinishes;
@@ -492,6 +556,7 @@ export interface DB {
   conversation_messages: ConversationMessages;
   conversations: Conversations;
   example_plan_editions: ExamplePlanEditions;
+  integration_connections: IntegrationConnections;
   live_event_heads: LiveEventHeads;
   live_events: LiveEvents;
   movement_definitions: MovementDefinitions;

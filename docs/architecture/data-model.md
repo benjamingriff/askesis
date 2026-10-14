@@ -44,11 +44,17 @@ A week's `cutback` flag marks it as deliberately lighter than the weeks around i
 
 Steps can be sequences, repeats or efforts. Ordered parent/child links express nested prescriptions; repeat counts apply to descendant completions. The validated tree has one root, but that root need not be a sequence.
 
-A workout's sport is `run`, `cycle`, `swim`, `strength` or `mixed`; an effort's is `run`, `cycle`, `swim`, `strength`, `row`, `ski_erg` or `other`, inherited from the workout unless the workout is mixed ([ADR 0006](../adr/0006-multisport-plans.md)). Coaching tools prescribe duration, distance, repetition or open completions with zone, run pace, swim pace, power, RPE, reps-in-reserve, suggested load (kilograms) or instruction targets. Zones are stored in the system of the effort's sport. Workout logging and completed-performance tracking are not delivered.
+A workout's sport is `run`, `cycle`, `swim`, `strength` or `mixed`; an effort's is `run`, `cycle`, `swim`, `strength`, `row`, `ski_erg` or `other`, inherited from the workout unless the workout is mixed ([ADR 0006](../adr/0006-multisport-plans.md)). Coaching tools prescribe duration, distance, repetition or open completions with zone, run pace, swim pace, power, RPE, reps-in-reserve, suggested load (kilograms) or instruction targets. Zones are stored in the system of the effort's sport. Manual workout logging is not delivered; recorded activities from Strava are matched to workouts as described below.
 
 `movement_definitions` is an immutable vocabulary that steps can reference. It replaces the early `movements` proposal; coaching currently names exercises with step labels instead. `week_targets` provides optional prescribed weekly targets; current agent tools do not author these targets.
 
 `workout_prescription_totals` derives explicit distance/duration through nested repeats. `weekly_plan_summary` aggregates prescribed workout estimates. These views do not estimate completion from zone pace or calculate actual training load.
+
+## Activities and adherence
+
+Recorded activities are separate from plans ([ADR 0008](../adr/0008-activity-ingestion.md)). `integration_connections` holds one connection per athlete and provider (Strava today) with encrypted tokens, granted scopes, status and a sync lease. A provider account belongs to one athlete. `activities` holds normalized summaries: sport, the provider's sport type, the start instant and the local calendar day, elapsed and moving seconds, metres, metres per second and watts. `activity_laps` holds per-lap values. Strava data is a seven-day cache: each sync refreshes the plan window and deletes what Strava no longer lists, and older rows are purged. `activity_match_overrides` records the athlete's link or reject decisions by plan, workout lineage and provider activity id, so they survive relocking and cache purges.
+
+Matching is computed on read (`GET /api/v1/adherence`, `GET /api/v1/workouts/{id}/actual`). Each workout gets completed, partial, missed or planned, a day offset and actual volume. Weeks get planned, due and actual volume, and extra activities are reported. Rep checks align laps with the expanded prescription. No activity or adherence data reaches the coaching worker.
 
 ## Conversations, execution and delivery
 
@@ -58,7 +64,7 @@ Live journal rows notify an owner which resources changed, including `performanc
 
 ## Removed early concepts
 
-`plan_goals`, `plan_constraints`, `plan_memberships`, `plan_revisions`, a mutable `movements` catalog and the version-owned `calibration_profiles`, `calibration_zones` and `plan_calibration_periods` are not current tables. Typed goals and generic constraints were replaced by the version-owned brief; plan calibration was replaced by the athlete timeline. There is no implemented plan merge lineage, user skill store or completed-workout log.
+`plan_goals`, `plan_constraints`, `plan_memberships`, `plan_revisions`, a mutable `movements` catalog and the version-owned `calibration_profiles`, `calibration_zones` and `plan_calibration_periods` are not current tables. Typed goals and generic constraints were replaced by the version-owned brief; plan calibration was replaced by the athlete timeline. There is no implemented plan merge lineage, user skill store or durable completed-workout log; Strava activities are a seven-day cache.
 
 ## Implementation evidence
 

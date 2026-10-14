@@ -11,6 +11,7 @@ Keep ADRs together in this folder, with one numbered document per significant te
 | [0005](./0005-athlete-owned-performance.md) | Athlete-owned, append-only performance calibration applied to every plan | Accepted; extended by 0006                                                             |
 | [0006](./0006-multisport-plans.md)          | Multi-sport plans: cycling power, swim CSS and uncalibrated strength     | Accepted                                                                               |
 | [0007](./0007-claude-coaching-runtime.md)   | Configurable coaching provider with a Claude Messages API runtime        | Accepted; extends 0003                                                                 |
+| [0008](./0008-activity-ingestion.md)        | Strava activities as a seven-day cache, matched to plans on read         | Accepted for the MVP                                                                   |
 
 ## When to write an ADR
 

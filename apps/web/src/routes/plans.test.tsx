@@ -4,6 +4,7 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { focusManager } from '@tanstack/react-query';
 import { AccountQueryProvider } from '../query-provider';
 import { api } from '../api';
+import { NO_INTEGRATIONS } from '../../test/activity-mocks';
 import type { Plan } from '../plan-data';
 import { PlanPage, PlansPage } from './plans';
 import { ActivePlansPage } from './active-plans';
@@ -106,6 +107,7 @@ beforeEach(() => {
     path: string,
     options?: { params?: { query?: { collection?: string } } },
   ) => {
+    if (path === '/api/v1/integrations') return { data: NO_INTEGRATIONS };
     const data = path.endsWith('/draft/changes')
       ? {
           versionId: current.draft?.id,

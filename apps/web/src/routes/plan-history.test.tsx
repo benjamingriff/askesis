@@ -5,7 +5,10 @@ import { AccountQueryProvider } from '../query-provider';
 import { PlanHistory, PlanRevisionPage } from './plan-history';
 
 const mocks = vi.hoisted(() => ({ get: vi.fn(), post: vi.fn() }));
-vi.mock('../api', () => ({ api: { GET: mocks.get, POST: mocks.post } }));
+vi.mock('../api', async () => {
+  const { withoutIntegrations } = await import('../../test/activity-mocks');
+  return { api: { GET: withoutIntegrations(mocks.get), POST: mocks.post } };
+});
 const summary = { headerChanges: ['description'], entities: {} };
 const revision = {
   id: 'v1',

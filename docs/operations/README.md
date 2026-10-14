@@ -6,6 +6,7 @@
 - [Local development](./local-development.md): web/API startup, agent sign-in and screenshot/video verification, background server lifetime, validation and generated types.
 - [Validation dashboard](../../apps/evals/README.md): local viewer for benchmark runs, conversations, prompt comparisons, grader calibration and human review.
 - [Complete multisport example](./example-plan.md): hosted owner, manual local seeding and preservation.
+- [Activity connections](./activity-connections.md): connecting your own Strava account or the local simulator, sync, cache expiry and disconnect.
 - [Database setup](./database-setup.md): Docker Compose, Atlas and development fixtures.
 - [Railway deployment](./railway-deployment-plan.md): service topology, configuration, migrations and release checks.
 - [Worker operations](./phase-5-runtime.md): credentials, provider configuration, limits, leases and failure recovery.
