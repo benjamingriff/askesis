@@ -91,7 +91,7 @@ Writers hold a per-run `benchmark-results/<run-id>/run.lock`: generation holds i
 
 ## Inspect conversations in the dashboard
 
-Run `pnpm dev:evals` and open the printed local address (normally `http://127.0.0.1:5179`). This separate local dashboard reads `benchmark-results`; it does not require the training app or a Clerk browser session. Set `EVALS_RESULTS_DIR` to inspect another result directory. Keep the dev server bound to loopback because review endpoints write to local artifacts.
+Run `pnpm dev:evals` and open the printed local address (the root command chooses a worktree-specific port; direct app-level Vite defaults to `http://127.0.0.1:5179`). This separate local dashboard reads `benchmark-results`; it does not require the training app or a Clerk browser session. Set `EVALS_RESULTS_DIR` to inspect another result directory. Keep the dev server bound to loopback because review endpoints write to local artifacts.
 
 The Conversations page starts with the run list. Each conversation shows persona/voice labels, disclosed facts, the athlete's sent message and the authored statements behind voiced messages. Expand tool cards for inputs/results. Interim text and tools follow saved timestamps; older artifacts without text times show an explicit ordering limitation. The Prompts section shows the saved texts, names and hashes.
 
