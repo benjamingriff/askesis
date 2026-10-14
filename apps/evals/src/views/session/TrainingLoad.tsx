@@ -79,9 +79,7 @@ function dayIndex(load: PlanLoad, date: string) {
 export function TrainingLoad({ load }: { load: PlanLoad | null }) {
   const [mode, setMode] = useState<Mode>('week');
   if (!load) return <p className="muted">No workouts were saved, so there is no load to show.</p>;
-  const present = SPORTS.filter((sport) =>
-    load.workouts.some((workout) => workout.sport === sport),
-  );
+  const present = SPORTS.filter((sport) => load.workouts.some((workout) => workout.sports[sport]));
   const counted = Object.entries(load.methods) as [LoadMethod, number][];
   return (
     <div className="training-load">

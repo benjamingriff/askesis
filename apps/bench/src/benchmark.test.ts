@@ -268,6 +268,29 @@ describe('saved completion and assessment', () => {
     lift.targets = [];
     expect(result()).toBe('fail');
   });
+  it('distinguishes an explicitly unknown baseline from an unanswered one and from zero', () => {
+    const strength = datasetCase('strength-beginner');
+    strength.expectations.checks = ['baseline'];
+    const expected = strength.persona.sports[0]!;
+    expected.currentSessions = null;
+    const saved = {
+      sport: 'strength',
+      desiredSessions: expected.desiredSessions,
+      currentSessions: { status: 'unknown', value: null as number | null },
+    };
+    const value = {
+      plan: { findings: [], workouts: [], brief: { brief: { sports: [saved] } } },
+    } as unknown as BenchmarkSnapshot;
+    const result = () =>
+      checkPlan(value, strength, []).find((check) => check.id === 'baseline')!.status;
+    expect(result()).toBe('pass');
+    saved.currentSessions.status = 'unanswered';
+    expect(result()).toBe('fail');
+    expected.currentSessions = 0;
+    expect(result()).toBe('fail');
+    saved.currentSessions = { status: 'known', value: 0 };
+    expect(result()).toBe('pass');
+  });
 });
 
 describe('local isolation and portable evidence', () => {

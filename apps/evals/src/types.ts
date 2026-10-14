@@ -297,6 +297,8 @@ export interface LoadWorkout extends LoadAmount {
   method: LoadMethod;
   /** Seconds in each band, counted per effort rather than from the workout average. */
   intensity: LoadWeek['intensity'];
+  /** Contributions from each effort's discipline, including mixed workouts. */
+  sports: Partial<Record<LoadSport, LoadAmount>>;
 }
 export interface LoadDay {
   date: string;

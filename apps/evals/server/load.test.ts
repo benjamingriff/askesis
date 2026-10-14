@@ -164,4 +164,35 @@ describe('training load', () => {
     expect(lift.workouts[0]).toMatchObject({ seconds: 3600, tss: 0, method: 'not_counted' });
     expect(lift.weeks[0]!.intensity.uncounted).toBe(3600);
   });
+
+  it('uses explicit targets ahead of zone guides and splits mixed workouts by effort sport', () => {
+    const run = effort(
+      'run',
+      { type: 'duration', value: 1800 },
+      resolved('seconds_per_kilometre', 400),
+    );
+    run.targets.push({ type: 'pace', targetValue: 300, unit: 'seconds_per_kilometre' });
+    const mixed = buildLoad(
+      {
+        workouts: [
+          workout('brick', '2026-10-19', 'mixed', {
+            kind: 'sequence',
+            steps: [
+              effort('cycle', { type: 'duration', value: 1800 }, resolved('watts', 200)),
+              run,
+            ],
+          }),
+        ],
+      },
+      performance,
+      scenario,
+    )!;
+    expect(mixed.workouts[0]!.tss).toBe(100);
+    expect(mixed.workouts[0]!.metres).toBe(6000);
+    expect(mixed.days[0]!.sports).toMatchObject({
+      run: { seconds: 1800, tss: 50 },
+      cycle: { seconds: 1800, tss: 50 },
+    });
+    expect(mixed.days[0]!.sports.other).toBeUndefined();
+  });
 });

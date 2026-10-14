@@ -41,7 +41,9 @@ export function hasExpectedCoverage(snapshot: BenchmarkSnapshot, scenario: Scena
 }
 
 const sameAnswer = (answer: { status: string; value: number | null }, expected: number | null) =>
-  expected === null ? answer.status !== 'known' : answer.value === expected;
+  expected === null
+    ? answer.status === 'unknown'
+    : answer.status === 'known' && answer.value === expected;
 
 /** Compares the saved brief with every sport baseline the athlete disclosed. */
 function baselineMatches(plan: Plan, scenario: Scenario) {

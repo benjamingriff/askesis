@@ -102,7 +102,11 @@ function intensity(effort: Effort, limits: Thresholds) {
   let factor: number | null = null;
   let secondsPerMetre: number | null = null;
   let method: LoadMethod = 'unestimated';
-  for (const target of effort.targets) {
+  // A specific pace/power overrides its zone guide, as it does in the workout UI.
+  const targets = [...effort.targets].sort(
+    (a, b) => Number(a.type === 'zone') - Number(b.type === 'zone'),
+  );
+  for (const target of targets) {
     const resolved = isObject(target.resolvedZone) ? target.resolvedZone : null;
     const value = asNumber(resolved?.targetValue) ?? asNumber(target.targetValue);
     const unit = asString(resolved?.unit) ?? asString(target.unit);
@@ -114,7 +118,7 @@ function intensity(effort: Effort, limits: Thresholds) {
       if (limits.cssPace !== null) [factor, method] = [limits.cssPace / value, 'targets'];
     } else if (value !== null && unit === 'watts' && limits.ftp !== null)
       [factor, method] = [value / limits.ftp, 'targets'];
-    if (factor !== null) break;
+    if (factor !== null || secondsPerMetre !== null) break;
   }
   if (factor === null) {
     const rpe = effort.targets.find((target) => target.type === 'rpe');
@@ -166,6 +170,9 @@ function workoutLoad(entry: Json, limits: Thresholds): LoadWorkout | null {
   };
   let untimed = false;
   const methods = new Set<LoadMethod>();
+  const sports: LoadWorkout['sports'] = {};
+  const contribution = (discipline: LoadSport) =>
+    (sports[discipline] ??= { seconds: 0, metres: 0, tss: 0 });
   for (const effort of steps) {
     const { factor, secondsPerMetre, method } = intensity(effort, limits);
     const type = asString(effort.completion?.type);
@@ -179,19 +186,24 @@ function workoutLoad(entry: Json, limits: Thresholds): LoadWorkout | null {
       effortMetres = value;
       if (secondsPerMetre) effortSeconds = value * secondsPerMetre;
     }
-    if (effortMetres !== null && effort.sport !== 'strength')
+    if (effortMetres !== null && effort.sport !== 'strength') {
       metres += effortMetres * effort.repeat;
+      contribution(effort.sport).metres += effortMetres * effort.repeat;
+    }
     if (effortSeconds === null) {
       untimed = true;
       continue;
     }
     const total = effortSeconds * effort.repeat;
     seconds += total;
+    contribution(effort.sport).seconds += total;
     timed += 1;
     methods.add(method);
     countIntensity(total, factor);
     if (factor === null) continue;
-    tss += stress(effort.sport, total, factor);
+    const effortTss = stress(effort.sport, total, factor);
+    tss += effortTss;
+    contribution(effort.sport).tss += effortTss;
     weighted += factor * total;
     counted += total;
   }
@@ -212,6 +224,8 @@ function workoutLoad(entry: Json, limits: Thresholds): LoadWorkout | null {
           : 'estimate';
     if (factor !== null && method === 'estimate') tss = stress(sport, seconds, factor);
     countIntensity(seconds, factor);
+    for (const key of Object.keys(sports)) delete sports[key as LoadSport];
+    Object.assign(contribution(sport), { seconds, metres, tss });
   } else {
     method = methods.has('targets')
       ? 'targets'
@@ -224,11 +238,15 @@ function workoutLoad(entry: Json, limits: Thresholds): LoadWorkout | null {
             : 'unestimated';
     // Time-weighted intensity of the counted steps, for the easy/moderate/hard split.
     factor = counted > 0 ? weighted / counted : null;
-    if (metres === 0 && estimatedMetres !== null && sport !== 'strength') metres = estimatedMetres;
+    if (metres === 0 && estimatedMetres !== null && sport !== 'strength') {
+      metres = estimatedMetres;
+      contribution(sport).metres += estimatedMetres;
+    }
     // Repetition-based work can have timed rests. Those rests are only part of the session;
     // retain the coach's total duration and leave the unknown work unscored.
     if (untimed && estimatedSeconds !== null && estimatedSeconds > seconds) {
       intensityTime.uncounted += estimatedSeconds - seconds;
+      contribution(sport).seconds += estimatedSeconds - seconds;
       seconds = estimatedSeconds;
       method = sport === 'strength' && counted === 0 ? 'not_counted' : 'unestimated';
     }
@@ -244,6 +262,7 @@ function workoutLoad(entry: Json, limits: Thresholds): LoadWorkout | null {
     intensityFactor: factor === null ? null : Math.round(factor * 100) / 100,
     method,
     intensity: intensityTime,
+    sports,
   };
 }
 
@@ -324,7 +343,9 @@ export function buildLoad(
     const own = workouts.filter((workout) => workout.date === date);
     const sports = Object.fromEntries(
       SPORTS.flatMap((sport) => {
-        const items = own.filter((workout) => workout.sport === sport);
+        const items = own.flatMap((workout) =>
+          workout.sports[sport] ? [workout.sports[sport]!] : [],
+        );
         if (!items.length) return [];
         const sum = (key: 'seconds' | 'metres' | 'tss') =>
           items.reduce((total, item) => total + item[key], 0);
