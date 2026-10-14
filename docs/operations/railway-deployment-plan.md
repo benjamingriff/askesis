@@ -59,11 +59,14 @@ Use a private service, no public domain/port. Initial operation uses one replica
 ```text
 AGENT_API_URL=<private API origin>
 AGENT_BOOTSTRAP_TOKEN=<reference to shared API secret>
-OPENAI_API_KEY=<worker-only provider secret>
-AGENT_PROVIDER=openai
-AGENT_MODEL=gpt-6.1-sol
+AGENT_PROVIDER=openai            # or anthropic
+OPENAI_API_KEY=<worker-only provider secret>     # when AGENT_PROVIDER=openai
+ANTHROPIC_API_KEY=<worker-only provider secret>  # when AGENT_PROVIDER=anthropic
+AGENT_MODEL=                     # empty selects gpt-6.1-sol or claude-opus-5-5
 AGENT_REASONING=medium
 ```
+
+Switching provider is a worker variable change and redeploy. Apply migration `20261013120000` before registering a Claude worker.
 
 Optional bounds are `AGENT_MAX_TURNS`, `AGENT_MAX_OUTPUT_TOKENS` and `AGENT_POLL_MS`; see [worker operations](./phase-5-runtime.md). Do not assign `DATABASE_URL` or `CLERK_SECRET_KEY`. Allow at least 40 seconds for graceful shutdown. Ready status is persisted through API registration; confirm it through signed-in chat capabilities, not a public worker health endpoint.
 

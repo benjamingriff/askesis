@@ -6,7 +6,13 @@ import { describe, expect, it } from 'vitest';
 import type { BenchmarkSnapshot } from '@askesis/api/benchmark';
 import { addDays, renderAthleteAction, resolveScenario } from './scenario.js';
 import { hasExpectedCoverage, overallVerdict, checkPlan } from './checks.js';
-import { criteria, validateReview, providerFailure, type Review } from './models.js';
+import {
+  criteria,
+  evaluatorModel,
+  validateReview,
+  providerFailure,
+  type Review,
+} from './models.js';
 import { Artifacts, redact } from './artifacts.js';
 import { acquireLock, environmentFor } from './local.js';
 import raw from '../scenarios/running-poc.json' with { type: 'json' };
@@ -331,9 +337,94 @@ describe('local isolation and portable evidence', () => {
       redact({
         token: 'secret',
         DATABASE_URL: 'secret',
+        ANTHROPIC_API_KEY: 'secret',
         created_at: new Date('2026-10-09T12:00:00Z'),
         nested: [{ headers: { authorization: 'secret' }, inputTokens: 17 }],
       }),
     ).toEqual({ created_at: '2026-10-09T12:00:00.000Z', nested: [{ inputTokens: 17 }] });
   });
+});
+
+describe('coach provider selection', () => {
+  it('keeps simulator and reviewer on OpenAI when the coach runs on Claude', () => {
+    expect(
+      evaluatorModel({ AGENT_PROVIDER: 'anthropic', AGENT_MODEL: 'claude-opus-5-5' }, undefined),
+    ).toBe('gpt-6.1-sol');
+    expect(evaluatorModel({ AGENT_MODEL: 'gpt-6.1-mini' }, undefined)).toBe('gpt-6.1-mini');
+    expect(evaluatorModel({ AGENT_PROVIDER: 'anthropic' }, 'gpt-6.1-judge')).toBe('gpt-6.1-judge');
+  });
+
+  it.each(['openai', 'anthropic'] as const)(
+    'replays the offline scripted coach through the %s runtime',
+    async (provider) => {
+      const { parseAgentConfig } = await import('@askesis/agent/config');
+      const { createRuntime } = await import('@askesis/agent/runtime');
+      const { scriptedOverrides } = await import('@askesis/agent/testing');
+      const { AgentApi } = await import('@askesis/agent/api');
+      const { scriptedCoach } = await import('./scripted.js');
+      const config = parseAgentConfig({
+        AGENT_PROVIDER: provider,
+        OPENAI_API_KEY: 'scripted',
+        ANTHROPIC_API_KEY: 'scripted',
+        AGENT_BOOTSTRAP_TOKEN: 'test-bootstrap-token-32-characters',
+      });
+      const runtime = createRuntime(config, scriptedOverrides(provider, scriptedCoach(scenario)));
+      const tools: string[] = [];
+      class LocalApi extends AgentApi {
+        override async tool(_claim: unknown, command: unknown) {
+          tools.push((command as { name: string }).name);
+          return { result: {}, versionId: null, editNumber: null, planId: null };
+        }
+        override async progress() {
+          return { status: 'running' };
+        }
+      }
+      const api = new LocalApi('http://127.0.0.1');
+      const claim = {
+        runId: '00000000-0000-4000-8000-000000000010',
+        token: 'run-token',
+        generation: 1,
+        deadlineAt: new Date(Date.now() + 60000).toISOString(),
+        versionId: null,
+        editNumber: null,
+      };
+      const context = {
+        messages: [{ role: 'user' as const, content: scenario.openingMessage, sequence: 1 }],
+        historyTruncated: false,
+        plan: null,
+        brief: null,
+        performance: null,
+        versionId: null,
+        editNumber: null,
+        tools: [
+          'create_plan_draft',
+          'record_performance',
+          'update_plan_brief',
+          'apply_schedule_changes',
+          'validate_plan',
+        ].map((name) => ({
+          name,
+          description: name,
+          parameters: { type: 'object', properties: {} },
+        })),
+      };
+      const run = () =>
+        runtime.execute(
+          context,
+          claim,
+          api,
+          new AbortController().signal,
+          new AbortController().signal,
+        );
+      expect((await run()).content).toContain('Please share your goal');
+      expect((await run()).content).toContain('offline scripted fixture');
+      expect(tools).toEqual([
+        'create_plan_draft',
+        'record_performance',
+        'update_plan_brief',
+        'apply_schedule_changes',
+        'validate_plan',
+      ]);
+    },
+  );
 });

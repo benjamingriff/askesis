@@ -4,7 +4,8 @@ import { resolve } from 'node:path';
 import { z } from 'zod';
 import { AgentApi, type Claim } from '@askesis/agent/api';
 import { parseAgentConfig } from '@askesis/agent/config';
-import { SdkRuntime } from '@askesis/agent/runtime';
+import { createRuntime } from '@askesis/agent/runtime';
+import { scriptedOverrides } from '@askesis/agent/testing';
 import { Worker } from '@askesis/agent/worker';
 import { Artifacts, redact } from './artifacts.js';
 import { scriptedCoach } from './scripted.js';
@@ -112,9 +113,11 @@ async function execute(message: unknown) {
     Object.fromEntries(Object.entries(input.config).map(([key, value]) => [key, String(value)])),
   );
   const artifacts = new Artifacts(input.directory);
-  const runtime = new SdkRuntime(
+  const runtime = createRuntime(
     config,
-    input.scriptedScenario ? scriptedCoach(input.scriptedScenario as Scenario) : undefined,
+    input.scriptedScenario
+      ? scriptedOverrides(config.AGENT_PROVIDER, scriptedCoach(input.scriptedScenario as Scenario))
+      : {},
   );
   worker = new Worker(config, new RecordingApi(config.AGENT_API_URL, artifacts), {
     async execute(...args) {

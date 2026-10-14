@@ -160,7 +160,7 @@ The scenario's date must be authoritative in context, calibration reads/writes a
 
 Initially keep production history truncation, batching, tool errors and limits. They affect whether a model can create plans in Askesis. Later experiments can vary them explicitly, with their own recorded configuration.
 
-Start comparisons with models supported by the current OpenAI runtime. Comparing Claude, Gemini or other providers needs a compatible model adapter; changing `AGENT_MODEL` alone does not supply that support. Use the existing SDK model-override seam where suitable, and verify tool-call/schema handling, streaming, cancellation, usage reporting and supported reasoning settings before scoring. Unsupported settings should fail configuration or be explicitly omitted and reported. The resulting benchmark compares model-plus-Askesis-runtime configurations, not an intrinsic universal ranking of models.
+Start comparisons with models supported by the coaching runtimes. OpenAI and Claude coaches are selected with `AGENT_PROVIDER` ([ADR 0007](../adr/0007-claude-coaching-runtime.md)); Gemini or other providers need another adapter, and changing `AGENT_MODEL` alone does not supply that support. Use the existing SDK model-override seam where suitable, and verify tool-call/schema handling, streaming, cancellation, usage reporting and supported reasoning settings before scoring. Unsupported settings should fail configuration or be explicitly omitted and reported. The resulting benchmark compares model-plus-Askesis-runtime configurations, not an intrinsic universal ranking of models.
 
 ## What to grade
 

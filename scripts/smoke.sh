@@ -54,6 +54,8 @@ while [ "$attempt" -lt 30 ]; do
   sleep 1
 done
 [ "$status" = 'completed' ] || { echo 'Worker smoke timed out.' >&2; exit 1; }
+provider=$($compose exec -T postgres psql --username askesis_smoke --dbname askesis_smoke --tuples-only --no-align --command "SELECT provider FROM agent_runs WHERE id='00000000-0000-4000-8000-000000000903'")
+[ "$provider" = "${SMOKE_AGENT_PROVIDER:-openai}" ] || { echo "Worker smoke ran on $provider." >&2; exit 1; }
 $compose exec -T postgres psql --username askesis_smoke --dbname askesis_smoke --set ON_ERROR_STOP=1 <<'SQL'
 DO $$ BEGIN
  IF (SELECT count(*) FROM agent_tool_receipts WHERE run_id='00000000-0000-4000-8000-000000000903') <> 1 THEN RAISE EXCEPTION 'Missing tool receipt'; END IF;
@@ -91,4 +93,4 @@ SQL
 private_status=$(curl --silent --output /dev/null --write-out '%{http_code}' http://127.0.0.1:58080/internal/agent/claim)
 [ "$private_status" = '404' ] || { echo 'Private worker API reached the public proxy.' >&2; exit 1; }
 
-echo 'Askesis disposable API/web/worker smoke test passed.'
+echo "Askesis disposable API/web/worker smoke test passed (${SMOKE_AGENT_PROVIDER:-openai} runtime)."
