@@ -1,6 +1,7 @@
 import { readFile } from 'node:fs/promises';
 import { describe, expect, it } from 'vitest';
 import {
+  loadVoices,
   coverageMarkdown,
   loadDataset,
   PersonaSchema,
@@ -114,9 +115,11 @@ describe('versioned athlete datasets', () => {
         expect(resolved.facts.fitness).not.toContain('5 km');
       }
     }
-    const scenario = structuredClone(dataset.scenarios.find((item) => item.id === 'running-poc')!);
+    const scenario = structuredClone(
+      dataset.scenarios.find((item) => item.id === 'running-improver')!,
+    );
     scenario.prescriptionWeeks = 8;
-    const persona = dataset.personas.find((item) => item.id === 'running-poc')!;
+    const persona = dataset.personas.find((item) => item.id === 'running-improver')!;
     const resolved = resolveDatasetScenario(persona, scenario, now);
     expect(resolved.openingMessage).toContain('first 8 weeks');
     expect(resolved.facts.horizon).toContain('first 8 weeks');
@@ -148,13 +151,13 @@ describe('versioned athlete datasets', () => {
       'planned';
     expect(() => validateDataset(stale)).toThrow('Planned catalogue mismatch');
     const heldout = structuredClone(source);
-    heldout.catalogue.personas.find((item) => item.id === 'running-poc')!.split = 'holdout';
+    heldout.catalogue.personas.find((item) => item.id === 'running-improver')!.split = 'holdout';
     heldout.catalogue.scenarios
-      .filter((item) => item.familyId === 'running-poc')
+      .filter((item) => item.familyId === 'running-improver')
       .forEach((item) => {
         item.split = 'holdout';
       });
-    heldout.scenarios.find((item) => item.id === 'running-poc')!.split = 'holdout';
+    heldout.scenarios.find((item) => item.id === 'running-improver')!.split = 'holdout';
     expect(() => validateDataset(heldout)).toThrow('Holdout in development suite');
   });
 
@@ -168,5 +171,16 @@ describe('versioned athlete datasets', () => {
         resolveDatasetScenario(persona, scenario, new Date('2026-10-13T12:00:00Z')),
       ).toThrow('Unknown fact placeholder');
     }
+  });
+  it('loads independently versioned voices that any scenario can use', async () => {
+    const voices = await loadVoices();
+    expect(voices.map((voice) => voice.id).sort()).toEqual([
+      'anxious',
+      'overconfident',
+      'terse',
+      'vague',
+    ]);
+    // Examples show manner only, so they carry no figures the voice step could copy.
+    for (const voice of voices) expect(voice.examples.join(' ')).not.toMatch(/\d/);
   });
 });

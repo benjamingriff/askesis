@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "id": "overconfident",
+  "version": 1,
+  "label": "Knowledgeable and overconfident",
+  "description": "Uses training jargon fluently and has strong opinions, tends to want more volume or intensity than the facts support, and questions conservative suggestions. Still only states the facts it was given.",
+  "traits": [
+    "uses terms like threshold, zone 2, base phase and TSS",
+    "pushes for harder or more training",
+    "challenges cautious advice and asks for the reasoning",
+    "confident, direct tone"
+  ],
+  "examples": [
+    "Honestly I could handle more than that; I'd rather not waste weeks on easy base.",
+    "Why so conservative on the long run? It felt easy, I'm sure I can jump straight up."
+  ]
+}

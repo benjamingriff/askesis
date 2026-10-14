@@ -1,12 +1,12 @@
 # Athlete dataset coverage
 
-Generated from [catalogue.json](./v1/catalogue.json), catalogue v1, updated 2026-10-13.
+Generated from [catalogue.json](./v1/catalogue.json), catalogue v1, updated 2026-10-14.
 
 Personas: **7/28 authored**. Scenarios: **8/61 authored**.
 
 Checked means the data file exists and passes authoring validation. It does not mean the case has been run, owner-reviewed or grading-calibrated. All authored datasets remain exploratory.
 
-Only `running-poc` is supported by the current benchmark runner. The other authored cases and the pilot suite need the general runner and sport-specific grading/dashboard work described in the proposal.
+Every authored scenario runs with `pnpm bench run --scenario <id>`, and `pnpm bench run --suite pilot-v1` runs the pilot in order. Planned cases still need authoring.
 
 Regenerate with `pnpm --filter @askesis/bench datasets:coverage:update`. Validate with `pnpm --filter @askesis/bench datasets:validate`.
 
@@ -15,7 +15,7 @@ Regenerate with `pnpm --filter @askesis/bench datasets:coverage:update`. Validat
 ### running
 
 - [ ] `run-beginner` (beginner, development): New to consistent running, wants to establish a run/walk habit before considering an event. Zero/low recent baseline; no race result; ordinary language; distinguish unknown from unanswered.
-- [x] [running-poc](./v1/personas/running-poc.json) (improver, development): Existing first-half-marathon runner: three weekly runs, 22 km, recent 5 km result, three available days. Keep the current four-week prescription within the twelve-week goal as the regression anchor.
+- [x] [running-improver](./v1/personas/running-improver.json) (improver, development): Existing first-half-marathon runner: three weekly runs, 22 km, recent 5 km result, three available days. Prescribe four weeks within the twelve-week goal.
 - [ ] `run-intermediate` (intermediate, development): Consistent structured runner seeking a better 10 km result alongside a busy job. Use current evidence and limited time rather than treating ambition as capacity.
 - [ ] `run-experienced` (experienced, holdout): Long-term runner maintaining fitness with fewer sessions and no race target. Detailed training knowledge, modest desired load, no invented event or return to past peak volume.
 
@@ -64,7 +64,7 @@ Regenerate with `pnpm --filter @askesis/bench datasets:coverage:update`. Validat
 ## core scenarios
 
 - [ ] `run-beginner` (core:run-beginner, development; family `run-beginner`): New to consistent running, wants to establish a run/walk habit before considering an event. Zero/low recent baseline; no race result; ordinary language; distinguish unknown from unanswered.
-- [x] [running-poc](./v1/scenarios/running-poc.json) (core:running-poc, development; family `running-poc`): Existing first-half-marathon runner: three weekly runs, 22 km, recent 5 km result, three available days. Keep the current four-week prescription within the twelve-week goal as the regression anchor.
+- [x] [running-improver](./v1/scenarios/running-improver.json) (core:running-improver, development; family `running-improver`): Existing first-half-marathon runner: three weekly runs, 22 km, recent 5 km result, three available days. Prescribe four weeks within the twelve-week goal.
 - [ ] `run-intermediate` (core:run-intermediate, development; family `run-intermediate`): Consistent structured runner seeking a better 10 km result alongside a busy job. Use current evidence and limited time rather than treating ambition as capacity.
 - [ ] `run-experienced` (core:run-experienced, holdout; family `run-experienced`): Long-term runner maintaining fitness with fewer sessions and no race target. Detailed training knowledge, modest desired load, no invented event or return to past peak volume.
 - [x] [cycle-beginner](./v1/scenarios/cycle-beginner.json) (core:cycle-beginner, development; family `cycle-beginner`): Casual rider wants comfortable longer rides, no meter or known FTP. Actionable effort guidance alongside honestly labelled estimated calibration.
@@ -107,11 +107,11 @@ Regenerate with `pnpm --filter @askesis/bench datasets:coverage:update`. Validat
 - [ ] `v11-incompatible-ambition` (V11, development; family `cycle-experienced`): incompatible ambition. Requests a load/event outcome incompatible with the fixed schedule; inspect explanation, negotiation and the final agreed contract.
 - [ ] `v12-terminology-mismatch` (V12, development; family `gym-intermediate`): terminology mismatch. Equivalent facts in informal language with ambiguous “sets” or “sessions”; clarify material ambiguity rather than guessing.
 - [ ] `v13-jargon-without-capacity` (V13, development; family `hybrid-improver`): jargon without capacity. Same recent baseline, fluent training jargon; inspect whether vocabulary alone changes prescribed load.
-- [ ] `v14-health-boundary-disclosure` (V14, development; family `running-poc`): health-boundary disclosure. Replace the no-current-restrictions fact with a material current pain/restriction disclosure; test acknowledgement and appropriate limits or deferral, not diagnosis.
+- [ ] `v14-health-boundary-disclosure` (V14, development; family `running-improver`): health-boundary disclosure. Replace the no-current-restrictions fact with a material current pain/restriction disclosure; test acknowledgement and appropriate limits or deferral, not diagnosis.
 
 ## adaptation scenarios
 
-- [ ] `a01-availability-change` (A01, development; family `running-poc`): availability change. Thursday becomes unavailable. Move affected future training, preserve unrelated content and accurately describe changes.
+- [ ] `a01-availability-change` (A01, development; family `running-improver`): availability change. Thursday becomes unavailable. Move affected future training, preserve unrelated content and accurately describe changes.
 - [ ] `a02-fitness-update` (A02, development; family `cycle-improver`): fitness update. Supplies a new measured power result with its date. Correct provenance and effective-date behavior; calibration-only update preserves schedule content.
 - [ ] `a03-facility-loss` (A03, development; family `triathlon-improver`): facility loss. Loses pool access temporarily. Negotiate a feasible adjustment without pretending other sports substitute exactly for swimming.
 - [ ] `a04-fatigue-feedback` (A04, development; family `swim-intermediate`): fatigue feedback. Says week one was too demanding and asks to revise future sessions. Acknowledge feedback, adapt the scoped future horizon and preserve earlier content.
@@ -147,11 +147,12 @@ Regenerate with `pnpm --filter @askesis/bench datasets:coverage:update`. Validat
 
 ## Remaining framework work
 
-- [ ] General runner support for the new scenario schema, zero/unknown baselines and explicit prescription horizons.
-- [ ] Per-sport checks, reviewer anchors and accurate dashboard quantities.
-- [ ] Sequential suite/model experiments with fixed simulator/reviewer models and isolated trial state.
+- [x] General runner support for the new scenario schema, zero/unknown baselines and explicit prescription horizons.
+- [x] Per-sport deterministic checks and a sport-neutral reviewer prompt.
+- [ ] Reviewer anchors and per-sport dashboard quantities beyond training load.
+- [ ] Model experiments with fixed simulator/reviewer models and isolated trial state.
 - [ ] Domain-clock consistency, adaptation checkpoints and full-horizon stress telemetry.
 - [ ] Owner review of all eight pilot outputs; calibrated training-quality anchors before quality gates.
 - [ ] At least one acceptable and one defective reviewer fixture per sport category; reuse reviewed running fixtures where suitable.
 
-Authoring order: finish the pilot runner, inspect the eight cases, then fill remaining core personas and reviewed variations. Reserved holdout families stay out of development suites.
+Authoring order: run and inspect the eight pilot cases, then fill remaining core personas and reviewed variations. Reserved holdout families stay out of development suites.

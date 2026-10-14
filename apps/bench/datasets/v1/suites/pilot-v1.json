@@ -5,7 +5,7 @@
   "label": "Seven sport categories plus a matched annual hybrid variant",
   "scenarios": [
     {
-      "id": "running-poc",
+      "id": "running-improver",
       "version": 1
     },
     {

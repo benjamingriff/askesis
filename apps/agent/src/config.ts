@@ -1,5 +1,5 @@
 import { z } from 'zod';
-export const PROMPT_VERSION = 'multisport-coach-v3';
+export { PROMPT_VERSION } from './prompt.js';
 export const PROVIDERS = ['openai', 'anthropic'] as const;
 export type Provider = (typeof PROVIDERS)[number];
 export const REASONING_LEVELS = ['low', 'medium', 'high', 'xhigh', 'max'] as const;

@@ -1,7 +1,8 @@
 import { randomUUID } from 'node:crypto';
 import { setTimeout as pause } from 'node:timers/promises';
 import { type AgentApi, ApiError, type Claim } from './api.js';
-import { PROMPT_VERSION, type AgentConfig } from './config.js';
+import type { AgentConfig } from './config.js';
+import { PROMPT_HASH, PROMPT_VERSION } from './prompt.js';
 import { failureCode, type CoachingRuntime } from './runtime/index.js';
 
 const MAX_HEARTBEAT_FAILURES = 3;
@@ -24,6 +25,7 @@ export class Worker {
       model: this.config.AGENT_MODEL,
       reasoning: this.config.AGENT_REASONING,
       promptVersion: PROMPT_VERSION,
+      promptHash: PROMPT_HASH,
       ready,
     });
   }

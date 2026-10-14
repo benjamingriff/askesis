@@ -4,7 +4,14 @@ import { tmpdir } from 'node:os';
 import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import type { BenchmarkSnapshot } from '@askesis/api/benchmark';
-import { addDays, renderAthleteAction, resolveScenario } from './scenario.js';
+import {
+  addDays,
+  buildScenario,
+  generateRequest,
+  personaVoice,
+  renderAthleteAction,
+} from './scenario.js';
+import { loadDataset } from './datasets.js';
 import { hasExpectedCoverage, overallVerdict, checkPlan } from './checks.js';
 import {
   criteria,
@@ -15,9 +22,13 @@ import {
 } from './models.js';
 import { Artifacts, redact } from './artifacts.js';
 import { acquireLock, environmentFor } from './local.js';
-import raw from '../scenarios/running-poc.json' with { type: 'json' };
-
-const scenario = resolveScenario(raw, new Date('2026-10-09T12:00:00Z'));
+const dataset = await loadDataset();
+function datasetCase(id: string, now = new Date('2026-10-09T12:00:00Z')) {
+  const scenario = dataset.scenarios.find((item) => item.id === id)!;
+  const persona = dataset.personas.find((item) => item.id === scenario.persona.id)!;
+  return buildScenario(persona, scenario, now, personaVoice(persona));
+}
+const scenario = datasetCase('running-improver');
 function snapshot(coverage: { startDate: string; endDate: string; current: boolean }[]) {
   // These tests exercise coverage/reference checking independently of SQL export details.
   return {
@@ -42,11 +53,12 @@ const review = (): Review => ({
 
 describe('scenario and disclosure boundaries', () => {
   it('uses the London date and saves a four-week horizon within a twelve-week goal', () => {
-    const london = resolveScenario(raw, new Date('2026-07-05T23:30:00Z'));
+    const london = datasetCase('running-improver', new Date('2026-07-05T23:30:00Z'));
     expect(london.dates.today).toBe('2026-07-06');
     expect(london.dates.startDate).toBe('2026-07-13');
     expect(london.dates.coverageEndDate).toBe('2026-08-09');
-    expect(london.dates.eventDate).toBe('2026-10-04');
+    expect(london.dates.endDate).toBe('2026-10-04');
+    expect(london.evidence[0]!.observedOn).toBe('2026-06-22');
     expect(scenario.dates.startDate).toBe('2026-10-12');
     expect(addDays('2026-10-25', 1)).toBe('2026-10-26');
   });
@@ -62,6 +74,24 @@ describe('scenario and disclosure boundaries', () => {
       expect(() => renderAthleteAction(scenario, { factIds: [fact], intent: 'answer' })).toThrow(
         'unknown fact',
       );
+  });
+  it("words requests and unknowns from the scenario's horizon and the persona", () => {
+    const annual = datasetCase('hybrid-improver-annual');
+    expect(renderAthleteAction(annual, { factIds: [], intent: 'generate' }).statements).toEqual([
+      generateRequest(annual),
+    ]);
+    expect(generateRequest(annual)).toContain(`first ${annual.prescriptionWeeks} weeks`);
+    expect(renderAthleteAction(annual, { factIds: [], intent: 'unknown' }).content).toBe(
+      annual.persona.communication.unknownResponse,
+    );
+  });
+  it('resolves every pilot case with private facts that the coach never receives', () => {
+    for (const ref of dataset.suites[0]!.scenarios) {
+      const resolved = datasetCase(ref.id);
+      expect(resolved.openingMessage).not.toContain('{{');
+      for (const id of resolved.expectations.requiredDiscovery)
+        expect(resolved.facts[id], `${ref.id}:${id}`).toBeTruthy();
+    }
   });
 });
 
@@ -92,12 +122,13 @@ describe('saved completion and assessment', () => {
   });
   it('cannot award a pass to missing output, failed execution, or failed exact checks', () => {
     const checks = checkPlan({ plan: null } as BenchmarkSnapshot, scenario, []);
+    expect(checks.map((check) => check.id)).toEqual(['saved_plan']);
     expect(overallVerdict(checks, review(), 'completed')).toBe('incomplete');
     expect(overallVerdict([], review(), 'INTERRUPTED')).toBe('incomplete');
     expect(overallVerdict([], null, 'completed')).toBe('assessment_unavailable');
     expect(
       overallVerdict(
-        [{ id: 'available_days', status: 'fail', explanation: '', evidence: [] }],
+        [{ id: 'availability', status: 'fail', explanation: '', evidence: [] }],
         review(),
         'completed',
       ),
@@ -112,14 +143,14 @@ describe('saved completion and assessment', () => {
           {
             system: 'run_pace',
             provenance: 'user_supplied',
-            observedOn: scenario.dates.observedOn,
+            observedOn: scenario.evidence[0]!.observedOn,
             input: { method: 'race_result', distanceMetres: 5000, durationSeconds: 1680 },
           },
         ],
       },
       plan: {
         header: {
-          draft: { startDate: scenario.dates.startDate, endDate: scenario.dates.eventDate },
+          draft: { startDate: scenario.dates.startDate, endDate: scenario.dates.endDate },
         },
         brief: {
           coverage: complete().plan!.brief.coverage,
@@ -127,11 +158,20 @@ describe('saved completion and assessment', () => {
             sports: [
               {
                 sport: 'run',
-                currentSessions: { value: 3 },
+                currentSessions: { status: 'known', value: 3 },
                 desiredSessions: 3,
-                weeklyDistance: { value: 22000 },
-                longestDistance: { value: 9000 },
+                weeklyDistance: { status: 'known', value: 22000 },
+                longestDistance: { status: 'known', value: 9000 },
               },
+            ],
+            weekdays: [
+              'unavailable',
+              'available',
+              'unavailable',
+              'available',
+              'unavailable',
+              'unavailable',
+              'preferred',
             ],
           },
         },
@@ -143,9 +183,11 @@ describe('saved completion and assessment', () => {
               id: `run-${week}-${day}`,
               scheduledDate: addDays(scenario.dates.startDate, week * 7 + day),
               discipline: 'run',
+              estimatedDurationSeconds: day === 6 ? 5400 : 3000,
             },
             prescription: {
               kind: 'effort',
+              discipline: null,
               completion: { type: 'distance' },
               targets: [{ type: 'zone', zoneSystem: 'run_pace', resolvedZone: {} }],
             },
@@ -164,9 +206,11 @@ describe('saved completion and assessment', () => {
     const failures = checkPlan(value, scenario, disclosed)
       .filter((item) => item.status === 'fail')
       .map((item) => item.id);
-    expect(failures).toEqual(
-      expect.arrayContaining(['available_days', 'baseline', 'prescriptions']),
-    );
+    expect(failures).toEqual(expect.arrayContaining(['availability', 'baseline', 'prescriptions']));
+    value.plan!.workouts[2]!.workout.estimatedDurationSeconds = 7200;
+    expect(
+      checkPlan(value, scenario, disclosed).find((item) => item.id === 'time_budgets')?.status,
+    ).toBe('fail');
   });
   it('rejects fabricated evidence, missing criteria and contradictory judgments', () => {
     expect(() => validateReview(review(), complete())).not.toThrow();
