@@ -384,10 +384,17 @@ export function summarizeWeeks(
 
 /**
  * Weekly volume is distance for running-only schedules and time once other sports appear, since
- * swim, ride and run distances do not add up meaningfully.
+ * swim, ride and run distances do not add up meaningfully. A run without a distance estimate,
+ * such as a club-session placeholder booked by duration, also switches to time so it still counts.
  */
-export function volumeMeasure(workouts: Pick<WorkoutSummary, 'discipline'>[]): 'distance' | 'time' {
-  return workouts.every((workout) => workout.discipline === 'run') ? 'distance' : 'time';
+export function volumeMeasure(
+  workouts: Pick<WorkoutSummary, 'discipline' | 'estimatedDistanceMetres'>[],
+): 'distance' | 'time' {
+  return workouts.every(
+    (workout) => workout.discipline === 'run' && workout.estimatedDistanceMetres !== null,
+  )
+    ? 'distance'
+    : 'time';
 }
 
 export function workoutsOn(workouts: WorkoutSummary[], date: string) {
