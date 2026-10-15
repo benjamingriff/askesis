@@ -21,3 +21,9 @@ For web behavior or appearance changes, use the real local application to verify
 - Save screenshots with `preview_snapshot` (`save: true`), and videos with `preview_recording_start`/`preview_recording_stop`. Include the saved artifact paths in the final response. If the browser tools fail, report that limitation accurately.
 - Keep login URLs, Clerk handshake parameters, session tokens and secret keys out of committed files and returned evidence. Retain real Clerk/API authorization; do not add an auth bypass to solve local access.
 - Stop only processes and Compose resources started for your worktree. The generated `.env` selects a separate Compose project and volume. Do not reset another worktree's database.
+
+# Coaching prompt versions
+
+- Any change to the coaching prompt text in `apps/agent/src/prompt.ts` bumps `PROMPT_VERSION` to the next `coach-vN` (for example `coach-v1` → `coach-v2`). Change only the number: keep the `coach-vN` naming and leave earlier versions' entries untouched.
+- Bump once per PR relative to `main`. If the prompt changes again before the PR merges, keep the new name and update its hash.
+- Update the API's copy of the name in `apps/api/src/modules/agent/agent.schemas.ts`, add the name and hash to `apps/agent/prompts.lock.json` (the test failure prints the hash to use) and replace the old name in tests and docs. Workers and the API must be deployed together.

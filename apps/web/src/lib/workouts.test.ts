@@ -28,6 +28,8 @@ const workout = (date: string, metres: number, title = 'Easy run'): WorkoutSumma
   racePriority: null,
   estimatedDurationSeconds: 1800,
   estimatedDistanceMetres: metres,
+  placeholder: false,
+  expectedRpe: null,
 });
 
 describe('inferKind', () => {
@@ -274,8 +276,11 @@ describe('multi-sport presentation', () => {
     expect(workoutLook(summary('run', 'Rest day')).effort).toBeNull();
   });
   it('measures weekly volume by time once a plan trains more than running', () => {
-    expect(volumeMeasure([{ discipline: 'run' }, { discipline: 'run' }])).toBe('distance');
-    expect(volumeMeasure([{ discipline: 'run' }, { discipline: 'swim' }])).toBe('time');
+    const run = { discipline: 'run', estimatedDistanceMetres: 10000 };
+    expect(volumeMeasure([run, run])).toBe('distance');
+    expect(volumeMeasure([run, { ...run, discipline: 'swim' }])).toBe('time');
+    // A duration-only club placeholder would otherwise add nothing to a distance total.
+    expect(volumeMeasure([run, { ...run, estimatedDistanceMetres: null }])).toBe('time');
   });
   it('times swim distances by swim pace and sets of lifts by reps and reps in reserve', () => {
     const effort = (overrides: Partial<WorkoutStep>): WorkoutStep => ({

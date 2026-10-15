@@ -38,3 +38,4 @@ These guides describe implemented behavior and were reconciled against code on 2
 Completed delivery plans and test evidence live in the [archive](../archive/README.md). Runtime limits and recovery procedures live in [operations](../operations/README.md).
 
 - [Workout logs and feedback](./training-log.md): manual logging, corrections, coaching and the local demo.
+- [Placeholder sessions](./placeholder-sessions.md): club sessions and other activities the coach books without prescribing, planning around them and logging what they turned out to be.

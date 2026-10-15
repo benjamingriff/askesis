@@ -15,6 +15,13 @@ export const REASONS = [
   'equipment',
   'other',
 ] as const;
+/** What a placeholder turned out to be; every session type except rest. */
+export const ACTUAL_SESSION_TYPES = SESSION_TYPES.filter(
+  (type): type is Exclude<(typeof SESSION_TYPES)[number], 'rest'> => type !== 'rest',
+) as [
+  Exclude<(typeof SESSION_TYPES)[number], 'rest'>,
+  ...Exclude<(typeof SESSION_TYPES)[number], 'rest'>[],
+];
 export const AnswersSchema = z
   .object({
     intervals: z.enum(['on_target', 'faded', 'missed', 'stopped']).optional(),
@@ -44,12 +51,17 @@ export const LogInputSchema = z
     reasons: z.array(z.enum(REASONS)).max(REASONS.length).optional(),
     answers: AnswersSchema.optional(),
     note: z.string().trim().max(2000).nullable().optional(),
+    /** Placeholders only: what the session turned out to be. */
+    actualSessionType: z.enum(ACTUAL_SESSION_TYPES).nullable().optional(),
   })
   .strict()
   .superRefine((v, c) => {
     if (
       v.status === 'skipped' &&
-      (v.actualDurationSeconds != null || v.actualDistanceMetres != null || v.rpe != null)
+      (v.actualDurationSeconds != null ||
+        v.actualDistanceMetres != null ||
+        v.rpe != null ||
+        v.actualSessionType != null)
     )
       c.addIssue({ code: 'custom', message: 'Skipped sessions cannot have actuals or effort.' });
   });
@@ -64,6 +76,9 @@ export const LogSchema = z
     discipline: z.string(),
     sessionType: z.enum(SESSION_TYPES).nullable(),
     keySession: z.boolean(),
+    /** Defaults keep message snapshots saved before placeholders readable and comparable. */
+    placeholder: z.boolean().default(false),
+    actualSessionType: z.enum(ACTUAL_SESSION_TYPES).nullable().default(null),
     plannedDurationSeconds: z.number().nullable(),
     plannedDistanceMetres: z.number().nullable(),
     plannedRpe: z.number().nullable(),
@@ -136,6 +151,9 @@ export const SummarySchema = z
     recentKeySessions: z.number(),
     tiredSessions: z.number(),
     easyHighEffortSessions: z.number(),
+    /** Placeholders logged in the window, and those rated 2+ above their expected effort. */
+    placeholderSessions: z.number(),
+    harderPlaceholderSessions: z.number(),
   })
   .openapi('TrainingLogSummary');
 export const TrainingLogSchema = z

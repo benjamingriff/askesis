@@ -21,6 +21,8 @@ const workout: WorkoutSummary = {
   racePriority: null,
   estimatedDurationSeconds: 1800,
   estimatedDistanceMetres: 5000,
+  placeholder: false,
+  expectedRpe: null,
 };
 afterEach(cleanup);
 

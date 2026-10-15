@@ -348,6 +348,58 @@ it('passes authorized feedback through worker context and records from chat with
     resetApiConfigForTests();
   }
 });
+it('records what a placeholder turned out to be, only for placeholders', async () => {
+  const alreadyLogged = new Set(
+    (await readTrainingLog(db, owner, { planId })).logs.map((l) => l.lineageId),
+  );
+  const draft = await unlockPlan(owner, planId, (await getPlan(owner, planId)).stateVersion);
+  const [target, other] = (await listWorkouts(owner, draft.draft!.id)).filter(
+    (w) =>
+      w.discipline === 'run' && !alreadyLogged.has(w.lineageId) && w.scheduledDate !== '2026-05-12',
+  );
+  await db
+    .updateTable('workouts')
+    .set({ placeholder: true, session_type: 'steady', estimated_duration_seconds: 3600 })
+    .where('id', '=', target!.id)
+    .execute();
+  await publish();
+  const locked = await listWorkouts(owner, (await getPlan(owner, planId)).locked!.id);
+  const club = locked.find((w) => w.lineageId === target!.lineageId)!;
+  expect(club).toMatchObject({ placeholder: true, sessionType: 'steady' });
+  const prescribed = locked.find((w) => w.lineageId === other!.lineageId)!;
+  expect(prescribed.placeholder).toBe(false);
+  await expect(
+    write(prescribed.lineageId, { status: 'done', actualSessionType: 'intervals' }),
+  ).rejects.toMatchObject({ code: 'LOG_ANSWERS_INVALID' });
+  await expect(
+    write(club.lineageId, { status: 'skipped', actualSessionType: 'intervals' }),
+  ).rejects.toThrow();
+  // Follow-up questions apply to what the session turned out to be, not the assumption.
+  await expect(
+    write(club.lineageId, { status: 'done', answers: { intervals: 'on_target' } }),
+  ).rejects.toMatchObject({ code: 'LOG_ANSWERS_INVALID' });
+  const logged = await write(club.lineageId, {
+    status: 'done',
+    actualSessionType: 'intervals',
+    rpe: 8,
+    answers: { intervals: 'faded' },
+    note: '6 × 800 m off 90 s',
+  });
+  expect(logged).toMatchObject({
+    placeholder: true,
+    sessionType: 'steady',
+    actualSessionType: 'intervals',
+    actualDurationSeconds: 3600,
+  });
+  const window = { planId, from: club.scheduledDate, to: club.scheduledDate };
+  expect((await readTrainingLog(db, owner, window, now)).summary).toMatchObject({
+    placeholderSessions: 1,
+  });
+  expect(await write(club.lineageId, { status: 'skipped' })).toMatchObject({
+    actualSessionType: null,
+  });
+  expect((await readTrainingLog(db, owner, window, now)).summary.placeholderSessions).toBe(0);
+});
 it('replays a PUT without recreating cleared data, validates answers, and archives logs read-only', async () => {
   const plan = await getPlan(owner, planId),
     workout = (await listWorkouts(owner, plan.locked!.id)).find(

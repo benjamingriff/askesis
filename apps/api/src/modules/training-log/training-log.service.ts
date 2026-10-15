@@ -36,6 +36,8 @@ export function logView(row: Selectable<DB['workout_logs']>) {
     discipline: row.discipline,
     sessionType: row.session_type,
     keySession: row.key_session,
+    placeholder: row.placeholder,
+    actualSessionType: row.actual_session_type,
     plannedDurationSeconds: row.planned_duration_seconds,
     plannedDistanceMetres: number(row.planned_distance_metres),
     plannedRpe: number(row.planned_rpe),
@@ -201,6 +203,7 @@ export async function saveLogRows(
         | 'discipline'
         | 'session_type'
         | 'key_session'
+        | 'placeholder'
         | 'logged_version_id'
         | 'scheduled_on'
         | 'planned_duration_seconds'
@@ -241,6 +244,7 @@ export async function saveLogRows(
           racePriority: w.race_priority,
         }),
       key_session: w.priority === 'high' || w.race_priority !== null,
+      placeholder: w.placeholder,
       logged_version_id: w.plan_version_id,
       scheduled_on: w.scheduled_date,
       planned_duration_seconds: w.estimated_duration_seconds,
@@ -255,7 +259,14 @@ export async function saveLogRows(
     (input.answers?.result?.observedOn && input.answers.result.observedOn > today)
   )
     throw new PlanError('LOG_IN_FUTURE', 'Actual training cannot be dated after today.', 422);
-  validateAnswers(input, original.session_type, original.discipline);
+  if (input.actualSessionType && !original.placeholder)
+    throw new PlanError(
+      'LOG_ANSWERS_INVALID',
+      'Only placeholder sessions record what they turned out to be.',
+      422,
+    );
+  // Follow-up questions apply to what a placeholder turned out to be.
+  validateAnswers(input, input.actualSessionType ?? original.session_type, original.discipline);
   const skipped = input.status === 'skipped';
   const values = {
     status: input.status,
@@ -279,6 +290,7 @@ export async function saveLogRows(
     reasons: [...new Set(input.reasons ?? [])],
     answers: json(input.answers ?? {}),
     note: input.note ?? null,
+    actual_session_type: skipped ? null : (input.actualSessionType ?? null),
     source: options.runId ? 'coach' : 'manual',
     recorded_by_run_id: options.runId ?? null,
     updated_at: new Date(),

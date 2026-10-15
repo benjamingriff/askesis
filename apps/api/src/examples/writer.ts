@@ -81,11 +81,14 @@ export async function writeExample(
           description: blueprint.description,
           purpose: session.purpose,
           primary_discipline: session.sport,
-          session_type: inferSessionType({
-            title: session.title,
-            discipline: session.sport,
-            racePriority: session.race ?? null,
-          }),
+          session_type:
+            session.placeholder?.sessionType ??
+            inferSessionType({
+              title: session.title,
+              discipline: session.sport,
+              racePriority: session.race ?? null,
+            }),
+          placeholder: !!session.placeholder,
           race_priority: session.race ?? null,
           priority: session.race || day === 5 ? 'high' : day === 0 ? 'low' : 'medium',
           estimated_duration_seconds: session.minutes * 60,
@@ -149,7 +152,31 @@ export async function writeExample(
         for (const [index, child] of (step.steps ?? []).entries())
           await writeStep(child, id, index + 1);
       }
-      await writeStep({ label: session.title, kind: 'sequence', steps: session.steps }, null, 1);
+      // A placeholder's root is its one open effort, as the coach's schedule tool writes it.
+      await writeStep(
+        session.placeholder
+          ? {
+              label: session.title,
+              sport: session.sport === 'mixed' ? 'other' : session.sport,
+              role: 'main',
+              completion: {
+                completion_type: 'duration',
+                numeric_value: session.minutes * 60,
+                unit: 'seconds',
+              },
+              targets: [
+                {
+                  target_type: 'rpe',
+                  minimum_value: session.placeholder.minimumRpe,
+                  maximum_value: session.placeholder.maximumRpe,
+                  unit: 'rpe',
+                },
+              ],
+            }
+          : { label: session.title, kind: 'sequence', steps: session.steps },
+        null,
+        1,
+      );
     }
   }
 }

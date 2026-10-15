@@ -441,6 +441,7 @@ export interface WeekTargets {
 export interface WorkoutLogs {
   actual_distance_metres: Numeric | null;
   actual_duration_seconds: number | null;
+  actual_session_type: string | null;
   answers: Generated<Json>;
   answers_schema_version: Generated<number>;
   athlete_id: string;
@@ -452,6 +453,7 @@ export interface WorkoutLogs {
   logged_version_id: string;
   note: string | null;
   performed_on: Timestamp;
+  placeholder: Generated<boolean>;
   plan_id: string;
   planned_distance_metres: Numeric | null;
   planned_duration_seconds: number | null;
@@ -484,6 +486,7 @@ export interface Workouts {
   estimated_duration_seconds: number | null;
   id: Generated<string>;
   lineage_id: Generated<string>;
+  placeholder: Generated<boolean>;
   plan_version_id: string;
   position: number;
   primary_discipline: string;

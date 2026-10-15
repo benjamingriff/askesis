@@ -156,6 +156,7 @@ erDiagram
         date scheduled_date
         text primary_discipline
         text race_priority "nullable A B or C"
+        boolean placeholder "booked, not prescribed"
     }
     workout_tags {
         uuid workout_id PK, FK
@@ -197,7 +198,7 @@ erDiagram
 
 All schedule/prescription tables above, except the shared movement vocabulary, carry `plan_version_id`. Composite parent foreign keys stop a week, workout, tag, step, completion or target from being attached to content in another version. The step-parent key also includes `workout_id`, so a parent cannot be in a different workout. `movement_definitions.supersedes_definition_id` references an earlier definition in the same movement lineage (edge omitted).
 
-The diagram shows structural FK cardinalities; deferred tree constraints further require **one root and at least one step per committed workout**. An effort has exactly one completion and no children. A sequence/repeat container has children and no completion or targets. Only repeats have `repeat_count`. A root may itself be an effort. A completion describes when a prescribed effort ends; it is **not a completed-workout log**.
+The diagram shows structural FK cardinalities; deferred tree constraints further require **one root and at least one step per committed workout**. An effort has exactly one completion and no children. A sequence/repeat container has children and no completion or targets. Only repeats have `repeat_count`. A root may itself be an effort: a [placeholder session](../product/placeholder-sessions.md) is exactly one root effort with a duration completion and an RPE range target. A completion describes when a prescribed effort ends; it is **not a completed-workout log**.
 
 Steps are ordered within their parent. Effort discipline inherits from a single-sport workout or is explicit; mixed workouts require an explicit discipline for each effort. Targets can be symbolic zones, absolute pace/power, RPE, reps in reserve, suggested load or instructions. Current agent tools use step labels for movements; they do not write `movement_id` or `week_targets`.
 

@@ -54,6 +54,7 @@ export function summarizeTraining(
         a.performedOn.localeCompare(b.performedOn) || a.createdAt.localeCompare(b.createdAt),
     )
     .slice(-3);
+  const placeholders = logs.filter((l) => l.placeholder && l.status !== 'skipped');
   return {
     due: due.length,
     done: logs.filter((l) => l.status === 'done').length,
@@ -67,11 +68,16 @@ export function summarizeTraining(
     easierKeySessions: key.filter((l) => l.plannedRpe! - l.rpe! >= 3).length,
     recentKeySessions: key.length,
     tiredSessions: logs.filter((l) => l.feel != null && l.feel >= 4).length,
-    easyHighEffortSessions: logs.filter(
-      (l) =>
-        l.status !== 'skipped' &&
-        (l.sessionType === 'easy' || l.sessionType === 'recovery') &&
-        (l.rpe ?? 0) >= 5,
+    easyHighEffortSessions: logs.filter((l) => {
+      // A placeholder is judged by what it turned out to be, not what the coach assumed.
+      const type = l.actualSessionType ?? l.sessionType;
+      return (
+        l.status !== 'skipped' && (type === 'easy' || type === 'recovery') && (l.rpe ?? 0) >= 5
+      );
+    }).length,
+    placeholderSessions: placeholders.length,
+    harderPlaceholderSessions: placeholders.filter(
+      (l) => l.rpe != null && l.plannedRpe != null && l.rpe - l.plannedRpe >= 2,
     ).length,
   };
 }

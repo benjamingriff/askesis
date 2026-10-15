@@ -578,6 +578,67 @@
   background: var(--accent-fill);
   color: var(--on-accent);
 }
+/* Placeholders are booked rather than prescribed: a dashed outline and an expected RPE band. */
+.workout-card.is-placeholder {
+  border-style: dashed;
+  border-color: color-mix(in srgb, var(--kind) 40%, var(--border));
+}
+.workout-card-kind em.placeholder-badge {
+  padding: 0 6px;
+  border: 1px dashed currentColor;
+  background: transparent;
+  color: var(--text-dim);
+}
+.placeholder-band {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+}
+.placeholder-band-track {
+  position: relative;
+  height: 12px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--text-muted) 22%, transparent);
+}
+.placeholder-band-track i {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  border-radius: 999px;
+  background: repeating-linear-gradient(
+    135deg,
+    var(--kind) 0 6px,
+    color-mix(in srgb, var(--kind) 65%, transparent) 6px 12px
+  );
+}
+.placeholder-band-scale {
+  display: flex;
+  justify-content: space-between;
+  color: var(--text-dim);
+  font-size: 11px;
+  font-weight: 600;
+}
+.placeholder-band-scale span:nth-child(2) {
+  color: var(--kind);
+  font-variant-numeric: tabular-nums;
+}
+.hero-cover .placeholder-band {
+  position: relative;
+  padding-bottom: 18px;
+}
+.placeholder-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px 16px;
+  border: 1px dashed color-mix(in srgb, var(--kind) 45%, var(--border));
+  border-radius: 16px;
+}
+.placeholder-summary p {
+  margin: 0;
+  color: var(--text-dim);
+}
 .workout-card-copy strong {
   font-size: 16px;
   font-weight: 600;

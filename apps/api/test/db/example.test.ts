@@ -124,8 +124,19 @@ it('publishes all content through the real lifecycle, preserving fitness and own
     for (const workout of workouts) {
       const detail = await getWorkoutDetail(owner, workout.id);
       expect(detail?.tags.length).toBeGreaterThan(0);
-      expect(detail?.prescription.steps.length).toBeGreaterThan(0);
+      // A placeholder (the triathlon's run club) is one open effort with an expected range.
+      if (workout.placeholder)
+        expect(detail?.prescription).toMatchObject({ kind: 'effort', steps: [] });
+      else expect(detail?.prescription.steps.length).toBeGreaterThan(0);
     }
+    const booked = blueprint.weeks.flatMap((w) => w.sessions).filter((s) => s.session.placeholder);
+    expect(workouts.filter((w) => w.placeholder).map((w) => w.expectedRpe)).toEqual(
+      booked.map(({ session }) => ({
+        minimum: session.placeholder!.minimumRpe,
+        maximum: session.placeholder!.maximumRpe,
+      })),
+    );
+    expect(booked.length > 0).toBe(blueprint.kind === 'triathlon');
     await expect(
       db
         .updateTable('workouts')

@@ -48,6 +48,8 @@ const workout: WorkoutSummary = {
   racePriority: null,
   estimatedDurationSeconds: 1800,
   estimatedDistanceMetres: 5000,
+  placeholder: false,
+  expectedRpe: null,
 };
 it('distinguishes unknown load and no log from skipping', () => {
   expect(summarizeTraining([workout], [], '2026-10-14')).toMatchObject({
@@ -108,4 +110,29 @@ it('separates performed-date actuals from scheduled-workout logging membership',
       },
     ],
   });
+});
+
+it('judges placeholders by what they turned out to be', () => {
+  const club = {
+    ...log,
+    title: 'Track club',
+    sessionType: 'steady' as const,
+    placeholder: true,
+    plannedRpe: 5.5,
+    actualDurationSeconds: 4500,
+  };
+  const logs = [
+    { ...club, id: '1', lineageId: '1', actualSessionType: 'intervals' as const, rpe: 8 },
+    { ...club, id: '2', lineageId: '2', actualSessionType: 'easy' as const, rpe: 5 },
+    { ...club, id: '3', lineageId: '3', status: 'skipped' as const, actualDurationSeconds: null },
+  ];
+  expect(summarizeTraining([], logs, '2026-10-14')).toMatchObject({
+    placeholderSessions: 2,
+    harderPlaceholderSessions: 1,
+    easyHighEffortSessions: 1,
+  });
+});
+
+it('reads log snapshots saved before placeholders existed', () => {
+  expect(log).toMatchObject({ placeholder: false, actualSessionType: null });
 });

@@ -23,6 +23,8 @@ const workout: WorkoutSummary = {
   racePriority: null,
   estimatedDurationSeconds: 2400,
   estimatedDistanceMetres: 6000,
+  placeholder: false,
+  expectedRpe: null,
 };
 beforeEach(() => localStorage.clear());
 afterEach(() => {
