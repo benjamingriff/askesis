@@ -164,17 +164,18 @@ function LoadRows({
   const [hover, setHover] = useState<number | null>(null);
   const [tooltip, setTooltip] = useState<TooltipState | null>(null);
   const data = points(load, mode);
-  const perPoint = mode === 'week' ? 1 : 1 / 7;
-  const baseline = load.baseline;
+  // A weekly baseline spread evenly over seven days would sit under every training day, so
+  // only the week view draws it; fitness and fatigue still start from it in both views.
+  const baseline = mode === 'week' ? load.baseline : null;
   const distanceSports = present.filter((sport) => sport !== 'strength');
   const rows: Row[] = [
     {
       id: 'tss',
       title: mode === 'week' ? 'Training stress per week' : 'Training stress per day',
       height: 120,
-      max: Math.max(...data.map((point) => point.tss), (baseline?.weeklyTss ?? 0) * perPoint),
+      max: Math.max(...data.map((point) => point.tss), baseline?.weeklyTss ?? 0),
       value: (amount) => amount.tss,
-      baseline: baseline ? baseline.weeklyTss * perPoint : null,
+      baseline: baseline?.weeklyTss ?? null,
       format: (value) => String(Math.round(value)),
     },
     {
@@ -190,12 +191,9 @@ function LoadRows({
       id: 'distance',
       title: mode === 'week' ? 'Distance per week (km)' : 'Distance per day (km)',
       height: 96,
-      max: Math.max(
-        ...data.map((point) => km(point.metres)),
-        km(baseline?.weeklyMetres ?? 0) * perPoint,
-      ),
+      max: Math.max(...data.map((point) => km(point.metres)), km(baseline?.weeklyMetres ?? 0)),
       value: (amount) => km(amount.metres),
-      baseline: baseline?.weeklyMetres ? km(baseline.weeklyMetres) * perPoint : null,
+      baseline: baseline?.weeklyMetres ? km(baseline.weeklyMetres) : null,
       format: (value) => `${Number(value.toFixed(1))}`,
     },
     {
@@ -204,10 +202,10 @@ function LoadRows({
       height: 96,
       max: Math.max(
         ...data.map((point) => hours(point.seconds)),
-        hours(baseline?.weeklySeconds ?? 0) * perPoint,
+        hours(baseline?.weeklySeconds ?? 0),
       ),
       value: (amount) => hours(amount.seconds),
-      baseline: baseline ? hours(baseline.weeklySeconds) * perPoint : null,
+      baseline: baseline ? hours(baseline.weeklySeconds) : null,
       format: (value) => `${Number(value.toFixed(1))}`,
     },
   ];

@@ -148,14 +148,28 @@ code,
 }
 
 .view-tabs {
+  position: relative;
   display: flex;
   align-items: stretch;
-  gap: 22px;
+  /* 22px on wide screens, tightening to 10px so a conversation's tabs fit at 1280px. */
+  gap: clamp(10px, calc((100vw - 980px) / 28), 22px);
   flex: 1;
   min-width: 0;
   height: 100%;
   overflow-x: auto;
   scrollbar-width: none;
+}
+
+.view-tabs[data-overflow-end] {
+  mask-image: linear-gradient(to right, #000 calc(100% - 40px), transparent);
+}
+
+.view-tabs[data-overflow-start] {
+  mask-image: linear-gradient(to left, #000 calc(100% - 40px), transparent);
+}
+
+.view-tabs[data-overflow-start][data-overflow-end] {
+  mask-image: linear-gradient(to right, transparent, #000 40px calc(100% - 40px), transparent);
 }
 
 .view-tabs button {
@@ -1732,8 +1746,4 @@ main > footer {
     transition: none !important;
     scroll-behavior: auto !important;
   }
-}
-
-.load-table tbody tr {
-  cursor: default;
 }
