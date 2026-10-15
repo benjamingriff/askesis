@@ -4,6 +4,8 @@ Manual logs record what happened separately from immutable plan prescriptions. T
 
 ## Using the feature
 
+New logs are created from the displayed locked prescription. Draft views direct athletes to Today; existing logs can still be corrected there using the saved original prescription.
+
 On **Today**, use **Done**, **Changed it** or **Skipped** once a workout's scheduled date arrives. Easy sessions take one tap; effort is optional. Key sessions, tests, races, changed/skipped workouts and unexpected effort open an optional feedback sheet after recording the status. Dismissing the sheet keeps that quick log.
 
 The sheet records actual time/distance, performed date, session effort, body feel, contributing factors and a note. Additional questions follow the session type: intervals, long sessions, strength, bricks, tests and races. Done initially uses planned amounts as estimates, which can be corrected or cleared. Test/race results can be previewed and attached; updating fitness guides is a separate explicit confirmation.
@@ -18,7 +20,7 @@ The sheet records actual time/distance, performed date, session effort, body fee
 
 `workout_logs` are owner-scoped, keyed by plan and workout lineage. Initial creation requires the current locked schedule and a due date in the athlete's timezone. Corrections preserve the original prescription snapshot and work after restore/relock even if the lineage is no longer current. `athlete_check_ins` are athlete-owned and plan-associated. Feedback references are authorized against both the athlete and the conversation's plan.
 
-The API calculates approximate planned effort from the prescription using per-step RPE or zone mappings and repeat/duration weighting. It returns unknown effort/load as null. Shared calculations serve list/detail reads, saved snapshots and summaries; recorded session load uses actual reported minutes × RPE. Athlete-wide coaching summaries include the last 14 days across plans. The worker can read logs and record explicitly reported training without unlocking a plan.
+The API calculates approximate planned effort from the prescription using per-step RPE or zone mappings and repeat/duration weighting. It returns unknown effort/load as null. Shared calculations serve list/detail reads, saved snapshots and summaries; recorded session load uses actual reported minutes × RPE. Actual session counts, volume and load use the performed-date window, including detached historical entries. Due/unlogged counts use the current locked schedule and recognize saved logs even when performed outside that window. Athlete-wide coaching summaries include the last 14 days across plans. The worker can read logs and record explicitly reported training without unlocking a plan.
 
 The migration adds nullable `session_type` to prescriptions and bumps the canonical hash calculation version to 8. Stored locked hashes remain untouched; schema-4 historical versions remain restorable. New coach prescriptions can set the type explicitly, and legacy workouts use a title-based fallback.
 

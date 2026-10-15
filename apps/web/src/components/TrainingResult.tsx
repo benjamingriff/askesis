@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Check, Gauge } from 'lucide-react';
 import type { paths } from '@askesis/api-client';
@@ -18,11 +18,13 @@ export function PerformanceResult({
   value,
   performedOn,
   onChange,
+  onBusyChange,
 }: {
   discipline: string;
   value: Input | undefined;
   performedOn: string;
   onChange: (value: Input | undefined) => void;
+  onBusyChange?: (busy: boolean) => void;
 }) {
   const system =
     discipline === 'run'
@@ -66,6 +68,15 @@ export function PerformanceResult({
   );
   const [confirmed, setConfirmed] = useState(false),
     [recorded, setRecorded] = useState(false);
+  const generation = useRef(0),
+    mounted = useRef(false);
+  const [revision, setRevision] = useState(0);
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+    };
+  }, []);
   const key = useRequestKey(),
     client = useQueryClient();
   const build = (): Input => {
@@ -113,13 +124,14 @@ export function PerformanceResult({
   const preview = useMutation({
     mutationFn: async () => {
       const proposed = build();
+      const requestRevision = generation.current;
       const data = result(
         await api.POST('/api/v1/performance/calibrations/preview', {
           body: { system: proposed.system, input: proposed.input } as PreviewInput,
         }),
       );
-      onChange(proposed);
-      return data;
+      if (mounted.current && requestRevision === generation.current) onChange(proposed);
+      return { data, revision: requestRevision };
     },
   });
   const record = useMutation({
@@ -141,9 +153,17 @@ export function PerformanceResult({
       void client.invalidateQueries({ queryKey: ['plans'] });
     },
   });
+  const busy = preview.isPending || record.isPending;
+  useEffect(() => {
+    onBusyChange?.(busy);
+    return () => onBusyChange?.(false);
+  }, [busy, onBusyChange]);
+  const previewData = preview.data?.revision === revision ? preview.data.data : undefined;
   const changed = () => {
+    generation.current++;
+    setRevision(generation.current);
     onChange(undefined);
-    preview.reset();
+    if (!preview.isPending) preview.reset();
     setConfirmed(false);
     setRecorded(false);
   };
@@ -252,18 +272,18 @@ export function PerformanceResult({
           {preview.error?.message ?? record.error?.message}
         </Notice>
       ) : null}
-      {preview.data ? (
+      {previewData ? (
         <div className="result-preview">
           <p>
             <Check size={14} /> Result previewed and attached.
           </p>
           <p className="muted">
-            {preview.data.current
+            {previewData.current
               ? 'Compare the calculated guides with your current fitness before updating.'
               : 'No current guides for this sport.'}
           </p>
           <dl className="result-zones">
-            {preview.data.zones.map((zone) => (
+            {previewData.zones.map((zone) => (
               <div key={zone.key}>
                 <dt>{zone.key.replaceAll('_', ' ')}</dt>
                 <dd>

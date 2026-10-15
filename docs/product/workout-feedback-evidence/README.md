@@ -14,3 +14,12 @@ Screenshots: [Today](desktop-today.png), [feedback on phone](phone-feedback.png)
 The local environment uses simulated coaching. This verifies persisted messages/references and the complete UI interaction, rather than live model amendment quality. Disposable PostgreSQL integration tests exercise current/changed/cleared references through the real worker contract, restore/relock history, owner isolation and archive guards. A component test verifies result preview/attach does not record calibration until the separate confirmation and update action.
 
 The first browser conversation attempt exposed a PostgreSQL JSON-array serialization error. The insert now serializes the validated reference array as JSON text; the interaction and worker integration test passed after the fix.
+
+## Review regression verification
+
+After the first independent review:
+
+- Cleared actual time and distance remained blank after reload and after saving a separate note correction ([screenshot](cleared-actuals-after-edit.png)).
+- Moving Wednesday's recorded ride into the previous week changed this week's completed count from 3 to 2 and time from 2h 37 to 1h 49, while the outstanding scheduled count remained 1 ([screenshot](performed-week-summary.png)). The demo date/time were then restored.
+- Opened an unchanged draft and its due, unlogged strength prescription. It offered guidance to log the published session on Today, with no creation action ([screenshot](draft-logging-guard.png)). Discarded only this verification draft; locked version 2 remained unchanged.
+- Deferred-response component tests verify obsolete/unmounted result previews are discarded and feedback Save remains disabled until the preview completes and its attachment is ready. Existing owned logs remain editable from draft views using their original prescription snapshots.

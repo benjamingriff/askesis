@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { afterEach, expect, it, vi } from 'vitest';
 import { useState } from 'react';
@@ -51,4 +51,62 @@ it('previews and attaches test evidence, recording fitness only after explicit c
     input: { method: 'twenty_minute_test', averageWatts: 260 },
     observedOn: '2026-10-14',
   });
+});
+
+it('discards a preview response if its result inputs changed while it was pending', async () => {
+  let finish!: (value: unknown) => void;
+  mock.post.mockImplementation(
+    () =>
+      new Promise((resolve) => {
+        finish = resolve;
+      }),
+  );
+  const changed = vi.fn(),
+    busy = vi.fn();
+  render(
+    <QueryClientProvider client={new QueryClient()}>
+      <PerformanceResult
+        discipline="cycle"
+        value={undefined}
+        performedOn="2026-10-14"
+        onChange={changed}
+        onBusyChange={busy}
+      />
+    </QueryClientProvider>,
+  );
+  fireEvent.change(screen.getByLabelText('Average power (watts)'), { target: { value: '260' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Preview and attach result' }));
+  await waitFor(() => expect(busy).toHaveBeenLastCalledWith(true));
+  fireEvent.change(screen.getByLabelText('Average power (watts)'), { target: { value: '280' } });
+  await act(async () => finish({ data: { zones: [] } }));
+  await waitFor(() => expect(busy).toHaveBeenLastCalledWith(false));
+  expect(changed).toHaveBeenLastCalledWith(undefined);
+  expect(changed.mock.calls.some(([v]) => v?.input)).toBe(false);
+  expect(screen.queryByText('Result previewed and attached.')).not.toBeInTheDocument();
+});
+it('does not attach a late result after its feedback draft unmounts', async () => {
+  let finish!: (value: unknown) => void;
+  mock.post.mockImplementation(
+    () =>
+      new Promise((resolve) => {
+        finish = resolve;
+      }),
+  );
+  const changed = vi.fn();
+  const view = render(
+    <QueryClientProvider client={new QueryClient()}>
+      <PerformanceResult
+        discipline="cycle"
+        value={undefined}
+        performedOn="2026-10-14"
+        onChange={changed}
+      />
+    </QueryClientProvider>,
+  );
+  fireEvent.change(screen.getByLabelText('Average power (watts)'), { target: { value: '260' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Preview and attach result' }));
+  await waitFor(() => expect(mock.post).toHaveBeenCalledTimes(1));
+  view.unmount();
+  await act(async () => finish({ data: { zones: [] } }));
+  expect(changed.mock.calls.some(([v]) => v?.input)).toBe(false);
 });

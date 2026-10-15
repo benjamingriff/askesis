@@ -86,3 +86,26 @@ it('calculates load from actuals and uses only the last three rated key sessions
     recentKeySessions: 3,
   });
 });
+
+it('separates performed-date actuals from scheduled-workout logging membership', () => {
+  const moved = { ...log, performedOn: '2026-10-19', actualDurationSeconds: 1800 };
+  expect(summarizeTraining([workout], [], '2026-10-14', [moved])).toMatchObject({
+    due: 1,
+    unlogged: 0,
+    done: 0,
+  });
+  expect(summarizeTraining([], [moved], '2026-10-19', [moved])).toMatchObject({
+    due: 0,
+    unlogged: 0,
+    done: 1,
+    bySport: [
+      {
+        discipline: 'run',
+        actualSeconds: 1800,
+        actualMetres: 5000,
+        plannedSeconds: 0,
+        plannedMetres: 0,
+      },
+    ],
+  });
+});

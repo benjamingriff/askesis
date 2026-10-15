@@ -100,12 +100,7 @@ export async function readTrainingLog(
   const from = options.from ?? '1900-01-01',
     to = options.to ?? '9999-12-31';
   if (to < from) throw new PlanError('LOG_RANGE_INVALID', 'End date precedes start date.', 422);
-  let lq = db
-    .selectFrom('workout_logs')
-    .selectAll()
-    .where('athlete_id', '=', owner)
-    .where('performed_on', '>=', sql<Date>`${from}::date`)
-    .where('performed_on', '<=', sql<Date>`${to}::date`);
+  let lq = db.selectFrom('workout_logs').selectAll().where('athlete_id', '=', owner);
   let cq = db
     .selectFrom('athlete_check_ins')
     .selectAll()
@@ -123,10 +118,16 @@ export async function readTrainingLog(
     cq = cq.where('plan_id', '=', options.planId);
     pq = pq.where('id', '=', options.planId);
   }
-  const [rows, checks, plans] = await Promise.all([
-    lq.orderBy('performed_on').orderBy('created_at').execute(),
+  const [rows, checks, plans, recorded] = await Promise.all([
+    lq
+      .where('performed_on', '>=', sql<Date>`${from}::date`)
+      .where('performed_on', '<=', sql<Date>`${to}::date`)
+      .orderBy('performed_on')
+      .orderBy('created_at')
+      .execute(),
     cq.orderBy('starts_on').execute(),
     pq.execute(),
+    lq.clearSelect().select(['plan_id', 'workout_lineage_id']).execute(),
   ]);
   const logs = rows.map(logView);
   const workouts = (
@@ -142,7 +143,15 @@ export async function readTrainingLog(
     today,
     logs,
     checkIns: checks.map(checkInView),
-    summary: summarizeTraining(workouts, logs, today),
+    summary: summarizeTraining(
+      workouts,
+      logs,
+      today,
+      recorded.map((l) => ({
+        planId: l.plan_id,
+        lineageId: l.workout_lineage_id,
+      })),
+    ),
   });
 }
 function validateAnswers(input: LogInput, type: string | null, discipline: string) {

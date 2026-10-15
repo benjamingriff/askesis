@@ -402,3 +402,38 @@ it('counts down to the next goal race rather than the plan’s end', async () =>
   mount();
   expect(await screen.findByText('12 days to go · A race goal')).toBeInTheDocument();
 });
+
+it('uses performed-date actual volume even when its workout is outside the current schedule', async () => {
+  const fallback = mocks.get.getMockImplementation()!;
+  mocks.get.mockImplementation(async (path: string, options: unknown) =>
+    path === '/api/v1/training-log'
+      ? {
+          data: {
+            today: '2027-01-12',
+            logs: [],
+            checkIns: [],
+            summary: {
+              done: 1,
+              changed: 0,
+              skipped: 0,
+              unlogged: 0,
+              bySport: [
+                {
+                  discipline: 'run',
+                  actualMetres: 7500,
+                  actualSeconds: 2700,
+                  plannedMetres: 0,
+                  plannedSeconds: 0,
+                },
+              ],
+              load: null,
+            },
+          },
+        }
+      : fallback(path, options),
+  );
+  mount();
+  await screen.findByText('7.5');
+  expect(screen.getByText('1 / 0')).toBeInTheDocument();
+  expect(screen.getByText('0 to log')).toBeInTheDocument();
+});

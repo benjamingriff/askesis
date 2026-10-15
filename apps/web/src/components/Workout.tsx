@@ -168,7 +168,11 @@ export function WorkoutCard({
         </span>
         <ChevronRight size={18} aria-hidden="true" className="chevron" />
       </button>
-      {!log && logContext?.ready && logContext.writable && workout.scheduledDate < today ? (
+      {!log &&
+      logContext?.ready &&
+      logContext.writable &&
+      workout.planVersionId === logContext.lockedVersionId &&
+      workout.scheduledDate < today ? (
         <WorkoutLogActions workout={workout} compact />
       ) : null}
     </div>

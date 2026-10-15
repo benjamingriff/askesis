@@ -65,7 +65,7 @@ beforeEach(() => {
       sessionType: activeWorkout.sessionType,
       keySession: activeWorkout.priority === 'high',
       plannedDurationSeconds: 1800,
-      plannedDistanceMetres: null,
+      plannedDistanceMetres: activeWorkout.estimatedDistanceMetres,
       plannedRpe: 3,
       status: body.status,
       performedOn: body.performedOn ?? '2026-10-14',
@@ -75,7 +75,10 @@ beforeEach(() => {
           : body.actualDurationSeconds === undefined
             ? 1800
             : body.actualDurationSeconds,
-      actualDistanceMetres: null,
+      actualDistanceMetres:
+        body.actualDistanceMetres === undefined
+          ? activeWorkout.estimatedDistanceMetres
+          : body.actualDistanceMetres,
       rpe: body.rpe ?? null,
       feel: body.feel ?? null,
       reasons: body.reasons ?? [],
@@ -95,14 +98,14 @@ beforeEach(() => {
   });
 });
 afterEach(cleanup);
-function mount(w = workout) {
+function mount(w = workout, p = plan) {
   activeWorkout = w;
   return createMemoryRouter([
     {
       path: '/',
       element: (
         <AccountQueryProvider accountId="test">
-          <TrainingLogProvider plan={plan}>
+          <TrainingLogProvider plan={p}>
             <WorkoutLogActions workout={w} />
             <TrainingHistory planId="plan" workouts={[w]} />
           </TrainingLogProvider>
@@ -163,4 +166,90 @@ it('saves feedback before sending a typed reference and keeps the saved log when
   expect(mocks.post.mock.calls[1]?.[1].body.references).toEqual([
     { type: 'workout_log', logId: 'log' },
   ]);
+});
+
+it('preserves explicitly unknown actuals when reopening and saving another correction', async () => {
+  render(<RouterProvider router={mount({ ...workout, estimatedDistanceMetres: 5000 })} />);
+  fireEvent.click(await screen.findByRole('button', { name: 'Done' }));
+  fireEvent.click(await screen.findByRole('button', { name: 'Edit' }));
+  fireEvent.change(screen.getByLabelText('Actual time (minutes)'), { target: { value: '' } });
+  fireEvent.change(screen.getByLabelText('Actual distance (metres)'), { target: { value: '' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+  await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+  fireEvent.click(screen.getByRole('button', { name: 'Edit' }));
+  expect(screen.getByLabelText('Actual time (minutes)')).toHaveValue(null);
+  expect(screen.getByLabelText('Actual distance (metres)')).toHaveValue(null);
+  fireEvent.change(screen.getByLabelText('Anything else for your coach?'), {
+    target: { value: 'Amounts unknown' },
+  });
+  fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+  await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+  expect(logs[0]).toMatchObject({
+    actualDurationSeconds: null,
+    actualDistanceMetres: null,
+    note: 'Amounts unknown',
+  });
+});
+it.each(['draft', 'new-draft-workout'])(
+  'does not create logs from a displayed %s prescription',
+  async (versionId) => {
+    render(
+      <RouterProvider
+        router={mount(
+          { ...workout, planVersionId: versionId },
+          { ...plan, draft: { ...plan.locked!, id: 'draft', state: 'draft' } },
+        )}
+      />,
+    );
+    await screen.findByText(/Log the published workout from Today/);
+    expect(screen.queryByRole('button', { name: 'Done' })).not.toBeInTheDocument();
+    expect(mocks.put).not.toHaveBeenCalled();
+  },
+);
+it('corrects an existing log from a draft view using its original snapshot', async () => {
+  await mocks.put('', { body: { status: 'done' } });
+  render(
+    <RouterProvider
+      router={mount({
+        ...workout,
+        planVersionId: 'draft',
+        title: 'Changed draft title',
+        scheduledDate: '2026-11-01',
+      })}
+    />,
+  );
+  fireEvent.click(await screen.findByRole('button', { name: 'Edit' }));
+  expect(screen.getByRole('dialog')).toHaveTextContent('Easy ride');
+  expect(screen.getByRole('dialog')).not.toHaveTextContent('Changed draft title');
+  fireEvent.change(screen.getByLabelText('Anything else for your coach?'), {
+    target: { value: 'Corrected from draft view' },
+  });
+  fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+  await waitFor(() => expect(logs[0]?.note).toBe('Corrected from draft view'));
+});
+it('waits for a result preview before allowing feedback to be saved', async () => {
+  let finish!: (value: unknown) => void;
+  mocks.post.mockImplementation(
+    () =>
+      new Promise((resolve) => {
+        finish = resolve;
+      }),
+  );
+  render(<RouterProvider router={mount({ ...workout, sessionType: 'test' })} />);
+  fireEvent.click(await screen.findByRole('button', { name: 'Done' }));
+  await screen.findByRole('dialog');
+  fireEvent.change(screen.getByLabelText('Average power (watts)'), { target: { value: '260' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Preview and attach result' }));
+  await waitFor(() => expect(screen.getByRole('button', { name: 'Save' })).toBeDisabled());
+  expect(screen.getByRole('button', { name: 'Save and talk it through' })).toBeDisabled();
+  finish({ data: { zones: [] } });
+  await screen.findByText('Result previewed and attached.');
+  await waitFor(() => expect(screen.getByRole('button', { name: 'Save' })).toBeEnabled());
+  fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+  await waitFor(() =>
+    expect(logs[0]?.answers.result?.input).toEqual({
+      method: 'twenty_minute_test',
+      averageWatts: 260,
+    }),
+  );
 });

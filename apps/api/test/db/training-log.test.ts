@@ -146,6 +146,25 @@ it('logs while locked or unlocked, preserves hashes, hides foreign owners and re
   await expect(
     write(workout.lineageId, { status: 'done', performedOn: '2026-10-15' }),
   ).rejects.toMatchObject({ code: 'LOG_IN_FUTURE' });
+  await write(workout.lineageId, { status: 'done', performedOn: '2026-05-19' });
+  const scheduledWeek = await readTrainingLog(
+    db,
+    owner,
+    { planId, from: '2026-05-11', to: '2026-05-17' },
+    now,
+  );
+  expect(scheduledWeek.logs).toHaveLength(0);
+  expect(scheduledWeek.summary.unlogged).toBe(scheduledWeek.summary.due - 1);
+  const performedWeek = await readTrainingLog(
+    db,
+    owner,
+    { planId, from: '2026-05-18', to: '2026-05-24' },
+    now,
+  );
+  expect(performedWeek.summary.done).toBe(1);
+  expect(
+    performedWeek.summary.bySport.find((s) => s.discipline === workout.discipline)?.actualSeconds,
+  ).toBe(workout.estimatedDurationSeconds);
   await unlockPlan(owner, planId, plan.stateVersion);
   const edited = await write(workout.lineageId, {
     status: 'changed',

@@ -50,6 +50,7 @@ const LogContext = createContext<{
   logs: WorkoutLog[];
   ready: boolean;
   writable: boolean;
+  lockedVersionId: string | undefined;
   edit: (w: WorkoutSummary, l?: WorkoutLog, s?: LogInput['status']) => void;
 } | null>(null);
 export const useLogContext = () => useContext(LogContext);
@@ -62,7 +63,11 @@ export function TrainingLogProvider({ plan, children }: { plan: Plan; children: 
         logs: query.data?.logs ?? [],
         ready: !!query.data,
         writable: !!plan.locked && !plan.archived,
-        edit: (workout, log, status) => setSubject({ workout, log, status }),
+        lockedVersionId: plan.locked?.id,
+        edit: (workout, log, status) => {
+          if (plan.archived || (!log && workout.planVersionId !== plan.locked?.id)) return;
+          setSubject({ workout: log ? loggedWorkout(log, workout) : workout, log, status });
+        },
       }}
     >
       {children}
@@ -164,7 +169,11 @@ export function WorkoutLogActions({
     save = useSaveLog(workout.planId, workout.lineageId),
     clear = useClearLog(workout.planId, workout.lineageId);
   const busy = save.isPending || clear.isPending;
-  if (!context || !context.ready || workout.scheduledDate > today) return null;
+  if (!context || !context.ready || (!log && workout.scheduledDate > today)) return null;
+  if (!log && workout.planVersionId !== context.lockedVersionId)
+    return context.writable ? (
+      <p className="fb-hint">Log the published workout from Today after its scheduled date.</p>
+    ) : null;
   const choose = (status: LogInput['status']) => {
     const full = fullFeedback(
       { ...workout, sessionType: workout.sessionType ?? inferKind(workout) },
@@ -436,20 +445,22 @@ function FeedbackSheet({ subject, onClose }: { subject: Subject; onClose: () => 
     today = useLocalToday();
   const [status, setStatus] = useState<LogInput['status']>(subject.status ?? log?.status ?? 'done');
   const [performed, setPerformed] = useState(log?.performedOn ?? workout.scheduledDate);
-  const [minutes, setMinutes] = useState(
-    String(
-      (log?.actualDurationSeconds ??
-        (status === 'done' ? workout.estimatedDurationSeconds : null) ??
-        0) / 60 || '',
-    ),
-  );
-  const [distance, setDistance] = useState(
-    String(
-      log?.actualDistanceMetres ??
-        (status === 'done' ? workout.estimatedDistanceMetres : null) ??
-        '',
-    ),
-  );
+  const [minutes, setMinutes] = useState(() => {
+    const seconds = log
+      ? log.actualDurationSeconds
+      : status === 'done'
+        ? workout.estimatedDurationSeconds
+        : null;
+    return seconds == null ? '' : String(seconds / 60);
+  });
+  const [distance, setDistance] = useState(() => {
+    const metres = log
+      ? log.actualDistanceMetres
+      : status === 'done'
+        ? workout.estimatedDistanceMetres
+        : null;
+    return metres == null ? '' : String(metres);
+  });
   const [rpe, setRpe] = useState<number | null>(log?.rpe ?? null),
     [feel, setFeel] = useState<number | null>(log?.feel ?? null);
   const [reasons, setReasons] = useState<NonNullable<LogInput['reasons']>>(log?.reasons ?? []),
@@ -458,7 +469,8 @@ function FeedbackSheet({ subject, onClose }: { subject: Subject; onClose: () => 
   const save = useSaveLog(workout.planId, workout.lineageId),
     discuss = useDiscussFeedback(workout.planId),
     clear = useClearLog(workout.planId, workout.lineageId);
-  const busy = save.isPending || discuss.isPending || clear.isPending;
+  const [resultBusy, setResultBusy] = useState(false);
+  const busy = save.isPending || discuss.isPending || clear.isPending || resultBusy;
   const kind = log?.sessionType ?? workout.sessionType ?? inferKind(workout),
     look = workoutLook(workout),
     planned = log ? log.plannedRpe : workout.plannedRpe;
@@ -501,6 +513,7 @@ function FeedbackSheet({ subject, onClose }: { subject: Subject; onClose: () => 
     };
   };
   const persist = async (talk: boolean) => {
+    if (busy) return;
     setLocalError(null);
     try {
       const current = saved ?? (await save.mutateAsync(payload()));
@@ -604,7 +617,10 @@ function FeedbackSheet({ subject, onClose }: { subject: Subject; onClose: () => 
                 type="date"
                 value={performed}
                 max={today}
-                onChange={(e) => setPerformed(e.target.value)}
+                onChange={(e) => {
+                  setPerformed(e.target.value);
+                  setAnswer('result', undefined);
+                }}
               />
             </label>
             {status !== 'skipped' ? (
@@ -757,10 +773,12 @@ function FeedbackSheet({ subject, onClose }: { subject: Subject; onClose: () => 
         ) : null}
         {status !== 'skipped' && ['test', 'race'].includes(kind) ? (
           <PerformanceResult
+            key={performed}
             discipline={workout.discipline}
             value={answers.result}
             performedOn={performed}
             onChange={(v) => setAnswer('result', v)}
+            onBusyChange={setResultBusy}
           />
         ) : null}
         <section className="fb-section">
@@ -888,6 +906,27 @@ function FeedbackSheet({ subject, onClose }: { subject: Subject; onClose: () => 
     </Dialog>
   );
 }
+function loggedWorkout(log: WorkoutLog, current?: WorkoutSummary): WorkoutSummary {
+  return {
+    id: current?.id ?? log.lineageId,
+    lineageId: log.lineageId,
+    planId: log.planId,
+    planVersionId: log.loggedVersionId,
+    planTitle: current?.planTitle ?? '',
+    weekNumber: current?.weekNumber ?? 1,
+    scheduledDate: log.scheduledOn,
+    title: log.title,
+    description: null,
+    purpose: null,
+    discipline: log.discipline,
+    priority: log.keySession ? 'high' : 'medium',
+    racePriority: log.sessionType === 'race' ? 'C' : null,
+    sessionType: log.sessionType,
+    plannedRpe: log.plannedRpe,
+    estimatedDurationSeconds: log.plannedDurationSeconds,
+    estimatedDistanceMetres: log.plannedDistanceMetres,
+  };
+}
 export function TrainingHistory({
   planId,
   workouts,
@@ -926,25 +965,7 @@ export function TrainingHistory({
           <div className="training-history">
             {[...(query.data?.logs ?? [])].reverse().map((log) => {
               const found = workouts.find((w) => w.lineageId === log.lineageId);
-              const workout: WorkoutSummary = found ?? {
-                id: log.lineageId,
-                lineageId: log.lineageId,
-                planId: log.planId,
-                planVersionId: log.loggedVersionId,
-                planTitle: '',
-                weekNumber: 1,
-                scheduledDate: log.scheduledOn,
-                title: log.title,
-                description: null,
-                purpose: null,
-                discipline: log.discipline,
-                priority: log.keySession ? 'high' : 'medium',
-                racePriority: log.sessionType === 'race' ? 'C' : null,
-                sessionType: log.sessionType,
-                plannedRpe: log.plannedRpe,
-                estimatedDurationSeconds: log.plannedDurationSeconds,
-                estimatedDistanceMetres: log.plannedDistanceMetres,
-              };
+              const workout = loggedWorkout(log, found);
               return (
                 <article key={log.id} className="training-history-entry">
                   <SectionHeader title={log.title} action={<LogChip log={log} />} />

@@ -1,7 +1,12 @@
 import type { WorkoutSummary } from '../workouts/workout.schemas.js';
 import type { WorkoutLog } from './training-log.schemas.js';
-export function summarizeTraining(workouts: WorkoutSummary[], logs: WorkoutLog[], today: string) {
-  const lookup = new Map(logs.map((l) => [`${l.planId}/${l.lineageId}`, l]));
+export function summarizeTraining(
+  workouts: WorkoutSummary[],
+  logs: WorkoutLog[],
+  today: string,
+  recorded: { planId: string; lineageId: string }[] = logs,
+) {
+  const lookup = new Set(recorded.map((l) => `${l.planId}/${l.lineageId}`));
   const due = workouts.filter((w) => w.scheduledDate <= today);
   const bySport = new Map<
     string,

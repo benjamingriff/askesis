@@ -125,12 +125,6 @@ function TodayForPlan({ plan, today }: { plan: Plan; today: string }) {
       !logs.some((l) => l.lineageId === w.lineageId),
   );
   const weekLog = useTrainingLog(plan.id, days[0], days[6]);
-  const loggedAmount = (w: WorkoutSummary) => {
-    const log = logs.find((l) => l.lineageId === w.lineageId);
-    return log && log.status !== 'skipped'
-      ? ((measure === 'time' ? log.actualDurationSeconds : log.actualDistanceMetres) ?? 0)
-      : 0;
-  };
   const dialog = useWorkoutSelection(all, version?.id);
   const week = all.filter((w) => w.scheduledDate >= days[0]! && w.scheduledDate <= days[6]!);
   // Distance for running-only plans; time once other sports join, as their distances don't add.
@@ -140,7 +134,10 @@ function TodayForPlan({ plan, today }: { plan: Plan; today: string }) {
   const formatAmount = (value: number, withUnit = true) =>
     measure === 'time' ? formatDuration(value) : formatDistance(value, units, withUnit);
   const weekAmount = week.reduce((sum, w) => sum + amount(w), 0);
-  const completedAmount = week.reduce((sum, w) => sum + loggedAmount(w), 0);
+  const completedAmount = (weekLog.data?.summary.bySport ?? []).reduce(
+    (sum, sport) => sum + (measure === 'time' ? sport.actualSeconds : sport.actualMetres),
+    0,
+  );
   const maxDay = Math.max(
     ...days.map((d) => workoutsOn(week, d).reduce((sum, w) => sum + amount(w), 0)),
     1,
