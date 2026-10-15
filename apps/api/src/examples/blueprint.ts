@@ -5,6 +5,7 @@ import { localDate } from '../modules/athletes/timezone.js';
 import { emptyBrief, type Brief, type SportBaseline } from '../modules/plans/brief.schemas.js';
 import type { StepDiscipline, WorkoutDiscipline } from '../modules/plans/disciplines.js';
 import type { BlockPhase, RacePriority } from '../modules/plans/periodization.js';
+import type { SessionType } from '../modules/workouts/session-types.js';
 
 export const EXAMPLE_KINDS = ['cycling', 'triathlon', 'strength-hiit'] as const;
 export type ExampleKind = (typeof EXAMPLE_KINDS)[number];
@@ -34,6 +35,8 @@ export type Session = {
   tags: string[];
   steps: Step[];
   race?: RacePriority;
+  /** Booked elsewhere, such as a club session: one open effort in this RPE range. */
+  placeholder?: { sessionType: SessionType; minimumRpe: number; maximumRpe: number };
 };
 export type WeekTarget = {
   metric: 'distance' | 'duration' | 'strength_session_count';
@@ -191,6 +194,18 @@ function run(week: number, type: 'easy' | 'long'): Session {
         : []),
       effort('Easy cool-down', 'run', duration(300), [zone('run', 'easy')], 'cooldown'),
     ],
+  };
+}
+function runClub(week: number): Session {
+  return {
+    title: 'Wednesday run club',
+    sport: 'run',
+    purpose:
+      'Your club decides the session. Planned as steady running; log what it turned out to be.',
+    minutes: isLight(week) ? 45 : 60,
+    tags: ['triathlon', 'running', 'club'],
+    steps: [],
+    placeholder: { sessionType: 'steady', minimumRpe: 4, maximumRpe: 7 },
   };
 }
 function swim(week: number, technique: boolean): Session {
@@ -550,7 +565,7 @@ export function buildExample(kind: ExampleKind, anchor: string) {
         { day: 0, session: swim(index, true) },
         { day: 0, session: strength(index, 'full', true) },
         { day: 1, session: ride(index, 'quality') },
-        { day: 2, session: run(index, 'easy') },
+        { day: 2, session: runClub(index) },
         { day: 3, session: swim(index, false) },
         { day: 5, session: brick(index) },
         { day: 6, session: run(index, 'long') },

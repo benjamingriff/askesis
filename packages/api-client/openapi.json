@@ -145,6 +145,25 @@
             "nullable": true,
             "minimum": 0,
             "exclusiveMinimum": true
+          },
+          "placeholder": {
+            "type": "boolean"
+          },
+          "expectedRpe": {
+            "type": "object",
+            "nullable": true,
+            "properties": {
+              "minimum": {
+                "type": "number"
+              },
+              "maximum": {
+                "type": "number"
+              }
+            },
+            "required": [
+              "minimum",
+              "maximum"
+            ]
           }
         },
         "required": [
@@ -164,7 +183,9 @@
           "priority",
           "racePriority",
           "estimatedDurationSeconds",
-          "estimatedDistanceMetres"
+          "estimatedDistanceMetres",
+          "placeholder",
+          "expectedRpe"
         ]
       },
       "WorkoutPriority": {
@@ -1328,6 +1349,30 @@
           },
           "keySession": {
             "type": "boolean"
+          },
+          "placeholder": {
+            "type": "boolean",
+            "default": false
+          },
+          "actualSessionType": {
+            "type": "string",
+            "nullable": true,
+            "enum": [
+              "recovery",
+              "easy",
+              "long",
+              "steady",
+              "tempo",
+              "intervals",
+              "speed",
+              "strength",
+              "mobility",
+              "brick",
+              "race",
+              "test",
+              null
+            ],
+            "default": null
           },
           "plannedDurationSeconds": {
             "type": "number",
@@ -2556,6 +2601,12 @@
           },
           "easyHighEffortSessions": {
             "type": "number"
+          },
+          "placeholderSessions": {
+            "type": "number"
+          },
+          "harderPlaceholderSessions": {
+            "type": "number"
           }
         },
         "required": [
@@ -2571,7 +2622,9 @@
           "easierKeySessions",
           "recentKeySessions",
           "tiredSessions",
-          "easyHighEffortSessions"
+          "easyHighEffortSessions",
+          "placeholderSessions",
+          "harderPlaceholderSessions"
         ]
       }
     },
@@ -14110,6 +14163,25 @@
                     "type": "string",
                     "nullable": true,
                     "maxLength": 2000
+                  },
+                  "actualSessionType": {
+                    "type": "string",
+                    "nullable": true,
+                    "enum": [
+                      "recovery",
+                      "easy",
+                      "long",
+                      "steady",
+                      "tempo",
+                      "intervals",
+                      "speed",
+                      "strength",
+                      "mobility",
+                      "brick",
+                      "race",
+                      "test",
+                      null
+                    ]
                   }
                 },
                 "required": [

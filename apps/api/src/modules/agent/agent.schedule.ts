@@ -303,6 +303,7 @@ export async function writeSchedule(
       ...(w.sessionType !== undefined ? { session_type: w.sessionType } : {}),
       estimated_duration_seconds: w.estimatedDurationSeconds,
       estimated_distance_metres: w.estimatedDistanceMetres,
+      placeholder: !!w.placeholder,
     };
     if (w.id) {
       await db
@@ -322,17 +323,34 @@ export async function writeSchedule(
         .insertInto('workout_tags')
         .values({ workout_id: id, plan_version_id: versionId, tag })
         .execute();
+    // A placeholder is one open effort lasting its expected duration; its effort range is
+    // written below as an RPE band, so planned effort and load read it like any prescription.
+    const steps: typeof w.steps = w.placeholder
+      ? [
+          {
+            parentIndex: null,
+            kind: 'effort',
+            repeatCount: null,
+            role: 'main',
+            discipline: w.discipline === 'mixed' ? 'other' : w.discipline,
+            label: w.title,
+            instructions: null,
+            completion: { type: 'duration', value: w.estimatedDurationSeconds!, unit: 'seconds' },
+            targets: [],
+          },
+        ]
+      : w.steps;
     const stepIds: string[] = [];
     const siblingCounts = new Map<number | null, number>();
-    for (const [i, s] of w.steps.entries()) {
+    for (const [i, s] of steps.entries()) {
       if (
         (i === 0 && s.parentIndex !== null) ||
         (i > 0 && (s.parentIndex === null || s.parentIndex >= i))
       )
         bad('Steps need one root, with every child pointing to an earlier parent.');
-      if (s.parentIndex !== null && w.steps[s.parentIndex]?.kind === 'effort')
+      if (s.parentIndex !== null && steps[s.parentIndex]?.kind === 'effort')
         bad('Effort steps cannot contain children.');
-      const children = w.steps.filter((c) => c.parentIndex === i);
+      const children = steps.filter((c) => c.parentIndex === i);
       if (
         s.kind === 'effort'
           ? !s.completion || children.length > 0 || s.repeatCount !== null
@@ -392,6 +410,19 @@ export async function writeSchedule(
           })
           .execute();
     }
+    if (w.placeholder)
+      await db
+        .insertInto('step_targets')
+        .values({
+          step_id: stepIds[0]!,
+          plan_version_id: versionId,
+          position: 1,
+          target_type: 'rpe',
+          minimum_value: w.placeholder.minimumRpe,
+          maximum_value: w.placeholder.maximumRpe,
+          unit: 'rpe',
+        })
+        .execute();
     result[w.key] = id;
   }
   const findings = validatePlan((await readAggregate(db, versionId)).validation);

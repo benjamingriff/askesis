@@ -39,6 +39,7 @@ import { emptyBrief } from '../../src/modules/plans/brief.schemas.js';
 import type { z } from 'zod';
 import type { ScheduleSchema } from '../../src/modules/agent/agent.schemas.js';
 import { calculatePaces } from '../../src/modules/performance/run-pace.calculator.js';
+import { getWorkoutDetail, listWorkouts } from '../../src/modules/workouts/workout.repository.js';
 const owner = '00000000-0000-0000-0000-000000000001';
 const bootstrap = 'local-test-bootstrap-credential-32-characters';
 const db = getDatabase();
@@ -64,7 +65,7 @@ async function worker() {
     provider: 'openai',
     model: 'gpt-6.1-sol',
     reasoning: 'medium',
-    promptVersion: 'training-feedback-coach-v1',
+    promptVersion: 'placeholder-sessions-coach-v1',
     ready: true,
   });
   return id;
@@ -399,7 +400,7 @@ it('registers a Claude worker over the private API, attributes its run and recor
         provider,
         model: 'claude-opus-5-5',
         reasoning: 'medium',
-        promptVersion: 'training-feedback-coach-v1',
+        promptVersion: 'placeholder-sessions-coach-v1',
         ready: true,
       }),
     });
@@ -850,6 +851,104 @@ it('stores the race priorities and cutback weeks the coach writes', async () => 
   };
   expect(schedule.result.training_weeks.map((w) => w.cutback)).toEqual([true]);
   expect(schedule.result.workouts.map((w) => w.race_priority)).toEqual(['B']);
+});
+it('books placeholders and other activities as one open effort with an effort range', async () => {
+  const { claim } = await planning();
+  const club = {
+    ...batch.workouts[0]!,
+    key: 'club',
+    date: '2027-01-05',
+    title: 'Tuesday track club',
+    purpose: 'Track nights are usually intervals; treated as the week’s quality session.',
+    priority: 'high' as const,
+    sessionType: 'intervals' as const,
+    estimatedDurationSeconds: 4500,
+    steps: [],
+    placeholder: { minimumRpe: 5, maximumRpe: 8 },
+  };
+  const football = {
+    ...club,
+    key: 'football',
+    date: '2027-01-06',
+    discipline: 'other' as const,
+    title: '5-a-side football',
+    priority: 'medium' as const,
+    sessionType: 'speed' as const,
+    estimatedDurationSeconds: 3600,
+    placeholder: { minimumRpe: 6, maximumRpe: 9 },
+  };
+  for (const invalid of [
+    { ...club, steps: [effort] },
+    { ...club, estimatedDurationSeconds: null },
+    { ...club, sessionType: undefined },
+    { ...club, placeholder: { minimumRpe: 8, maximumRpe: 5 } },
+    { ...batch.workouts[0]!, steps: [] },
+  ])
+    await expect(
+      tool(claim, 'apply_schedule_changes', { ...batch, workouts: [invalid] }),
+    ).rejects.toMatchObject({ code: 'INVALID_TOOL_INPUT' });
+  const written = (await tool(claim, 'apply_schedule_changes', {
+    ...batch,
+    workouts: [batch.workouts[0]!, club, football],
+  })) as { result: { ids: Record<string, string> } };
+  const { versionId } = await runContext(claim.runId, claim.token);
+  const booked = (await listWorkouts(owner, versionId!)).filter((w) => w.placeholder);
+  expect(
+    booked.map(({ title, discipline, sessionType, expectedRpe, plannedRpe }) => ({
+      title,
+      discipline,
+      sessionType,
+      expectedRpe,
+      plannedRpe,
+    })),
+  ).toEqual([
+    {
+      title: 'Tuesday track club',
+      discipline: 'run',
+      sessionType: 'intervals',
+      expectedRpe: { minimum: 5, maximum: 8 },
+      plannedRpe: 6.5,
+    },
+    {
+      title: '5-a-side football',
+      discipline: 'other',
+      sessionType: 'speed',
+      expectedRpe: { minimum: 6, maximum: 9 },
+      plannedRpe: 7.5,
+    },
+  ]);
+  const detail = await getWorkoutDetail(owner, written.result.ids.club!);
+  expect(detail?.workout.expectedRpe).toEqual({ minimum: 5, maximum: 8 });
+  expect(detail?.prescription).toMatchObject({
+    kind: 'effort',
+    discipline: 'run',
+    label: 'Tuesday track club',
+    completion: { type: 'duration', value: 4500 },
+    targets: [{ type: 'rpe', minimumValue: 5, maximumValue: 8 }],
+    steps: [],
+  });
+  // One occurrence becomes a prescribed session; the placeholder flag and range go with it.
+  await tool(claim, 'apply_schedule_changes', {
+    ...batch,
+    blocks: [],
+    weeks: [],
+    workouts: [
+      {
+        ...batch.workouts[0]!,
+        key: 'club',
+        id: written.result.ids.club,
+        weekKey: written.result.ids.week1,
+        date: '2027-01-05',
+        title: 'Track intervals',
+        sessionType: 'intervals',
+        placeholder: null,
+      },
+    ],
+    generation: null,
+    coverage: null,
+  });
+  const after = (await listWorkouts(owner, versionId!)).find((w) => w.title === 'Track intervals');
+  expect(after).toMatchObject({ placeholder: false, expectedRpe: null });
 });
 it('swaps dated workouts in one coherent transaction without intermediate uniqueness failures', async () => {
   const { claim, p } = await planning();
@@ -1339,7 +1438,7 @@ it('requires the current prompt contract before a worker contributes readiness o
     provider: 'openai',
     model: 'gpt-6.1-sol',
     reasoning: 'medium',
-    promptVersion: 'training-feedback-coach-v1',
+    promptVersion: 'placeholder-sessions-coach-v1',
     ready: true,
   });
   expect((await chatCapabilities()).executionAvailable).toBe(true);

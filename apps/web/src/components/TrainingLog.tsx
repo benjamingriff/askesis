@@ -21,7 +21,13 @@ import { api } from '../api';
 import { result } from '../lib/result';
 import { addDays, formatDuration, formatDistance, formatLong } from '../lib/format';
 import { useRequestKey } from '../lib/use-request-key';
-import { inferKind, workoutLook } from '../lib/workouts';
+import {
+  KIND_META,
+  expectedEffort,
+  inferKind,
+  workoutLook,
+  type WorkoutKind,
+} from '../lib/workouts';
 import { useLocalToday } from '../lib/use-local-today';
 import { useUnits } from '../settings';
 import {
@@ -206,11 +212,20 @@ export function WorkoutLogActions({
       <div className="hero-log">
         <div className="hero-log-copy">
           {log ? (
-            <LogChip log={log} />
+            <>
+              <LogChip log={log} />
+              {log.actualSessionType ? (
+                <small>Was {KIND_META[log.actualSessionType].label.toLowerCase()}</small>
+              ) : null}
+            </>
           ) : (
             <>
               <strong>How did it go?</strong>
-              <small>A quick log is enough. Add detail if it’s useful.</small>
+              <small>
+                {workout.placeholder
+                  ? 'Tell your coach what the session turned out to be.'
+                  : 'A quick log is enough. Add detail if it’s useful.'}
+              </small>
             </>
           )}
         </div>
@@ -268,13 +283,14 @@ export function WorkoutLogActions({
           <div className="quick-rpe-head">
             <strong>How hard was it overall?</strong>
             <small>
-              Optional · planned{' '}
+              Optional · {log.placeholder ? 'expected' : 'planned'}{' '}
               {log.plannedRpe == null ? 'effort not set' : `~${log.plannedRpe}/10`}
             </small>
           </div>
           <RpeScale
             value={log.rpe}
             planned={log.plannedRpe}
+            expected={log.placeholder}
             disabled={!context.writable || busy}
             onChange={rate}
           />
@@ -311,6 +327,11 @@ export function WorkoutLogActions({
               </strong>
             </div>
           </div>
+          {log.actualSessionType ? (
+            <p className="muted">
+              Turned out to be {KIND_META[log.actualSessionType].label.toLowerCase()}
+            </p>
+          ) : null}
           {log.reasons.length ? (
             <p className="muted">{log.reasons.map((r) => REASON_LABELS[r]).join(' · ')}</p>
           ) : null}
@@ -331,6 +352,7 @@ export function logInput(log: WorkoutLog, changes: Partial<LogInput> = {}): LogI
     reasons: log.reasons,
     answers: log.answers,
     note: log.note,
+    ...(log.placeholder ? { actualSessionType: log.actualSessionType } : {}),
     ...changes,
   };
 }
@@ -349,17 +371,24 @@ const RPE_WORDS = [
 export function RpeScale({
   value,
   planned,
+  expected = false,
   disabled,
   onChange,
 }: {
   value: number | null;
   planned: number | null;
+  /** A placeholder's effort was expected, not planned. */
+  expected?: boolean;
   disabled?: boolean;
   onChange: (n: number) => void;
 }) {
   return (
     <>
-      <div className="rpe-scale" role="group" aria-label="Session effort">
+      <div
+        className={`rpe-scale${expected ? ' is-expected' : ''}`}
+        role="group"
+        aria-label="Session effort"
+      >
         {Array.from({ length: 10 }, (_, i) => i + 1).map((n) => (
           <button
             type="button"
@@ -432,6 +461,22 @@ function Options<T extends string>({
     </div>
   );
 }
+type ActualType = NonNullable<LogInput['actualSessionType']>;
+/** What a placeholder can turn out to be, in the order athletes usually think of them. */
+const ACTUAL_TYPES = [
+  'recovery',
+  'easy',
+  'steady',
+  'long',
+  'tempo',
+  'intervals',
+  'speed',
+  'race',
+  'test',
+  'strength',
+  'mobility',
+  'brick',
+] as const satisfies readonly (ActualType & WorkoutKind)[];
 const FEEL = [
   { label: 'Strong', Icon: Laugh },
   { label: 'Good', Icon: Smile },
@@ -466,12 +511,21 @@ function FeedbackSheet({ subject, onClose }: { subject: Subject; onClose: () => 
   const [reasons, setReasons] = useState<NonNullable<LogInput['reasons']>>(log?.reasons ?? []),
     [note, setNote] = useState(log?.note ?? '');
   const [answers, setAnswers] = useState<NonNullable<LogInput['answers']>>(log?.answers ?? {});
+  const placeholder = !!(log?.placeholder ?? workout.placeholder);
+  const [actualType, setActualType] = useState<ActualType | undefined>(
+    log?.actualSessionType ?? undefined,
+  );
   const save = useSaveLog(workout.planId, workout.lineageId),
     discuss = useDiscussFeedback(workout.planId),
     clear = useClearLog(workout.planId, workout.lineageId);
   const [resultBusy, setResultBusy] = useState(false);
   const busy = save.isPending || discuss.isPending || clear.isPending || resultBusy;
-  const kind = log?.sessionType ?? workout.sessionType ?? inferKind(workout),
+  // Follow-up questions match what a placeholder turned out to be, once the athlete says.
+  const kind =
+      (status !== 'skipped' ? actualType : undefined) ??
+      log?.sessionType ??
+      workout.sessionType ??
+      inferKind(workout),
     look = workoutLook(workout),
     planned = log ? log.plannedRpe : workout.plannedRpe;
   const [saved, setSaved] = useState<WorkoutLog | null>(null),
@@ -500,7 +554,23 @@ function FeedbackSheet({ subject, onClose }: { subject: Subject; onClose: () => 
       delete cleaned.painSeverity;
     }
     if (status === 'skipped') delete cleaned.result;
+    // Drop follow-ups that no longer apply after the athlete says what the session was.
+    if (!['intervals', 'tempo', 'speed'].includes(kind)) delete cleaned.intervals;
+    if (kind !== 'long') {
+      delete cleaned.finish;
+      delete cleaned.fuelled;
+    }
+    if (kind !== 'strength') {
+      delete cleaned.weights;
+      delete cleaned.weightsUsed;
+    }
+    if (kind !== 'brick') delete cleaned.hardestPart;
+    if (kind !== 'race') delete cleaned.race;
+    if (!['test', 'race'].includes(kind)) delete cleaned.result;
     return {
+      ...(placeholder
+        ? { actualSessionType: status === 'skipped' ? null : (actualType ?? null) }
+        : {}),
       status,
       performedOn: performed,
       actualDurationSeconds: status === 'skipped' ? null : secs,
@@ -609,6 +679,27 @@ function FeedbackSheet({ subject, onClose }: { subject: Subject; onClose: () => 
             ))}
           </div>
         </section>
+        {placeholder && status !== 'skipped' ? (
+          <section className="fb-section">
+            <div className="fb-question">
+              <h3>What was it?</h3>
+              {workout.sessionType ? (
+                <small>
+                  Your coach assumed {KIND_META[workout.sessionType].label.toLowerCase()}
+                </small>
+              ) : null}
+            </div>
+            <Options
+              label="What the session was"
+              value={actualType}
+              values={ACTUAL_TYPES.map((type) => [type, KIND_META[type].label])}
+              onChange={(v) => {
+                setActualType(v);
+                setSaved(null);
+              }}
+            />
+          </section>
+        ) : null}
         <section className="fb-section">
           <div className="field-row">
             <label className="field">
@@ -649,8 +740,8 @@ function FeedbackSheet({ subject, onClose }: { subject: Subject; onClose: () => 
             ) : null}
           </div>
           <p className="fb-hint">
-            Done starts with the planned amounts as estimates. Correct them or leave them blank if
-            unknown.
+            Done starts with the {placeholder ? 'expected' : 'planned'} amounts as estimates.
+            Correct them or leave them blank if unknown.
           </p>
         </section>
         {status !== 'skipped' ? (
@@ -658,12 +749,16 @@ function FeedbackSheet({ subject, onClose }: { subject: Subject; onClose: () => 
             <div className="fb-question">
               <h3>How hard was it overall?</h3>
               <small>
-                Optional · planned {planned == null ? 'effort not set' : `~${planned}/10`}
+                Optional ·{' '}
+                {placeholder && workout.expectedRpe
+                  ? `expected ${expectedEffort(workout)}`
+                  : `planned ${planned == null ? 'effort not set' : `~${planned}/10`}`}
               </small>
             </div>
             <RpeScale
               value={rpe}
               planned={planned}
+              expected={placeholder}
               onChange={(n) => {
                 setRpe(rpe === n ? null : n);
                 setSaved(null);
@@ -877,13 +972,17 @@ function FeedbackSheet({ subject, onClose }: { subject: Subject; onClose: () => 
         ) : null}
         <section className="fb-section">
           <label className="field">
-            <span>Anything else for your coach?</span>
+            <span>{placeholder ? 'What did you do?' : 'Anything else for your coach?'}</span>
             <textarea
               rows={3}
               maxLength={2000}
               value={note}
               onChange={(e) => setNote(e.target.value)}
-              placeholder="How it went, what helped, or anything you want to talk through…"
+              placeholder={
+                placeholder
+                  ? 'The session, such as 6 × 800 m off 90 s, and anything else for your coach…'
+                  : 'How it went, what helped, or anything you want to talk through…'
+              }
             />
           </label>
         </section>
@@ -925,6 +1024,8 @@ function loggedWorkout(log: WorkoutLog, current?: WorkoutSummary): WorkoutSummar
     plannedRpe: log.plannedRpe,
     estimatedDurationSeconds: log.plannedDurationSeconds,
     estimatedDistanceMetres: log.plannedDistanceMetres,
+    placeholder: log.placeholder,
+    expectedRpe: log.placeholder ? (current?.expectedRpe ?? null) : null,
   };
 }
 export function TrainingHistory({
@@ -977,6 +1078,9 @@ export function TrainingHistory({
                     {log.actualDistanceMetres == null
                       ? ''
                       : ` · ${formatDistance(log.actualDistanceMetres, units)}`}
+                    {log.actualSessionType
+                      ? ` · Was ${KIND_META[log.actualSessionType].label.toLowerCase()}`
+                      : ''}
                     {!found ? ' · From an earlier plan version' : ''}
                   </p>
                   {log.note ? <p>{log.note}</p> : null}

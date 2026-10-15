@@ -34,6 +34,10 @@ export const WorkoutSummarySchema = z
     racePriority: RacePrioritySchema.nullable(),
     estimatedDurationSeconds: z.number().int().positive().nullable(),
     estimatedDistanceMetres: z.number().positive().nullable(),
+    /** Booked training decided elsewhere (a club session or another sport); details come in the log. */
+    placeholder: z.boolean(),
+    /** A placeholder's expected effort range; null for prescribed workouts. */
+    expectedRpe: z.object({ minimum: z.number(), maximum: z.number() }).nullable(),
   })
   .openapi('WorkoutSummary');
 

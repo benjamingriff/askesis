@@ -20,7 +20,7 @@ import {
   type PoolUnits,
 } from '../lib/format';
 import { formatZoneValue, SPORT_META, zoneLabel, type Sport } from '../lib/sports';
-import { RACE_META, stepEffort, workoutLook } from '../lib/workouts';
+import { KIND_META, RACE_META, expectedEffort, stepEffort, workoutLook } from '../lib/workouts';
 import { effortColor } from '../theme/palette';
 import { useWorkoutDetail, type PlanVersion } from '../plan-data';
 import { useSportUnits, type Units } from '../settings';
@@ -38,7 +38,11 @@ export function workoutMeta(workout: WorkoutSummary, units: Units, pool: PoolUni
         : formatDistance(workout.estimatedDistanceMetres, units),
     );
   if (workout.estimatedDurationSeconds !== null)
-    parts.push(formatDuration(workout.estimatedDurationSeconds));
+    parts.push(
+      `${workout.placeholder ? '~' : ''}${formatDuration(workout.estimatedDurationSeconds)}`,
+    );
+  const effort = expectedEffort(workout);
+  if (effort) parts.push(effort);
   return parts.join(' · ') || SPORT_META[workout.discipline as Sport]?.label || workout.discipline;
 }
 
@@ -52,8 +56,18 @@ export function workoutStats(workout: WorkoutSummary, units: Units, pool: PoolUn
         ? { label: 'Distance', value: formatSwimDistance(metres, pool) }
         : { label: 'Distance', value: formatDistance(metres, units, false), unit: units },
     );
-  if (seconds !== null) stats.push({ label: 'Time', value: formatDuration(seconds) });
-  if (metres && seconds) {
+  if (seconds !== null)
+    stats.push({
+      label: 'Time',
+      value: `${workout.placeholder ? '~' : ''}${formatDuration(seconds)}`,
+    });
+  if (workout.expectedRpe)
+    stats.push({
+      label: 'Effort',
+      value: expectedEffort(workout)!.replace('RPE ', ''),
+      unit: 'RPE',
+    });
+  if (metres && seconds && !workout.placeholder) {
     if (workout.discipline === 'run')
       stats.push({
         label: 'Avg pace',
@@ -139,7 +153,7 @@ export function WorkoutCard({
     <div className="workout-card-wrap">
       <button
         type="button"
-        className={`workout-card${log ? ' is-logged' : ''}${log?.status === 'skipped' ? ' is-skipped' : ''}`}
+        className={`workout-card${workout.placeholder ? ' is-placeholder' : ''}${log ? ' is-logged' : ''}${log?.status === 'skipped' ? ' is-skipped' : ''}`}
         style={{ '--kind': look.color } as CSSProperties}
         onClick={() => onOpen(workout)}
         aria-label={`${workout.title}, ${look.label}, ${formatLong(workout.scheduledDate)}`}
@@ -155,6 +169,11 @@ export function WorkoutCard({
             ) : workout.priority === 'high' ? (
               <em>Key session</em>
             ) : null}
+            {workout.placeholder ? (
+              <em className="placeholder-badge" title={PLACEHOLDER_HINT}>
+                Placeholder
+              </em>
+            ) : null}
             <WorkoutChangeBadge id={workout.id} />
           </span>
           <strong>{workout.title}</strong>
@@ -162,6 +181,9 @@ export function WorkoutCard({
           {log ? (
             <span className="workout-card-log">
               <LogChip log={log} />
+              {log.actualSessionType ? (
+                <small>Was {KIND_META[log.actualSessionType].label.toLowerCase()}</small>
+              ) : null}
               {effortFlag(log) ? <small>{effortFlag(log)}</small> : null}
             </span>
           ) : null}
@@ -175,6 +197,46 @@ export function WorkoutCard({
       workout.scheduledDate < today ? (
         <WorkoutLogActions workout={workout} compact />
       ) : null}
+    </div>
+  );
+}
+
+const PLACEHOLDER_HINT =
+  'Booked, not prescribed: your coach plans around it, and you log what it turned out to be.';
+
+/** Where a placeholder's expected effort sits on the 1–10 RPE scale. */
+export function PlaceholderBand({ workout }: { workout: WorkoutSummary }) {
+  const range = workout.expectedRpe;
+  if (!range) return null;
+  const left = ((range.minimum - 1) / 9) * 100,
+    width = Math.max(((range.maximum - range.minimum) / 9) * 100, 4);
+  return (
+    <span className="placeholder-band" aria-label={`Expected effort ${expectedEffort(workout)}`}>
+      <span className="placeholder-band-track" aria-hidden="true">
+        <i style={{ left: `${left}%`, width: `${width}%` }} />
+      </span>
+      <span className="placeholder-band-scale" aria-hidden="true">
+        <span>Easy</span>
+        <span>{expectedEffort(workout)}</span>
+        <span>Max</span>
+      </span>
+    </span>
+  );
+}
+
+/** What a placeholder is, and what the coach assumed when planning around it. */
+function PlaceholderSummary({ workout }: { workout: WorkoutSummary }) {
+  const assumed = workout.sessionType ? KIND_META[workout.sessionType].label.toLowerCase() : null;
+  return (
+    <div className="placeholder-summary">
+      <span className="label">Placeholder session</span>
+      <PlaceholderBand workout={workout} />
+      <p>
+        There’s no prescription for this one. Your coach has planned the rest of your training
+        around it{assumed ? `, assuming ${assumed}` : ''}
+        {workout.expectedRpe ? ` at ${expectedEffort(workout)}` : ''}. Do the session as it comes,
+        then log what it turned out to be.
+      </p>
     </div>
   );
 }
@@ -374,6 +436,7 @@ export function WorkoutDialog({
           <span className="workout-kind-label">
             <look.icon size={15} aria-hidden="true" /> {look.label}
             {workout.racePriority ? ` · ${RACE_META[workout.racePriority].label}` : ''}
+            {workout.placeholder ? ' · Placeholder' : ''}
           </span>
           {workout.title}
         </span>
@@ -396,11 +459,21 @@ export function WorkoutDialog({
         </div>
         {workout.purpose ? <p className="workout-purpose">{workout.purpose}</p> : null}
         {workout.description ? <p className="muted">{workout.description}</p> : null}
-        {detail.isPending ? <LoadingState>Loading prescription…</LoadingState> : null}
+        {workout.placeholder ? <PlaceholderSummary workout={workout} /> : null}
+        {detail.isPending && !workout.placeholder ? (
+          <LoadingState>Loading prescription…</LoadingState>
+        ) : null}
         {detail.error ? (
           <ErrorState message={detail.error.message} onRetry={() => void detail.refetch()} />
         ) : null}
-        {detail.data ? (
+        {detail.data && workout.placeholder && detail.data.tags.length ? (
+          <div className="tag-list">
+            {detail.data.tags.map((tag) => (
+              <span key={tag}>{tag.replaceAll('-', ' ')}</span>
+            ))}
+          </div>
+        ) : null}
+        {detail.data && !workout.placeholder ? (
           <>
             <div className="effort-profile">
               <span className="label">Effort profile</span>

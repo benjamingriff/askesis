@@ -44,13 +44,20 @@ type WorkoutRow = Pick<
   | 'race_priority'
   | 'estimated_duration_seconds'
   | 'estimated_distance_metres'
+  | 'placeholder'
 > & {
   plan_id: string;
   plan_title: string;
   week_number: number;
 };
 
-function toWorkoutSummary(row: WorkoutRow, plannedRpe: number | null = null): WorkoutSummary {
+type RpeRange = WorkoutSummary['expectedRpe'];
+
+function toWorkoutSummary(
+  row: WorkoutRow,
+  plannedRpe: number | null = null,
+  expectedRpe: RpeRange = null,
+): WorkoutSummary {
   return {
     id: row.id,
     lineageId: row.lineage_id,
@@ -76,7 +83,38 @@ function toWorkoutSummary(row: WorkoutRow, plannedRpe: number | null = null): Wo
     estimatedDurationSeconds: row.estimated_duration_seconds,
     estimatedDistanceMetres:
       row.estimated_distance_metres === null ? null : Number(row.estimated_distance_metres),
+    placeholder: row.placeholder,
+    expectedRpe: row.placeholder ? expectedRpe : null,
   };
+}
+
+/** A placeholder's effort range is the RPE band on its single open effort. */
+async function loadExpectedRpe(database: Database, workoutIds: string[]) {
+  if (!workoutIds.length) return new Map<string, NonNullable<RpeRange>>();
+  const rows = await database
+    .selectFrom('step_targets')
+    .innerJoin('workout_steps', 'workout_steps.id', 'step_targets.step_id')
+    .select([
+      'workout_steps.workout_id',
+      'step_targets.minimum_value',
+      'step_targets.maximum_value',
+    ])
+    .where('workout_steps.workout_id', 'in', workoutIds)
+    .where('workout_steps.parent_step_id', 'is', null)
+    .where('step_targets.target_type', '=', 'rpe')
+    .execute();
+  return new Map(
+    rows.flatMap((row) =>
+      row.minimum_value === null || row.maximum_value === null
+        ? []
+        : [
+            [
+              row.workout_id,
+              { minimum: Number(row.minimum_value), maximum: Number(row.maximum_value) },
+            ] as const,
+          ],
+    ),
+  );
 }
 
 export async function listWorkouts(
@@ -104,6 +142,7 @@ export async function listWorkouts(
       'workouts.race_priority',
       'workouts.estimated_duration_seconds',
       'workouts.estimated_distance_metres',
+      'workouts.placeholder',
       'plans.display_name as plan_title',
       'training_weeks.week_number',
     ])
@@ -115,16 +154,24 @@ export async function listWorkouts(
     .orderBy('workouts.position', 'asc')
     .execute();
 
-  const efforts = await loadPlannedRpe(
-    database,
-    athleteId,
-    rows.map((row) => ({
-      id: row.id,
-      date: formatDate(row.scheduled_date),
-      discipline: row.primary_discipline,
-    })),
+  const [efforts, ranges] = await Promise.all([
+    loadPlannedRpe(
+      database,
+      athleteId,
+      rows.map((row) => ({
+        id: row.id,
+        date: formatDate(row.scheduled_date),
+        discipline: row.primary_discipline,
+      })),
+    ),
+    loadExpectedRpe(
+      database,
+      rows.filter((row) => row.placeholder).map((row) => row.id),
+    ),
+  ]);
+  return rows.map((row) =>
+    toWorkoutSummary(row, efforts.get(row.id) ?? null, ranges.get(row.id) ?? null),
   );
-  return rows.map((row) => toWorkoutSummary(row, efforts.get(row.id) ?? null));
 }
 
 export async function listBlocks(
@@ -205,6 +252,7 @@ export async function getWorkoutDetail(
       'workouts.race_priority',
       'workouts.estimated_duration_seconds',
       'workouts.estimated_distance_metres',
+      'workouts.placeholder',
       'plans.display_name as plan_title',
       'training_weeks.week_number',
     ])
@@ -388,10 +436,14 @@ export async function getWorkoutDetail(
   });
 
   const prescription = toPublicStep(root);
+  const band = prescription.targets.find((target) => target.type === 'rpe');
   return {
     workout: toWorkoutSummary(
       workoutRow,
       prescriptionRpe(prescription, workoutRow.primary_discipline),
+      band?.minimumValue != null && band.maximumValue != null
+        ? { minimum: band.minimumValue, maximum: band.maximumValue }
+        : null,
     ),
     tags: tagRows.map(({ tag }) => tag),
     prescription,

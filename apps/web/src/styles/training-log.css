@@ -333,6 +333,9 @@
   text-transform: uppercase;
   white-space: nowrap;
 }
+.rpe-scale.is-expected button.expected::before {
+  content: 'Expected';
+}
 .rpe-scale button.expected::after {
   content: '';
   position: absolute;

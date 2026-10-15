@@ -5593,6 +5593,8 @@ export interface paths {
                             };
                         };
                         note?: string | null;
+                        /** @enum {string|null} */
+                        actualSessionType?: "recovery" | "easy" | "long" | "steady" | "tempo" | "intervals" | "speed" | "strength" | "mobility" | "brick" | "race" | "test" | null;
                     };
                 };
             };
@@ -5877,6 +5879,11 @@ export interface components {
             racePriority: "A" | "B" | "C" | null;
             estimatedDurationSeconds: number | null;
             estimatedDistanceMetres: number | null;
+            placeholder: boolean;
+            expectedRpe: {
+                minimum: number;
+                maximum: number;
+            } | null;
         };
         /** @enum {string} */
         WorkoutPriority: "low" | "medium" | "high";
@@ -6122,6 +6129,13 @@ export interface components {
             /** @enum {string|null} */
             sessionType: "recovery" | "easy" | "long" | "steady" | "tempo" | "intervals" | "speed" | "strength" | "mobility" | "brick" | "race" | "test" | "rest" | null;
             keySession: boolean;
+            /** @default false */
+            placeholder: boolean;
+            /**
+             * @default null
+             * @enum {string|null}
+             */
+            actualSessionType: "recovery" | "easy" | "long" | "steady" | "tempo" | "intervals" | "speed" | "strength" | "mobility" | "brick" | "race" | "test" | null;
             plannedDurationSeconds: number | null;
             plannedDistanceMetres: number | null;
             plannedRpe: number | null;
@@ -6389,6 +6403,8 @@ export interface components {
             recentKeySessions: number;
             tiredSessions: number;
             easyHighEffortSessions: number;
+            placeholderSessions: number;
+            harderPlaceholderSessions: number;
         };
     };
     responses: never;

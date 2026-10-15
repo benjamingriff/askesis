@@ -107,21 +107,32 @@ export const REASON_LABELS = {
   equipment: 'Equipment',
   other: 'Other',
 } as const;
-export function effortFlag(log: Pick<WorkoutLog, 'rpe' | 'plannedRpe' | 'status'>) {
+export function effortFlag(
+  log: Pick<WorkoutLog, 'rpe' | 'plannedRpe' | 'status'> & Partial<Pick<WorkoutLog, 'placeholder'>>,
+) {
   if (log.status === 'skipped' || log.rpe === null || log.plannedRpe === null) return null;
+  // A placeholder's effort was only expected, never planned.
+  const basis = log.placeholder ? 'expected' : 'planned';
   return log.rpe - log.plannedRpe >= 2
-    ? 'Harder than planned'
+    ? `Harder than ${basis}`
     : log.plannedRpe - log.rpe >= 3
-      ? 'Easier than planned'
+      ? `Easier than ${basis}`
       : null;
 }
 export function fullFeedback(
-  workout: { priority?: string; racePriority?: string | null; sessionType?: string | null },
+  workout: {
+    priority?: string;
+    racePriority?: string | null;
+    sessionType?: string | null;
+    placeholder?: boolean;
+  },
   status: LogInput['status'],
   rpe?: number | null,
   planned?: number | null,
 ) {
   return (
+    // Only the athlete knows what a placeholder turned out to be.
+    !!workout.placeholder ||
     workout.priority === 'high' ||
     !!workout.racePriority ||
     ['test', 'race'].includes(workout.sessionType ?? '') ||

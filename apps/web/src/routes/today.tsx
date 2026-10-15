@@ -14,7 +14,7 @@ import { IntensityChart } from '../components/IntensityChart';
 import { useOpenPlanChat, PlanChatError } from '../components/PlanLifecycle';
 import { planProgress } from '../components/PlanView';
 import { PlanZones, Stat, zonesTitle } from '../components/PlanWidgets';
-import { WorkoutDialog, workoutStats } from '../components/Workout';
+import { PlaceholderBand, WorkoutDialog, workoutStats } from '../components/Workout';
 import {
   Button,
   ButtonLink,
@@ -415,8 +415,11 @@ function HeroWorkout({
       <span className="hero-cover">
         <span className="hero-kind">
           <kind.icon size={15} aria-hidden="true" /> {kind.label}
+          {workout.placeholder ? ' · Placeholder' : ''}
         </span>
-        {detail.data ? (
+        {workout.placeholder ? (
+          <PlaceholderBand workout={workout} />
+        ) : detail.data ? (
           <IntensityChart prescription={detail.data.prescription} height={64} />
         ) : null}
       </span>

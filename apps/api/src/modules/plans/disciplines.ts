@@ -1,8 +1,9 @@
 /**
  * Controlled sport vocabulary, mirrored by database checks. A workout names its sport; a mixed
  * workout (a triathlon brick or a Hyrox simulation) names each effort's sport on its steps.
+ * Other covers activities the plan does not train, such as football; its title says what it is.
  */
-export const WORKOUT_DISCIPLINES = ['run', 'cycle', 'swim', 'strength', 'mixed'] as const;
+export const WORKOUT_DISCIPLINES = ['run', 'cycle', 'swim', 'strength', 'mixed', 'other'] as const;
 export type WorkoutDiscipline = (typeof WORKOUT_DISCIPLINES)[number];
 
 /** Sports an effort step can be. Ergs and transitions only appear inside workouts. */

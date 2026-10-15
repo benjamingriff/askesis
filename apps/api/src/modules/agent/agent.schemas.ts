@@ -15,7 +15,7 @@ import {
   ProvenanceSchema,
   SwimInputSchema,
 } from '../performance/performance.schemas.js';
-export const PROMPT_VERSION = 'training-feedback-coach-v1';
+export const PROMPT_VERSION = 'placeholder-sessions-coach-v1';
 
 export const RegisterSchema = z
   .object({
@@ -127,9 +127,34 @@ export const WorkoutInputSchema = z
     estimatedDurationSeconds: z.number().int().positive().max(86400).nullable(),
     estimatedDistanceMetres: z.number().positive().max(300000).nullable(),
     tags: z.array(z.string().trim().min(1).max(100)).max(20),
-    steps: z.array(StepSchema).min(1).max(100),
+    /**
+     * Booked training whose content is decided elsewhere, such as a club run or another sport.
+     * The API writes its single open effort from the expected duration and effort range.
+     */
+    placeholder: z
+      .object({
+        minimumRpe: z.number().int().min(1).max(10),
+        maximumRpe: z.number().int().min(1).max(10),
+      })
+      .strict()
+      .nullable()
+      .optional(),
+    steps: z.array(StepSchema).max(100),
   })
-  .strict();
+  .strict()
+  .superRefine((w, context) => {
+    const issue = (message: string) => context.addIssue({ code: 'custom', message });
+    if (!w.placeholder) {
+      if (!w.steps.length) issue('Prescribe at least one step, or mark the workout a placeholder.');
+      return;
+    }
+    if (w.steps.length) issue('Placeholders have no steps; the API writes their open effort.');
+    if (w.estimatedDurationSeconds === null) issue('Placeholders need an expected duration.');
+    if (!w.sessionType || w.sessionType === 'rest')
+      issue('Placeholders need the session type you are assuming for planning.');
+    if (w.placeholder.minimumRpe > w.placeholder.maximumRpe)
+      issue('The placeholder effort range is reversed.');
+  });
 export const CoverageSchema = z.object({ startDate: date, endDate: date }).strict();
 export const ScheduleSchema = z
   .object({
@@ -209,9 +234,9 @@ const descriptions: Record<ToolName, string> = {
   retract_performance:
     'Withdraw a mistaken entry the user asks to undo; the previous entry applies again. Never retract to hide an inconvenient result.',
   apply_schedule_changes:
-    'Atomically add/update/delete dated blocks, weeks and full workout trees. Every block names its training phase (base, build, peak, taper or recovery); phases may repeat. Mark deliberately lighter weeks cutback. Give each race a racePriority (A goal race, B tune-up, C raced as training); other workouts use null. Set generation to the whole intended horizon on the first schedule batch of this run; subsequent batches may repeat it or use null. Local keys reference new parents; existing UUIDs may be parent keys. Steps are ordered, first root parentIndex null, later parentIndex points to an earlier container. Efforts need a completion and containers need children. Every workout names its discipline; each effort inherits it or names its own (required in mixed workouts). Give every run, ride and swim effort a zone target for its sport; pace, swim_pace and power targets only refine it. Strength efforts use reps with rir or rpe and an optional suggested load in kilograms; ergs use rpe. Coverage asserts fully prescribed dates, including rest days; use null for unfinished chunks.',
+    'Atomically add/update/delete dated blocks, weeks and full workout trees. Every block names its training phase (base, build, peak, taper or recovery); phases may repeat. Mark deliberately lighter weeks cutback. Give each race a racePriority (A goal race, B tune-up, C raced as training); other workouts use null. Set generation to the whole intended horizon on the first schedule batch of this run; subsequent batches may repeat it or use null. Local keys reference new parents; existing UUIDs may be parent keys. Steps are ordered, first root parentIndex null, later parentIndex points to an earlier container. Efforts need a completion and containers need children. Every workout names its discipline; each effort inherits it or names its own (required in mixed workouts). Give every run, ride and swim effort a zone target for its sport; pace, swim_pace and power targets only refine it. Strength efforts use reps with rir or rpe and an optional suggested load in kilograms; ergs use rpe. A placeholder books training decided elsewhere (a club run, group ride, class, or another sport using discipline other): give it no steps, an estimatedDurationSeconds, the sessionType you assume for planning and an expected rpe range; the API writes one open effort. To turn one into a prescribed session, update it with placeholder null and full steps. Coverage asserts fully prescribed dates, including rest days; use null for unfinished chunks.',
   replace_schedule_range:
-    'Atomically replace workouts only inside the explicit range, preserving all content outside it. Set generation to the whole intended horizon on the first schedule batch of this run; subsequent batches may repeat it or use null. Existing parents may be referenced by UUID. New blocks/weeks must fit inside the range; each new block names its phase and each new week whether it is a cutback. Races carry a racePriority. Every workout names its discipline; mixed workouts name each effort’s. Give every run, ride and swim effort a zone target for its sport. Never declare coverage for an unfinished chunk.',
+    'Atomically replace workouts only inside the explicit range, preserving all content outside it. Set generation to the whole intended horizon on the first schedule batch of this run; subsequent batches may repeat it or use null. Existing parents may be referenced by UUID. New blocks/weeks must fit inside the range; each new block names its phase and each new week whether it is a cutback. Races carry a racePriority. Every workout names its discipline; mixed workouts name each effort’s. Give every run, ride and swim effort a zone target for its sport. Placeholders have no steps, an expected duration, an assumed sessionType and an rpe range. Never declare coverage for an unfinished chunk.',
   validate_plan:
     'Check draft structure and human review requirements; returns findings and current hashes. Does not confirm or lock.',
 };

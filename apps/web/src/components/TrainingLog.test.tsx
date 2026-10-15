@@ -34,6 +34,8 @@ const workout: WorkoutSummary = {
   plannedRpe: 3,
   estimatedDurationSeconds: 1800,
   estimatedDistanceMetres: null,
+  placeholder: false,
+  expectedRpe: null,
 };
 const plan = {
   id: 'plan',
@@ -64,6 +66,8 @@ beforeEach(() => {
       discipline: 'cycle',
       sessionType: activeWorkout.sessionType,
       keySession: activeWorkout.priority === 'high',
+      placeholder: activeWorkout.placeholder,
+      actualSessionType: body.actualSessionType ?? null,
       plannedDurationSeconds: 1800,
       plannedDistanceMetres: activeWorkout.estimatedDistanceMetres,
       plannedRpe: 3,
@@ -252,4 +256,41 @@ it('waits for a result preview before allowing feedback to be saved', async () =
       averageWatts: 260,
     }),
   );
+});
+it('asks what a placeholder turned out to be and follows up on that session type', async () => {
+  render(
+    <RouterProvider
+      router={mount({
+        ...workout,
+        title: 'Saturday club ride',
+        sessionType: 'steady',
+        placeholder: true,
+        expectedRpe: { minimum: 4, maximum: 7 },
+      })}
+    />,
+  );
+  expect(
+    await screen.findByText('Tell your coach what the session turned out to be.'),
+  ).toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: 'Done' }));
+  const dialog = await screen.findByRole('dialog');
+  expect(dialog).toHaveTextContent('What was it?');
+  expect(dialog).toHaveTextContent('Your coach assumed steady');
+  expect(dialog).toHaveTextContent('expected RPE 4–7');
+  expect(dialog).not.toHaveTextContent('How did the intervals go?');
+  fireEvent.click(screen.getByRole('button', { name: 'Intervals' }));
+  expect(dialog).toHaveTextContent('How did the intervals go?');
+  fireEvent.click(screen.getByRole('button', { name: 'Faded on the last reps' }));
+  fireEvent.change(screen.getByLabelText('What did you do?'), {
+    target: { value: 'Chain gang with 5 × 3 min turns' },
+  });
+  fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+  await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+  expect(mocks.put.mock.calls.at(-1)?.[1].body).toMatchObject({
+    status: 'done',
+    actualSessionType: 'intervals',
+    answers: { intervals: 'faded' },
+    note: 'Chain gang with 5 × 3 min turns',
+  });
+  expect(logs[0]).toMatchObject({ placeholder: true, actualSessionType: 'intervals' });
 });

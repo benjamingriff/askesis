@@ -28,6 +28,8 @@ const workout = (date: string, metres: number, title = 'Easy run'): WorkoutSumma
   racePriority: null,
   estimatedDurationSeconds: 1800,
   estimatedDistanceMetres: metres,
+  placeholder: false,
+  expectedRpe: null,
 });
 
 describe('inferKind', () => {
