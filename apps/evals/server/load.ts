@@ -108,8 +108,12 @@ function intensity(effort: Effort, limits: Thresholds) {
   );
   for (const target of targets) {
     const resolved = isObject(target.resolvedZone) ? target.resolvedZone : null;
-    const value = asNumber(resolved?.targetValue) ?? asNumber(target.targetValue);
-    const unit = asString(resolved?.unit) ?? asString(target.unit);
+    let value = asNumber(resolved?.targetValue) ?? asNumber(target.targetValue);
+    let unit = asString(resolved?.unit) ?? asString(target.unit);
+    if (value !== null && unit === 'seconds_per_mile') {
+      value /= 1.609344;
+      unit = 'seconds_per_kilometre';
+    }
     if (value !== null && unit === 'seconds_per_kilometre') {
       secondsPerMetre = value / 1000;
       if (limits.runPace !== null) [factor, method] = [limits.runPace / value, 'targets'];

@@ -167,6 +167,17 @@ export interface AthleteCalibrationZones {
   zone_key: string;
 }
 
+export interface AthleteCheckIns {
+  athlete_id: string;
+  created_at: Generated<Timestamp>;
+  details: Json;
+  ends_on: Timestamp | null;
+  id: Generated<string>;
+  kind: string;
+  plan_id: string;
+  starts_on: Timestamp;
+}
+
 export interface AthleteIdentities {
   athlete_id: string;
   created_at: Generated<Timestamp>;
@@ -206,6 +217,7 @@ export interface ConversationMessages {
   created_at: Generated<Timestamp>;
   id: Generated<string>;
   producing_run_id: string | null;
+  references: Json | null;
   role: string;
   sequence: number;
 }
@@ -426,6 +438,36 @@ export interface WeekTargets {
   week_id: string;
 }
 
+export interface WorkoutLogs {
+  actual_distance_metres: Numeric | null;
+  actual_duration_seconds: number | null;
+  answers: Generated<Json>;
+  answers_schema_version: Generated<number>;
+  athlete_id: string;
+  created_at: Generated<Timestamp>;
+  discipline: string;
+  feel: number | null;
+  id: Generated<string>;
+  key_session: boolean;
+  logged_version_id: string;
+  note: string | null;
+  performed_on: Timestamp;
+  plan_id: string;
+  planned_distance_metres: Numeric | null;
+  planned_duration_seconds: number | null;
+  planned_rpe: Numeric | null;
+  reasons: Generated<string[]>;
+  recorded_by_run_id: string | null;
+  rpe: number | null;
+  scheduled_on: Timestamp;
+  session_type: string | null;
+  source: Generated<string>;
+  status: string;
+  title: string;
+  updated_at: Generated<Timestamp>;
+  workout_lineage_id: string;
+}
+
 export interface WorkoutPrescriptionTotals {
   discipline: string | null;
   distance_metres: Numeric | null;
@@ -449,6 +491,7 @@ export interface Workouts {
   purpose: string | null;
   race_priority: string | null;
   scheduled_date: Timestamp;
+  session_type: string | null;
   title: string;
   updated_at: Generated<Timestamp>;
   week_id: string;
@@ -489,6 +532,7 @@ export interface DB {
   api_idempotency_keys: ApiIdempotencyKeys;
   athlete_calibration_zones: AthleteCalibrationZones;
   athlete_calibrations: AthleteCalibrations;
+  athlete_check_ins: AthleteCheckIns;
   athlete_identities: AthleteIdentities;
   athletes: Athletes;
   "atlas_schema_revisions.atlas_schema_revisions": AtlasSchemaRevisionsAtlasSchemaRevisions;
@@ -511,6 +555,7 @@ export interface DB {
   training_weeks: TrainingWeeks;
   week_targets: WeekTargets;
   weekly_plan_summary: WeeklyPlanSummary;
+  workout_logs: WorkoutLogs;
   workout_prescription_totals: WorkoutPrescriptionTotals;
   workout_steps: WorkoutSteps;
   workout_tags: WorkoutTags;

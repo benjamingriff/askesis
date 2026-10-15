@@ -122,6 +122,25 @@ export function checkPlan(
       item,
     ]);
   const missing = scenario.expectations.requiredDiscovery.filter((id) => !known.has(id));
+  const frequencyMismatches: string[] = [];
+  for (let week = 0; week < scenario.prescriptionWeeks; week++) {
+    const start = addDays(scenario.dates.startDate, week * 7);
+    const end = addDays(start, 6);
+    const own = workouts.filter(
+      ({ workout }) => workout.scheduledDate >= start && workout.scheduledDate <= end,
+    );
+    for (const sport of persona.sports) {
+      const actual = own.filter(({ workout, prescription }) =>
+        scenario.expectations.frequencyPolicy === 'sport_exposures'
+          ? workoutSports(workout, prescription).has(sport.sport)
+          : workout.discipline === sport.sport,
+      ).length;
+      if (actual !== sport.desiredSessions)
+        frequencyMismatches.push(
+          `Week ${week + 1} ${sport.sport}: ${actual}, expected ${sport.desiredSessions}.`,
+        );
+    }
+  }
   const candidates: Record<string, () => Check> = {
     plan_dates: () =>
       check(
@@ -268,11 +287,20 @@ export function checkPlan(
         .filter((finding) => finding.severity === 'error')
         .map((finding) => finding.path),
     ),
+    check(
+      'weekly_frequency',
+      frequencyMismatches.length === 0,
+      frequencyMismatches.length
+        ? frequencyMismatches.join(' ')
+        : `Each prescribed week matches the requested sessions per sport (${scenario.expectations.frequencyPolicy}).`,
+      ['plan:brief'],
+    ),
   );
   for (const id of scenario.expectations.checks) {
     const candidate = candidates[id];
     if (candidate) checks.push(candidate());
-    else if (id !== 'saved_plan') throw new Error(`Unknown check ${id}.`);
+    else if (id !== 'saved_plan' && id !== 'weekly_frequency')
+      throw new Error(`Unknown check ${id}.`);
   }
   return checks;
 }

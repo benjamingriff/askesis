@@ -45,6 +45,7 @@ const context: ExecutionContext = {
   plan: null,
   brief: null,
   performance: null,
+  trainingLog: null,
   versionId: null,
   editNumber: null,
   tools: [{ name: 'read_plan_context', description: 'Read plan', parameters: readParameters }],

@@ -346,6 +346,134 @@ describe('analyzeSession', () => {
   });
 });
 
+describe('dataset belief comparisons', () => {
+  const sports = [
+    {
+      sport: 'run',
+      currentSessions: 3,
+      desiredSessions: 3,
+      weeklyDistanceMetres: 22000,
+      longestDistanceMetres: 9000,
+    },
+    {
+      sport: 'cycle',
+      currentSessions: 3,
+      desiredSessions: 3,
+      weeklyDurationSeconds: 14400,
+      longestDurationSeconds: 7200,
+    },
+    {
+      sport: 'swim',
+      currentSessions: 2,
+      desiredSessions: 2,
+      weeklyDistanceMetres: 2200,
+      longestDistanceMetres: 1200,
+    },
+  ];
+  const recorded = (sport: Record<string, unknown>) => ({
+    sport: sport.sport,
+    currentSessions: {
+      status: sport.currentSessions === null ? 'unknown' : 'known',
+      value: sport.currentSessions,
+    },
+    desiredSessions: sport.desiredSessions,
+    ...Object.fromEntries(
+      [
+        ['weeklyDistance', 'weeklyDistanceMetres'],
+        ['longestDistance', 'longestDistanceMetres'],
+        ['weeklyDuration', 'weeklyDurationSeconds'],
+        ['longestDuration', 'longestDurationSeconds'],
+      ]
+        .filter(([, key]) => key! in sport)
+        .map(([field, key]) => [field, { status: 'known', value: sport[key!] }]),
+    ),
+  });
+  const datasetInput = (own: Record<string, unknown>[]) => {
+    const source = input();
+    source.scenario = {
+      ...scenario,
+      edition: 'v1',
+      persona: { sports: own, availability: [] },
+      dates: { startDate: '2026-10-12', endDate: '2027-01-03' },
+      prescriptionWeeks: 4,
+      expectations: { requiredDiscovery: ['training', 'frequency'] },
+      evidence: [],
+    };
+    const saved = { ...brief({}), sports: own.map(recorded) };
+    source.plan = { ...source.plan, brief: { brief: saved } };
+    source.tools[0]!.input = { brief: saved };
+    return source;
+  };
+  it('compares every triathlon baseline and each measured performance system', () => {
+    const source = datasetInput(sports);
+    const evidence = [
+      {
+        system: 'run_pace',
+        input: { method: 'race_result', distanceMetres: 5000, durationSeconds: 1500 },
+        observedOn: '2026-09-25',
+      },
+      { system: 'cycle_power', input: { method: 'ftp', watts: 200 }, observedOn: '2026-09-26' },
+      {
+        system: 'swim_pace',
+        input: { method: 'css_pace', secondsPer100Metres: 120 },
+        observedOn: '2026-09-27',
+      },
+    ];
+    source.scenario!.evidence = evidence;
+    source.tools.push(
+      ...evidence.flatMap((entry, index) =>
+        ['started', 'completed'].map((status) => ({
+          operationId: `fitness-${index}`,
+          runId: 'r2',
+          at: '2026-10-09T14:00:12Z',
+          name: 'record_performance',
+          status,
+          input: { ...entry, provenance: 'user_supplied' },
+        })),
+      ),
+    );
+    const result = analyzeSession(source);
+    expect(result.beliefs.find((row) => row.field === 'run.desiredSessions')).toMatchObject({
+      expected: '3 sessions',
+      recorded: '3 sessions',
+    });
+    expect(result.beliefs.find((row) => row.field === 'swim.currentSessions')).toMatchObject({
+      expected: '2 sessions',
+      recorded: '2 sessions',
+    });
+    expect(result.beliefs.find((row) => row.field === 'cycle.weeklyDuration')?.status).toBe(
+      'match',
+    );
+    expect(
+      result.beliefs.filter((row) => row.field.startsWith('fitness.')).map((row) => row.status),
+    ).toEqual(['assumed', 'assumed', 'assumed']);
+    expect(result.beliefs.some((row) => row.status === 'mismatch')).toBe(false);
+    expect(
+      result.decisions.flatMap((entry) => entry.changes).map((entry) => entry.field),
+    ).toContain('swim current sessions/week');
+    // A later wrong swim baseline must still produce a real, sport-specific mismatch.
+    const saved = source.plan!.brief as { brief: { sports: Record<string, unknown>[] } };
+    saved.brief.sports[2]!.currentSessions = { status: 'known', value: 3 };
+    expect(
+      analyzeSession(source).beliefs.find((row) => row.field === 'swim.currentSessions')?.status,
+    ).toBe('mismatch');
+  });
+  it.each([0, null])('keeps strength sessions %s distinct from a running baseline', (sessions) => {
+    const result = analyzeSession(
+      datasetInput([{ sport: 'strength', currentSessions: sessions, desiredSessions: 2 }]),
+    );
+    expect(result.beliefs.find((row) => row.field === 'strength.currentSessions')).toMatchObject({
+      status: 'match',
+      expected: sessions === null ? 'unknown' : '0 sessions',
+    });
+    expect(
+      result.beliefs.some(
+        (row) => row.field.startsWith('fitness') || row.field.includes('Distance'),
+      ),
+    ).toBe(false);
+  });
+});
+
 describe('helpers', () => {
   it('counts questions that end sentences or bold spans', () => {
     expect(countQuestions('**What is the date?** Also, how far?')).toBe(2);

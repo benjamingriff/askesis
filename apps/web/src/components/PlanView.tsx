@@ -1,3 +1,4 @@
+import { TrainingLogProvider, TrainingHistory, CheckInButton } from './TrainingLog';
 import { ClipboardList, Flag, Lock, PencilLine, Sparkles } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
 import { Link } from 'react-router';
@@ -117,237 +118,254 @@ export function PlanView({
   );
 
   return (
-    <div className={cx('page plan-view', embedded && 'embedded-plan')}>
-      {embedded ? null : (
-        <header className="page-header plan-header">
-          <div className="page-heading">
-            {eyebrow}
-            <span className="label">Training plan</span>
-            <h1>{plan.displayName}</h1>
-            <div className="plan-meta">
-              <PlanStatus plan={plan} view={view} />
-              <span className="muted">
-                {formatRange(version?.startDate ?? null, version?.endDate ?? null)}
-              </span>
-            </div>
-          </div>
-          <div className="plan-header-actions">
-            {switcher}
-            {toolbar}
-          </div>
-        </header>
-      )}
-
-      {plan.draft && plan.locked ? (
-        <Segmented<View>
-          label="Content source"
-          className="source-toggle"
-          value={view}
-          onChange={onViewChange}
-          options={[
-            { value: 'locked', label: `Locked v${plan.locked.versionNumber}`, icon: Lock },
-            { value: 'draft', label: 'Draft', icon: PencilLine },
-          ]}
-        />
-      ) : null}
-
-      <div className="plan-layout">
-        <div className="plan-main">
-          <Card className="plan-hero">
-            {embedded ? (
-              <div className="embedded-plan-heading">
-                <div>
-                  <span className="label">Plan</span>
-                  <h2>{plan.displayName}</h2>
-                  <span className="muted">
-                    {formatRange(version?.startDate ?? null, version?.endDate ?? null)}
-                  </span>
-                </div>
-                <div className="plan-meta">
-                  <PlanStatus plan={plan} view={view} />
-                </div>
+    <TrainingLogProvider plan={plan}>
+      <div className={cx('page plan-view', embedded && 'embedded-plan')}>
+        {embedded ? null : (
+          <header className="page-header plan-header">
+            <div className="page-heading">
+              {eyebrow}
+              <span className="label">Training plan</span>
+              <h1>{plan.displayName}</h1>
+              <div className="plan-meta">
+                <PlanStatus plan={plan} view={view} />
+                <span className="muted">
+                  {formatRange(version?.startDate ?? null, version?.endDate ?? null)}
+                </span>
               </div>
+            </div>
+            <div className="plan-header-actions">
+              {switcher}
+              {toolbar}
+              <TrainingHistory
+                planId={plan.id}
+                workouts={workouts.data ?? []}
+                readOnly={plan.archived}
+              />
+            </div>
+          </header>
+        )}
+
+        {plan.draft && plan.locked ? (
+          <Segmented<View>
+            label="Content source"
+            className="source-toggle"
+            value={view}
+            onChange={onViewChange}
+            options={[
+              { value: 'locked', label: `Locked v${plan.locked.versionNumber}`, icon: Lock },
+              { value: 'draft', label: 'Draft', icon: PencilLine },
+            ]}
+          />
+        ) : null}
+
+        <CheckInButton plan={plan} workouts={workouts.data ?? []} />
+        <div className="plan-layout">
+          <div className="plan-main">
+            <Card className="plan-hero">
+              {embedded ? (
+                <div className="embedded-plan-heading">
+                  <div>
+                    <span className="label">Plan</span>
+                    <h2>{plan.displayName}</h2>
+                    <span className="muted">
+                      {formatRange(version?.startDate ?? null, version?.endDate ?? null)}
+                    </span>
+                  </div>
+                  <div className="plan-meta">
+                    <PlanStatus plan={plan} view={view} />
+                  </div>
+                </div>
+              ) : null}
+              {goal ? (
+                <p className="plan-goal">
+                  <Flag size={14} aria-hidden="true" /> {goal}
+                </p>
+              ) : null}
+              {blocks.length ? (
+                <BlockTimeline
+                  blocks={blocks}
+                  startDate={version?.startDate ?? null}
+                  endDate={version?.endDate ?? null}
+                  today={today}
+                  races={workouts.data?.filter((workout) => workout.racePriority)}
+                />
+              ) : null}
+              {blockQuery.error ? (
+                <ErrorState
+                  message="Couldn’t load this plan’s training blocks."
+                  onRetry={() => void blockQuery.refetch()}
+                />
+              ) : null}
+              {progress ? (
+                <div className="plan-progress">
+                  <ProgressBar value={progress.value} label="Plan progress" />
+                  <strong>{progress.text}</strong>
+                </div>
+              ) : null}
+              {version?.description ? (
+                <p className="plan-description">{version.description}</p>
+              ) : null}
+              {brief.data ? <CoverageNote state={brief.data} /> : null}
+              {brief.error ? (
+                <ErrorState message={brief.error.message} onRetry={() => void brief.refetch()} />
+              ) : null}
+            </Card>
+
+            {view === 'draft' && embedded ? null : view === 'draft' ? (
+              <Notice tone="accent" icon={Sparkles} className="draft-banner">
+                <strong>
+                  {plan.locked ? 'Unpublished draft' : 'Initial draft'} · your coach can edit this
+                </strong>
+                <span>
+                  {plan.locked
+                    ? `Locked version ${plan.locked.versionNumber} stays unchanged until you review and lock.`
+                    : 'Review and lock it to start following the plan.'}
+                </span>
+              </Notice>
+            ) : plan.draft ? (
+              <Notice
+                tone="neutral"
+                icon={PencilLine}
+                action={
+                  <button
+                    className="link-button"
+                    type="button"
+                    onClick={() => onViewChange('draft')}
+                  >
+                    View draft
+                  </button>
+                }
+              >
+                You have unpublished draft changes. This is the stable locked version.
+              </Notice>
             ) : null}
-            {goal ? (
-              <p className="plan-goal">
-                <Flag size={14} aria-hidden="true" /> {goal}
+
+            {changes.data ? (
+              <PlanChanges
+                summary={changes.data}
+                firstDraft={!changes.data.baselineId}
+                onOpen={(id) => {
+                  const workout = workouts.data?.find((workout) => workout.id === id);
+                  if (workout) selection.open(workout);
+                }}
+              />
+            ) : null}
+            {changes.error ? (
+              <ErrorState
+                message="Could not load saved changes."
+                onRetry={() => void changes.refetch()}
+              />
+            ) : null}
+            {workouts.isPlaceholderData || brief.isPlaceholderData ? (
+              <p className="muted" role="status">
+                Refreshing saved schedule…
               </p>
             ) : null}
-            {blocks.length ? (
-              <BlockTimeline
-                blocks={blocks}
-                startDate={version?.startDate ?? null}
-                endDate={version?.endDate ?? null}
-                today={today}
-                races={workouts.data?.filter((workout) => workout.racePriority)}
-              />
+            {onAskCoach ? null : <PlanChatError chat={chat} />}
+            {(workouts.isPending || brief.isPending) && version ? (
+              <LoadingState>Loading schedule…</LoadingState>
             ) : null}
-            {blockQuery.error ? (
+            {workouts.error ? (
               <ErrorState
-                message="Couldn’t load this plan’s training blocks."
-                onRetry={() => void blockQuery.refetch()}
+                message={workouts.error.message}
+                onRetry={() => void workouts.refetch()}
               />
             ) : null}
-            {progress ? (
-              <div className="plan-progress">
-                <ProgressBar value={progress.value} label="Plan progress" />
-                <strong>{progress.text}</strong>
-              </div>
-            ) : null}
-            {version?.description ? (
-              <p className="plan-description">{version.description}</p>
-            ) : null}
-            {brief.data ? <CoverageNote state={brief.data} /> : null}
-            {brief.error ? (
-              <ErrorState message={brief.error.message} onRetry={() => void brief.refetch()} />
-            ) : null}
-          </Card>
-
-          {view === 'draft' && embedded ? null : view === 'draft' ? (
-            <Notice tone="accent" icon={Sparkles} className="draft-banner">
-              <strong>
-                {plan.locked ? 'Unpublished draft' : 'Initial draft'} · your coach can edit this
-              </strong>
-              <span>
-                {plan.locked
-                  ? `Locked version ${plan.locked.versionNumber} stays unchanged until you review and lock.`
-                  : 'Review and lock it to start following the plan.'}
-              </span>
-            </Notice>
-          ) : plan.draft ? (
-            <Notice
-              tone="neutral"
-              icon={PencilLine}
-              action={
-                <button className="link-button" type="button" onClick={() => onViewChange('draft')}>
-                  View draft
-                </button>
-              }
-            >
-              You have unpublished draft changes. This is the stable locked version.
-            </Notice>
-          ) : null}
-
-          {changes.data ? (
-            <PlanChanges
-              summary={changes.data}
-              firstDraft={!changes.data.baselineId}
-              onOpen={(id) => {
-                const workout = workouts.data?.find((workout) => workout.id === id);
-                if (workout) selection.open(workout);
-              }}
-            />
-          ) : null}
-          {changes.error ? (
-            <ErrorState
-              message="Could not load saved changes."
-              onRetry={() => void changes.refetch()}
-            />
-          ) : null}
-          {workouts.isPlaceholderData || brief.isPlaceholderData ? (
-            <p className="muted" role="status">
-              Refreshing saved schedule…
-            </p>
-          ) : null}
-          {onAskCoach ? null : <PlanChatError chat={chat} />}
-          {(workouts.isPending || brief.isPending) && version ? (
-            <LoadingState>Loading schedule…</LoadingState>
-          ) : null}
-          {workouts.error ? (
-            <ErrorState message={workouts.error.message} onRetry={() => void workouts.refetch()} />
-          ) : null}
-          {workouts.data && version && brief.data && !brief.error ? (
-            <WorkoutChangesContext.Provider value={changes.data?.workouts ?? []}>
-              <Schedule
-                key={version.id}
-                presentation={schedulePresentation}
-                workouts={workouts.data}
-                version={version}
-                startDate={version.startDate}
-                endDate={version.endDate}
-                coverage={knownCoverage(brief.data)}
-                units={units}
-                today={today}
-                selection={selection}
-                blocks={blocks}
-                storedWeeks={weeks}
-                onAskCoach={
-                  plan.archived
-                    ? undefined
-                    : (workout) =>
-                        askCoach(`About “${workout.title}” on ${workout.scheduledDate}: `)
-                }
-                onPlanRest={plan.archived ? undefined : () => askCoach('Plan the remaining weeks')}
-              />
-            </WorkoutChangesContext.Provider>
-          ) : null}
-        </div>
-
-        <aside className="plan-side">
-          <Card>
-            <SectionHeader
-              title={zonesTitle(sports)}
-              action={
-                <Link className="text-link" to="/performance">
-                  Update
-                </Link>
-              }
-            />
-            <PlanZones sports={sports} units={units} compact />
-          </Card>
-          <Card>
-            <SectionHeader
-              title="Brief"
-              action={
-                <Link
-                  className="text-link"
-                  to={
-                    view === 'draft'
-                      ? `/plans/${plan.id}/brief`
-                      : `/plans/${plan.id}/versions/${version?.id}/brief`
+            {workouts.data && version && brief.data && !brief.error ? (
+              <WorkoutChangesContext.Provider value={changes.data?.workouts ?? []}>
+                <Schedule
+                  key={version.id}
+                  presentation={schedulePresentation}
+                  workouts={workouts.data}
+                  version={version}
+                  startDate={version.startDate}
+                  endDate={version.endDate}
+                  coverage={knownCoverage(brief.data)}
+                  units={units}
+                  today={today}
+                  selection={selection}
+                  blocks={blocks}
+                  storedWeeks={weeks}
+                  onAskCoach={
+                    plan.archived
+                      ? undefined
+                      : (workout) =>
+                          askCoach(`About “${workout.title}” on ${workout.scheduledDate}: `)
                   }
-                >
-                  {view === 'draft' ? 'Edit brief' : 'View brief'}
-                </Link>
-              }
-            />
-            {brief.data ? (
-              <div className="brief-summary">
-                {goal ? null : (
-                  <p>
-                    <Flag size={15} aria-hidden="true" /> No goal recorded yet.
-                  </p>
-                )}
-                <p>
-                  <ClipboardList size={15} aria-hidden="true" />{' '}
-                  {brief.data.confirmed
-                    ? 'Assumptions confirmed'
-                    : 'Assumptions need your confirmation'}
-                </p>
-              </div>
-            ) : (
-              <LoadingState>Loading brief…</LoadingState>
-            )}
-          </Card>
-          <details
-            className="card history-card"
-            id="version-history"
-            open={historyOpen}
-            onToggle={(event) => setHistoryOpen(event.currentTarget.open)}
-          >
-            <summary>
-              <h2>Version history</h2>
-            </summary>
-            {historyOpen ? (
-              <PlanHistory
-                planId={plan.id}
-                basedOnVersionId={plan.draft?.basedOnVersionId ?? null}
-              />
+                  onPlanRest={
+                    plan.archived ? undefined : () => askCoach('Plan the remaining weeks')
+                  }
+                />
+              </WorkoutChangesContext.Provider>
             ) : null}
-          </details>
-        </aside>
+          </div>
+
+          <aside className="plan-side">
+            <Card>
+              <SectionHeader
+                title={zonesTitle(sports)}
+                action={
+                  <Link className="text-link" to="/performance">
+                    Update
+                  </Link>
+                }
+              />
+              <PlanZones sports={sports} units={units} compact />
+            </Card>
+            <Card>
+              <SectionHeader
+                title="Brief"
+                action={
+                  <Link
+                    className="text-link"
+                    to={
+                      view === 'draft'
+                        ? `/plans/${plan.id}/brief`
+                        : `/plans/${plan.id}/versions/${version?.id}/brief`
+                    }
+                  >
+                    {view === 'draft' ? 'Edit brief' : 'View brief'}
+                  </Link>
+                }
+              />
+              {brief.data ? (
+                <div className="brief-summary">
+                  {goal ? null : (
+                    <p>
+                      <Flag size={15} aria-hidden="true" /> No goal recorded yet.
+                    </p>
+                  )}
+                  <p>
+                    <ClipboardList size={15} aria-hidden="true" />{' '}
+                    {brief.data.confirmed
+                      ? 'Assumptions confirmed'
+                      : 'Assumptions need your confirmation'}
+                  </p>
+                </div>
+              ) : (
+                <LoadingState>Loading brief…</LoadingState>
+              )}
+            </Card>
+            <details
+              className="card history-card"
+              id="version-history"
+              open={historyOpen}
+              onToggle={(event) => setHistoryOpen(event.currentTarget.open)}
+            >
+              <summary>
+                <h2>Version history</h2>
+              </summary>
+              {historyOpen ? (
+                <PlanHistory
+                  planId={plan.id}
+                  basedOnVersionId={plan.draft?.basedOnVersionId ?? null}
+                />
+              ) : null}
+            </details>
+          </aside>
+        </div>
+        {embedded ? <footer className="embedded-plan-actions">{toolbar}</footer> : null}
       </div>
-      {embedded ? <footer className="embedded-plan-actions">{toolbar}</footer> : null}
-    </div>
+    </TrainingLogProvider>
   );
 }

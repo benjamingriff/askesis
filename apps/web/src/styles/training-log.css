@@ -1,0 +1,810 @@
+.log-chip {
+  --log: var(--text-muted);
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 24px;
+  padding: 0 9px;
+  border-radius: 12px;
+  border: 1px solid color-mix(in srgb, var(--log) 35%, transparent);
+  background: color-mix(in srgb, var(--log) 14%, transparent);
+  color: var(--log);
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.log-chip.done {
+  --log: var(--locked);
+}
+.log-chip.changed {
+  --log: var(--warning);
+}
+.log-chip.skipped {
+  --log: var(--danger);
+}
+.log-chip.unlogged {
+  border-style: dashed;
+  background: transparent;
+}
+.log-chip .rpe {
+  padding-left: 6px;
+  margin-left: 2px;
+  border-left: 1px solid color-mix(in srgb, var(--log) 35%, transparent);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Status mark that replaces the chevron on schedule cards once a workout is in the past. */
+.log-mark {
+  --log: var(--text-muted);
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--log) 16%, transparent);
+  color: var(--log);
+}
+.log-mark.done {
+  --log: var(--locked);
+}
+.log-mark.changed {
+  --log: var(--warning);
+}
+.log-mark.skipped {
+  --log: var(--danger);
+}
+.log-mark.unlogged {
+  background: transparent;
+  border: 1.5px dashed var(--text-muted);
+}
+.workout-card.is-skipped strong {
+  text-decoration: line-through;
+  text-decoration-color: color-mix(in srgb, var(--text) 40%, transparent);
+}
+.workout-card.is-skipped .kind-icon {
+  filter: grayscale(1);
+  opacity: 0.6;
+}
+.day-row.past .workout-card.is-logged {
+  opacity: 1;
+}
+.workout-card-log {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-top: 6px;
+}
+.workout-card-log small {
+  color: var(--text-muted);
+}
+.workout-card .quick-log {
+  display: flex;
+  gap: 6px;
+  flex: none;
+}
+
+/* Week strip: a tick, cross or hollow ring under the date replaces the plain kind dot. */
+.strip-day .strip-log {
+  display: grid;
+  place-items: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  color: var(--bg);
+}
+.strip-day .strip-log.done {
+  background: var(--locked);
+}
+.strip-day .strip-log.changed {
+  background: var(--warning);
+}
+.strip-day .strip-log.skipped {
+  background: var(--danger);
+}
+.strip-day .strip-log.unlogged {
+  border: 1.5px dashed var(--text-muted);
+}
+.strip-day .strip-log.planned {
+  width: 6px;
+  height: 6px;
+  margin: 5px;
+  background: var(--kind);
+}
+.strip-day.selected .strip-log.planned {
+  box-shadow: 0 0 0 1.5px var(--on-accent);
+}
+
+/* Week progress: planned bars with the logged part filled. */
+.day-bars i.logged {
+  position: relative;
+  opacity: 1 !important;
+}
+.day-bars .skipped i {
+  opacity: 0.25;
+  background: repeating-linear-gradient(135deg, var(--kind) 0 4px, transparent 4px 8px);
+}
+.adherence {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 16px;
+}
+.adherence-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 13px;
+  color: var(--text-dim);
+}
+.adherence-row strong {
+  color: var(--text);
+}
+.adherence .progress {
+  flex: none;
+}
+.progress .done {
+  display: block;
+  height: 100%;
+  border-radius: 3px;
+  background: var(--locked);
+}
+
+/* ---- Hero: log bar ---------------------------------------------------------------------------- */
+.hero-workout.as-card {
+  cursor: default;
+}
+.hero-log {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px 16px;
+  padding: 16px 22px 18px;
+  border-top: 1px solid var(--border);
+  background: color-mix(in srgb, var(--surface-raised) 55%, var(--surface));
+}
+.hero-log-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.hero-log-copy strong {
+  font-size: 16px;
+}
+.hero-log-copy small {
+  color: var(--text-dim);
+  font-size: 13px;
+}
+.log-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.log-actions .btn {
+  min-width: 108px;
+}
+.btn-done {
+  background: var(--locked);
+  color: #04150a;
+}
+.hero-footer .btn-view {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-dim);
+  font-weight: 700;
+  font-size: 14px;
+}
+.quick-rpe {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+}
+.quick-rpe-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.quick-rpe-head strong {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.quick-rpe-head .log-chip {
+  height: 26px;
+}
+
+/* ---- Feedback form ---------------------------------------------------------------------------- */
+.fb-section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 16px 0;
+  border-top: 1px solid var(--border);
+}
+.fb-section:first-child {
+  border-top: 0;
+  padding-top: 4px;
+}
+.fb-question {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+.fb-question h3 {
+  font-size: 16px;
+  font-weight: 700;
+}
+.fb-question small {
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 600;
+}
+.fb-hint {
+  color: var(--text-dim);
+  font-size: 13px;
+}
+.status-choice {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+.status-choice button {
+  --log: var(--text-dim);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 12px 6px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text-dim);
+  font-size: 13px;
+  font-weight: 700;
+}
+.status-choice button .ico {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--log) 16%, transparent);
+  color: var(--log);
+}
+.status-choice .done {
+  --log: var(--locked);
+}
+.status-choice .changed {
+  --log: var(--warning);
+}
+.status-choice .skipped {
+  --log: var(--danger);
+}
+.status-choice button.active {
+  border-color: var(--log);
+  background: color-mix(in srgb, var(--log) 12%, var(--surface));
+  color: var(--text);
+}
+
+/* RPE 1–10 coloured by the app's effort scale, with the prescription's expected effort marked. */
+.rpe-scale {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(10, 1fr);
+  gap: 5px;
+  padding-top: 22px;
+}
+.rpe-scale button {
+  --rpe: var(--effort-easy);
+  position: relative;
+  height: 44px;
+  border-radius: 12px;
+  border: 1px solid color-mix(in srgb, var(--rpe) 30%, var(--border));
+  background: color-mix(in srgb, var(--rpe) 12%, var(--surface));
+  color: var(--text);
+  font-size: 15px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+.rpe-scale button.active {
+  background: var(--rpe);
+  border-color: transparent;
+  color: #0a0a0b;
+  box-shadow:
+    0 0 0 2px var(--bg),
+    0 0 0 4px var(--rpe);
+}
+.rpe-scale button.expected::before {
+  content: 'Planned';
+  position: absolute;
+  top: -21px;
+  left: 50%;
+  transform: translateX(-50%);
+  color: var(--text-muted);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.rpe-scale button.expected::after {
+  content: '';
+  position: absolute;
+  top: -7px;
+  left: 50%;
+  width: 0;
+  height: 0;
+  transform: translateX(-50%);
+  border: 4px solid transparent;
+  border-top-color: var(--text-muted);
+}
+.rpe-legend {
+  display: flex;
+  justify-content: space-between;
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.rpe-readout {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  font-size: 14px;
+}
+.rpe-readout b {
+  font-size: 22px;
+  font-weight: 800;
+  color: var(--effort-hard);
+}
+.rpe-readout span {
+  color: var(--text-dim);
+}
+.rpe-readout .log-chip {
+  margin-left: auto;
+}
+
+.feel-scale {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 6px;
+}
+.feel-scale button {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 4px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text-dim);
+  font-size: 12px;
+  font-weight: 700;
+}
+.feel-scale button.active {
+  border-color: var(--accent-border);
+  background: var(--accent-soft);
+  color: var(--accent-text);
+}
+
+.feedback-form .chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+.feedback-form .chips button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 34px;
+  padding: 0 12px;
+  border-radius: 17px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text-dim);
+  font-size: 13px;
+  font-weight: 600;
+}
+.feedback-form .chips button.active {
+  border-color: var(--accent-border);
+  background: var(--accent-soft);
+  color: var(--accent-text);
+}
+.feedback-form .chips button.warn.active {
+  border-color: color-mix(in srgb, var(--danger) 45%, transparent);
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+.feedback-form .chips.stacked {
+  flex-direction: column;
+}
+.feedback-form .chips.stacked button {
+  justify-content: flex-start;
+  height: auto;
+  min-height: 44px;
+  padding: 10px 14px;
+  border-radius: var(--radius-sm);
+  text-align: left;
+}
+.feedback-form .chips.stacked button small {
+  display: block;
+  margin-top: 1px;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+.feedback-form .chips.stacked button.active small {
+  color: var(--text-dim);
+}
+.feedback-form .chips.grid-2 {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+}
+.feedback-form .chips.grid-2 button {
+  justify-content: flex-start;
+  border-radius: var(--radius-sm);
+}
+
+.actuals {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+}
+.actual-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--surface);
+}
+.actual-field .label {
+  font-size: 10px;
+}
+.actual-field strong {
+  font-size: 18px;
+  font-variant-numeric: tabular-nums;
+}
+.actual-field small {
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.note-field {
+  position: relative;
+}
+.note-field textarea {
+  width: 100%;
+  min-height: 84px;
+  padding: 12px 44px 12px 14px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-size: 14px;
+  resize: none;
+}
+.note-field .icon-btn {
+  position: absolute;
+  right: 6px;
+  bottom: 10px;
+  width: 32px;
+  height: 32px;
+}
+.fb-safety {
+  font-size: 13px;
+}
+.fb-footer-note {
+  flex: 1;
+  align-self: center;
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+/* Header of the feedback sheet reuses the workout dialog's kind label. */
+.fb-title {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.fb-title .kind-line {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--kind);
+  font-size: 13px;
+  font-weight: 700;
+}
+.fb-title .kind-line em {
+  padding: 1px 7px;
+  border-radius: 10px;
+  background: var(--accent-soft);
+  color: var(--accent-text);
+  font-size: 11px;
+  font-style: normal;
+}
+.fb-planned {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  color: var(--text-dim);
+  font-size: 13px;
+}
+.fb-planned span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+/* ---- Logged workout (detail dialog) ------------------------------------------------------------ */
+.your-log {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 16px;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--locked-border);
+  background: color-mix(in srgb, var(--locked) 6%, var(--surface));
+}
+.your-log-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.your-log-head h3 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 16px;
+}
+.pva {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+.pva > div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  border: 1px solid var(--border);
+}
+.pva strong {
+  font-size: 18px;
+  font-variant-numeric: tabular-nums;
+}
+.pva small {
+  color: var(--text-muted);
+  font-size: 12px;
+}
+.pva .over {
+  color: var(--effort-hard);
+}
+.log-quote {
+  padding: 10px 14px;
+  border-left: 3px solid var(--border);
+  color: var(--text-dim);
+  font-size: 14px;
+  font-style: italic;
+}
+.coach-thread-link {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  font-size: 13px;
+}
+.coach-thread-link > span:not(.coach-avatar) {
+  flex: 1;
+  color: var(--text-dim);
+}
+.coach-thread-link strong {
+  color: var(--text);
+}
+
+.feeling-link {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 14px 16px;
+  border-radius: var(--radius-md);
+  border: 1px dashed var(--border);
+  background: transparent;
+  color: var(--text-dim);
+  text-align: left;
+  font-size: 14px;
+}
+.feeling-link strong {
+  color: var(--text);
+}
+.feeling-link span {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+.feeling-link small {
+  color: var(--text-muted);
+}
+
+.feedback-form {
+  border: 0;
+  padding: 0;
+  margin: 0;
+  min-width: 0;
+}
+.feedback-form .field-row {
+  flex-wrap: wrap;
+}
+.feedback-form .field-row .field {
+  flex: 1;
+  min-width: 120px;
+}
+.training-feedback .dialog-footer {
+  flex-wrap: wrap;
+}
+.hero-log-wrapper {
+  border: 1px solid var(--border);
+  border-radius: 0 0 var(--radius-lg) var(--radius-lg);
+  background: var(--surface);
+}
+.hero-log-wrapper .quick-rpe {
+  padding: 0 20px 18px;
+}
+.training-hero {
+  display: flex;
+  flex-direction: column;
+}
+.training-hero .hero-workout {
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  z-index: 1;
+}
+.training-history {
+  display: grid;
+  gap: 16px;
+}
+.training-history-entry {
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+.training-history-entry .section-header {
+  flex-wrap: wrap;
+}
+.workout-card-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.workout-card-wrap .quick-log {
+  display: flex;
+  gap: 6px;
+  padding-left: 64px;
+}
+.workout-card-wrap .workout-card-log {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.feedback-card {
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 12px;
+  text-align: left;
+}
+.feedback-card p {
+  margin: 8px 0 0;
+}
+.feedback-card-header {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+.feedback-card-header strong {
+  flex: 1;
+}
+.result-preview {
+  margin-top: 14px;
+}
+.result-zones {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+.result-zones dt {
+  font-size: 12px;
+  color: var(--text-muted);
+  text-transform: capitalize;
+}
+.result-zones dd {
+  margin: 0;
+  font-weight: 600;
+}
+@media (max-width: 600px) {
+  .status-choice {
+    gap: 6px;
+  }
+  .training-feedback .dialog-footer > .btn {
+    flex: 1;
+  }
+  .training-feedback .dialog-footer > .btn-primary {
+    flex-basis: 100%;
+  }
+  .hero-log {
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  .hero-log-wrapper .quick-rpe {
+    padding: 0 14px 16px;
+  }
+  .workout-card-wrap .quick-log {
+    padding-left: 0;
+  }
+  .rpe-scale {
+    gap: 3px;
+  }
+  .rpe-scale button {
+    min-width: 0;
+    padding: 0;
+  }
+}
+
+.training-hero > .hero-log-wrapper {
+  margin-top: -14px;
+  padding-top: 12px;
+}
+.training-unlogged {
+  padding: 14px;
+  border: 1px solid color-mix(in srgb, var(--warning) 35%, var(--border));
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--warning) 5%, var(--surface));
+  display: grid;
+  gap: 14px;
+}
+.training-unlogged article {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.training-unlogged .hero-log {
+  padding: 0;
+  border: 0;
+}
+.training-unlogged .hero-log-copy {
+  display: none;
+}
+.training-unlogged .log-actions .btn {
+  min-width: 0;
+}
+.day-bars .past i.logged {
+  opacity: 1;
+}
+
+.training-feedback .fb-footer-note {
+  flex-basis: 100%;
+  margin: 0;
+}

@@ -24,8 +24,12 @@ export function normalizeScenario(raw: Json | null): Json | null {
   const persona = isObject(raw.persona) ? raw.persona : {};
   const sports = objects(persona.sports);
   // Distance-based analysis follows running, or swimming for a swim-only athlete.
+  // The legacy volume chart has one distance series; avoid comparing mixed-sport
+  // totals to one sport's baseline. The load chart handles per-sport quantities.
   const primary =
-    sports.find((sport) => sport.sport === 'run') ?? sports.find((sport) => sport.sport === 'swim');
+    sports.length === 1 && ['run', 'swim'].includes(asString(sports[0]?.sport) ?? '')
+      ? sports[0]
+      : undefined;
   const runEvidence = objects(raw.evidence).find((item) => item.system === 'run_pace');
   const evidenceInput = isObject(runEvidence?.input) ? runEvidence.input : {};
   const availability = objects(persona.availability);
@@ -50,10 +54,10 @@ export function normalizeScenario(raw: Json | null): Json | null {
       ...expectations,
       planningWeeks: asNumber(raw.prescriptionWeeks),
       goalWeeks: asNumber(raw.planSpanWeeks),
-      sessionsPerWeek: sports.reduce(
-        (total, sport) => total + (asNumber(sport.desiredSessions) ?? 0),
-        0,
-      ),
+      sessionsPerWeek:
+        expectations.frequencyPolicy === 'sport_exposures'
+          ? null
+          : sports.reduce((total, sport) => total + (asNumber(sport.desiredSessions) ?? 0), 0),
       weeklyDistanceMetres: asNumber(primary?.weeklyDistanceMetres),
       longestDistanceMetres: asNumber(primary?.longestDistanceMetres),
       raceDistanceMetres: asNumber(evidenceInput.distanceMetres),

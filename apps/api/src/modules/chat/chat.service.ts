@@ -1,5 +1,7 @@
 import { workerReady } from '../agent/agent.service.js';
 import { generationState } from '../plans/schedule-generation.js';
+import { feedbackReferences } from '../training-log/training-log.service.js';
+import type { FeedbackReference } from '../training-log/training-log.schemas.js';
 import { randomUUID } from 'node:crypto';
 import { sql, type Transaction, type Selectable } from 'kysely';
 import { getDatabase } from '../../database/client.js';
@@ -184,6 +186,7 @@ function messageView(row: Selectable<DB['conversation_messages']>) {
     sequence: row.sequence,
     role: row.role,
     content: row.content,
+    references: row.references,
     producingRunId: row.producing_run_id,
     context: row.context,
     createdAt: iso(row.created_at),
@@ -230,6 +233,7 @@ export async function appendMessage(
   content: string,
   context: Context,
   runId: string | null = null,
+  references: FeedbackReference[] | null = null,
 ) {
   const counter = await db
     .updateTable('conversations')
@@ -248,6 +252,8 @@ export async function appendMessage(
         content,
         context: context === null ? null : json(context),
         producing_run_id: runId,
+        // pg treats top-level JS arrays as SQL arrays; encode the JSON array explicitly.
+        references: references === null ? null : JSON.stringify(references),
       })
       .returningAll()
       .executeTakeFirstOrThrow(),
@@ -270,7 +276,10 @@ async function accept(db: Tx, row: Conversation, input: Send) {
       .where('id', '=', row.id)
       .execute();
   }
-  const message = await appendMessage(db, row, 'user', input.content, context);
+  const references = input.references
+    ? await feedbackReferences(db, row.owner_id, row.plan_id, input.references)
+    : null;
+  const message = await appendMessage(db, row, 'user', input.content, context, null, references);
   const run = await db
     .insertInto('agent_runs')
     .values({

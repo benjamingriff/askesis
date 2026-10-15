@@ -293,6 +293,91 @@ describe('saved completion and assessment', () => {
   });
 });
 
+describe('weekly sport frequency', () => {
+  it('preserves every pilot sport frequency in the offline fixture, including limited pool slots', async () => {
+    const { scriptedCoach } = await import('./scripted.js');
+    for (const ref of dataset.suites[0]!.scenarios) {
+      const scenario = datasetCase(ref.id);
+      const call = scriptedCoach(scenario)
+        .flatMap((turn) => (turn.type === 'tools' ? turn.calls : []))
+        .find((call) => call.name === 'apply_schedule_changes')!;
+      const workouts = call.input.workouts as { key: string; date: string; discipline: string }[];
+      const value = {
+        plan: {
+          findings: [],
+          workouts: workouts.map((workout) => ({
+            workout: {
+              id: workout.key,
+              scheduledDate: workout.date,
+              discipline: workout.discipline,
+            },
+            prescription: { kind: 'effort', discipline: workout.discipline },
+          })),
+        },
+      } as unknown as BenchmarkSnapshot;
+      expect(frequency(value, scenario), scenario.id).toMatchObject({ status: 'pass' });
+    }
+  });
+  const schedule = (scenario: ReturnType<typeof datasetCase>, sessions: string[][]) =>
+    ({
+      plan: {
+        findings: [],
+        workouts: Array.from({ length: scenario.prescriptionWeeks }, (_, week) =>
+          sessions.map((sports, index) => ({
+            workout: {
+              id: `${week}-${index}`,
+              scheduledDate: addDays(scenario.dates.startDate, week * 7 + Math.min(index, 6)),
+              discipline: sports.length === 1 ? sports[0] : 'mixed',
+            },
+            prescription: {
+              kind: 'repeat',
+              repeatCount: 3,
+              steps: sports.map((sport) => ({ kind: 'effort', discipline: sport })),
+            },
+          })),
+        ).flat(),
+      },
+    }) as unknown as BenchmarkSnapshot;
+  const frequency = (value: BenchmarkSnapshot, scenario: ReturnType<typeof datasetCase>) => {
+    scenario.expectations.checks = [];
+    return checkPlan(value, scenario, Object.keys(scenario.facts)).find(
+      (check) => check.id === 'weekly_frequency',
+    )!;
+  };
+  it('requires the requested session count in each prescribed week, ignoring later weeks', () => {
+    const running = datasetCase('running-improver');
+    const good = schedule(running, [['run'], ['run'], ['run']]);
+    good.plan!.workouts.push({
+      ...good.plan!.workouts[0]!,
+      workout: {
+        ...good.plan!.workouts[0]!.workout,
+        scheduledDate: addDays(running.dates.coverageEndDate, 1),
+      },
+    });
+    expect(frequency(good, running).status).toBe('pass');
+    expect(frequency(schedule(running, [['run']]), running).status).toBe('fail');
+    expect(frequency(schedule(running, [['run'], ['run'], ['run'], ['run']]), running).status).toBe(
+      'fail',
+    );
+  });
+  it('counts each sport in a brick once regardless of repeated effort count', () => {
+    const triathlon = datasetCase('triathlon-intermediate');
+    const good = [['cycle', 'run'], ['cycle'], ['cycle'], ['run'], ['run'], ['swim'], ['swim']];
+    expect(frequency(schedule(triathlon, good), triathlon).status).toBe('pass');
+    expect(
+      frequency(
+        schedule(
+          triathlon,
+          good.filter((sports) => !sports.includes('swim')),
+        ),
+        triathlon,
+      ).explanation,
+    ).toContain('swim: 0, expected 2');
+    triathlon.expectations.frequencyPolicy = 'workouts_per_sport';
+    expect(frequency(schedule(triathlon, good), triathlon).status).toBe('fail');
+  });
+});
+
 describe('local isolation and portable evidence', () => {
   it('keeps SDK shutdown from exiting before interrupt cleanup finishes', async () => {
     const sdk = import.meta.resolve('@openai/agents');
@@ -499,6 +584,7 @@ describe('coach provider selection', () => {
         plan: null,
         brief: null,
         performance: null,
+        trainingLog: null,
         versionId: null,
         editNumber: null,
         tools: [

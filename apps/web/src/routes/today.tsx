@@ -1,3 +1,11 @@
+import {
+  TrainingLogProvider,
+  WorkoutLogActions,
+  LogMark,
+  CheckInButton,
+  useLogContext,
+} from '../components/TrainingLog';
+import { useTrainingLog } from '../training-log';
 import type { WorkoutSummary } from '@askesis/api-client';
 import { ArrowRight, CalendarDays, Library, MessageSquare, Moon, Sparkles } from 'lucide-react';
 import { useMemo, type CSSProperties } from 'react';
@@ -84,7 +92,11 @@ export function TodayPage() {
           Once a plan is locked and active, today’s session and your week appear here.
         </EmptyState>
       ) : null}
-      {plan ? <TodayForPlan key={plan.id} plan={plan} today={today} /> : null}
+      {plan ? (
+        <TrainingLogProvider key={plan.id} plan={plan}>
+          <TodayForPlan plan={plan} today={today} />
+        </TrainingLogProvider>
+      ) : null}
     </div>
   );
 }
@@ -104,6 +116,15 @@ function TodayForPlan({ plan, today }: { plan: Plan; today: string }) {
     [today],
   );
   const all = workouts.data ?? [];
+  const logContext = useLogContext();
+  const logs = logContext?.logs ?? [];
+  const recent = all.filter(
+    (w) =>
+      w.scheduledDate < today &&
+      w.scheduledDate >= addDays(today, -3) &&
+      !logs.some((l) => l.lineageId === w.lineageId),
+  );
+  const weekLog = useTrainingLog(plan.id, days[0], days[6]);
   const dialog = useWorkoutSelection(all, version?.id);
   const week = all.filter((w) => w.scheduledDate >= days[0]! && w.scheduledDate <= days[6]!);
   // Distance for running-only plans; time once other sports join, as their distances don't add.
@@ -113,9 +134,10 @@ function TodayForPlan({ plan, today }: { plan: Plan; today: string }) {
   const formatAmount = (value: number, withUnit = true) =>
     measure === 'time' ? formatDuration(value) : formatDistance(value, units, withUnit);
   const weekAmount = week.reduce((sum, w) => sum + amount(w), 0);
-  const plannedSoFar = week
-    .filter((w) => w.scheduledDate < today)
-    .reduce((sum, w) => sum + amount(w), 0);
+  const completedAmount = (weekLog.data?.summary.bySport ?? []).reduce(
+    (sum, sport) => sum + (measure === 'time' ? sport.actualSeconds : sport.actualMetres),
+    0,
+  );
   const maxDay = Math.max(
     ...days.map((d) => workoutsOn(week, d).reduce((sum, w) => sum + amount(w), 0)),
     1,
@@ -166,7 +188,15 @@ function TodayForPlan({ plan, today }: { plan: Plan; today: string }) {
             >
               <span className="label">{WEEKDAYS_SHORT[index]!.slice(0, 1)}</span>
               <strong>{dayNumber(date)}</strong>
-              <i style={{ '--kind': kind?.color ?? 'var(--border)' } as CSSProperties} />
+              {items.length && date <= today && logContext?.ready ? (
+                <LogMark
+                  logs={logs.filter((l) => items.some((w) => w.lineageId === l.lineageId))}
+                  date={date}
+                  today={today}
+                />
+              ) : (
+                <i style={{ '--kind': kind?.color ?? 'var(--border)' } as CSSProperties} />
+              )}
             </button>
           );
         })}
@@ -229,16 +259,32 @@ function TodayForPlan({ plan, today }: { plan: Plan; today: string }) {
               </p>
             </Card>
           ) : null}
+          {recent.length && logContext?.ready ? (
+            <div className="training-unlogged">
+              {recent.map((workout) => (
+                <article key={workout.id}>
+                  <span className="muted">
+                    {formatLong(workout.scheduledDate)} · {workout.title}
+                  </span>
+                  <WorkoutLogActions workout={workout} compact />
+                </article>
+              ))}
+            </div>
+          ) : null}
           {selectedWorkouts.map((workout) => (
-            <HeroWorkout
-              key={workout.id}
-              workout={workout}
-              version={version}
-              units={units}
-              onOpen={dialog.open}
-            />
+            <div className="training-hero" key={workout.id}>
+              <HeroWorkout
+                key={workout.id}
+                workout={workout}
+                version={version}
+                units={units}
+                onOpen={dialog.open}
+              />
+              <WorkoutLogActions workout={workout} />
+            </div>
           ))}
 
+          <CheckInButton plan={plan} workouts={all} />
           {plan.draft ? (
             <button
               type="button"
@@ -272,13 +318,18 @@ function TodayForPlan({ plan, today }: { plan: Plan; today: string }) {
             />
             <div className="week-summary">
               <Stat
-                label={measure === 'time' ? 'Planned time' : 'Planned distance'}
-                value={formatAmount(weekAmount, false)}
+                label={measure === 'time' ? 'Done time' : 'Done distance'}
+                value={formatAmount(completedAmount, false)}
                 unit={measure === 'time' ? undefined : units}
-                sub={`${formatAmount(weekAmount - plannedSoFar)} to go from today`}
+                sub={`of ${formatAmount(weekAmount)} planned`}
                 large
               />
-              <Stat label="Sessions" value={String(week.length)} large />
+              <Stat
+                label="Sessions"
+                value={`${(weekLog.data?.summary.done ?? 0) + (weekLog.data?.summary.changed ?? 0)} / ${week.length}`}
+                sub={`${weekLog.data?.summary.unlogged ?? 0} to log`}
+                large
+              />
             </div>
             <div className="day-bars" aria-hidden="true">
               {days.map((date, index) => {
@@ -291,6 +342,13 @@ function TodayForPlan({ plan, today }: { plan: Plan; today: string }) {
                     className={date < today ? 'past' : date === today ? 'today' : ''}
                   >
                     <i
+                      className={
+                        items.some((w) =>
+                          logs.some((l) => l.lineageId === w.lineageId && l.status !== 'skipped'),
+                        )
+                          ? 'logged'
+                          : ''
+                      }
                       style={
                         {
                           height: metres ? `${Math.max(14, (metres / maxDay) * 100)}%` : '6%',

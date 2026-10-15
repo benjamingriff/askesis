@@ -67,7 +67,13 @@ function weekWorkouts(scenario: Scenario, weekKey: string, weekStart: string, in
   const persona = scenario.persona;
   const used = new Map<number, { minutes: number; sports: Sport[] }>();
   const workouts = [];
-  for (const sport of persona.sports) {
+  const availableSlots = (sport: (typeof persona.sports)[number]) => {
+    const access = persona.accessRestrictions.find((item) => item.sport === sport.sport);
+    return persona.availability.filter((day) => !access || access.weekdays.includes(day.weekday))
+      .length;
+  };
+  // Reserve limited facility slots before flexible sports occupy their time budget.
+  for (const sport of [...persona.sports].sort((a, b) => availableSlots(a) - availableSlots(b))) {
     const access = persona.accessRestrictions.find((item) => item.sport === sport.sport);
     for (let session = 0; session < sport.desiredSessions; session++) {
       const slot = persona.availability.find((day) => {
@@ -79,7 +85,10 @@ function weekWorkouts(scenario: Scenario, weekKey: string, weekStart: string, in
           (!access || access.weekdays.includes(day.weekday))
         );
       });
-      if (!slot) break;
+      if (!slot)
+        throw new Error(
+          `Scripted fixture cannot fit ${sport.desiredSessions} ${sport.sport} sessions.`,
+        );
       const state = used.get(slot.weekday) ?? { minutes: 0, sports: [] };
       const minutes = Math.min(40, slot.maxMinutes - state.minutes, access?.maxMinutes ?? 40);
       used.set(slot.weekday, {

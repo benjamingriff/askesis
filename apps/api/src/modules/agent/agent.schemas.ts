@@ -1,3 +1,5 @@
+import { SESSION_TYPES } from '../workouts/session-types.js';
+import { LogInputSchema } from '../training-log/training-log.schemas.js';
 import { z } from 'zod';
 import { BriefSchema } from '../plans/brief.schemas.js';
 import { Id } from '../plans/plan.schemas.js';
@@ -13,7 +15,7 @@ import {
   ProvenanceSchema,
   SwimInputSchema,
 } from '../performance/performance.schemas.js';
-export const PROMPT_VERSION = 'multisport-coach-v3';
+export const PROMPT_VERSION = 'training-feedback-coach-v1';
 
 export const RegisterSchema = z
   .object({
@@ -123,6 +125,7 @@ export const WorkoutInputSchema = z
     priority: z.enum(['low', 'medium', 'high']),
     /** Races only: A goal race, B tune-up, C raced as training. Null for other workouts. */
     racePriority: z.enum(RACE_PRIORITIES).nullable(),
+    sessionType: z.enum(SESSION_TYPES).nullable().optional(),
     estimatedDurationSeconds: z.number().int().positive().max(86400).nullable(),
     estimatedDistanceMetres: z.number().positive().max(300000).nullable(),
     tags: z.array(z.string().trim().min(1).max(100)).max(20),
@@ -165,6 +168,8 @@ export const ToolSchemas = {
       description: z.string().max(20000).nullable(),
     })
     .strict(),
+  read_training_log: z.object({ from: date, to: date }).strict(),
+  record_workout_log: z.object({ planId: Id, lineageId: Id, log: LogInputSchema }).strict(),
   read_performance: z.object({}).strict(),
   preview_performance: z
     .object({ system: PerformanceSystemSchema, input: performanceInput })
@@ -193,6 +198,10 @@ const descriptions: Record<ToolName, string> = {
     'Create and bind one new plan to a standalone conversation only after the user expresses intent to create a plan. Never locks.',
   update_plan_brief:
     'Save current planning assumptions and dates. List each sport the plan trains once in sports, with its baseline: run and swim volumes are metres, cycle volumes are seconds, strength records sessions only. Missing facts stay unanswered; unknown means user says they do not know. Weekdays Monday through Sunday.',
+  read_training_log:
+    'Read actual training and check-ins across the athlete’s plans with deterministic load and fatigue summaries. Narrow the date window; do not calculate flags yourself.',
+  record_workout_log:
+    'Record or correct a workout log only from what the athlete explicitly reports. Does not edit or unlock a plan; use returned workout lineage IDs. Confirm the saved status. Do not invent effort, actuals or symptoms.',
   read_performance:
     "Read the athlete's calibration timeline: the entry in effect today for each system and recent history. Works with or without a plan.",
   preview_performance:

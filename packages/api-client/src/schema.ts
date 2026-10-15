@@ -3210,6 +3210,15 @@ export interface paths {
                                 versionId: string;
                                 editNumber: number;
                             } | null;
+                            references?: ({
+                                /** @enum {string} */
+                                type: "workout_log";
+                                logId: string;
+                            } | {
+                                /** @enum {string} */
+                                type: "check_in";
+                                checkInId: string;
+                            })[];
                         };
                     };
                 };
@@ -3247,6 +3256,17 @@ export interface paths {
                                     sequence: number;
                                     /** @enum {string} */
                                     role: "user" | "assistant";
+                                    references?: ({
+                                        /** @enum {string} */
+                                        type: "workout_log";
+                                        logId: string;
+                                        snapshot: components["schemas"]["WorkoutLog"];
+                                    } | {
+                                        /** @enum {string} */
+                                        type: "check_in";
+                                        checkInId: string;
+                                        snapshot: components["schemas"]["AthleteCheckIn"];
+                                    })[] | null;
                                     content: string;
                                     producingRunId: string | null;
                                     context: {
@@ -3928,6 +3948,17 @@ export interface paths {
                                 sequence: number;
                                 /** @enum {string} */
                                 role: "user" | "assistant";
+                                references?: ({
+                                    /** @enum {string} */
+                                    type: "workout_log";
+                                    logId: string;
+                                    snapshot: components["schemas"]["WorkoutLog"];
+                                } | {
+                                    /** @enum {string} */
+                                    type: "check_in";
+                                    checkInId: string;
+                                    snapshot: components["schemas"]["AthleteCheckIn"];
+                                })[] | null;
                                 content: string;
                                 producingRunId: string | null;
                                 context: {
@@ -4011,6 +4042,15 @@ export interface paths {
                             versionId: string;
                             editNumber: number;
                         } | null;
+                        references?: ({
+                            /** @enum {string} */
+                            type: "workout_log";
+                            logId: string;
+                        } | {
+                            /** @enum {string} */
+                            type: "check_in";
+                            checkInId: string;
+                        })[];
                     };
                 };
             };
@@ -4028,6 +4068,17 @@ export interface paths {
                                 sequence: number;
                                 /** @enum {string} */
                                 role: "user" | "assistant";
+                                references?: ({
+                                    /** @enum {string} */
+                                    type: "workout_log";
+                                    logId: string;
+                                    snapshot: components["schemas"]["WorkoutLog"];
+                                } | {
+                                    /** @enum {string} */
+                                    type: "check_in";
+                                    checkInId: string;
+                                    snapshot: components["schemas"]["AthleteCheckIn"];
+                                })[] | null;
                                 content: string;
                                 producingRunId: string | null;
                                 context: {
@@ -5378,6 +5429,415 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/training-log": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: {
+                    planId?: string;
+                    from?: string;
+                    to?: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Success. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["TrainingLog"];
+                    };
+                };
+                /** @description Rejected. */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Rejected. */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Rejected. */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Rejected. */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Rejected. */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/plans/{planId}/workouts/{lineageId}/log": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: {
+            parameters: {
+                query?: never;
+                header?: {
+                    "idempotency-key"?: string;
+                };
+                path: {
+                    planId: string;
+                    lineageId: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        /** @enum {string} */
+                        status: "done" | "changed" | "skipped";
+                        /** Format: date */
+                        performedOn?: string;
+                        actualDurationSeconds?: number | null;
+                        actualDistanceMetres?: number | null;
+                        rpe?: number | null;
+                        feel?: number | null;
+                        reasons?: ("poor_sleep" | "heavy_legs" | "under_fuelled" | "ill" | "pain" | "heat" | "terrain" | "stress" | "time" | "equipment" | "other")[];
+                        answers?: {
+                            /** @enum {string} */
+                            intervals?: "on_target" | "faded" | "missed" | "stopped";
+                            /** @enum {string} */
+                            finish?: "strong" | "faded" | "struggled";
+                            /** @enum {string} */
+                            fuelled?: "yes" | "some" | "no";
+                            /** @enum {string} */
+                            weights?: "light" | "right" | "heavy";
+                            weightsUsed?: string;
+                            /** @enum {string} */
+                            hardestPart?: "run" | "cycle" | "swim" | "strength" | "row" | "ski_erg" | "transitions";
+                            /** @enum {string} */
+                            painArea?: "foot" | "ankle" | "calf" | "knee" | "hip" | "back" | "shoulder" | "other";
+                            /** @enum {string} */
+                            painSeverity?: "mild" | "changed_movement" | "stopped";
+                            /** @enum {string} */
+                            race?: "to_plan" | "faded" | "better";
+                            result?: {
+                                /** @enum {string} */
+                                system: "run_pace";
+                                input: components["schemas"]["PaceInput"];
+                                /** @enum {string} */
+                                provenance?: "user_supplied" | "user_estimate" | "agent_estimate";
+                                estimateBasis?: string;
+                                /** Format: date */
+                                observedOn?: string;
+                            } | {
+                                /** @enum {string} */
+                                system: "cycle_power";
+                                input: components["schemas"]["PowerInput"];
+                                /** @enum {string} */
+                                provenance?: "user_supplied" | "user_estimate" | "agent_estimate";
+                                estimateBasis?: string;
+                                /** Format: date */
+                                observedOn?: string;
+                            } | {
+                                /** @enum {string} */
+                                system: "swim_pace";
+                                input: components["schemas"]["SwimInput"];
+                                /** @enum {string} */
+                                provenance?: "user_supplied" | "user_estimate" | "agent_estimate";
+                                estimateBasis?: string;
+                                /** Format: date */
+                                observedOn?: string;
+                            };
+                        };
+                        note?: string | null;
+                    };
+                };
+            };
+            responses: {
+                /** @description Success. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["WorkoutLog"];
+                    };
+                };
+                /** @description Rejected. */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Rejected. */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Rejected. */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Rejected. */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Rejected. */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        post?: never;
+        delete: {
+            parameters: {
+                query?: never;
+                header?: {
+                    "idempotency-key"?: string;
+                };
+                path: {
+                    planId: string;
+                    lineageId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Success. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            cleared: boolean;
+                        };
+                    };
+                };
+                /** @description Rejected. */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Rejected. */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Rejected. */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Rejected. */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Rejected. */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/check-ins": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: {
+                    "idempotency-key"?: string;
+                };
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        planId: string;
+                        /** @enum {string} */
+                        kind: "ill" | "pain" | "run_down" | "busy";
+                        /** Format: date */
+                        startsOn: string;
+                        /** Format: date */
+                        endsOn: string | null;
+                        details: {
+                            /** @enum {string} */
+                            symptoms?: "above_neck" | "below_neck" | "fever" | "chest_pain";
+                            /** @enum {string} */
+                            painArea?: "foot" | "ankle" | "calf" | "knee" | "hip" | "back" | "shoulder" | "other";
+                            /** @enum {string} */
+                            painSeverity?: "mild" | "changed_movement" | "stopped";
+                            /** @enum {string} */
+                            preference: "easy" | "shorter" | "rest" | "coach";
+                            /** @enum {string} */
+                            returnStyle: "gently" | "balanced" | "quickly";
+                            note?: string;
+                        };
+                    };
+                };
+            };
+            responses: {
+                /** @description Success. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["AthleteCheckIn"];
+                    };
+                };
+                /** @description Rejected. */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Rejected. */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Rejected. */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Rejected. */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Rejected. */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -5395,6 +5855,11 @@ export interface components {
         WorkoutSummary: {
             /** Format: uuid */
             id: string;
+            /** Format: uuid */
+            lineageId: string;
+            /** @enum {string|null} */
+            sessionType: "recovery" | "easy" | "long" | "steady" | "tempo" | "intervals" | "speed" | "strength" | "mobility" | "brick" | "race" | "test" | "rest" | null;
+            plannedRpe: number | null;
             /** Format: uuid */
             planId: string;
             /** Format: uuid */
@@ -5645,6 +6110,141 @@ export interface components {
             };
             desiredSessions: number | null;
         };
+        WorkoutLog: {
+            id: string;
+            planId: string;
+            lineageId: string;
+            loggedVersionId: string;
+            /** Format: date */
+            scheduledOn: string;
+            title: string;
+            discipline: string;
+            /** @enum {string|null} */
+            sessionType: "recovery" | "easy" | "long" | "steady" | "tempo" | "intervals" | "speed" | "strength" | "mobility" | "brick" | "race" | "test" | "rest" | null;
+            keySession: boolean;
+            plannedDurationSeconds: number | null;
+            plannedDistanceMetres: number | null;
+            plannedRpe: number | null;
+            /** @enum {string} */
+            status: "done" | "changed" | "skipped";
+            /** Format: date */
+            performedOn: string;
+            actualDurationSeconds: number | null;
+            actualDistanceMetres: number | null;
+            rpe: number | null;
+            feel: number | null;
+            reasons: ("poor_sleep" | "heavy_legs" | "under_fuelled" | "ill" | "pain" | "heat" | "terrain" | "stress" | "time" | "equipment" | "other")[];
+            answers: {
+                /** @enum {string} */
+                intervals?: "on_target" | "faded" | "missed" | "stopped";
+                /** @enum {string} */
+                finish?: "strong" | "faded" | "struggled";
+                /** @enum {string} */
+                fuelled?: "yes" | "some" | "no";
+                /** @enum {string} */
+                weights?: "light" | "right" | "heavy";
+                weightsUsed?: string;
+                /** @enum {string} */
+                hardestPart?: "run" | "cycle" | "swim" | "strength" | "row" | "ski_erg" | "transitions";
+                /** @enum {string} */
+                painArea?: "foot" | "ankle" | "calf" | "knee" | "hip" | "back" | "shoulder" | "other";
+                /** @enum {string} */
+                painSeverity?: "mild" | "changed_movement" | "stopped";
+                /** @enum {string} */
+                race?: "to_plan" | "faded" | "better";
+                result?: {
+                    /** @enum {string} */
+                    system: "run_pace";
+                    input: components["schemas"]["PaceInput"];
+                    /** @enum {string} */
+                    provenance?: "user_supplied" | "user_estimate" | "agent_estimate";
+                    estimateBasis?: string;
+                    /** Format: date */
+                    observedOn?: string;
+                } | {
+                    /** @enum {string} */
+                    system: "cycle_power";
+                    input: components["schemas"]["PowerInput"];
+                    /** @enum {string} */
+                    provenance?: "user_supplied" | "user_estimate" | "agent_estimate";
+                    estimateBasis?: string;
+                    /** Format: date */
+                    observedOn?: string;
+                } | {
+                    /** @enum {string} */
+                    system: "swim_pace";
+                    input: components["schemas"]["SwimInput"];
+                    /** @enum {string} */
+                    provenance?: "user_supplied" | "user_estimate" | "agent_estimate";
+                    estimateBasis?: string;
+                    /** Format: date */
+                    observedOn?: string;
+                };
+            };
+            answersSchemaVersion: number;
+            note: string | null;
+            /** @enum {string} */
+            source: "manual" | "coach";
+            createdAt: string;
+            updatedAt: string;
+        };
+        PaceInput: {
+            /** @enum {string} */
+            method: "race_result";
+            distanceMetres: number;
+            durationSeconds: number;
+        } | {
+            /** @enum {string} */
+            method: "threshold_pace";
+            secondsPerKilometre: number;
+        };
+        PowerInput: {
+            /** @enum {string} */
+            method: "ftp";
+            watts: number;
+        } | {
+            /** @enum {string} */
+            method: "twenty_minute_test";
+            averageWatts: number;
+        } | {
+            /** @enum {string} */
+            method: "ramp_test";
+            bestMinuteWatts: number;
+        };
+        SwimInput: {
+            /** @enum {string} */
+            method: "css_test";
+            t400Seconds: number;
+            t200Seconds: number;
+        } | {
+            /** @enum {string} */
+            method: "css_pace";
+            secondsPer100Metres: number;
+        };
+        AthleteCheckIn: {
+            planId: string;
+            /** @enum {string} */
+            kind: "ill" | "pain" | "run_down" | "busy";
+            /** Format: date */
+            startsOn: string;
+            /** Format: date */
+            endsOn: string | null;
+            details: {
+                /** @enum {string} */
+                symptoms?: "above_neck" | "below_neck" | "fever" | "chest_pain";
+                /** @enum {string} */
+                painArea?: "foot" | "ankle" | "calf" | "knee" | "hip" | "back" | "shoulder" | "other";
+                /** @enum {string} */
+                painSeverity?: "mild" | "changed_movement" | "stopped";
+                /** @enum {string} */
+                preference: "easy" | "shorter" | "rest" | "coach";
+                /** @enum {string} */
+                returnStyle: "gently" | "balanced" | "quickly";
+                note?: string;
+            };
+            id: string;
+            createdAt: string;
+        };
         PerformanceState: {
             timezone: string;
             today: string;
@@ -5742,39 +6342,6 @@ export interface components {
             observedOn?: string;
             idempotencyKey?: string;
         };
-        PaceInput: {
-            /** @enum {string} */
-            method: "race_result";
-            distanceMetres: number;
-            durationSeconds: number;
-        } | {
-            /** @enum {string} */
-            method: "threshold_pace";
-            secondsPerKilometre: number;
-        };
-        PowerInput: {
-            /** @enum {string} */
-            method: "ftp";
-            watts: number;
-        } | {
-            /** @enum {string} */
-            method: "twenty_minute_test";
-            averageWatts: number;
-        } | {
-            /** @enum {string} */
-            method: "ramp_test";
-            bestMinuteWatts: number;
-        };
-        SwimInput: {
-            /** @enum {string} */
-            method: "css_test";
-            t400Seconds: number;
-            t200Seconds: number;
-        } | {
-            /** @enum {string} */
-            method: "css_pace";
-            secondsPer100Metres: number;
-        };
         CalibrationPreview: {
             system: components["schemas"]["PerformanceSystem"];
             method: string;
@@ -5794,6 +6361,34 @@ export interface components {
             /** @enum {string} */
             system: "swim_pace";
             input: components["schemas"]["SwimInput"];
+        };
+        TrainingLog: {
+            /** Format: date */
+            today: string;
+            logs: components["schemas"]["WorkoutLog"][];
+            checkIns: components["schemas"]["AthleteCheckIn"][];
+            summary: components["schemas"]["TrainingLogSummary"];
+        };
+        TrainingLogSummary: {
+            due: number;
+            done: number;
+            changed: number;
+            skipped: number;
+            unlogged: number;
+            bySport: {
+                discipline: string;
+                plannedSeconds: number;
+                actualSeconds: number;
+                plannedMetres: number;
+                actualMetres: number;
+            }[];
+            load: number | null;
+            unknownLoadSessions: number;
+            harderKeySessions: number;
+            easierKeySessions: number;
+            recentKeySessions: number;
+            tiredSessions: number;
+            easyHighEffortSessions: number;
         };
     };
     responses: never;

@@ -62,6 +62,8 @@ export function conversationInput(context: ExecutionContext): ConversationTurn[]
     plan: context.plan,
     brief: context.brief,
     performance: context.performance,
+    trainingLog: context.trainingLog,
+    feedbackReferences: context.messages.flatMap((m) => m.references ?? []),
     historyTruncated: context.historyTruncated,
   };
   return [

@@ -1,3 +1,4 @@
+import { registerTrainingLogRoutes } from './modules/training-log/training-log.routes.js';
 import { registerLiveRoutes } from './modules/live/live.routes.js';
 import { registerAgentRoutes } from './modules/agent/agent.routes.js';
 import * as Sentry from '@sentry/node';
@@ -92,7 +93,7 @@ app.get('/api/ready', async (context) => {
     select exists (
       select 1
       from atlas_schema_revisions.atlas_schema_revisions
-      where version = '20261007120000'
+      where version = '20261015120000'
     ) as migrated
   `.execute(getDatabase());
 
@@ -120,6 +121,7 @@ registerPlanRoutes(app);
 registerChatRoutes(app);
 registerBriefRoutes(app);
 registerPerformanceRoutes(app);
+registerTrainingLogRoutes(app);
 
 app.doc('/api/openapi.json', {
   openapi: '3.1.0',

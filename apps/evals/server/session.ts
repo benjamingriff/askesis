@@ -529,61 +529,147 @@ function buildBeliefs(
     ),
   );
 
-  const sessionsPerWeek = asNumber(expectations.sessionsPerWeek);
-  const current = fromBrief((brief) => {
-    const value = known(runSport(brief).currentSessions);
-    return value === null ? null : `${value} runs`;
-  });
-  // The benchmark's baseline check expects three current runs per week.
-  rows.push(
-    row(
-      'currentSessions',
-      'Current runs per week',
-      'training',
-      '3 runs',
-      current.final,
-      current.turn,
-    ),
-  );
+  const datasetSports =
+    scenario.edition === 'v1' && isObject(scenario.persona)
+      ? objects(scenario.persona.sports)
+      : null;
+  if (datasetSports) {
+    for (const sport of datasetSports) {
+      const name = asString(sport.sport) ?? 'other';
+      const label =
+        { run: 'Running', cycle: 'Cycling', swim: 'Swimming', strength: 'Strength' }[name] ?? name;
+      const fields: [string, string, string, string, (value: number) => string][] = [
+        [
+          'currentSessions',
+          'currentSessions',
+          'sessions per week',
+          'training',
+          (value) => `${value} sessions`,
+        ],
+        [
+          'desiredSessions',
+          'desiredSessions',
+          'sessions per week wanted',
+          'frequency',
+          (value) => `${value} sessions`,
+        ],
+        ...(name === 'run' || name === 'swim'
+          ? ([
+              [
+                'weeklyDistance',
+                'weeklyDistanceMetres',
+                'weekly distance',
+                'training',
+                (value: number) => km(value)!,
+              ],
+              [
+                'longestDistance',
+                'longestDistanceMetres',
+                'longest recent session',
+                'training',
+                (value: number) => km(value)!,
+              ],
+            ] as typeof fields)
+          : []),
+        ...(name === 'cycle'
+          ? ([
+              [
+                'weeklyDuration',
+                'weeklyDurationSeconds',
+                'weekly duration',
+                'training',
+                (value: number) => `${clock(value)} min`,
+              ],
+              [
+                'longestDuration',
+                'longestDurationSeconds',
+                'longest recent session',
+                'training',
+                (value: number) => `${clock(value)} min`,
+              ],
+            ] as typeof fields)
+          : []),
+      ];
+      for (const [field, expectedField, title, fact, format] of fields) {
+        const saved = fromBrief((brief) => {
+          const own = objects(brief.sports).find((entry) => entry.sport === name);
+          const answer = own?.[field];
+          return isObject(answer) && answer.status === 'unknown'
+            ? 'unknown'
+            : known(answer) === null
+              ? null
+              : format(known(answer)!);
+        });
+        const expected = asNumber(sport[expectedField]);
+        rows.push(
+          row(
+            `${name}.${field}`,
+            `${label} ${title}`,
+            fact,
+            expected === null ? 'unknown' : format(expected),
+            saved.final,
+            saved.turn,
+          ),
+        );
+      }
+    }
+  } else {
+    const sessionsPerWeek = asNumber(expectations.sessionsPerWeek);
+    const current = fromBrief((brief) => {
+      const value = known(runSport(brief).currentSessions);
+      return value === null ? null : `${value} runs`;
+    });
+    // The benchmark's baseline check expects three current runs per week.
+    rows.push(
+      row(
+        'currentSessions',
+        'Current runs per week',
+        'training',
+        '3 runs',
+        current.final,
+        current.turn,
+      ),
+    );
 
-  const weekly = fromBrief((brief) => km(known(runSport(brief).weeklyDistance)));
-  rows.push(
-    row(
-      'weeklyDistance',
-      'Weekly distance',
-      'training',
-      km(asNumber(expectations.weeklyDistanceMetres)),
-      weekly.final,
-      weekly.turn,
-    ),
-  );
+    const weekly = fromBrief((brief) => km(known(runSport(brief).weeklyDistance)));
+    rows.push(
+      row(
+        'weeklyDistance',
+        'Weekly distance',
+        'training',
+        km(asNumber(expectations.weeklyDistanceMetres)),
+        weekly.final,
+        weekly.turn,
+      ),
+    );
 
-  const longest = fromBrief((brief) => km(known(runSport(brief).longestDistance)));
-  rows.push(
-    row(
-      'longestDistance',
-      'Longest recent run',
-      'training',
-      km(asNumber(expectations.longestDistanceMetres)),
-      longest.final,
-      longest.turn,
-    ),
-  );
+    const longest = fromBrief((brief) => km(known(runSport(brief).longestDistance)));
+    rows.push(
+      row(
+        'longestDistance',
+        'Longest recent run',
+        'training',
+        km(asNumber(expectations.longestDistanceMetres)),
+        longest.final,
+        longest.turn,
+      ),
+    );
 
-  const desired = fromBrief((brief) => {
-    const value = known(runSport(brief).desiredSessions);
-    return value === null ? null : `${value} runs`;
-  });
-  rows.push(
-    row(
-      'desiredSessions',
-      'Runs per week wanted',
-      'frequency',
-      sessionsPerWeek === null ? null : `${sessionsPerWeek} runs`,
-      desired.final,
-      desired.turn,
-    ),
-  );
+    const desired = fromBrief((brief) => {
+      const value = known(runSport(brief).desiredSessions);
+      return value === null ? null : `${value} runs`;
+    });
+    rows.push(
+      row(
+        'desiredSessions',
+        'Runs per week wanted',
+        'frequency',
+        sessionsPerWeek === null ? null : `${sessionsPerWeek} runs`,
+        desired.final,
+        desired.turn,
+      ),
+    );
+  }
 
   const availableDays = asArray(expectations.availableWeekdays).filter(
     (day): day is number => typeof day === 'number',
@@ -612,40 +698,77 @@ function buildBeliefs(
       ? 'miles'
       : null;
   const unit = fromBrief((brief) => asString(brief.unit));
-  rows.push(row('unit', 'Distance unit', 'constraints', expectedUnit, unit.final, unit.turn));
+  const unitFact =
+    datasetSports && /kilomet|\bmiles?\b/i.test(asString(facts.preferences) ?? '')
+      ? 'preferences'
+      : 'constraints';
+  rows.push(row('unit', 'Distance unit', unitFact, expectedUnit, unit.final, unit.turn));
 
-  const recordCall = [...tools]
-    .reverse()
-    .find((tool) => tool.name === 'record_performance' && tool.status === 'completed');
-  const recordInput = inputOf(recordCall);
-  const measured = isObject(recordInput.input) ? recordInput.input : {};
-  const raceDistance = asNumber(expectations.raceDistanceMetres);
-  const raceDuration = asNumber(expectations.raceDurationSeconds);
-  const fitnessText = (
-    distance: number | null,
-    duration: number | null,
-    observed: string | null,
-  ) =>
-    distance !== null && duration !== null
-      ? `${km(distance)} in ${clock(duration)}${observed ? ` on ${observed}` : ''}`
-      : null;
-  rows.push(
-    row(
-      'fitness',
-      'Fitness evidence',
-      'fitness',
-      fitnessText(raceDistance, raceDuration, asString(dates.observedOn)),
-      recordCall
-        ? fitnessText(
-            asNumber(measured.distanceMetres),
-            asNumber(measured.durationSeconds),
-            asString(recordInput.observedOn),
-          )
-        : null,
-      recordCall ? (toolTurn.get(recordCall.operationId) ?? null) : null,
-      asString(recordInput.provenance),
-    ),
-  );
+  if (datasetSports) {
+    for (const evidence of objects(scenario.evidence)) {
+      const system = asString(evidence.system);
+      const recordCall = [...tools]
+        .reverse()
+        .find(
+          (tool) =>
+            tool.name === 'record_performance' &&
+            tool.status === 'completed' &&
+            inputOf(tool).system === system,
+        );
+      const recordInput = inputOf(recordCall);
+      const evidenceText = (input: unknown, observed: unknown) =>
+        isObject(input)
+          ? `${Object.entries(input)
+              .sort(([a], [b]) => a.localeCompare(b))
+              .map(([key, value]) => `${key}: ${String(value)}`)
+              .join(', ')}${asString(observed) ? ` on ${asString(observed)}` : ''}`
+          : null;
+      rows.push(
+        row(
+          `fitness.${system}`,
+          `${system} evidence`,
+          'fitness',
+          evidenceText(evidence.input, evidence.observedOn),
+          evidenceText(recordInput.input, recordInput.observedOn),
+          recordCall ? (toolTurn.get(recordCall.operationId) ?? null) : null,
+          asString(recordInput.provenance),
+        ),
+      );
+    }
+  } else {
+    const recordCall = [...tools]
+      .reverse()
+      .find((tool) => tool.name === 'record_performance' && tool.status === 'completed');
+    const recordInput = inputOf(recordCall);
+    const measured = isObject(recordInput.input) ? recordInput.input : {};
+    const raceDistance = asNumber(expectations.raceDistanceMetres);
+    const raceDuration = asNumber(expectations.raceDurationSeconds);
+    const fitnessText = (
+      distance: number | null,
+      duration: number | null,
+      observed: string | null,
+    ) =>
+      distance !== null && duration !== null
+        ? `${km(distance)} in ${clock(duration)}${observed ? ` on ${observed}` : ''}`
+        : null;
+    rows.push(
+      row(
+        'fitness',
+        'Fitness evidence',
+        'fitness',
+        fitnessText(raceDistance, raceDuration, asString(dates.observedOn)),
+        recordCall
+          ? fitnessText(
+              asNumber(measured.distanceMetres),
+              asNumber(measured.durationSeconds),
+              asString(recordInput.observedOn),
+            )
+          : null,
+        recordCall ? (toolTurn.get(recordCall.operationId) ?? null) : null,
+        asString(recordInput.provenance),
+      ),
+    );
+  }
 
   // Goal is free text, so it can only be flagged for review or as assumed.
   const goal = fromBrief((brief) => asString(brief.goal));
@@ -661,7 +784,6 @@ function buildBeliefs(
 // ---------- decisions ----------
 
 function flattenBrief(brief: Json, top: Json): Record<string, string | null> {
-  const sport = runSport(brief);
   const value = (field: unknown, format: (n: number) => string) => {
     if (isObject(field)) {
       if (field.status !== 'known') return asString(field.status);
@@ -678,10 +800,27 @@ function flattenBrief(brief: Json, top: Json): Record<string, string | null> {
   return {
     Goal: asString(brief.goal),
     'Distance unit': asString(brief.unit),
-    'Current runs/week': value(sport.currentSessions, (n) => `${n}`),
-    'Runs/week wanted': value(sport.desiredSessions, (n) => `${n}`),
-    'Weekly distance': value(sport.weeklyDistance, (n) => km(n) ?? ''),
-    'Longest run': value(sport.longestDistance, (n) => km(n) ?? ''),
+    ...Object.fromEntries(
+      objects(brief.sports).flatMap((sport) => {
+        const name = asString(sport.sport) ?? 'other';
+        return [
+          [`${name} current sessions/week`, value(sport.currentSessions, String)],
+          [`${name} sessions/week wanted`, value(sport.desiredSessions, String)],
+          ...(name === 'run' || name === 'swim'
+            ? [
+                [`${name} weekly distance`, value(sport.weeklyDistance, (n) => km(n) ?? '')],
+                [`${name} longest session`, value(sport.longestDistance, (n) => km(n) ?? '')],
+              ]
+            : []),
+          ...(name === 'cycle'
+            ? [
+                [`${name} weekly duration`, value(sport.weeklyDuration, clock)],
+                [`${name} longest session`, value(sport.longestDuration, clock)],
+              ]
+            : []),
+        ];
+      }),
+    ),
     'Available days': weekdaysOf(brief),
     'Preferred days': preferred || null,
     Context: asString(brief.context),

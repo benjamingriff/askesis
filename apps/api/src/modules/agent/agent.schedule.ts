@@ -300,6 +300,7 @@ export async function writeSchedule(
       primary_discipline: w.discipline,
       priority: w.priority,
       race_priority: w.racePriority,
+      ...(w.sessionType !== undefined ? { session_type: w.sessionType } : {}),
       estimated_duration_seconds: w.estimatedDurationSeconds,
       estimated_distance_metres: w.estimatedDistanceMetres,
     };

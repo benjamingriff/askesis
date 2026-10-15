@@ -56,6 +56,35 @@
             "format": "uuid",
             "pattern": "^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i"
           },
+          "lineageId": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i"
+          },
+          "sessionType": {
+            "type": "string",
+            "nullable": true,
+            "enum": [
+              "recovery",
+              "easy",
+              "long",
+              "steady",
+              "tempo",
+              "intervals",
+              "speed",
+              "strength",
+              "mobility",
+              "brick",
+              "race",
+              "test",
+              "rest",
+              null
+            ]
+          },
+          "plannedRpe": {
+            "type": "number",
+            "nullable": true
+          },
           "planId": {
             "type": "string",
             "format": "uuid",
@@ -120,6 +149,9 @@
         },
         "required": [
           "id",
+          "lineageId",
+          "sessionType",
+          "plannedRpe",
           "planId",
           "planVersionId",
           "planTitle",
@@ -1245,6 +1277,644 @@
           }
         ]
       },
+      "WorkoutLog": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+          },
+          "planId": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+          },
+          "lineageId": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+          },
+          "loggedVersionId": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+          },
+          "scheduledOn": {
+            "type": "string",
+            "format": "date"
+          },
+          "title": {
+            "type": "string"
+          },
+          "discipline": {
+            "type": "string"
+          },
+          "sessionType": {
+            "type": "string",
+            "nullable": true,
+            "enum": [
+              "recovery",
+              "easy",
+              "long",
+              "steady",
+              "tempo",
+              "intervals",
+              "speed",
+              "strength",
+              "mobility",
+              "brick",
+              "race",
+              "test",
+              "rest",
+              null
+            ]
+          },
+          "keySession": {
+            "type": "boolean"
+          },
+          "plannedDurationSeconds": {
+            "type": "number",
+            "nullable": true
+          },
+          "plannedDistanceMetres": {
+            "type": "number",
+            "nullable": true
+          },
+          "plannedRpe": {
+            "type": "number",
+            "nullable": true
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "done",
+              "changed",
+              "skipped"
+            ]
+          },
+          "performedOn": {
+            "type": "string",
+            "format": "date"
+          },
+          "actualDurationSeconds": {
+            "type": "number",
+            "nullable": true
+          },
+          "actualDistanceMetres": {
+            "type": "number",
+            "nullable": true
+          },
+          "rpe": {
+            "type": "number",
+            "nullable": true
+          },
+          "feel": {
+            "type": "number",
+            "nullable": true
+          },
+          "reasons": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "poor_sleep",
+                "heavy_legs",
+                "under_fuelled",
+                "ill",
+                "pain",
+                "heat",
+                "terrain",
+                "stress",
+                "time",
+                "equipment",
+                "other"
+              ]
+            }
+          },
+          "answers": {
+            "type": "object",
+            "properties": {
+              "intervals": {
+                "type": "string",
+                "enum": [
+                  "on_target",
+                  "faded",
+                  "missed",
+                  "stopped"
+                ]
+              },
+              "finish": {
+                "type": "string",
+                "enum": [
+                  "strong",
+                  "faded",
+                  "struggled"
+                ]
+              },
+              "fuelled": {
+                "type": "string",
+                "enum": [
+                  "yes",
+                  "some",
+                  "no"
+                ]
+              },
+              "weights": {
+                "type": "string",
+                "enum": [
+                  "light",
+                  "right",
+                  "heavy"
+                ]
+              },
+              "weightsUsed": {
+                "type": "string",
+                "maxLength": 1000
+              },
+              "hardestPart": {
+                "type": "string",
+                "enum": [
+                  "run",
+                  "cycle",
+                  "swim",
+                  "strength",
+                  "row",
+                  "ski_erg",
+                  "transitions"
+                ]
+              },
+              "painArea": {
+                "type": "string",
+                "enum": [
+                  "foot",
+                  "ankle",
+                  "calf",
+                  "knee",
+                  "hip",
+                  "back",
+                  "shoulder",
+                  "other"
+                ]
+              },
+              "painSeverity": {
+                "type": "string",
+                "enum": [
+                  "mild",
+                  "changed_movement",
+                  "stopped"
+                ]
+              },
+              "race": {
+                "type": "string",
+                "enum": [
+                  "to_plan",
+                  "faded",
+                  "better"
+                ]
+              },
+              "result": {
+                "oneOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "system": {
+                        "type": "string",
+                        "enum": [
+                          "run_pace"
+                        ]
+                      },
+                      "input": {
+                        "$ref": "#/components/schemas/PaceInput"
+                      },
+                      "provenance": {
+                        "type": "string",
+                        "enum": [
+                          "user_supplied",
+                          "user_estimate",
+                          "agent_estimate"
+                        ]
+                      },
+                      "estimateBasis": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 4000
+                      },
+                      "observedOn": {
+                        "type": "string",
+                        "format": "date"
+                      }
+                    },
+                    "required": [
+                      "system",
+                      "input"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "system": {
+                        "type": "string",
+                        "enum": [
+                          "cycle_power"
+                        ]
+                      },
+                      "input": {
+                        "$ref": "#/components/schemas/PowerInput"
+                      },
+                      "provenance": {
+                        "type": "string",
+                        "enum": [
+                          "user_supplied",
+                          "user_estimate",
+                          "agent_estimate"
+                        ]
+                      },
+                      "estimateBasis": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 4000
+                      },
+                      "observedOn": {
+                        "type": "string",
+                        "format": "date"
+                      }
+                    },
+                    "required": [
+                      "system",
+                      "input"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "system": {
+                        "type": "string",
+                        "enum": [
+                          "swim_pace"
+                        ]
+                      },
+                      "input": {
+                        "$ref": "#/components/schemas/SwimInput"
+                      },
+                      "provenance": {
+                        "type": "string",
+                        "enum": [
+                          "user_supplied",
+                          "user_estimate",
+                          "agent_estimate"
+                        ]
+                      },
+                      "estimateBasis": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 4000
+                      },
+                      "observedOn": {
+                        "type": "string",
+                        "format": "date"
+                      }
+                    },
+                    "required": [
+                      "system",
+                      "input"
+                    ],
+                    "additionalProperties": false
+                  }
+                ]
+              }
+            },
+            "additionalProperties": false
+          },
+          "answersSchemaVersion": {
+            "type": "number"
+          },
+          "note": {
+            "type": "string",
+            "nullable": true
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "manual",
+              "coach"
+            ]
+          },
+          "createdAt": {
+            "type": "string"
+          },
+          "updatedAt": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "planId",
+          "lineageId",
+          "loggedVersionId",
+          "scheduledOn",
+          "title",
+          "discipline",
+          "sessionType",
+          "keySession",
+          "plannedDurationSeconds",
+          "plannedDistanceMetres",
+          "plannedRpe",
+          "status",
+          "performedOn",
+          "actualDurationSeconds",
+          "actualDistanceMetres",
+          "rpe",
+          "feel",
+          "reasons",
+          "answers",
+          "answersSchemaVersion",
+          "note",
+          "source",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "PaceInput": {
+        "oneOf": [
+          {
+            "type": "object",
+            "properties": {
+              "method": {
+                "type": "string",
+                "enum": [
+                  "race_result"
+                ]
+              },
+              "distanceMetres": {
+                "type": "number",
+                "minimum": 1609.344,
+                "maximum": 42195
+              },
+              "durationSeconds": {
+                "type": "integer",
+                "minimum": 0,
+                "exclusiveMinimum": true
+              }
+            },
+            "required": [
+              "method",
+              "distanceMetres",
+              "durationSeconds"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "method": {
+                "type": "string",
+                "enum": [
+                  "threshold_pace"
+                ]
+              },
+              "secondsPerKilometre": {
+                "type": "number",
+                "minimum": 0,
+                "exclusiveMinimum": true
+              }
+            },
+            "required": [
+              "method",
+              "secondsPerKilometre"
+            ],
+            "additionalProperties": false
+          }
+        ]
+      },
+      "PowerInput": {
+        "oneOf": [
+          {
+            "type": "object",
+            "properties": {
+              "method": {
+                "type": "string",
+                "enum": [
+                  "ftp"
+                ]
+              },
+              "watts": {
+                "type": "number",
+                "minimum": 0,
+                "exclusiveMinimum": true,
+                "maximum": 2000
+              }
+            },
+            "required": [
+              "method",
+              "watts"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "method": {
+                "type": "string",
+                "enum": [
+                  "twenty_minute_test"
+                ]
+              },
+              "averageWatts": {
+                "type": "number",
+                "minimum": 0,
+                "exclusiveMinimum": true,
+                "maximum": 2000
+              }
+            },
+            "required": [
+              "method",
+              "averageWatts"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "method": {
+                "type": "string",
+                "enum": [
+                  "ramp_test"
+                ]
+              },
+              "bestMinuteWatts": {
+                "type": "number",
+                "minimum": 0,
+                "exclusiveMinimum": true,
+                "maximum": 3000
+              }
+            },
+            "required": [
+              "method",
+              "bestMinuteWatts"
+            ],
+            "additionalProperties": false
+          }
+        ]
+      },
+      "SwimInput": {
+        "oneOf": [
+          {
+            "type": "object",
+            "properties": {
+              "method": {
+                "type": "string",
+                "enum": [
+                  "css_test"
+                ]
+              },
+              "t400Seconds": {
+                "type": "number",
+                "minimum": 0,
+                "exclusiveMinimum": true,
+                "maximum": 3600
+              },
+              "t200Seconds": {
+                "type": "number",
+                "minimum": 0,
+                "exclusiveMinimum": true,
+                "maximum": 1800
+              }
+            },
+            "required": [
+              "method",
+              "t400Seconds",
+              "t200Seconds"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "method": {
+                "type": "string",
+                "enum": [
+                  "css_pace"
+                ]
+              },
+              "secondsPer100Metres": {
+                "type": "number",
+                "minimum": 0,
+                "exclusiveMinimum": true,
+                "maximum": 600
+              }
+            },
+            "required": [
+              "method",
+              "secondsPer100Metres"
+            ],
+            "additionalProperties": false
+          }
+        ]
+      },
+      "AthleteCheckIn": {
+        "type": "object",
+        "properties": {
+          "planId": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "ill",
+              "pain",
+              "run_down",
+              "busy"
+            ]
+          },
+          "startsOn": {
+            "type": "string",
+            "format": "date"
+          },
+          "endsOn": {
+            "type": "string",
+            "nullable": true,
+            "format": "date"
+          },
+          "details": {
+            "type": "object",
+            "properties": {
+              "symptoms": {
+                "type": "string",
+                "enum": [
+                  "above_neck",
+                  "below_neck",
+                  "fever",
+                  "chest_pain"
+                ]
+              },
+              "painArea": {
+                "type": "string",
+                "enum": [
+                  "foot",
+                  "ankle",
+                  "calf",
+                  "knee",
+                  "hip",
+                  "back",
+                  "shoulder",
+                  "other"
+                ]
+              },
+              "painSeverity": {
+                "type": "string",
+                "enum": [
+                  "mild",
+                  "changed_movement",
+                  "stopped"
+                ]
+              },
+              "preference": {
+                "type": "string",
+                "enum": [
+                  "easy",
+                  "shorter",
+                  "rest",
+                  "coach"
+                ]
+              },
+              "returnStyle": {
+                "type": "string",
+                "enum": [
+                  "gently",
+                  "balanced",
+                  "quickly"
+                ]
+              },
+              "note": {
+                "type": "string",
+                "maxLength": 2000
+              }
+            },
+            "required": [
+              "preference",
+              "returnStyle"
+            ],
+            "additionalProperties": false
+          },
+          "id": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+          },
+          "createdAt": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "planId",
+          "kind",
+          "startsOn",
+          "endsOn",
+          "details",
+          "id",
+          "createdAt"
+        ],
+        "additionalProperties": false
+      },
       "PerformanceState": {
         "type": "object",
         "properties": {
@@ -1697,183 +2367,6 @@
           }
         ]
       },
-      "PaceInput": {
-        "oneOf": [
-          {
-            "type": "object",
-            "properties": {
-              "method": {
-                "type": "string",
-                "enum": [
-                  "race_result"
-                ]
-              },
-              "distanceMetres": {
-                "type": "number",
-                "minimum": 1609.344,
-                "maximum": 42195
-              },
-              "durationSeconds": {
-                "type": "integer",
-                "minimum": 0,
-                "exclusiveMinimum": true
-              }
-            },
-            "required": [
-              "method",
-              "distanceMetres",
-              "durationSeconds"
-            ],
-            "additionalProperties": false
-          },
-          {
-            "type": "object",
-            "properties": {
-              "method": {
-                "type": "string",
-                "enum": [
-                  "threshold_pace"
-                ]
-              },
-              "secondsPerKilometre": {
-                "type": "number",
-                "minimum": 0,
-                "exclusiveMinimum": true
-              }
-            },
-            "required": [
-              "method",
-              "secondsPerKilometre"
-            ],
-            "additionalProperties": false
-          }
-        ]
-      },
-      "PowerInput": {
-        "oneOf": [
-          {
-            "type": "object",
-            "properties": {
-              "method": {
-                "type": "string",
-                "enum": [
-                  "ftp"
-                ]
-              },
-              "watts": {
-                "type": "number",
-                "minimum": 0,
-                "exclusiveMinimum": true,
-                "maximum": 2000
-              }
-            },
-            "required": [
-              "method",
-              "watts"
-            ],
-            "additionalProperties": false
-          },
-          {
-            "type": "object",
-            "properties": {
-              "method": {
-                "type": "string",
-                "enum": [
-                  "twenty_minute_test"
-                ]
-              },
-              "averageWatts": {
-                "type": "number",
-                "minimum": 0,
-                "exclusiveMinimum": true,
-                "maximum": 2000
-              }
-            },
-            "required": [
-              "method",
-              "averageWatts"
-            ],
-            "additionalProperties": false
-          },
-          {
-            "type": "object",
-            "properties": {
-              "method": {
-                "type": "string",
-                "enum": [
-                  "ramp_test"
-                ]
-              },
-              "bestMinuteWatts": {
-                "type": "number",
-                "minimum": 0,
-                "exclusiveMinimum": true,
-                "maximum": 3000
-              }
-            },
-            "required": [
-              "method",
-              "bestMinuteWatts"
-            ],
-            "additionalProperties": false
-          }
-        ]
-      },
-      "SwimInput": {
-        "oneOf": [
-          {
-            "type": "object",
-            "properties": {
-              "method": {
-                "type": "string",
-                "enum": [
-                  "css_test"
-                ]
-              },
-              "t400Seconds": {
-                "type": "number",
-                "minimum": 0,
-                "exclusiveMinimum": true,
-                "maximum": 3600
-              },
-              "t200Seconds": {
-                "type": "number",
-                "minimum": 0,
-                "exclusiveMinimum": true,
-                "maximum": 1800
-              }
-            },
-            "required": [
-              "method",
-              "t400Seconds",
-              "t200Seconds"
-            ],
-            "additionalProperties": false
-          },
-          {
-            "type": "object",
-            "properties": {
-              "method": {
-                "type": "string",
-                "enum": [
-                  "css_pace"
-                ]
-              },
-              "secondsPer100Metres": {
-                "type": "number",
-                "minimum": 0,
-                "exclusiveMinimum": true,
-                "maximum": 600
-              }
-            },
-            "required": [
-              "method",
-              "secondsPer100Metres"
-            ],
-            "additionalProperties": false
-          }
-        ]
-      },
       "CalibrationPreview": {
         "type": "object",
         "properties": {
@@ -1962,6 +2455,123 @@
             ],
             "additionalProperties": false
           }
+        ]
+      },
+      "TrainingLog": {
+        "type": "object",
+        "properties": {
+          "today": {
+            "type": "string",
+            "format": "date"
+          },
+          "logs": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/WorkoutLog"
+            }
+          },
+          "checkIns": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AthleteCheckIn"
+            }
+          },
+          "summary": {
+            "$ref": "#/components/schemas/TrainingLogSummary"
+          }
+        },
+        "required": [
+          "today",
+          "logs",
+          "checkIns",
+          "summary"
+        ]
+      },
+      "TrainingLogSummary": {
+        "type": "object",
+        "properties": {
+          "due": {
+            "type": "number"
+          },
+          "done": {
+            "type": "number"
+          },
+          "changed": {
+            "type": "number"
+          },
+          "skipped": {
+            "type": "number"
+          },
+          "unlogged": {
+            "type": "number"
+          },
+          "bySport": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "discipline": {
+                  "type": "string"
+                },
+                "plannedSeconds": {
+                  "type": "number"
+                },
+                "actualSeconds": {
+                  "type": "number"
+                },
+                "plannedMetres": {
+                  "type": "number"
+                },
+                "actualMetres": {
+                  "type": "number"
+                }
+              },
+              "required": [
+                "discipline",
+                "plannedSeconds",
+                "actualSeconds",
+                "plannedMetres",
+                "actualMetres"
+              ]
+            }
+          },
+          "load": {
+            "type": "number",
+            "nullable": true
+          },
+          "unknownLoadSessions": {
+            "type": "number"
+          },
+          "harderKeySessions": {
+            "type": "number"
+          },
+          "easierKeySessions": {
+            "type": "number"
+          },
+          "recentKeySessions": {
+            "type": "number"
+          },
+          "tiredSessions": {
+            "type": "number"
+          },
+          "easyHighEffortSessions": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "due",
+          "done",
+          "changed",
+          "skipped",
+          "unlogged",
+          "bySport",
+          "load",
+          "unknownLoadSessions",
+          "harderKeySessions",
+          "easierKeySessions",
+          "recentKeySessions",
+          "tiredSessions",
+          "easyHighEffortSessions"
         ]
       }
     },
@@ -8548,6 +9158,54 @@
                           "versionId",
                           "editNumber"
                         ]
+                      },
+                      "references": {
+                        "type": "array",
+                        "items": {
+                          "oneOf": [
+                            {
+                              "type": "object",
+                              "properties": {
+                                "type": {
+                                  "type": "string",
+                                  "enum": [
+                                    "workout_log"
+                                  ]
+                                },
+                                "logId": {
+                                  "type": "string",
+                                  "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+                                }
+                              },
+                              "required": [
+                                "type",
+                                "logId"
+                              ],
+                              "additionalProperties": false
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "type": {
+                                  "type": "string",
+                                  "enum": [
+                                    "check_in"
+                                  ]
+                                },
+                                "checkInId": {
+                                  "type": "string",
+                                  "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+                                }
+                              },
+                              "required": [
+                                "type",
+                                "checkInId"
+                              ],
+                              "additionalProperties": false
+                            }
+                          ]
+                        },
+                        "maxItems": 4
                       }
                     },
                     "required": [
@@ -8671,6 +9329,60 @@
                                 "user",
                                 "assistant"
                               ]
+                            },
+                            "references": {
+                              "type": "array",
+                              "nullable": true,
+                              "items": {
+                                "oneOf": [
+                                  {
+                                    "type": "object",
+                                    "properties": {
+                                      "type": {
+                                        "type": "string",
+                                        "enum": [
+                                          "workout_log"
+                                        ]
+                                      },
+                                      "logId": {
+                                        "type": "string",
+                                        "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+                                      },
+                                      "snapshot": {
+                                        "$ref": "#/components/schemas/WorkoutLog"
+                                      }
+                                    },
+                                    "required": [
+                                      "type",
+                                      "logId",
+                                      "snapshot"
+                                    ]
+                                  },
+                                  {
+                                    "type": "object",
+                                    "properties": {
+                                      "type": {
+                                        "type": "string",
+                                        "enum": [
+                                          "check_in"
+                                        ]
+                                      },
+                                      "checkInId": {
+                                        "type": "string",
+                                        "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+                                      },
+                                      "snapshot": {
+                                        "$ref": "#/components/schemas/AthleteCheckIn"
+                                      }
+                                    },
+                                    "required": [
+                                      "type",
+                                      "checkInId",
+                                      "snapshot"
+                                    ]
+                                  }
+                                ]
+                              }
                             },
                             "content": {
                               "type": "string"
@@ -10097,6 +10809,60 @@
                               "assistant"
                             ]
                           },
+                          "references": {
+                            "type": "array",
+                            "nullable": true,
+                            "items": {
+                              "oneOf": [
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "type": {
+                                      "type": "string",
+                                      "enum": [
+                                        "workout_log"
+                                      ]
+                                    },
+                                    "logId": {
+                                      "type": "string",
+                                      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+                                    },
+                                    "snapshot": {
+                                      "$ref": "#/components/schemas/WorkoutLog"
+                                    }
+                                  },
+                                  "required": [
+                                    "type",
+                                    "logId",
+                                    "snapshot"
+                                  ]
+                                },
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "type": {
+                                      "type": "string",
+                                      "enum": [
+                                        "check_in"
+                                      ]
+                                    },
+                                    "checkInId": {
+                                      "type": "string",
+                                      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+                                    },
+                                    "snapshot": {
+                                      "$ref": "#/components/schemas/AthleteCheckIn"
+                                    }
+                                  },
+                                  "required": [
+                                    "type",
+                                    "checkInId",
+                                    "snapshot"
+                                  ]
+                                }
+                              ]
+                            }
+                          },
                           "content": {
                             "type": "string"
                           },
@@ -10274,6 +11040,54 @@
                       "versionId",
                       "editNumber"
                     ]
+                  },
+                  "references": {
+                    "type": "array",
+                    "items": {
+                      "oneOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "type": {
+                              "type": "string",
+                              "enum": [
+                                "workout_log"
+                              ]
+                            },
+                            "logId": {
+                              "type": "string",
+                              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+                            }
+                          },
+                          "required": [
+                            "type",
+                            "logId"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "type": {
+                              "type": "string",
+                              "enum": [
+                                "check_in"
+                              ]
+                            },
+                            "checkInId": {
+                              "type": "string",
+                              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+                            }
+                          },
+                          "required": [
+                            "type",
+                            "checkInId"
+                          ],
+                          "additionalProperties": false
+                        }
+                      ]
+                    },
+                    "maxItems": 4
                   }
                 },
                 "required": [
@@ -10311,6 +11125,60 @@
                             "user",
                             "assistant"
                           ]
+                        },
+                        "references": {
+                          "type": "array",
+                          "nullable": true,
+                          "items": {
+                            "oneOf": [
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "type": {
+                                    "type": "string",
+                                    "enum": [
+                                      "workout_log"
+                                    ]
+                                  },
+                                  "logId": {
+                                    "type": "string",
+                                    "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+                                  },
+                                  "snapshot": {
+                                    "$ref": "#/components/schemas/WorkoutLog"
+                                  }
+                                },
+                                "required": [
+                                  "type",
+                                  "logId",
+                                  "snapshot"
+                                ]
+                              },
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "type": {
+                                    "type": "string",
+                                    "enum": [
+                                      "check_in"
+                                    ]
+                                  },
+                                  "checkInId": {
+                                    "type": "string",
+                                    "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+                                  },
+                                  "snapshot": {
+                                    "$ref": "#/components/schemas/AthleteCheckIn"
+                                  }
+                                },
+                                "required": [
+                                  "type",
+                                  "checkInId",
+                                  "snapshot"
+                                ]
+                              }
+                            ]
+                          }
                         },
                         "content": {
                           "type": "string"
@@ -12834,6 +13702,766 @@
           },
           "422": {
             "description": "Request rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/training-log": {
+      "get": {
+        "tags": [
+          "Training log"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+            },
+            "required": false,
+            "name": "planId",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "date"
+            },
+            "required": false,
+            "name": "from",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "date"
+            },
+            "required": false,
+            "name": "to",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TrainingLog"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/plans/{planId}/workouts/{lineageId}/log": {
+      "put": {
+        "tags": [
+          "Training log"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+            },
+            "required": true,
+            "name": "planId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+            },
+            "required": true,
+            "name": "lineageId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 200
+            },
+            "required": false,
+            "name": "idempotency-key",
+            "in": "header"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "status": {
+                    "type": "string",
+                    "enum": [
+                      "done",
+                      "changed",
+                      "skipped"
+                    ]
+                  },
+                  "performedOn": {
+                    "type": "string",
+                    "format": "date"
+                  },
+                  "actualDurationSeconds": {
+                    "type": "integer",
+                    "nullable": true,
+                    "minimum": 1,
+                    "maximum": 604800
+                  },
+                  "actualDistanceMetres": {
+                    "type": "number",
+                    "nullable": true,
+                    "minimum": 0,
+                    "exclusiveMinimum": true,
+                    "maximum": 1000000
+                  },
+                  "rpe": {
+                    "type": "integer",
+                    "nullable": true,
+                    "minimum": 1,
+                    "maximum": 10
+                  },
+                  "feel": {
+                    "type": "integer",
+                    "nullable": true,
+                    "minimum": 1,
+                    "maximum": 5
+                  },
+                  "reasons": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "enum": [
+                        "poor_sleep",
+                        "heavy_legs",
+                        "under_fuelled",
+                        "ill",
+                        "pain",
+                        "heat",
+                        "terrain",
+                        "stress",
+                        "time",
+                        "equipment",
+                        "other"
+                      ]
+                    },
+                    "maxItems": 11
+                  },
+                  "answers": {
+                    "type": "object",
+                    "properties": {
+                      "intervals": {
+                        "type": "string",
+                        "enum": [
+                          "on_target",
+                          "faded",
+                          "missed",
+                          "stopped"
+                        ]
+                      },
+                      "finish": {
+                        "type": "string",
+                        "enum": [
+                          "strong",
+                          "faded",
+                          "struggled"
+                        ]
+                      },
+                      "fuelled": {
+                        "type": "string",
+                        "enum": [
+                          "yes",
+                          "some",
+                          "no"
+                        ]
+                      },
+                      "weights": {
+                        "type": "string",
+                        "enum": [
+                          "light",
+                          "right",
+                          "heavy"
+                        ]
+                      },
+                      "weightsUsed": {
+                        "type": "string",
+                        "maxLength": 1000
+                      },
+                      "hardestPart": {
+                        "type": "string",
+                        "enum": [
+                          "run",
+                          "cycle",
+                          "swim",
+                          "strength",
+                          "row",
+                          "ski_erg",
+                          "transitions"
+                        ]
+                      },
+                      "painArea": {
+                        "type": "string",
+                        "enum": [
+                          "foot",
+                          "ankle",
+                          "calf",
+                          "knee",
+                          "hip",
+                          "back",
+                          "shoulder",
+                          "other"
+                        ]
+                      },
+                      "painSeverity": {
+                        "type": "string",
+                        "enum": [
+                          "mild",
+                          "changed_movement",
+                          "stopped"
+                        ]
+                      },
+                      "race": {
+                        "type": "string",
+                        "enum": [
+                          "to_plan",
+                          "faded",
+                          "better"
+                        ]
+                      },
+                      "result": {
+                        "oneOf": [
+                          {
+                            "type": "object",
+                            "properties": {
+                              "system": {
+                                "type": "string",
+                                "enum": [
+                                  "run_pace"
+                                ]
+                              },
+                              "input": {
+                                "$ref": "#/components/schemas/PaceInput"
+                              },
+                              "provenance": {
+                                "type": "string",
+                                "enum": [
+                                  "user_supplied",
+                                  "user_estimate",
+                                  "agent_estimate"
+                                ]
+                              },
+                              "estimateBasis": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 4000
+                              },
+                              "observedOn": {
+                                "type": "string",
+                                "format": "date"
+                              }
+                            },
+                            "required": [
+                              "system",
+                              "input"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "system": {
+                                "type": "string",
+                                "enum": [
+                                  "cycle_power"
+                                ]
+                              },
+                              "input": {
+                                "$ref": "#/components/schemas/PowerInput"
+                              },
+                              "provenance": {
+                                "type": "string",
+                                "enum": [
+                                  "user_supplied",
+                                  "user_estimate",
+                                  "agent_estimate"
+                                ]
+                              },
+                              "estimateBasis": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 4000
+                              },
+                              "observedOn": {
+                                "type": "string",
+                                "format": "date"
+                              }
+                            },
+                            "required": [
+                              "system",
+                              "input"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "system": {
+                                "type": "string",
+                                "enum": [
+                                  "swim_pace"
+                                ]
+                              },
+                              "input": {
+                                "$ref": "#/components/schemas/SwimInput"
+                              },
+                              "provenance": {
+                                "type": "string",
+                                "enum": [
+                                  "user_supplied",
+                                  "user_estimate",
+                                  "agent_estimate"
+                                ]
+                              },
+                              "estimateBasis": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 4000
+                              },
+                              "observedOn": {
+                                "type": "string",
+                                "format": "date"
+                              }
+                            },
+                            "required": [
+                              "system",
+                              "input"
+                            ],
+                            "additionalProperties": false
+                          }
+                        ]
+                      }
+                    },
+                    "additionalProperties": false
+                  },
+                  "note": {
+                    "type": "string",
+                    "nullable": true,
+                    "maxLength": 2000
+                  }
+                },
+                "required": [
+                  "status"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkoutLog"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Training log"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+            },
+            "required": true,
+            "name": "planId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+            },
+            "required": true,
+            "name": "lineageId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 200
+            },
+            "required": false,
+            "name": "idempotency-key",
+            "in": "header"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "cleared": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "cleared"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/check-ins": {
+      "post": {
+        "tags": [
+          "Training log"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 200
+            },
+            "required": false,
+            "name": "idempotency-key",
+            "in": "header"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "planId": {
+                    "type": "string",
+                    "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+                  },
+                  "kind": {
+                    "type": "string",
+                    "enum": [
+                      "ill",
+                      "pain",
+                      "run_down",
+                      "busy"
+                    ]
+                  },
+                  "startsOn": {
+                    "type": "string",
+                    "format": "date"
+                  },
+                  "endsOn": {
+                    "type": "string",
+                    "nullable": true,
+                    "format": "date"
+                  },
+                  "details": {
+                    "type": "object",
+                    "properties": {
+                      "symptoms": {
+                        "type": "string",
+                        "enum": [
+                          "above_neck",
+                          "below_neck",
+                          "fever",
+                          "chest_pain"
+                        ]
+                      },
+                      "painArea": {
+                        "type": "string",
+                        "enum": [
+                          "foot",
+                          "ankle",
+                          "calf",
+                          "knee",
+                          "hip",
+                          "back",
+                          "shoulder",
+                          "other"
+                        ]
+                      },
+                      "painSeverity": {
+                        "type": "string",
+                        "enum": [
+                          "mild",
+                          "changed_movement",
+                          "stopped"
+                        ]
+                      },
+                      "preference": {
+                        "type": "string",
+                        "enum": [
+                          "easy",
+                          "shorter",
+                          "rest",
+                          "coach"
+                        ]
+                      },
+                      "returnStyle": {
+                        "type": "string",
+                        "enum": [
+                          "gently",
+                          "balanced",
+                          "quickly"
+                        ]
+                      },
+                      "note": {
+                        "type": "string",
+                        "maxLength": 2000
+                      }
+                    },
+                    "required": [
+                      "preference",
+                      "returnStyle"
+                    ],
+                    "additionalProperties": false
+                  }
+                },
+                "required": [
+                  "planId",
+                  "kind",
+                  "startsOn",
+                  "endsOn",
+                  "details"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AthleteCheckIn"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Rejected.",
             "content": {
               "application/json": {
                 "schema": {

@@ -1,3 +1,4 @@
+import { ReferenceInputSchema, ReferenceSchema } from '../training-log/training-log.schemas.js';
 import { z } from '@hono/zod-openapi';
 import { Id } from '../plans/plan.schemas.js';
 import { GenerationSchema } from '../plans/schedule-generation.js';
@@ -15,6 +16,7 @@ export const TargetSchema = z.object({
 export const SendSchema = z.object({
   content: z.string().trim().min(1).max(32000),
   target: TargetSchema.nullable().default(null),
+  references: z.array(ReferenceInputSchema).max(4).optional(),
 });
 export const CreateConversationSchema = z.object({
   planId: Id.optional(),
@@ -50,6 +52,7 @@ export const MessageSchema = z.object({
   conversationId: Id,
   sequence: z.number().int(),
   role: z.enum(['user', 'assistant']),
+  references: z.array(ReferenceSchema).nullable().optional(),
   content: z.string(),
   producingRunId: Id.nullable(),
   context: ContextSchema.nullable(),

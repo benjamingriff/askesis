@@ -13,6 +13,9 @@ import {
 const workout = (date: string, metres: number, title = 'Easy run'): WorkoutSummary => ({
   id: date,
   planId: 'p',
+  lineageId: 'test-lineage',
+  sessionType: null,
+  plannedRpe: null,
   planVersionId: 'v',
   planTitle: 'Plan',
   weekNumber: 1,

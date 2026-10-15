@@ -434,6 +434,9 @@ export function CheckRow({
 
 // ---- Overlays ----------------------------------------------------------------------------------
 
+const activeDialogs: HTMLElement[] = [];
+let dialogOverflow = '';
+
 const FOCUSABLE =
   'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
@@ -475,9 +478,14 @@ export function Dialog({
     if (!open) return;
     const previous = document.activeElement as HTMLElement | null;
     const node = panel.current;
+    if (node) {
+      if (!activeDialogs.length) dialogOverflow = document.body.style.overflow;
+      activeDialogs.push(node);
+    }
     const first = node?.querySelector<HTMLElement>('[autofocus], ' + FOCUSABLE);
     (first ?? node)?.focus();
     const onKey = (event: KeyboardEvent) => {
+      if (activeDialogs.at(-1) !== node) return;
       if (event.key === 'Escape' && !busy) {
         event.stopPropagation();
         close.current();
@@ -497,12 +505,15 @@ export function Dialog({
       }
     };
     document.addEventListener('keydown', onKey);
-    const overflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
     return () => {
       document.removeEventListener('keydown', onKey);
-      document.body.style.overflow = overflow;
-      previous?.focus?.();
+      if (node) {
+        const index = activeDialogs.indexOf(node);
+        if (index >= 0) activeDialogs.splice(index, 1);
+      }
+      document.body.style.overflow = activeDialogs.length ? 'hidden' : dialogOverflow;
+      if (previous?.isConnected) previous.focus();
     };
   }, [open, busy]);
 

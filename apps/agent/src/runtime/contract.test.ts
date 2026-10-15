@@ -65,6 +65,7 @@ const context: ExecutionContext = {
   plan: null,
   brief: null,
   performance: null,
+  trainingLog: null,
   versionId: null,
   editNumber: null,
   tools: [
@@ -80,6 +81,38 @@ const read = (id?: string) => ({ name: 'read_plan_context', input: {}, ...(id ? 
 const noChange = { result: {}, versionId: null, editNumber: null, planId: null };
 
 describe.each(['openai', 'anthropic'] as const)('%s runtime contract', (provider) => {
+  it('delivers training summaries and current reference state to the model', async () => {
+    const h = harness(provider, [{ type: 'reply', text: 'Keep the next session easy.' }]);
+    const input = {
+      ...context,
+      trainingLog: { summary: { harderKeySessions: 2 } },
+      messages: [
+        {
+          role: 'user' as const,
+          content: 'Talk through this session',
+          sequence: 1,
+          references: [
+            {
+              type: 'workout_log',
+              state: 'changed',
+              current: { note: 'Corrected fatigue report' },
+            },
+          ],
+        },
+      ],
+    };
+    await h.runtime.execute(
+      input,
+      claim,
+      new AgentApi('http://localhost'),
+      new AbortController().signal,
+      new AbortController().signal,
+    );
+    const sent = h.modelInputs();
+    expect(sent).toContain('harderKeySessions');
+    expect(sent).toContain('Corrected fatigue report');
+    expect(sent).toContain('feedbackReferences');
+  });
   it('completes a tool round trip and returns the final reply', async () => {
     const { runtime, modelCalls } = harness(provider, [
       { type: 'tools', calls: [read()] },

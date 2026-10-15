@@ -1,3 +1,9 @@
+import {
+  readTrainingLog,
+  readRecentTrainingLog,
+  saveLogRows,
+  resolveFeedback,
+} from '../training-log/training-log.service.js';
 import { createHash, randomBytes } from 'node:crypto';
 import { sql, type Kysely, type Selectable, type Transaction } from 'kysely';
 import type { z } from 'zod';
@@ -258,6 +264,7 @@ export async function runContext(id: string, token: string) {
           'role',
           'content',
           'sequence',
+          'references',
           eb
             .exists(
               eb
@@ -279,19 +286,25 @@ export async function runContext(id: string, token: string) {
       // a way that changes its meaning. Explicitly disclose omitted older history.
       let total = 0;
       const messages: Omit<(typeof history)[number], 'refused'>[] = [];
-      for (const { role, content, sequence } of eligible) {
+      for (const { role, content, sequence, references } of eligible) {
         if (total + content.length > 100000) break;
-        messages.push({ role, content, sequence });
+        messages.push({ role, content, sequence, references });
         total += content.length;
       }
       return {
-        messages: messages.reverse(),
+        messages: await Promise.all(
+          messages.reverse().map(async (m) => ({
+            ...m,
+            references: await resolveFeedback(db, run.owner_id, m.references),
+          })),
+        ),
         historyTruncated: messages.length < eligible.length || (history.at(-1)?.sequence ?? 1) > 1,
         plan: current?.plan ?? null,
         brief: current
           ? await readBrief(db, current.version.id, current.version.state === 'locked')
           : null,
         performance: await readPerformance(db, run.owner_id),
+        trainingLog: await readRecentTrainingLog(db, run.owner_id),
         tools: toolDefinitions(),
         versionId: run.execution_version_id,
         editNumber: run.execution_edit_number,
@@ -383,6 +396,21 @@ export async function executeTool(
           versionId: created.draftId,
         });
         response = { plan: await detail(db, run.owner_id, created.planId) };
+      } else if (name === 'read_training_log' || name === 'record_workout_log') {
+        const conversation = await ownedConversation(db, run.owner_id, run.conversation_id);
+        if (conversation.archived_at) throw rejected();
+        if (name === 'read_training_log')
+          response = await readTrainingLog(
+            db,
+            run.owner_id,
+            ToolSchemas.read_training_log.parse(command.input),
+          );
+        else {
+          const input = ToolSchemas.record_workout_log.parse(command.input);
+          response = await saveLogRows(db, run.owner_id, input.planId, input.lineageId, input.log, {
+            runId: run.id,
+          });
+        }
       } else if (PERFORMANCE_TOOLS.includes(name)) {
         const conversation = await ownedConversation(db, run.owner_id, run.conversation_id);
         if (conversation.archived_at) throw rejected();

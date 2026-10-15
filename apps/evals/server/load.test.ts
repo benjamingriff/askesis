@@ -195,4 +195,36 @@ describe('training load', () => {
     });
     expect(mixed.days[0]!.sports.other).toBeUndefined();
   });
+
+  it.each(['resolved', 'explicit'])(
+    'normalizes %s mile paces for distance and timed efforts',
+    (kind) => {
+      const target =
+        kind === 'resolved'
+          ? resolved('seconds_per_mile', 300 * 1.609344)
+          : { type: 'pace', targetValue: 300 * 1.609344, unit: 'seconds_per_mile' };
+      const metric = resolved('seconds_per_kilometre', 300);
+      const planAt = (pace: Record<string, unknown>) => ({
+        workouts: [
+          workout(
+            'distance',
+            '2026-10-19',
+            'run',
+            effort('run', { type: 'distance', value: 12000 }, pace),
+          ),
+          workout(
+            'timed',
+            '2026-10-20',
+            'run',
+            effort('run', { type: 'duration', value: 3600 }, pace),
+          ),
+        ],
+      });
+      const miles = buildLoad(planAt(target), performance, scenario)!;
+      const kilometres = buildLoad(planAt(metric), performance, scenario)!;
+      expect(miles.workouts).toEqual(kilometres.workouts);
+      expect(miles.days).toEqual(kilometres.days);
+      expect(miles.weeks).toEqual(kilometres.weeks);
+    },
+  );
 });
