@@ -44,6 +44,7 @@ export class ApiError extends Error {
   constructor(
     public code: string,
     public status: number,
+    public requestId?: string,
   ) {
     super(`Agent API rejected request: ${code}`);
   }
@@ -89,7 +90,12 @@ export class AgentApi {
           } catch {
             /* Keep server payloads out of exceptions. */
           }
-          throw new ApiError(code, response.status);
+          const requestId = response.headers.get('x-request-id');
+          throw new ApiError(
+            code,
+            response.status,
+            requestId && z.uuid().safeParse(requestId).success ? requestId : undefined,
+          );
         }
         return schema.parse(await response.json());
       } catch (error) {
