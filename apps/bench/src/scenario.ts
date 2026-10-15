@@ -1,33 +1,10 @@
-import { readFile } from 'node:fs/promises';
-import { z } from 'zod';
-
-const ScenarioSchema = z
-  .object({
-    id: z.literal('running-poc'),
-    version: z.number().int().positive(),
-    timezone: z.literal('Europe/London'),
-    openingMessage: z.string().min(1),
-    facts: z.record(z.string(), z.string().min(1)),
-    expectations: z
-      .object({
-        planningWeeks: z.number().int().min(1).max(12),
-        goalWeeks: z.number().int().min(1).max(52),
-        availableWeekdays: z.array(z.number().int().min(1).max(7)),
-        sessionsPerWeek: z.number().int().min(1).max(7),
-        weeklyDistanceMetres: z.number().positive(),
-        longestDistanceMetres: z.number().positive(),
-        raceDistanceMetres: z.number().positive(),
-        raceDurationSeconds: z.number().int().positive(),
-      })
-      .strict(),
-    limits: z
-      .object({
-        maxAthleteMessages: z.number().int().min(1).max(25),
-        maxElapsedMinutes: z.number().int().min(1).max(60),
-      })
-      .strict(),
-  })
-  .strict();
+import {
+  loadDataset,
+  loadVoices,
+  resolveDatasetScenario,
+  type DatasetScenario,
+  type Persona,
+} from './datasets.js';
 
 export function addDays(date: string, count: number) {
   const value = new Date(`${date}T12:00:00Z`);
@@ -35,61 +12,118 @@ export function addDays(date: string, count: number) {
   return value.toISOString().slice(0, 10);
 }
 
-export function resolveScenario(raw: unknown, now = new Date()) {
-  const input = ScenarioSchema.parse(raw);
-  const today = new Intl.DateTimeFormat('en-CA', {
-    timeZone: input.timezone,
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  }).format(now);
-  const weekday = new Date(`${today}T12:00:00Z`).getUTCDay();
-  // Always the next Monday, even when the run starts on Monday.
-  const startDate = addDays(today, (8 - weekday) % 7 || 7);
-  const dates = {
-    today,
-    startDate,
-    eventDate: addDays(startDate, input.expectations.goalWeeks * 7 - 1),
-    coverageEndDate: addDays(startDate, input.expectations.planningWeeks * 7 - 1),
-    observedOn: addDays(today, -14),
-  };
-  const render = (text: string) =>
-    text.replace(/\{\{(\w+)\}\}/g, (_match, key: string) => {
-      const value = dates[key as keyof typeof dates];
-      if (!value) throw new Error(`Unknown scenario date placeholder: ${key}`);
-      return value;
-    });
+/** How the simulated athlete words its replies; null keeps the authored fact text verbatim. */
+export type ScenarioVoice = {
+  id: string;
+  version: number;
+  label: string;
+  description: string;
+  traits: string[];
+  examples: string[];
+};
+
+/**
+ * A resolved dataset case. It is saved with each run and holds simulator-private facts and
+ * evaluator-private expectations, so it must never be sent to the coach.
+ */
+export function buildScenario(
+  persona: Persona,
+  scenario: DatasetScenario,
+  now: Date,
+  voice: ScenarioVoice | null,
+) {
+  const resolved = resolveDatasetScenario(persona, scenario, now);
   return {
-    ...input,
-    openingMessage: render(input.openingMessage),
-    facts: Object.fromEntries(
-      Object.entries(input.facts).map(([key, value]) => [key, render(value)]),
-    ),
-    dates,
+    edition: 'v1' as const,
+    id: scenario.id,
+    version: scenario.version,
+    label: resolved.persona.label,
+    category: resolved.persona.category,
+    timezone: resolved.persona.timezone,
+    persona: resolved.persona,
+    planSpanWeeks: scenario.planSpanWeeks,
+    prescriptionWeeks: scenario.prescriptionWeeks,
+    dates: resolved.dates,
+    events: resolved.events,
+    evidence: resolved.evidence,
+    facts: resolved.facts,
+    openingMessage: resolved.openingMessage,
+    openingFactIds: scenario.openingFactIds,
+    expectations: scenario.expectations,
+    limits: scenario.limits,
+    voice,
   };
 }
 
-export type Scenario = ReturnType<typeof resolveScenario>;
+export type Scenario = ReturnType<typeof buildScenario>;
 
-export async function loadScenario() {
-  return resolveScenario(
-    JSON.parse(await readFile(new URL('../scenarios/running-poc.json', import.meta.url), 'utf8')),
+/** The persona's own authored communication style, used when no voice profile is chosen. */
+export function personaVoice(persona: Persona): ScenarioVoice {
+  return {
+    id: 'persona',
+    version: persona.version,
+    label: persona.communication.style,
+    description: `An ordinary athlete who speaks in this style: ${persona.communication.style}.`,
+    traits: [],
+    examples: [],
+  };
+}
+
+export async function scenarioIds() {
+  return (await loadDataset()).scenarios.map((scenario) => scenario.id);
+}
+
+export async function suiteScenarioIds(id: string) {
+  const suite = (await loadDataset()).suites.find((item) => item.id === id);
+  if (!suite) throw new Error(`Unknown suite ${id}.`);
+  return suite.scenarios.map((item) => item.id);
+}
+
+/** `voice` is a voice profile ID, `persona` for the persona's own style, or `none`. */
+export async function loadScenario(id: string, voice = 'persona', now = new Date()) {
+  const dataset = await loadDataset();
+  const scenario = dataset.scenarios.find((item) => item.id === id);
+  if (!scenario)
+    throw new Error(
+      `Unknown scenario ${id}. Available: ${dataset.scenarios.map((item) => item.id).join(', ')}.`,
+    );
+  const persona = dataset.personas.find(
+    (item) => item.id === scenario.persona.id && item.version === scenario.persona.version,
   );
+  if (!persona) throw new Error(`Missing persona for ${id}.`);
+  let selected: ScenarioVoice | null = null;
+  if (voice === 'persona')
+    selected = personaVoice({
+      ...persona,
+      communication: scenario.personaOverrides?.communication ?? persona.communication,
+    });
+  else if (voice !== 'none') {
+    const voices = await loadVoices();
+    const profile = voices.find((item) => item.id === voice);
+    if (!profile)
+      throw new Error(
+        `Unknown voice ${voice}. Use persona, none or one of: ${voices.map((item) => item.id).join(', ')}.`,
+      );
+    const { schemaVersion: _schema, ...rest } = profile;
+    selected = rest;
+  }
+  return buildScenario(persona, scenario, now, selected);
 }
 
 export type AthleteAction = { factIds: string[]; intent: 'answer' | 'generate' | 'unknown' };
 
-/** The model selects facts; only code renders their values into coach-visible messages. */
+export function generateRequest(scenario: Scenario) {
+  return `Please go ahead and create the agreed first ${scenario.prescriptionWeeks} weeks of my plan.`;
+}
+
+/** The model selects facts; only code renders their authored values. */
 export function renderAthleteAction(scenario: Scenario, action: AthleteAction) {
   const ids = [...new Set(action.factIds)];
   for (const id of ids)
     if (!Object.hasOwn(scenario.facts, id)) throw new Error('Simulator selected an unknown fact.');
-  const facts = ids.map((id) => scenario.facts[id]);
-  if (action.intent === 'generate')
-    facts.push('Please go ahead and create the agreed first four weeks of my plan.');
+  const facts = ids.map((id) => scenario.facts[id]!);
+  if (action.intent === 'generate') facts.push(generateRequest(scenario));
   if (action.intent === 'unknown' || !facts.length)
-    facts.push(
-      "I don't know anything else about that. Please use reasonable assumptions where appropriate.",
-    );
-  return { content: facts.join('\n'), factIds: ids };
+    facts.push(scenario.persona.communication.unknownResponse);
+  return { content: facts.join('\n'), factIds: ids, statements: facts };
 }

@@ -24,6 +24,8 @@ export const RegisterSchema = z
     model: z.string().min(1).max(200),
     reasoning: z.enum(['low', 'medium', 'high', 'xhigh', 'max']),
     promptVersion: z.literal(PROMPT_VERSION),
+    /** SHA-256 of the worker's exact prompt text. */
+    promptHash: z.string().regex(/^[a-f0-9]{64}$/),
     ready: z.boolean(),
   })
   .strict();

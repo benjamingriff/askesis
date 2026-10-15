@@ -1,4 +1,4 @@
-import { readdir, stat, writeFile } from 'node:fs/promises';
+import { readFile, readdir, stat, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import type {
   CalibrationAttempt,
@@ -11,6 +11,7 @@ import type {
   CriterionResult,
   PlanBlock,
   PlannedWorkout,
+  PromptRecord,
   ResultsIndex,
   RunDetail,
   RunSummary,
@@ -26,7 +27,7 @@ import {
   readJsonLines,
   type Json,
 } from './json';
-import { parseReview, REVIEW_FILE } from './review';
+import { HIGHLIGHTS_FILE, parseHighlights, parseReview, REVIEW_FILE } from './review';
 import { analyzeSession, type Session } from './session';
 
 // Artifacts are private local files written by `pnpm bench`. Everything is read
@@ -120,6 +121,7 @@ interface RunFiles {
   scenario: Json | null;
   snapshot: Json | null;
   disclosures: Json[];
+  actions: Json[];
   review: unknown;
 }
 
@@ -138,6 +140,7 @@ async function readRunFiles(directory: string): Promise<RunFiles | null> {
     scenario,
     snapshot,
     disclosures,
+    actions,
     review,
   ] = await Promise.all([
     readJson(path.join(directory, 'configuration.json')),
@@ -151,6 +154,7 @@ async function readRunFiles(directory: string): Promise<RunFiles | null> {
     readJson(path.join(directory, 'scenario.json')),
     readJson(path.join(directory, 'snapshot.json')),
     readJson(path.join(directory, 'disclosures.json')),
+    readJsonLines(path.join(directory, 'athlete-actions.jsonl')),
     readJson(path.join(directory, REVIEW_FILE)),
   ]);
   return {
@@ -166,6 +170,7 @@ async function readRunFiles(directory: string): Promise<RunFiles | null> {
     scenario: isObject(scenario) ? scenario : null,
     snapshot: isObject(snapshot) ? snapshot : null,
     disclosures: asArray(disclosures).filter(isObject),
+    actions,
     review,
   };
 }
@@ -177,6 +182,7 @@ function sessionOf(files: RunFiles): Session {
     tools: files.tools,
     snapshot: files.snapshot,
     disclosures: files.disclosures,
+    actions: files.actions,
     plan: files.plan,
     scenario: files.scenario,
     metrics: files.metrics,
@@ -217,6 +223,9 @@ function summarizeRun(id: string, files: RunFiles, session: Session): RunSummary
     scenarioVersion: asNumber(manifest.scenarioVersion),
     promptVersion: asString(manifest.promptVersion),
     promptHash: shortHash(manifest.promptHash),
+    personaId: asString(manifest.personaId),
+    voiceId: isObject(manifest.voice) ? asString(manifest.voice.id) : null,
+    scenarioLabel: asString(files.scenario?.label),
     revision: shortHash(manifest.revision),
     workingTreeDirty: manifest.workingTreeDirty === true,
     scripted: manifest.scripted === true,
@@ -293,6 +302,36 @@ function stringRecord(value: unknown): Record<string, string> {
   );
 }
 
+const PROMPT_FILES: Record<string, string> = {
+  coach: 'coach.md',
+  simulator: 'simulator.md',
+  voice: 'voice.md',
+  reviewer: 'reviewer.md',
+  tools: 'tools.json',
+};
+
+/** The exact prompt texts saved with a run, with their recorded names and hashes. */
+async function loadPrompts(directory: string, manifest: Json): Promise<PromptRecord[]> {
+  const identities = isObject(manifest.prompts) ? manifest.prompts : {};
+  const records = await Promise.all(
+    Object.entries(PROMPT_FILES).map(async ([role, file]) => {
+      const identity = isObject(identities[role]) ? identities[role] : null;
+      const coach = isObject(identities.coach) ? identities.coach : {};
+      const text = await readFile(path.join(directory, 'prompts', file), 'utf8').catch(() => null);
+      return {
+        role,
+        name:
+          role === 'tools'
+            ? asString(coach.toolsHash) && 'tool definitions'
+            : asString(identity?.name),
+        hash: role === 'tools' ? asString(coach.toolsHash) : asString(identity?.hash),
+        text,
+      };
+    }),
+  );
+  return records.filter((record) => record.text !== null || record.name !== null);
+}
+
 export async function loadRunDetail(root: string, id: string): Promise<RunDetail | null> {
   const directory = resolveId(root, id);
   if (directory === null || id.startsWith('calibration-')) return null;
@@ -317,7 +356,10 @@ export async function loadRunDetail(root: string, id: string): Promise<RunDetail
     beliefs: session.beliefs,
     decisions: session.decisions,
     fitness: session.fitness,
+    load: session.load,
     claims: session.claims,
+    prompts: await loadPrompts(directory, files.manifest),
+    highlights: parseHighlights(await readJson(path.join(directory, HIGHLIGHTS_FILE))) ?? [],
     progress: files.progress.map((row) => ({
       at: asString(row.at) ?? '',
       stage: asString(row.stage) ?? '',
@@ -329,6 +371,21 @@ export async function loadRunDetail(root: string, id: string): Promise<RunDetail
     facts: stringRecord(files.scenario?.facts),
     dates: stringRecord(files.manifest.dates),
   };
+}
+
+/** Replaces the phrase highlights saved beside the run's artifacts. */
+export async function saveHighlights(root: string, id: string, payload: unknown) {
+  const directory = resolveId(root, id);
+  if (directory === null || id.startsWith('calibration-')) return 'not_found' as const;
+  if (!isObject(await readJson(path.join(directory, 'manifest.json')))) return 'not_found' as const;
+  const highlights = parseHighlights(payload);
+  if (highlights === null) return 'invalid' as const;
+  await writeFile(
+    path.join(directory, HIGHLIGHTS_FILE),
+    `${JSON.stringify(highlights, null, 2)}\n`,
+    { mode: 0o600 },
+  );
+  return highlights;
 }
 
 /** Writes a human review beside the run's artifacts. */

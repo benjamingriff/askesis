@@ -1,6 +1,6 @@
 import { mkdir, writeFile, rename, appendFile, unlink } from 'node:fs/promises';
 import { randomUUID } from 'node:crypto';
-import { resolve } from 'node:path';
+import { dirname, resolve } from 'node:path';
 import type { BenchmarkSnapshot } from '@askesis/api/benchmark';
 import type { Check } from './checks.js';
 import type { Review } from './models.js';
@@ -29,10 +29,15 @@ export class Artifacts {
     await mkdir(this.directory, { recursive: true, mode: 0o700 });
   }
   async json(name: string, value: unknown) {
+    await this.text(name, JSON.stringify(redact(value), null, 2) + '\n');
+  }
+  /** Atomic private write; `name` may include one subdirectory, such as prompts/coach.md. */
+  async text(name: string, content: string) {
     const path = resolve(this.directory, name);
+    await mkdir(dirname(path), { recursive: true, mode: 0o700 });
     const temporary = `${path}.${randomUUID()}.tmp`;
     try {
-      await writeFile(temporary, JSON.stringify(redact(value), null, 2) + '\n', {
+      await writeFile(temporary, content, {
         mode: 0o600,
         flag: 'wx',
       });
@@ -43,6 +48,11 @@ export class Artifacts {
           throw error;
       });
     }
+  }
+  async line(name: string, value: unknown) {
+    await appendFile(resolve(this.directory, name), JSON.stringify(redact(value)) + '\n', {
+      mode: 0o600,
+    });
   }
   async event(event: Record<string, unknown>) {
     await appendFile(

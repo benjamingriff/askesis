@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "version": 1,
-  "updatedOn": "2026-10-13",
+  "updatedOn": "2026-10-14",
   "proposal": "../../../../docs/product/athlete-scenario-evaluation-proposal.md",
   "personas": [
     {
@@ -15,14 +15,14 @@
       "file": null
     },
     {
-      "id": "running-poc",
-      "label": "Existing first-half-marathon runner: three weekly runs, 22 km, recent 5 km result, three available days. Keep the current four-week prescription within the twelve-week goal as the regression anchor.",
+      "id": "running-improver",
+      "label": "Existing first-half-marathon runner: three weekly runs, 22 km, recent 5 km result, three available days. Prescribe four weeks within the twelve-week goal.",
       "status": "authored",
       "split": "development",
       "category": "running",
       "experience": "improver",
       "version": 1,
-      "file": "personas/running-poc.json"
+      "file": "personas/running-improver.json"
     },
     {
       "id": "run-intermediate",
@@ -206,7 +206,7 @@
     },
     {
       "id": "gym-beginner",
-      "label": "New gym member wants confidence and general fitness with machines and simple cardio. Clarify what \u201cgym training\u201d means; understandable instructions and facility-specific choices.",
+      "label": "New gym member wants confidence and general fitness with machines and simple cardio. Clarify what “gym training” means; understandable instructions and facility-specific choices.",
       "status": "planned",
       "split": "development",
       "category": "gym",
@@ -301,18 +301,18 @@
       "runnerSupport": "needs_runner"
     },
     {
-      "id": "running-poc",
-      "label": "Existing first-half-marathon runner: three weekly runs, 22 km, recent 5 km result, three available days. Keep the current four-week prescription within the twelve-week goal as the regression anchor.",
+      "id": "running-improver",
+      "label": "Existing first-half-marathon runner: three weekly runs, 22 km, recent 5 km result, three available days. Prescribe four weeks within the twelve-week goal.",
       "status": "authored",
       "split": "development",
       "category": "running",
       "experience": "improver",
       "version": 1,
-      "file": "scenarios/running-poc.json",
+      "file": "scenarios/running-improver.json",
       "kind": "core",
-      "proposalRef": "core:running-poc",
-      "familyId": "running-poc",
-      "runnerSupport": "legacy_running_poc"
+      "proposalRef": "core:running-improver",
+      "familyId": "running-improver",
+      "runnerSupport": "runnable"
     },
     {
       "id": "run-intermediate",
@@ -354,7 +354,7 @@
       "kind": "core",
       "proposalRef": "core:cycle-beginner",
       "familyId": "cycle-beginner",
-      "runnerSupport": "needs_runner"
+      "runnerSupport": "runnable"
     },
     {
       "id": "cycle-improver",
@@ -438,7 +438,7 @@
       "kind": "core",
       "proposalRef": "core:triathlon-intermediate",
       "familyId": "triathlon-intermediate",
-      "runnerSupport": "needs_runner"
+      "runnerSupport": "runnable"
     },
     {
       "id": "triathlon-experienced",
@@ -466,7 +466,7 @@
       "kind": "core",
       "proposalRef": "core:swim-beginner",
       "familyId": "swim-beginner",
-      "runnerSupport": "needs_runner"
+      "runnerSupport": "runnable"
     },
     {
       "id": "swim-improver",
@@ -522,7 +522,7 @@
       "kind": "core",
       "proposalRef": "core:strength-beginner",
       "familyId": "strength-beginner",
-      "runnerSupport": "needs_runner"
+      "runnerSupport": "runnable"
     },
     {
       "id": "strength-improver",
@@ -568,7 +568,7 @@
     },
     {
       "id": "gym-beginner",
-      "label": "New gym member wants confidence and general fitness with machines and simple cardio. Clarify what \u201cgym training\u201d means; understandable instructions and facility-specific choices.",
+      "label": "New gym member wants confidence and general fitness with machines and simple cardio. Clarify what “gym training” means; understandable instructions and facility-specific choices.",
       "status": "planned",
       "split": "development",
       "category": "gym",
@@ -620,7 +620,7 @@
       "kind": "core",
       "proposalRef": "core:gym-experienced",
       "familyId": "gym-experienced",
-      "runnerSupport": "needs_runner"
+      "runnerSupport": "runnable"
     },
     {
       "id": "hybrid-beginner",
@@ -648,7 +648,7 @@
       "kind": "core",
       "proposalRef": "core:hybrid-improver",
       "familyId": "hybrid-improver",
-      "runnerSupport": "needs_runner"
+      "runnerSupport": "runnable"
     },
     {
       "id": "hybrid-intermediate",
@@ -834,7 +834,7 @@
     },
     {
       "id": "v12-terminology-mismatch",
-      "label": "terminology mismatch. Equivalent facts in informal language with ambiguous \u201csets\u201d or \u201csessions\u201d; clarify material ambiguity rather than guessing.",
+      "label": "terminology mismatch. Equivalent facts in informal language with ambiguous “sets” or “sessions”; clarify material ambiguity rather than guessing.",
       "status": "planned",
       "split": "development",
       "category": "gym",
@@ -871,7 +871,7 @@
       "version": null,
       "kind": "variation",
       "proposalRef": "V14",
-      "familyId": "running-poc",
+      "familyId": "running-improver",
       "runnerSupport": "needs_runner"
     },
     {
@@ -885,7 +885,7 @@
       "version": null,
       "kind": "adaptation",
       "proposalRef": "A01",
-      "familyId": "running-poc",
+      "familyId": "running-improver",
       "runnerSupport": "needs_runner"
     },
     {
@@ -1040,7 +1040,7 @@
       "kind": "duration",
       "proposalRef": "D05",
       "familyId": "hybrid-improver",
-      "runnerSupport": "needs_runner"
+      "runnerSupport": "runnable"
     },
     {
       "id": "d06-goal-beyond-a-year",

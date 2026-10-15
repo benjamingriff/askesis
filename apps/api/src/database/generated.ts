@@ -59,6 +59,7 @@ export interface AgentRunOutputs {
   position: number;
   revision: number;
   run_id: string;
+  started_at: Generated<Timestamp | null>;
   truncated: Generated<boolean>;
 }
 
@@ -87,6 +88,7 @@ export interface AgentRuns {
   output_tokens: number | null;
   owner_id: string;
   plan_id: string | null;
+  prompt_hash: string | null;
   prompt_version: string | null;
   provider: string | null;
   reasoning: string | null;
@@ -118,6 +120,7 @@ export interface AgentWorkers {
   id: string;
   last_seen_at: Generated<Timestamp>;
   model: string;
+  prompt_hash: string | null;
   prompt_version: string;
   provider: string;
   ready: Generated<boolean>;

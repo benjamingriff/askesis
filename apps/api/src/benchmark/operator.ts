@@ -6,6 +6,7 @@ import { getApiConfig } from '../config.js';
 import { getDatabase, closeDatabase } from '../database/client.js';
 import { startAgentSweeper } from '../modules/agent/agent.sweeper.js';
 import { workerReady } from '../modules/agent/agent.service.js';
+import { toolDefinitions } from '../modules/agent/agent.schemas.js';
 import {
   createConversation,
   sendMessage,
@@ -108,6 +109,7 @@ export async function benchmarkSnapshot(owner: string, conversationId: string) {
       'model',
       'reasoning',
       'prompt_version',
+      'prompt_hash',
       'input_tokens',
       'output_tokens',
       'created_at',
@@ -118,7 +120,30 @@ export async function benchmarkSnapshot(owner: string, conversationId: string) {
     .where('conversation_id', '=', conversationId)
     .orderBy('created_at')
     .execute();
-  const outputs = await Promise.all(runs.map((run) => getOutput(owner, run.id)));
+  const ids = runs.map((run) => run.id);
+  // When each segment was first saved orders it against tool calls; the public output omits it.
+  const started = ids.length
+    ? await db
+        .selectFrom('agent_run_outputs')
+        .select(['run_id', 'item_id', 'started_at'])
+        .where('run_id', 'in', ids)
+        .execute()
+    : [];
+  const startedAt = new Map(
+    started.map((row) => [
+      `${row.run_id}:${row.item_id}`,
+      row.started_at ? new Date(row.started_at).toISOString() : null,
+    ]),
+  );
+  const outputs = (await Promise.all(runs.map((run) => getOutput(owner, run.id)))).map(
+    (output) => ({
+      ...output,
+      items: output.items.map((item) => ({
+        ...item,
+        startedAt: startedAt.get(`${output.runId}:${item.itemId}`) ?? null,
+      })),
+    }),
+  );
   const receipts = runs.length
     ? await db
         .selectFrom('agent_tool_receipts')
@@ -162,6 +187,11 @@ export async function benchmarkSnapshot(owner: string, conversationId: string) {
       findings: validatePlan(aggregate.validation),
     },
   };
+}
+
+/** The tool definitions every coaching run receives, for benchmark provenance. */
+export function benchmarkToolDefinitions() {
+  return toolDefinitions();
 }
 
 export type BenchmarkSnapshot = Awaited<ReturnType<typeof benchmarkSnapshot>>;

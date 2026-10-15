@@ -213,7 +213,6 @@ export const DatasetScenarioSchema = z
         maxElapsedMinutes: z.number().int().min(1).max(60),
       })
       .strict(),
-    legacyScenarioId: z.literal('running-poc').optional(),
   })
   .strict();
 export const SuiteSchema = z
@@ -254,7 +253,7 @@ export const CatalogueSchema = z
           kind: z.enum(['core', 'variation', 'adaptation', 'duration']),
           proposalRef: z.string().min(1),
           familyId: id,
-          runnerSupport: z.enum(['legacy_running_poc', 'needs_runner']),
+          runnerSupport: z.enum(['runnable', 'needs_runner']),
         })
         .strict(),
     ),
@@ -263,6 +262,22 @@ export const CatalogueSchema = z
     ),
   })
   .strict();
+/**
+ * How a simulated athlete speaks. A voice changes wording and manner only; facts still come from
+ * the persona, so any voice can be combined with any scenario.
+ */
+export const VoiceSchema = z
+  .object({
+    schemaVersion: z.literal(1),
+    id,
+    version,
+    label: z.string().min(1),
+    description: z.string().min(1),
+    traits: strings.min(1),
+    examples: strings.min(1).max(6),
+  })
+  .strict();
+export type Voice = z.infer<typeof VoiceSchema>;
 export type Persona = z.infer<typeof PersonaSchema>;
 export type DatasetScenario = z.infer<typeof DatasetScenarioSchema>;
 export type Dataset = {
@@ -272,6 +287,7 @@ export type Dataset = {
   catalogue: z.infer<typeof CatalogueSchema>;
 };
 const datasetRoot = fileURLToPath(new URL('../datasets/v1/', import.meta.url));
+const voiceRoot = fileURLToPath(new URL('../datasets/', import.meta.url));
 const weekNames = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 const systemSport = { run_pace: 'run', cycle_power: 'cycle', swim_pace: 'swim' } as const;
 function unique(values: (string | number)[], context: string) {
@@ -365,6 +381,10 @@ export function resolveDatasetScenario(persona: Persona, scenario: DatasetScenar
       values.swim200Seconds = String(evidence.input.t200Seconds);
     }
   }
+  const evidence = persona.performanceEvidence.map((item) => ({
+    ...item,
+    observedOn: datePlus(today, -item.observedDaysAgo),
+  }));
   const events = scenario.events.map((event) => ({
     ...event,
     date: datePlus(startDate, (event.week - 1) * 7 + event.weekday - 1),
@@ -386,6 +406,7 @@ export function resolveDatasetScenario(persona: Persona, scenario: DatasetScenar
     scenario,
     dates,
     events,
+    evidence,
     facts,
     openingMessage: render(scenario.openingMessage, values),
   };
@@ -461,11 +482,6 @@ export function validateDataset(dataset: Dataset) {
       if (!Object.hasOwn(resolved.facts, key))
         throw new Error(`Missing fact ${key} for ${scenario.id}.`);
     if (
-      scenario.legacyScenarioId &&
-      (scenario.id !== 'running-poc' || persona.id !== 'running-poc')
-    )
-      throw new Error('Invalid legacy reference.');
-    if (
       scenario.expectations.frequencyPolicy === 'workouts_per_sport' &&
       resolved.persona.sports.reduce((n, sport) => n + sport.desiredSessions, 0) >
         resolved.persona.availability.length * 2
@@ -505,10 +521,8 @@ export function validateDataset(dataset: Dataset) {
     const scenario = dataset.scenarios.find((scenario) => scenario.id === item.id);
     if (scenario && (scenario.persona.id !== item.familyId || scenario.split !== item.split))
       throw new Error(`Scenario family/split mismatch for ${item.id}.`);
-    if (
-      item.runnerSupport === 'legacy_running_poc' &&
-      (item.id !== 'running-poc' || item.status !== 'authored')
-    )
+    // Every authored scenario runs through the general runner; planned ones cannot yet.
+    if ((item.runnerSupport === 'runnable') !== (item.status === 'authored'))
       throw new Error(`Invalid runner support for ${item.id}.`);
   }
   for (const suite of dataset.suites) {
@@ -552,6 +566,15 @@ export async function loadDataset(root = datasetRoot): Promise<Dataset> {
   validateDataset(dataset);
   return dataset;
 }
+/** Voices are versioned independently of dataset editions. */
+export async function loadVoices(root = voiceRoot) {
+  const voices = await files(root, 'voices', VoiceSchema);
+  unique(
+    voices.map((voice) => voice.id),
+    'voice',
+  );
+  return voices;
+}
 export function coverageMarkdown(dataset: Dataset) {
   const catalogue = dataset.catalogue;
   const count = (items: { status: string }[]) =>
@@ -565,7 +588,7 @@ export function coverageMarkdown(dataset: Dataset) {
     '',
     'Checked means the data file exists and passes authoring validation. It does not mean the case has been run, owner-reviewed or grading-calibrated. All authored datasets remain exploratory.',
     '',
-    'Only `running-poc` is supported by the current benchmark runner. The other authored cases and the pilot suite need the general runner and sport-specific grading/dashboard work described in the proposal.',
+    'Every authored scenario runs with `pnpm bench run --scenario <id>`, and `pnpm bench run --suite pilot-v1` runs the pilot in order. Planned cases still need authoring.',
     '',
     'Regenerate with `pnpm --filter @askesis/bench datasets:coverage:update`. Validate with `pnpm --filter @askesis/bench datasets:validate`.',
     '',
@@ -594,14 +617,15 @@ export function coverageMarkdown(dataset: Dataset) {
     '',
     '## Remaining framework work',
     '',
-    '- [ ] General runner support for the new scenario schema, zero/unknown baselines and explicit prescription horizons.',
-    '- [ ] Per-sport checks, reviewer anchors and accurate dashboard quantities.',
-    '- [ ] Sequential suite/model experiments with fixed simulator/reviewer models and isolated trial state.',
+    '- [x] General runner support for the new scenario schema, zero/unknown baselines and explicit prescription horizons.',
+    '- [x] Per-sport deterministic checks and a sport-neutral reviewer prompt.',
+    '- [ ] Reviewer anchors and per-sport dashboard quantities beyond training load.',
+    '- [ ] Model experiments with fixed simulator/reviewer models and isolated trial state.',
     '- [ ] Domain-clock consistency, adaptation checkpoints and full-horizon stress telemetry.',
     '- [ ] Owner review of all eight pilot outputs; calibrated training-quality anchors before quality gates.',
     '- [ ] At least one acceptable and one defective reviewer fixture per sport category; reuse reviewed running fixtures where suitable.',
     '',
-    'Authoring order: finish the pilot runner, inspect the eight cases, then fill remaining core personas and reviewed variations. Reserved holdout families stay out of development suites.',
+    'Authoring order: run and inspect the eight pilot cases, then fill remaining core personas and reviewed variations. Reserved holdout families stay out of development suites.',
     '',
   );
   return lines.join('\n');

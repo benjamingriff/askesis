@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import type { HumanReview, ResultsIndex, RunDetail } from '../types';
+import type { Highlight, HumanReview, ResultsIndex, RunDetail } from '../types';
 
 export type Load<T> =
   { status: 'loading' } | { status: 'error'; message: string } | { status: 'ready'; data: T };
@@ -109,4 +109,14 @@ export async function saveReview(
   const saved = (await response.json()) as HumanReview;
   window.dispatchEvent(new Event(REFRESH_EVENT));
   return saved;
+}
+
+export async function saveHighlights(id: string, highlights: Highlight[]): Promise<Highlight[]> {
+  const response = await fetch(`/api/runs/${encodeURIComponent(id)}/highlights`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(highlights),
+  });
+  if (!response.ok) throw new Error(`Saving highlights failed with HTTP ${response.status}`);
+  return (await response.json()) as Highlight[];
 }

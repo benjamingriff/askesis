@@ -1,7 +1,7 @@
 import type { IncomingMessage } from 'node:http';
 import path from 'node:path';
 import type { Plugin } from 'vite';
-import { loadIndex, loadRunDetail, resultsRootExists, saveReview } from './results';
+import { loadIndex, loadRunDetail, resultsRootExists, saveHighlights, saveReview } from './results';
 
 const MAX_BODY = 64 * 1024;
 
@@ -63,6 +63,26 @@ export function benchmarkResults(root: string): Plugin {
             );
             if (saved === 'not_found') send(404, { error: 'run_not_found' });
             else if (saved === 'invalid') send(400, { error: 'invalid_review' });
+            else send(200, saved);
+            return;
+          }
+
+          const highlightsMatch = /^\/runs\/([^/]+)\/highlights$/.exec(url.pathname);
+          if (highlightsMatch?.[1] && request.method === 'PUT') {
+            let payload: unknown;
+            try {
+              payload = JSON.parse(await readBody(request));
+            } catch {
+              send(400, { error: 'invalid_json' });
+              return;
+            }
+            const saved = await saveHighlights(
+              resolvedRoot,
+              decodeURIComponent(highlightsMatch[1]),
+              payload,
+            );
+            if (saved === 'not_found') send(404, { error: 'run_not_found' });
+            else if (saved === 'invalid') send(400, { error: 'invalid_highlights' });
             else send(200, saved);
             return;
           }

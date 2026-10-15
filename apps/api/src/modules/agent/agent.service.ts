@@ -84,6 +84,7 @@ export async function registerWorker(input: z.infer<typeof RegisterSchema>) {
       model: input.model,
       reasoning: input.reasoning,
       prompt_version: input.promptVersion,
+      prompt_hash: input.promptHash,
       ready: input.ready,
       last_seen_at: new Date(),
     })
@@ -93,6 +94,7 @@ export async function registerWorker(input: z.infer<typeof RegisterSchema>) {
         model: input.model,
         reasoning: input.reasoning,
         prompt_version: input.promptVersion,
+        prompt_hash: input.promptHash,
         ready: input.ready,
         last_seen_at: new Date(),
       }),
@@ -171,6 +173,7 @@ export async function claimRun(workerId: string) {
             model: worker.model,
             reasoning: worker.reasoning,
             prompt_version: worker.prompt_version,
+            prompt_hash: worker.prompt_hash,
           })
           .where('id', '=', run.id)
           .execute();

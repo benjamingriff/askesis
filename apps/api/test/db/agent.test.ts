@@ -65,6 +65,7 @@ async function worker() {
     model: 'gpt-6.1-sol',
     reasoning: 'medium',
     promptVersion: 'training-feedback-coach-v1',
+    promptHash: 'a'.repeat(64),
     ready: true,
   });
   return id;
@@ -400,6 +401,7 @@ it('registers a Claude worker over the private API, attributes its run and recor
         model: 'claude-opus-5-5',
         reasoning: 'medium',
         promptVersion: 'training-feedback-coach-v1',
+        promptHash: 'a'.repeat(64),
         ready: true,
       }),
     });
@@ -1340,6 +1342,7 @@ it('requires the current prompt contract before a worker contributes readiness o
     model: 'gpt-6.1-sol',
     reasoning: 'medium',
     promptVersion: 'training-feedback-coach-v1',
+    promptHash: 'a'.repeat(64),
     ready: true,
   });
   expect((await chatCapabilities()).executionAvailable).toBe(true);

@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "id": "vague",
+  "version": 1,
+  "label": "Vague beginner",
+  "description": "Unsure of training terminology and hedges answers, but includes the exact figures it has been given. Sometimes misreads technical questions and asks what words mean.",
+  "traits": [
+    "hedges with 'I think' and 'roughly'",
+    "unfamiliar with terms such as zones, threshold, CSS or RIR and asks what they mean",
+    "describes training in everyday language",
+    "polite and a little unsure"
+  ],
+  "examples": [
+    "I think it's been roughly that much each week? I'm not totally sure.",
+    "Sorry, what do you mean by threshold pace? I did a race recently if that helps."
+  ]
+}

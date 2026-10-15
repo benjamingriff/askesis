@@ -2,7 +2,7 @@ import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { loadIndex, loadRunDetail, resolveId } from './results';
+import { loadIndex, loadRunDetail, resolveId, saveHighlights, saveReview } from './results';
 
 let root: string;
 
@@ -161,5 +161,33 @@ describe('run ids', () => {
     expect(resolveId(root, 'a/b')).toBeNull();
     expect(resolveId(root, '..')).toBeNull();
     expect(await loadRunDetail(root, '../etc')).toBeNull();
+  });
+});
+
+describe('human annotations', () => {
+  it('retains communication ratings and phrase highlights independently on reload', async () => {
+    const run = '2026-10-14-human-review';
+    await write(`${run}/manifest.json`, { scenarioId: 'running-improver' });
+    const review = {
+      verdict: 'fit',
+      notes: 'Clear explanation.',
+      communication: { tone: 4, clarity: 5, adaptation: 3 },
+    };
+    const highlights = [
+      {
+        sequence: 2,
+        quote: 'What has your running looked like?',
+        tag: 'great question',
+        createdAt: '2026-10-14T12:00:00Z',
+      },
+    ];
+    await saveReview(root, run, review);
+    await saveHighlights(root, run, highlights);
+    const reloaded = await loadRunDetail(root, run);
+    expect(reloaded?.review).toMatchObject(review);
+    expect(reloaded?.highlights).toEqual(highlights);
+    await saveReview(root, run, { ...review, notes: 'Updated notes.' });
+    expect((await loadRunDetail(root, run))?.highlights).toEqual(highlights);
+    expect(await saveHighlights(root, '../escape', highlights)).toBe('not_found');
   });
 });

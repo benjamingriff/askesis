@@ -47,6 +47,10 @@ export interface RunSummary {
   scenarioVersion: number | null;
   promptVersion: string | null;
   promptHash: string | null;
+  /** Dataset persona and athlete voice; null for runs of the retired running-poc scenario. */
+  personaId: string | null;
+  voiceId: string | null;
+  scenarioLabel: string | null;
   revision: string | null;
   workingTreeDirty: boolean;
   scripted: boolean;
@@ -131,6 +135,19 @@ export interface HumanReview {
   criteria: Record<string, 'agree' | 'disagree'>;
   tags: string[];
   notes: string;
+  /** Your 1–5 ratings of how the coach communicated; null where not rated. */
+  communication: Record<CommunicationAspect, number | null>;
+}
+
+export const COMMUNICATION_ASPECTS = ['tone', 'clarity', 'adaptation'] as const;
+export type CommunicationAspect = (typeof COMMUNICATION_ASPECTS)[number];
+
+/** A phrase you tagged in a coach message, saved apart from the review form. */
+export interface Highlight {
+  sequence: number;
+  quote: string;
+  tag: string;
+  createdAt: string;
 }
 
 export interface ConversationMessage {
@@ -173,12 +190,28 @@ export interface CoachTurn {
   questions: number;
   words: number;
   tools: ToolCall[];
+  /** Interim text and tool calls in the order they happened, before the final reply. */
+  steps: TurnStep[];
+  /** False for older runs without saved text times; text is then shown before tools. */
+  stepsOrdered: boolean;
 }
+
+export type TurnStep =
+  | { kind: 'text'; at: string | null; position: number; content: string }
+  | { kind: 'tool'; at: string | null; position: number; operationId: string };
 
 export interface Disclosure {
   sequence: number;
   factIds: string[];
   kind: 'answer' | 'nudge' | 'unknown';
+  /** How the persona's voice step worded this message; null when it used the authored text. */
+  voice: {
+    id: string;
+    status: 'voiced' | 'fallback' | 'skipped';
+    attempts: number;
+    /** The authored fact text the voiced message had to convey. */
+    authored: string | null;
+  } | null;
 }
 
 export type BeliefStatus = 'match' | 'mismatch' | 'assumed' | 'missing' | 'review';
@@ -243,6 +276,79 @@ export interface PlanFitness {
   findings: { code: string; severity: string; message: string }[];
 }
 
+export type LoadSport = 'run' | 'cycle' | 'swim' | 'strength' | 'other';
+/**
+ * How a workout's stress was estimated: from pace/power targets against threshold, from an RPE,
+ * from a zone's usual intensity, from the coach's duration estimate, or not at all.
+ */
+export type LoadMethod =
+  'targets' | 'rpe' | 'zone_default' | 'estimate' | 'not_counted' | 'unestimated';
+export interface LoadAmount {
+  seconds: number;
+  metres: number;
+  tss: number;
+}
+export interface LoadWorkout extends LoadAmount {
+  id: string;
+  date: string;
+  title: string;
+  sport: LoadSport;
+  intensityFactor: number | null;
+  method: LoadMethod;
+  /** Seconds in each band, counted per effort rather than from the workout average. */
+  intensity: LoadWeek['intensity'];
+  /** Contributions from each effort's discipline, including mixed workouts. */
+  sports: Partial<Record<LoadSport, LoadAmount>>;
+}
+export interface LoadDay {
+  date: string;
+  sports: Partial<Record<LoadSport, LoadAmount>>;
+  seconds: number;
+  metres: number;
+  tss: number;
+  /** 42-day weighted average of daily stress (CTL). */
+  fitness: number;
+  /** 7-day weighted average of daily stress (ATL). */
+  fatigue: number;
+  /** Fitness minus fatigue (TSB). */
+  form: number;
+}
+export interface LoadWeek {
+  index: number;
+  start: string;
+  sports: Partial<Record<LoadSport, LoadAmount>>;
+  seconds: number;
+  metres: number;
+  tss: number;
+  fitness: number;
+  fatigue: number;
+  form: number;
+  /** Seconds by intensity factor: easy < 0.85, moderate < 0.95, hard ≥ 0.95. */
+  intensity: { easy: number; moderate: number; hard: number; uncounted: number };
+}
+export interface PlanLoad {
+  start: string;
+  end: string;
+  coverageEnd: string | null;
+  events: { date: string; label: string }[];
+  /** The athlete's stated training before the plan, which seeds fitness and fatigue. */
+  baseline: {
+    weeklyTss: number;
+    weeklySeconds: number;
+    weeklyMetres: number;
+    assumption: string;
+  } | null;
+  thresholds: {
+    runPaceSecondsPerKm: number | null;
+    ftpWatts: number | null;
+    cssSecondsPer100m: number | null;
+  };
+  days: LoadDay[];
+  weeks: LoadWeek[];
+  workouts: LoadWorkout[];
+  methods: Partial<Record<LoadMethod, number>>;
+}
+
 export interface SummaryClaim {
   label: string;
   plannedKm: number;
@@ -279,7 +385,11 @@ export interface RunDetail extends RunSummary {
   beliefs: BeliefRow[];
   decisions: Decision[];
   fitness: PlanFitness | null;
+  load: PlanLoad | null;
   claims: SummaryClaim[];
+  /** Exact prompt texts saved with the run, keyed by role. Older runs saved none. */
+  prompts: PromptRecord[];
+  highlights: Highlight[];
   progress: { at: string; stage: string }[];
   workouts: PlannedWorkout[];
   blocks: PlanBlock[];
@@ -287,6 +397,13 @@ export interface RunDetail extends RunSummary {
   planEnd: string | null;
   facts: Record<string, string>;
   dates: Record<string, string>;
+}
+
+export interface PromptRecord {
+  role: string;
+  name: string | null;
+  hash: string | null;
+  text: string | null;
 }
 
 export interface CalibrationFixture {

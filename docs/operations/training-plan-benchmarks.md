@@ -1,22 +1,24 @@
 # Local training-plan benchmark
 
-The proof of concept starts a dedicated local PostgreSQL database, the current API and the normal coaching worker. A synthetic runner answers the coach, then deterministic checks and a separate model call review the saved plan. No frontend is required. The CLI hosts the API and local fixture/export operator; a separate worker process receives only coaching configuration over IPC and calls the authenticated internal API over HTTP. Database and Clerk credentials are excluded from its environment.
+The benchmark starts a dedicated local PostgreSQL database, the current API and the normal coaching worker. A synthetic runner answers the coach, then deterministic checks and a separate model call review the saved plan. No frontend is required. The CLI hosts the API and local fixture/export operator; a separate worker process receives only coaching configuration over IPC and calls the authenticated internal API over HTTP. Database and Clerk credentials are excluded from its environment.
 
 ## Run a scenario
 
-The [versioned athlete datasets](../../apps/bench/datasets/README.md) contain the next eight-case pilot and a complete coverage tracker. Validate their authoring data without starting services or making provider calls with `pnpm --filter @askesis/bench datasets:validate`. The current execution command below still accepts only `running-poc`; the new suite is not executable yet.
+Scenarios come from the [versioned athlete datasets](../../apps/bench/datasets/README.md): eight authored cases across running, cycling, swimming, strength, gym, hybrid and triathlon athletes, grouped in the `pilot-v1` suite. Validate their authoring data without starting services or making provider calls with `pnpm --filter @askesis/bench datasets:validate`. The retired `running-poc` scenario is replaced by `running-improver`, the same athlete in the dataset format; older `running-poc` runs remain readable in the dashboard but cannot be regraded.
 
 Requirements: Node 24, the repository's pnpm version, Docker with a local daemon, development Clerk keys and a valid OpenAI API key. Model requests use the provider and incur its normal charges. PostgreSQL, API and worker run locally.
 
 ```sh
 pnpm install --frozen-lockfile
-pnpm bench run --scenario running-poc
+pnpm bench run --scenario running-improver
+# Every pilot case in order, each in its own process
+pnpm bench run --suite pilot-v1
 ```
 
 Credentials are read from `.env`, then `.env.bench.local`, then your shell. Alternatively select a private environment file:
 
 ```sh
-pnpm bench run --scenario running-poc --env-file /absolute/path/to/private.env
+pnpm bench run --scenario running-improver --env-file /absolute/path/to/private.env
 ```
 
 Supported configuration:
@@ -34,9 +36,24 @@ BENCH_REVIEW_MODEL=gpt-6.1-sol
 
 Keep credential files ignored. Missing development Clerk keys can fall back to the main checkout's ignored `.env`, as with `dev:setup`. The provider key does not fall back automatically. Shell variables take precedence over the selected file. The runner ignores supplied database URLs, API URLs, execution modes and bootstrap tokens, and constructs its own local configuration. Real Clerk middleware and machine authentication remain installed; fixture creation and exports call local domain services directly.
 
-The CLI builds the relevant packages automatically, applies migrations and prints readiness, athlete messages, coach replies, tool activity and the assessment/report path. Each run uses a new synthetic athlete and conversation. The scenario describes a first half marathon twelve weeks away, a three-run/22 km baseline, Tuesday/Thursday/Sunday availability, and a recent measured 5 km result. It asks for the first four weeks now. Dates are resolved in Europe/London and saved with the run.
+The CLI builds the relevant packages automatically, applies migrations and prints readiness, athlete messages, coach replies, tool activity and the assessment/report path. Each run uses a new synthetic athlete and conversation. Running `pnpm bench run` without `--scenario` or `--suite` lists the available scenarios. Dates are resolved in Europe/London and saved with the run. A suite stops early if a case is interrupted, and exits nonzero when any case fails.
 
-Default coach configuration comes from the existing worker parser and current coaching prompt. `AGENT_PROVIDER`, `AGENT_MODEL`, `AGENT_REASONING`, `AGENT_MAX_TURNS`, `AGENT_MAX_OUTPUT_TOKENS` and `AGENT_POLL_MS` are supported. To benchmark a Claude coach, set `AGENT_PROVIDER=anthropic` and `ANTHROPIC_API_KEY`; `OPENAI_API_KEY` is still required because the simulator and reviewer always run on OpenAI. With an OpenAI coach they default to the coach model, and with a Claude coach to `gpt-6.1-sol`. Set their `BENCH_*_MODEL` variables explicitly when comparing coaching models so the evaluators remain fixed. `--scripted` replays the offline script through whichever coach runtime is selected. Candidate prompt injection, scenario suites, repeated trials and comparison summaries are future work.
+### Athlete voices
+
+The simulator first selects which scenario facts to reveal, exactly as before. A second call then words those facts as the athlete would say them. It sees only the selected statements, the recent conversation and a voice description, never the unrevealed facts. Code rejects a reply that drops or adds any number, date or weekday, retries once with the problems listed, and otherwise sends the authored fact text. Every message therefore discloses exactly the facts recorded in `disclosures.json`, while its wording varies.
+
+```sh
+pnpm bench run --scenario running-improver --voice anxious
+pnpm bench run --scenario running-improver --voice none
+```
+
+`--voice persona` (the default) uses the persona's own communication style. `--voice none` sends the authored fact text unchanged, as earlier runs did. Named voices live in [`apps/bench/datasets/voices`](../../apps/bench/datasets/voices) and combine with any scenario: `terse`, `anxious`, `overconfident` and `vague`. They are versioned independently of dataset editions. The voice step uses the simulator model and adds one or two short calls per athlete message. Scripted runs skip it. Judge the coach's tone yourself in the dashboard; no model grades tone.
+
+Default coach configuration comes from the existing worker parser and current coaching prompt. `AGENT_PROVIDER`, `AGENT_MODEL`, `AGENT_REASONING`, `AGENT_MAX_TURNS`, `AGENT_MAX_OUTPUT_TOKENS` and `AGENT_POLL_MS` are supported. To benchmark a Claude coach, set `AGENT_PROVIDER=anthropic` and `ANTHROPIC_API_KEY`; `OPENAI_API_KEY` is still required because the simulator and reviewer always run on OpenAI. With an OpenAI coach they default to the coach model, and with a Claude coach to `gpt-6.1-sol`. Set their `BENCH_*_MODEL` variables explicitly when comparing coaching models so the evaluators remain fixed. `--scripted` replays the offline script through whichever coach runtime is selected. Candidate prompt injection, repeated trials and comparison summaries are future work.
+
+### Prompt versions
+
+Every prompt is identified by a name and the SHA-256 of its exact text: the coach (`training-feedback-coach-v1`; older runs used `multisport-coach-v3`), simulator (`fact-selection-v2`), voice (`athlete-voice-v1`) and reviewer (`training-plan-v3`). Changing a prompt's text requires a new name. `apps/agent/prompts.lock.json` and `apps/bench/prompts.lock.json` record each name's hash, and their tests fail if a text changes under an existing name. Workers report the coach prompt's hash when registering, and each `agent_runs` row records the hash of the worker that claimed it. Each benchmark run also saves the prompt texts and the coach's tool definitions under `prompts/`, with their hashes, plus a `toolsHash`, in `manifest.json`.
 
 ## Review the result
 
@@ -44,17 +61,19 @@ Open the printed `benchmark-results/<run-id>/report.md`. It contains the overall
 
 | File                                  | Evidence                                                                                                           |
 | ------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
-| `scenario.json`                       | Resolved facts, dates, expectations and limits                                                                     |
+| `scenario.json`                       | Resolved persona, facts, dates, events, evidence, expectations, limits and voice                                   |
+| `prompts/`                            | Exact coach, simulator, voice and reviewer prompt texts, plus the coach's tool definitions                         |
+| `athlete-actions.jsonl`               | Per athlete message: selected facts, intent, authored text, voice attempts with any rejections, and sent text      |
 | `manifest.json`, `configuration.json` | Git revision and working-tree status, prompt/scenario hashes and versions, model settings and environment identity |
 | `state.json`, `progress.jsonl`        | Current stage and activity history                                                                                 |
 | `disclosures.json`                    | Facts disclosed at each athlete message                                                                            |
-| `snapshot.json`                       | Persisted conversation, run metadata, durable visible output, receipts, performance and plan                       |
+| `snapshot.json`                       | Persisted conversation, run metadata and prompt hash, visible output with first-saved times, receipts and plan     |
 | `plan.json`                           | Saved brief, blocks, semantic plan, validation and resolved workout prescriptions                                  |
 | `tool-trace.jsonl`                    | Tool inputs, accepted results, status and timing                                                                   |
 | `checks.json`, `assessment.json`      | Deterministic checks and overall assessment                                                                        |
 | `metrics.json`                        | Available coaching/evaluator token usage; monetary cost remains unknown                                            |
 
-The athlete model selects fact IDs; code renders their exact values. It cannot write additional athlete facts. Completion depends on current persisted coverage for the agreed horizon and a nonempty schedule, rather than the simulator's satisfaction or the coach's claim. Checks assess dates, coverage, disclosed facts, baseline, allowed days, weekly frequency, structure, resolved prescriptions and calibration provenance. The reviewer assesses goal fit, progression, recovery, prescriptions, personalization and conversation. Its references must exist and it must assess all six criteria.
+The athlete model selects fact IDs and code renders their authored values. The voice prompt asks for rewording only; code checks numbers, ISO dates and weekdays, retries once on differences, then falls back to the authored text. This is a lexical guard, not a semantic guarantee: a reply can still omit or alter nonnumeric information. Compare voiced messages with their authored statements when reviewing the conversation. Completion depends on current persisted coverage for the agreed horizon and a nonempty schedule, rather than the simulator's satisfaction or the coach's claim. Each scenario lists its checks: saved plan, plan dates, coverage, sports, per-sport baseline (unknown values must stay unknown), available days and facility days, daily time budgets, at most two workouts a day, prescriptions (a resolved zone for every run, ride and swim effort; reps with RIR or RPE for strength, allowing timed rests) and calibration provenance (disclosed results recorded as user supplied with their dates; anything else labelled an estimate). Required discovery, structural validation and actual weekly sport frequency always run. Frequency follows the scenario policy: separate workouts per sport, or one exposure to each sport in a mixed workout. The reviewer assesses goal fit, progression, recovery, prescriptions, personalization and conversation. Its references must exist and it must assess all six criteria.
 
 An `acceptable` result requires all exact checks and all reviewer criteria to pass. Missing coverage/prescriptions or failed execution produces `incomplete`. Other quality failures or uncertainty produce `needs_revision`. A completed conversation without a valid review produces `assessment_unavailable`. Model grading is provisional and has not been calibrated against a human coach. One synthetic run does not establish comparative model quality.
 
@@ -69,6 +88,16 @@ pnpm bench grade --run <run-id> --env-file /absolute/path/to/private.env
 The command preserves the previous assessment and writes a versioned review artifact before updating the report. It uses the saved dates. `BENCH_REVIEW_MODEL` selects the reviewer. Failed regrading leaves the previous assessment intact.
 
 Writers hold a per-run `benchmark-results/<run-id>/run.lock`: generation holds it until its final report is saved, and regrading holds it throughout reading, reviewing and publishing. A second writer for the same run is rejected before starting a model call. Different saved runs can be regraded independently. The lock is released after reporting even with `--keep-alive`, so a completed run can be regraded while its API remains available. Ctrl+C during a review cancels the call and releases its lock; publication that has already started finishes before cleanup. If a process is forcibly killed, verify its recorded PID has exited before removing a stale per-run lock. JSON publication uses unique private temporary files, so concurrent writers cannot rename one another's temporary output.
+
+## Inspect conversations in the dashboard
+
+Run `pnpm dev:evals` and open the printed local address (the root command chooses a worktree-specific port; direct app-level Vite defaults to `http://127.0.0.1:5179`). This separate local dashboard reads `benchmark-results`; it does not require the training app or a Clerk browser session. Set `EVALS_RESULTS_DIR` to inspect another result directory. Keep the dev server bound to loopback because review endpoints write to local artifacts.
+
+The Conversations page starts with the run list. Each conversation shows persona/voice labels, disclosed facts, the athlete's sent message and the authored statements behind voiced messages. Expand tool cards for inputs/results. Interim text and tools follow saved timestamps; older artifacts without text times show an explicit ordering limitation. The Prompts section shows the saved texts, names and hashes.
+
+Training load offers week/day charts and a weekly table on a shared date axis. Time, distance and TSS-style stress are coloured by sport, alongside fitness/fatigue and a baseline derived from stated training at assumed easy effort. Stress is `hours × IF² × 100` for run/ride and `hours × IF³ × 100` for swim, relative to threshold pace, FTP or CSS. Unresolved targets can use labelled RPE/zone estimates; strength without timed RPE work contributes time only. The intensity split counts time per effort. These are descriptive estimates with no new pass/fail rules; the existing volume chart's +10% marking is retained.
+
+Rate tone, clarity and adaptation from 1–5 in Your review and save. Select a phrase in a coach reply to tag it. Ratings/notes save to `human-review.json`; phrase tags save separately to `human-highlights.json` so they do not overwrite an unsaved review draft. Both survive a reload. No automatic tone judge is added.
 
 ## Validate the grader with fixed fixtures
 
@@ -118,7 +147,7 @@ Each run prints a new `benchmark-results/calibration-<run-id>/report.md`. Open i
 
 Reports update after each attempt. Ctrl+C or the 30-minute suite limit retains completed reviews. A provider or review-validation failure stops further calls, records safe diagnostics and returns exit status 1. Validation failures have specific `REVIEW_*` codes and fixed explanations; the parsed rejected review and available usage are retained in the attempt JSON, so invalid citations or verdicts can be inspected. Errors and unattempted cases are excluded from grading-agreement denominators and shown explicitly. There is no automatic resume or retry.
 
-Reviewer v2 receives the available evidence-reference IDs explicitly. When the saved plan is null, `plan:missing` is a valid reference for that absence; `plan:brief`, workout and block IDs are unavailable. The reviewer must still provide all six criteria and an `incomplete` verdict. A valid incomplete judgment is an expected result, not an operational error. Retry just that case with `pnpm bench calibrate --op --fixture missing-plan`.
+The reviewer (since `running-plan-v2`; now the sport-neutral `training-plan-v3`) receives the available evidence-reference IDs explicitly. When the saved plan is null, `plan:missing` is a valid reference for that absence; `plan:brief`, workout and block IDs are unavailable. The reviewer must still provide all six criteria and an `incomplete` verdict. A valid incomplete judgment is an expected result, not an operational error. Retry just that case with `pnpm bench calibrate --op --fixture missing-plan`.
 
 By default, a fully executed suite exits 0 even when the grader disagrees with labels: disagreement is the result being measured. Add `--assert` to exit 1 on any labelled disagreement, for a regression gate after calibrating and reviewing the labels. Operational errors always exit 1.
 
@@ -133,7 +162,7 @@ This uses a deliberately permissive stand-in that passes every existing plan and
 ## Keep the API available and stop it
 
 ```sh
-pnpm bench run --scenario running-poc --keep-alive
+pnpm bench run --scenario running-improver --keep-alive
 ```
 
 After reporting, the command keeps its API listening on the printed loopback URL until Ctrl+C. The coaching worker stops after execution; the database remains available until Ctrl+C, which removes the containers/network while retaining data. Agents must not leave this mode running when handing back. Public API endpoints retain normal authentication, and the synthetic athlete is not provisioned into a browser account. This mode supports API/service inspection; viewing the Markdown/JSON artifacts is the first proof-of-concept review interface.
@@ -157,10 +186,10 @@ The project/volume name is derived from the worktree path. API and database port
 ## Verify the harness without provider calls
 
 ```sh
-pnpm bench run --scripted
+pnpm bench run --suite pilot-v1 --scripted
 pnpm --filter @askesis/bench test
 ```
 
 The scripted mode exercises the same worker, authenticated tools, migrations and persisted plan exports with an SDK model fixture. It requires development Clerk configuration, but no provider key. Its report explicitly states that it evaluates harness wiring and does not grade real model quality. All reviewer criteria are `uncertain`, so its overall verdict is `needs_revision` even when every deterministic check passes.
 
-The fixture's 12 easy runs are test data. They are not a coaching recommendation or evidence of appropriate progression.
+The fixture schedules each persona's desired sessions as short easy efforts on allowed days, recording measured results as user supplied and placeholder calibrations as estimates. Every pilot case should pass all deterministic checks in scripted mode. These sessions are test data. They are not a coaching recommendation or evidence of appropriate progression.
