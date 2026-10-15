@@ -1,0 +1,71 @@
+{
+  "schemaVersion": 1,
+  "id": "swim-beginner",
+  "version": 1,
+  "category": "swimming",
+  "experience": "beginner",
+  "label": "New pool fitness swimmer learning structured sessions",
+  "reviewStatus": "exploratory",
+  "age": 29,
+  "timezone": "Europe/London",
+  "communication": {
+    "style": "simple descriptions; unfamiliar with CSS and set notation",
+    "disclosurePolicy": "answer_requested_facts",
+    "unknownResponse": "I don't know anything else about that. Please explain any material assumptions."
+  },
+  "sports": [
+    {
+      "sport": "swim",
+      "experience": "beginner",
+      "historyYears": 0.25,
+      "recentBaselineWeeks": 6,
+      "currentSessions": 1,
+      "desiredSessions": 2,
+      "weeklyDistanceMetres": 300,
+      "longestDistanceMetres": 300,
+      "comfortableContinuousDistanceMetres": 100
+    }
+  ],
+  "availability": [
+    {
+      "weekday": 2,
+      "maxMinutes": 45,
+      "preferred": false
+    },
+    {
+      "weekday": 6,
+      "maxMinutes": 45,
+      "preferred": true
+    }
+  ],
+  "equipment": ["25-metre pool", "basic swimming goggles"],
+  "constraints": [
+    "No current injuries or health restrictions",
+    "Longer sessions currently include rests between continuous swims",
+    "Pool training only; no open-water sessions"
+  ],
+  "preferences": [
+    "Explain sets and rest in ordinary language",
+    "Build confidence and a regular fitness habit",
+    "No race or target time"
+  ],
+  "performanceEvidence": [],
+  "factTemplates": {
+    "availability": "I can train only on these days: {{availability}}",
+    "equipment": "I have access to: {{equipment}}.",
+    "constraints": "I'm {{age}}. {{constraints}}.",
+    "preferences": "{{preferences}}.",
+    "training": "For the last {{swimBaselineWeeks}} weeks I have swum {{swimCurrentSessions}} time per week, about {{swimWeeklyMetres}} metres total. My longest recent session totals {{swimLongestMetres}} metres, including rests. I am comfortable swimming {{swimContinuousMetres}} metres continuously and am new to structured fitness swimming.",
+    "frequency": "I want {{swimDesiredSessions}} pool sessions each week.",
+    "fitness": "I have not done a CSS test and don't know my pace per 100 metres. I can swim {{swimContinuousMetres}} metres comfortably without stopping, but longer sessions currently need rests. Do not treat an estimated pace as a measured result.",
+    "access": "I have access to {{facilityAccess}}. Pool training only."
+  },
+  "accessRestrictions": [
+    {
+      "sport": "swim",
+      "facility": "25-metre pool",
+      "weekdays": [2, 6],
+      "maxMinutes": 45
+    }
+  ]
+}

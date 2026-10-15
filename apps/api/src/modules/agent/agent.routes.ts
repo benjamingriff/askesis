@@ -28,6 +28,7 @@ const FinishSchema = z
       .enum([
         'PROVIDER_ERROR',
         'TURN_LIMIT',
+        'MODEL_REFUSAL',
         'TOOL_LIMIT',
         'OUTPUT_LIMIT',
         'EXECUTION_TIMEOUT',

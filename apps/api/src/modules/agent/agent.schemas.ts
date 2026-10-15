@@ -20,7 +20,7 @@ export const PROMPT_VERSION = 'training-feedback-coach-v1';
 export const RegisterSchema = z
   .object({
     id: Id,
-    provider: z.literal('openai'),
+    provider: z.enum(['openai', 'anthropic']),
     model: z.string().min(1).max(200),
     reasoning: z.enum(['low', 'medium', 'high', 'xhigh', 'max']),
     promptVersion: z.literal(PROMPT_VERSION),

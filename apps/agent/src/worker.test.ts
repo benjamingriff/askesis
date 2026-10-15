@@ -141,35 +141,96 @@ const deferred = <T>() => {
   return { promise, resolve, reject };
 };
 
-it.each(['shutdown', 'lease loss', 'deadline', 'cancellation only'] as const)(
-  'preserves cancellation prefix flushing while observing a later %s',
-  async (stop) => {
-    vi.useFakeTimers();
+const cancellationCases = (['openai', 'anthropic'] as const).flatMap((provider) =>
+  (['shutdown', 'lease loss', 'deadline', 'cancellation only'] as const).map(
+    (stop) => [provider, stop] as const,
+  ),
+);
+/** A provider stream that shows a prefix when told, then fails only once its request aborts. */
+async function blockingProvider(
+  provider: 'openai' | 'anthropic',
+  emit: Promise<void>,
+  onSignal: (signal: AbortSignal) => void,
+) {
+  const untilAborted = (signal: AbortSignal) =>
+    new Promise<void>((resolve) => {
+      if (signal.aborted) resolve();
+      else signal.addEventListener('abort', () => resolve(), { once: true });
+    });
+  const providerConfig = parseAgentConfig(
+    provider === 'openai'
+      ? { OPENAI_API_KEY: 'test', AGENT_BOOTSTRAP_TOKEN: 'test-bootstrap-token-32-characters' }
+      : {
+          AGENT_PROVIDER: 'anthropic',
+          ANTHROPIC_API_KEY: 'test',
+          AGENT_BOOTSTRAP_TOKEN: 'test-bootstrap-token-32-characters',
+        },
+  );
+  const { createRuntime } = await import('./runtime/index.js');
+  if (provider === 'openai') {
     const { ScriptedModel, modelStreamResponder } = await import('@openai/agents/testing');
-    const { SdkRuntime } = await import('./runtime.js');
-    const emit = deferred<void>();
-    const pending = deferred<void>();
-    const delivery = deferred<Response>();
-    let providerSignal: AbortSignal | undefined;
     const model = new ScriptedModel([
       modelStreamResponder(({ request }) =>
         (async function* () {
-          providerSignal = request.signal!;
+          onSignal(request.signal!);
           yield { type: 'response_started' as const };
-          await emit.promise;
+          await emit;
           yield {
             type: 'output_text_delta' as const,
             itemId: 'prefix',
             delta: 'Accepted before cancellation',
           };
-          await new Promise<void>((resolve) => {
-            if (request.signal!.aborted) resolve();
-            else request.signal!.addEventListener('abort', () => resolve(), { once: true });
-          });
+          await untilAborted(request.signal!);
           throw new Error('Provider interrupted');
         })(),
       ),
     ]);
+    return { config: providerConfig, runtime: createRuntime(providerConfig, { openai: model }) };
+  }
+  const { default: Anthropic } = await import('@anthropic-ai/sdk');
+  const { anthropicEvents, serverSentEvents } = await import('./testing.js');
+  const events = anthropicEvents(
+    {
+      type: 'message',
+      content: [{ type: 'text', text: 'Accepted before cancellation' }],
+      stopReason: 'end_turn',
+    },
+    'claude-opus-5-5',
+    'msg_prefix',
+  );
+  const client = new Anthropic({
+    apiKey: 'test',
+    maxRetries: 0,
+    fetch: async (_url, init) => {
+      const signal = init!.signal!;
+      onSignal(signal);
+      const encoder = new TextEncoder();
+      const body = new ReadableStream<Uint8Array>({
+        async start(controller) {
+          controller.enqueue(encoder.encode(serverSentEvents(events.slice(0, 2))));
+          await emit;
+          controller.enqueue(encoder.encode(serverSentEvents(events.slice(2, 3))));
+          await untilAborted(signal);
+          controller.error(new Error('Provider interrupted'));
+        },
+      });
+      return new Response(body, { headers: { 'content-type': 'text/event-stream' } });
+    },
+  });
+  return { config: providerConfig, runtime: createRuntime(providerConfig, { anthropic: client }) };
+}
+
+it.each(cancellationCases)(
+  '%s preserves cancellation prefix flushing while observing a later %s',
+  async (provider, stop) => {
+    vi.useFakeTimers();
+    const emit = deferred<void>();
+    const pending = deferred<void>();
+    const delivery = deferred<Response>();
+    let providerSignal: AbortSignal | undefined;
+    const { config, runtime } = await blockingProvider(provider, emit.promise, (signal) => {
+      providerSignal = signal;
+    });
     const run = {
       ...claim,
       deadlineAt: new Date(Date.now() + (stop === 'deadline' ? 20000 : 200000)).toISOString(),
@@ -197,7 +258,6 @@ it.each(['shutdown', 'lease loss', 'deadline', 'cancellation only'] as const)(
       .mockRejectedValue(new ApiError('LEASE_LOST', 409));
     const tool = vi.spyOn(api, 'tool');
     const finish = vi.spyOn(api, 'finish').mockResolvedValue({ status: 'cancelled' });
-    const runtime = new SdkRuntime(config, model);
     const execute = vi.spyOn(runtime, 'execute');
     const worker = new Worker(config, api, runtime);
     const execution = worker.execute(run);
@@ -210,7 +270,7 @@ it.each(['shutdown', 'lease loss', 'deadline', 'cancellation only'] as const)(
     const executionSignal = execute.mock.calls[0]![3];
     const hardStopSignal = execute.mock.calls[0]![4];
     expect(executionSignal.reason).toBe('CANCELLED');
-    expect(providerSignal!.reason).toBe('CANCELLED');
+    expect(providerSignal!.aborted).toBe(true);
     expect(hardStopSignal.aborted).toBe(false);
     expect(progressSignal!.aborted).toBe(false);
     expect(finish).not.toHaveBeenCalled();

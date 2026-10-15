@@ -154,3 +154,39 @@ it('does not retry a pending tool fetch that rejects after caller cancellation',
   await rejection;
   expect(fetcher).toHaveBeenCalledOnce();
 });
+it('makes one progress transport attempt while retaining stable finish retries', async () => {
+  const requests: unknown[] = [];
+  let fail = true;
+  const api = new AgentApi('http://localhost', async (_url, init) => {
+    requests.push(init?.body);
+    if (fail) {
+      fail = false;
+      throw new TypeError('Acknowledgement lost');
+    }
+    return response({ status: 'running' });
+  });
+  await expect(
+    api.progress(claim, { sequence: 1, items: [] }, new AbortController().signal),
+  ).rejects.toThrow('Acknowledgement lost');
+  expect(requests).toHaveLength(1);
+  requests.length = 0;
+  fail = true;
+  await api.finish(claim, { status: 'failed', failureCode: 'PROVIDER_ERROR' });
+  expect(requests[0]).toEqual(requests[1]);
+});
+it('retries an uncertain tool HTTP response with exactly the same operation identity and input', async () => {
+  const requests: string[] = [];
+  let first = true;
+  const api = new AgentApi('http://localhost', async (_url, init) => {
+    requests.push(String(init?.body));
+    if (first) {
+      first = false;
+      throw new TypeError('Connection lost after commit');
+    }
+    return response(result);
+  });
+  const delivered = await api.tool(claim, command, new AbortController().signal);
+  expect(requests).toHaveLength(2);
+  expect(requests[0]).toBe(requests[1]);
+  expect(delivered.editNumber).toBe(3);
+});

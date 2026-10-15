@@ -4,6 +4,8 @@ The proof of concept starts a dedicated local PostgreSQL database, the current A
 
 ## Run a scenario
 
+The [versioned athlete datasets](../../apps/bench/datasets/README.md) contain the next eight-case pilot and a complete coverage tracker. Validate their authoring data without starting services or making provider calls with `pnpm --filter @askesis/bench datasets:validate`. The current execution command below still accepts only `running-poc`; the new suite is not executable yet.
+
 Requirements: Node 24, the repository's pnpm version, Docker with a local daemon, development Clerk keys and a valid OpenAI API key. Model requests use the provider and incur its normal charges. PostgreSQL, API and worker run locally.
 
 ```sh
@@ -23,6 +25,7 @@ Supported configuration:
 OPENAI_API_KEY=your-provider-key
 CLERK_SECRET_KEY=sk_test_your-development-key
 CLERK_PUBLISHABLE_KEY=pk_test_your-development-key
+AGENT_PROVIDER=openai
 AGENT_MODEL=gpt-6.1-sol
 AGENT_REASONING=medium
 BENCH_SIMULATOR_MODEL=gpt-6.1-sol
@@ -33,7 +36,7 @@ Keep credential files ignored. Missing development Clerk keys can fall back to t
 
 The CLI builds the relevant packages automatically, applies migrations and prints readiness, athlete messages, coach replies, tool activity and the assessment/report path. Each run uses a new synthetic athlete and conversation. The scenario describes a first half marathon twelve weeks away, a three-run/22 km baseline, Tuesday/Thursday/Sunday availability, and a recent measured 5 km result. It asks for the first four weeks now. Dates are resolved in Europe/London and saved with the run.
 
-Default coach configuration comes from the existing worker parser and current coaching prompt. `AGENT_MODEL`, `AGENT_REASONING`, `AGENT_MAX_TURNS`, `AGENT_MAX_OUTPUT_TOKENS` and `AGENT_POLL_MS` are supported. Simulator and reviewer models default to the coach model; set their `BENCH_*_MODEL` variables explicitly when comparing coaching models so the evaluators remain fixed. Candidate prompt injection, scenario suites, repeated trials and comparison summaries are future work.
+Default coach configuration comes from the existing worker parser and current coaching prompt. `AGENT_PROVIDER`, `AGENT_MODEL`, `AGENT_REASONING`, `AGENT_MAX_TURNS`, `AGENT_MAX_OUTPUT_TOKENS` and `AGENT_POLL_MS` are supported. To benchmark a Claude coach, set `AGENT_PROVIDER=anthropic` and `ANTHROPIC_API_KEY`; `OPENAI_API_KEY` is still required because the simulator and reviewer always run on OpenAI. With an OpenAI coach they default to the coach model, and with a Claude coach to `gpt-6.1-sol`. Set their `BENCH_*_MODEL` variables explicitly when comparing coaching models so the evaluators remain fixed. `--scripted` replays the offline script through whichever coach runtime is selected. Candidate prompt injection, scenario suites, repeated trials and comparison summaries are future work.
 
 ## Review the result
 
@@ -133,9 +136,9 @@ This uses a deliberately permissive stand-in that passes every existing plan and
 pnpm bench run --scenario running-poc --keep-alive
 ```
 
-After reporting, the command keeps its API listening on the printed loopback URL until Ctrl+C. The coaching worker stops after execution; the database remains available. Public API endpoints retain normal authentication, and the synthetic athlete is not provisioned into a browser account. This mode supports API/service inspection; viewing the Markdown/JSON artifacts is the first proof-of-concept review interface.
+After reporting, the command keeps its API listening on the printed loopback URL until Ctrl+C. The coaching worker stops after execution; the database remains available until Ctrl+C, which removes the containers/network while retaining data. Agents must not leave this mode running when handing back. Public API endpoints retain normal authentication, and the synthetic athlete is not provisioned into a browser account. This mode supports API/service inspection; viewing the Markdown/JSON artifacts is the first proof-of-concept review interface.
 
-Ctrl+C during execution requests cancellation through the normal run lifecycle, waits for accepted partial output to persist, stops the worker/API and retains the database and artifacts. It never automatically resumes a failed model session. Without `--keep-alive`, API and worker stop after reporting. PostgreSQL persists until:
+Ctrl+C during execution requests cancellation through the normal run lifecycle, waits for accepted partial output to persist, stops the worker/API and removes the benchmark containers/network, retaining the database volume and artifacts. It never automatically resumes a failed model session. Without `--keep-alive`, API, worker and PostgreSQL stop after reporting; containers and the empty network are removed. Database data and reports remain. To recover a stack after an uncatchable termination:
 
 ```sh
 pnpm bench stop

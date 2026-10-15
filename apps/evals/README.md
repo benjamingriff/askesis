@@ -10,7 +10,7 @@ pnpm dev:evals
 EVALS_RESULTS_DIR=/absolute/path/to/benchmark-results pnpm dev:evals
 ```
 
-The dev server binds to `127.0.0.1:5179` (`EVALS_PORT` overrides it). A Vite middleware reads the results directory on each request and normalizes every run and `calibration-*` directory, so new runs appear within 15 seconds without a restart. Artifacts never leave the machine. There is no deployment; the static build only checks that the app compiles.
+The root command selects a worktree-specific port (`EVALS_PORT` overrides it) and binds to `127.0.0.1`; direct app-level Vite defaults to 5179. Occupied ports fail without switching URLs. Ctrl+C or `pnpm dev:stop evals` stops the viewer. A Vite middleware reads the results directory on each request and normalizes every run and `calibration-*` directory, so new runs appear within 15 seconds without a restart. Artifacts never leave the machine. There is no deployment; the static build only checks that the app compiles.
 
 - **Overview**: quality score against coach tokens and wall time (Pareto line, linear/log), verdict mix, criterion pass rates and tokens by model and reasoning effort. Runs that stopped early are excluded from the quality scatters.
 - **Conversations**: failure modes counted once per run across exact checks, the reviewer, transcript flags and your reviews; a discovery funnel; behaviour distributions; pass@1 and pass^k reliability; and a per-chat table.

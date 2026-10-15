@@ -5,6 +5,10 @@
   "type": "module",
   "scripts": {
     "build": "tsc -p tsconfig.json",
+    "datasets:validate": "node src/datasets.ts validate",
+    "datasets:list": "node src/datasets.ts list",
+    "datasets:coverage": "node src/datasets.ts coverage",
+    "datasets:coverage:update": "node src/datasets.ts coverage:update",
     "typecheck": "pnpm --filter @askesis/api --filter @askesis/agent build && tsc -p tsconfig.json --noEmit",
     "test": "vitest run"
   },

@@ -6,7 +6,7 @@
 
 ## The model proposes; the API authorizes · 15 minutes
 
-The API persists conversations and runs. A private worker claims a run and uses the OpenAI Agents SDK to orchestrate model responses and tool calls. Tools are HTTP requests to the API; domain writes are not made by the model or worker's direct SQL access.
+The API persists conversations and runs. A private worker claims a run and orchestrates model responses and tool calls with the configured provider: the OpenAI Agents SDK, or the Anthropic SDK's Messages API with Askesis's own loop (`AGENT_PROVIDER`). Tools are HTTP requests to the API; domain writes are not made by the model or worker's direct SQL access.
 
 ```mermaid
 sequenceDiagram
@@ -117,7 +117,7 @@ In Network, locate live bootstrap/events and subsequent turn/output reads. Do no
 
 ### Optional real-coaching extension
 
-This fits the same exercise budget only if a worker is already configured; otherwise save it for a future deep dive. Follow [worker setup](../operations/phase-5-runtime.md#local-setup): API uses agent mode/bootstrap token, worker uses its own ignored `apps/agent/.env` and the matching token/API URL plus provider credentials. `dev:setup` does not copy provider keys. Worker configuration accepts OpenAI; model defaults are in source. Live calls use the configured provider account.
+This fits the same exercise budget only if a worker is already configured; otherwise save it for a future deep dive. Follow [worker setup](../operations/phase-5-runtime.md#local-setup): API uses agent mode/bootstrap token, worker uses its own ignored `apps/agent/.env` and the matching token/API URL plus provider credentials. `dev:setup` does not copy provider keys. Worker configuration accepts `AGENT_PROVIDER=openai` or `anthropic` with that provider's key; model defaults are in source. Live calls use the configured provider account.
 
 Unlock the local exercise plan through the app and ask for one small, explicit future workout change. Observe a tool receipt and draft edit advance, then reload. Stop a later turn only after a saved change appears and check it remains. Inspect safe run/tool identifiers rather than exporting payloads. `agent_tool_receipts` gives delivery receipts; `agent_tool_changes` gives saved-change attribution. For scripted model/tool examples without a provider, read [SDK runtime tests](../../apps/agent/src/runtime.test.ts) and the [disposable smoke](../../scripts/smoke.sh).
 

@@ -324,9 +324,11 @@ function RunActivity({ run, conversation }: { run: Turn; conversation: Conversat
       ? 'The plan changed; refresh context before sending again.'
       : run.failureCode === 'EXECUTION_TIMEOUT'
         ? 'Execution timed out. You can send another message.'
-        : run.failureCode
-          ? 'Execution stopped. You can send another message.'
-          : null;
+        : run.failureCode === 'MODEL_REFUSAL'
+          ? 'The coaching model declined to respond to this request. Try rephrasing it.'
+          : run.failureCode
+            ? 'Execution stopped. You can send another message.'
+            : null;
   return (
     <div className={cx('run-activity', run.status)} role={active ? 'status' : undefined}>
       <button

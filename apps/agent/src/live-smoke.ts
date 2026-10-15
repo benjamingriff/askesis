@@ -1,61 +1,85 @@
-import { Agent, Runner, OpenAIProvider, tool, setTracingDisabled } from '@openai/agents';
-import { z } from 'zod';
-// Bounded provider check: proves the selected model can call a Responses tool.
-// This does not replace the domain integration suite or consume private plan data.
-const key = process.env.OPENAI_API_KEY;
-if (!key) throw new Error('Set OPENAI_API_KEY locally before running the live smoke test.');
-setTracingDisabled(true);
+import { AgentApi, type Claim, type ExecutionContext } from './api.js';
+import { parseAgentConfig } from './config.js';
+import { createRuntime } from './runtime/index.js';
+// Bounded provider check: proves the configured provider and model complete a streamed tool
+// round trip through the production runtime. It uses no API, database or private plan data.
+const environment = {
+  AGENT_BOOTSTRAP_TOKEN: 'live-smoke-no-api-request-bootstrap-token',
+  ...process.env,
+  AGENT_MAX_TURNS: '3',
+};
+const config = parseAgentConfig(environment);
 let calls = 0;
-const echo = tool({
-  name: 'check_training_context',
-  description: 'Read the known test running frequency.',
-  parameters: z.object({}),
-  execute: () => {
+let visibleCharacters = 0;
+class LocalApi extends AgentApi {
+  override async tool(_claim: Claim, command: unknown) {
     calls++;
-    return { runsPerWeek: 3 };
-  },
-});
-const agent = new Agent({
-  name: 'Askesis compatibility check',
-  model: process.env.AGENT_MODEL ?? 'gpt-6.1-sol',
-  instructions:
-    'Call check_training_context once, then reply with the returned weekly run count. Do not answer without calling it.',
-  tools: [echo],
-  modelSettings: {
-    reasoning: { effort: 'low' },
-    parallelToolCalls: false,
-    maxTokens: 1024,
-    store: false,
-  },
-});
-const runner = new Runner({
-  modelProvider: new OpenAIProvider({ apiKey: key, useResponses: true }),
-  tracingDisabled: true,
-  traceIncludeSensitiveData: false,
-});
+    if ((command as { name?: unknown }).name !== 'check_training_context')
+      throw new Error('Unexpected tool.');
+    return { result: { runsPerWeek: 3 }, versionId: null, editNumber: null, planId: null };
+  }
+  override async progress(_claim: Claim, input: unknown) {
+    const items = (input as { items?: { content: string }[] }).items ?? [];
+    visibleCharacters = Math.max(
+      visibleCharacters,
+      items.reduce((total, item) => total + item.content.length, 0),
+    );
+    return { status: 'running' };
+  }
+}
+const context: ExecutionContext = {
+  messages: [
+    {
+      role: 'user',
+      content:
+        'This is a compatibility check. Call check_training_context once, then tell me the weekly run count it returns.',
+      sequence: 1,
+    },
+  ],
+  historyTruncated: false,
+  plan: null,
+  brief: null,
+  performance: null,
+  trainingLog: null,
+  versionId: null,
+  editNumber: null,
+  tools: [
+    {
+      name: 'check_training_context',
+      description: 'Read the known test running frequency.',
+      parameters: { type: 'object', properties: {}, required: [], additionalProperties: false },
+    },
+  ],
+};
+const claim: Claim = {
+  runId: '00000000-0000-4000-8000-000000000001',
+  token: 'live-smoke',
+  generation: 1,
+  deadlineAt: new Date(Date.now() + 120000).toISOString(),
+  versionId: null,
+  editNumber: null,
+};
 try {
-  const result = await runner.run(agent, 'How many runs per week are in this test context?', {
-    maxTurns: 3,
-    stream: true,
-    signal: AbortSignal.timeout(60000),
-  });
-  let visibleCharacters = 0;
-  for await (const event of result)
-    if (event.type === 'raw_model_stream_event' && event.data.type === 'output_text_delta')
-      visibleCharacters += event.data.delta.length;
-  await result.completed;
-  if (result.error) throw new Error('Streamed compatibility check failed.');
+  const signal = AbortSignal.timeout(120000);
+  const result = await createRuntime(config).execute(
+    context,
+    claim,
+    new LocalApi('http://127.0.0.1'),
+    signal,
+    signal,
+  );
   if (!visibleCharacters) throw new Error('No streamed visible text.');
-  if (calls !== 1 || typeof result.finalOutput !== 'string' || !result.finalOutput.includes('3'))
+  if (calls !== 1 || !result.content.includes('3'))
     throw new Error('The selected model did not complete the expected tool round trip.');
   console.log(
     JSON.stringify({
       passed: true,
-      model: agent.model,
+      provider: config.AGENT_PROVIDER,
+      model: config.AGENT_MODEL,
       toolCalls: calls,
       streamedVisibleCharacters: visibleCharacters,
-      inputTokens: result.runContext.usage.inputTokens,
-      outputTokens: result.runContext.usage.outputTokens,
+      inputTokens: result.inputTokens,
+      outputTokens: result.outputTokens,
     }),
   );
 } catch (error) {
@@ -64,6 +88,7 @@ try {
     JSON.stringify({
       passed: false,
       code: 'PROVIDER_CHECK_FAILED',
+      provider: config.AGENT_PROVIDER,
       ...(typeof status === 'number' ? { status } : {}),
     }),
   );

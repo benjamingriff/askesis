@@ -30,19 +30,17 @@ From this worktree, using Node 24 and the pinned pnpm:
 pnpm install --frozen-lockfile
 # Only for a fresh, unconfigured worktree:
 pnpm dev:setup
-
-# For this already configured worktree:
-docker compose up -d postgres
-docker compose run --rm migrate
 pnpm example:seed --email askesis-verification+clerk_test@example.com
-pnpm dev:local
+
+# This worktree is already configured and seeded:
+pnpm dev
 ```
 
 Open the Vite address printed by `dev:local` (this worktree uses `http://localhost:5825`). In another terminal run `pnpm --silent dev:login` and open its private `url`. Confirm the dedicated verification email in Settings before changing demo data. The three plans span twelve weeks from the previous Monday; inspect the selected plan's actual dates. Existing examples and saved logs are retained.
 
 The generated local environment uses simulated coaching unless a real worker/provider has separately been configured. Logging, feedback persistence, result previews and conversation references use the real API and PostgreSQL in either mode. Simulated replies do not amend the plan. See [worker setup](../operations/phase-5-runtime.md) for real coaching.
 
-Ctrl+C stops API and web when `dev:local` runs in a terminal. `docker compose stop postgres` stops only this worktree's database and preserves its volume.
+Ctrl+C stops the foreground supervisor and its owned API, web and database processes while retaining database data. Use `pnpm dev:status` or `pnpm dev:stop local` to inspect or stop a managed session.
 
 ## Privacy and verification
 

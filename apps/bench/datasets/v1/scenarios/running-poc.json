@@ -1,0 +1,65 @@
+{
+  "schemaVersion": 1,
+  "id": "running-poc",
+  "version": 1,
+  "persona": {
+    "id": "running-poc",
+    "version": 1
+  },
+  "mode": "conversation_to_plan",
+  "split": "development",
+  "reviewStatus": "exploratory",
+  "goal": "My goal is to finish my first half marathon comfortably. I don't have a target finish time.",
+  "openingMessage": "I'd like help creating a running plan for my first half marathon. I want to prescribe the first {{prescriptionWeeks}} weeks now, then extend the plan after feedback.",
+  "openingFactIds": ["goal", "horizon"],
+  "planSpanWeeks": 12,
+  "prescriptionWeeks": 4,
+  "startPolicy": "next_monday",
+  "events": [
+    {
+      "label": "First half marathon",
+      "week": 12,
+      "weekday": 7,
+      "priority": "A"
+    }
+  ],
+  "expectations": {
+    "outcome": "saved_draft",
+    "frequencyPolicy": "workouts_per_sport",
+    "requiredDiscovery": [
+      "goal",
+      "dates",
+      "horizon",
+      "training",
+      "frequency",
+      "availability",
+      "equipment",
+      "fitness"
+    ],
+    "checks": [
+      "saved_plan",
+      "plan_dates",
+      "coverage",
+      "sports",
+      "baseline",
+      "availability",
+      "time_budgets",
+      "daily_limit",
+      "prescriptions",
+      "performance_provenance"
+    ],
+    "reviewAnchors": {
+      "goal_fit": "Support comfortable first-half-marathon completion, not an invented time goal.",
+      "progression": "Start from the disclosed 22 km/week and 9 km longest run; plausible alternatives may pass.",
+      "recovery": "Respect three running days and recovery between demanding sessions.",
+      "prescriptions": "Actionable running prescriptions with resolved run zones and meaningful completions.",
+      "personalization": "Respect weekday time limits, preferred Sunday long run and kilometre preference.",
+      "conversation": "Discover relevant facts without unrelated sport questions; distinguish unknowns from unanswered facts, explain assumptions, and accurately describe what is saved and what remains unprescribed."
+    }
+  },
+  "limits": {
+    "maxAthleteMessages": 18,
+    "maxElapsedMinutes": 30
+  },
+  "legacyScenarioId": "running-poc"
+}

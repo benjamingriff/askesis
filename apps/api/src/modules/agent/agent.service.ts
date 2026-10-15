@@ -257,19 +257,36 @@ export async function runContext(id: string, token: string) {
       const current = await target(db, run);
       const history = await db
         .selectFrom('conversation_messages')
-        .select(['role', 'content', 'sequence', 'references'])
+        .select((eb) => [
+          'role',
+          'content',
+          'sequence',
+          'references',
+          eb
+            .exists(
+              eb
+                .selectFrom('agent_runs')
+                .select('agent_runs.id')
+                .whereRef('agent_runs.user_message_id', '=', 'conversation_messages.id')
+                .where('agent_runs.failure_code', '=', 'MODEL_REFUSAL'),
+            )
+            .as('refused'),
+        ])
         .where('conversation_id', '=', run.conversation_id)
         .orderBy('sequence', 'desc')
         .limit(60)
         .execute();
+      // A refused request stays in the durable chat but never returns to the model, so a
+      // rephrased request is judged on its own rather than alongside the refused one.
+      const eligible = history.filter((m) => !m.refused);
       // Keep newest messages within a bounded budget; do not truncate a message in
       // a way that changes its meaning. Explicitly disclose omitted older history.
       let total = 0;
-      const messages: typeof history = [];
-      for (const m of history) {
-        if (total + m.content.length > 100000) break;
-        messages.push(m);
-        total += m.content.length;
+      const messages: Omit<(typeof history)[number], 'refused'>[] = [];
+      for (const { role, content, sequence, references } of eligible) {
+        if (total + content.length > 100000) break;
+        messages.push({ role, content, sequence, references });
+        total += content.length;
       }
       return {
         messages: await Promise.all(
@@ -278,7 +295,7 @@ export async function runContext(id: string, token: string) {
             references: await resolveFeedback(db, run.owner_id, m.references),
           })),
         ),
-        historyTruncated: messages.length < history.length || (history.at(-1)?.sequence ?? 1) > 1,
+        historyTruncated: messages.length < eligible.length || (history.at(-1)?.sequence ?? 1) > 1,
         plan: current?.plan ?? null,
         brief: current
           ? await readBrief(db, current.version.id, current.version.state === 'locked')

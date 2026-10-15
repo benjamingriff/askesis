@@ -93,7 +93,7 @@ app.get('/api/ready', async (context) => {
     select exists (
       select 1
       from atlas_schema_revisions.atlas_schema_revisions
-      where version = '20261014120000'
+      where version = '20261015120000'
     ) as migrated
   `.execute(getDatabase());
 
