@@ -1848,3 +1848,364 @@
     flex-wrap: wrap;
   }
 }
+
+/* ---------- Turn steps & voice ---------- */
+
+.turn-steps {
+  display: grid;
+  gap: 6px;
+  margin: 0 0 10px;
+  padding: 0 0 10px;
+  list-style: none;
+  border-bottom: 1px dashed var(--line-2);
+}
+
+.turn-step-text {
+  padding-left: 10px;
+  border-left: 2px solid var(--line-2);
+  color: var(--fg-2);
+  font-size: 13px;
+}
+
+.turn-step-text p {
+  margin: 0 0 6px;
+}
+
+.tool-card {
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--surface);
+  font-size: 12px;
+}
+
+.tool-card summary {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 5px 8px;
+  cursor: pointer;
+  list-style: none;
+}
+
+.tool-card summary::-webkit-details-marker {
+  display: none;
+}
+
+.tool-card summary::before {
+  content: '▸';
+  color: var(--fg-3);
+}
+
+.tool-card[open] summary::before {
+  content: '▾';
+}
+
+.tool-card[open] {
+  padding-bottom: 6px;
+}
+
+.tool-card > :not(summary) {
+  margin: 4px 8px 0;
+}
+
+.tool-card code {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--fg-3);
+}
+
+.tool-card code.tool-write {
+  color: var(--fg);
+}
+
+.tool-card.failed {
+  border-color: color-mix(in oklab, var(--bad) 50%, transparent);
+}
+
+.tool-card-summary {
+  flex: 1;
+  min-width: 0;
+  color: var(--fg-2);
+}
+
+.authored-facts {
+  margin-top: 8px;
+  font-size: 12px;
+  color: var(--fg-3);
+}
+
+.authored-facts summary {
+  cursor: pointer;
+}
+
+.authored-facts p {
+  margin: 6px 0 0;
+  white-space: pre-line;
+}
+
+/* ---------- Training load ---------- */
+
+.load-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.load-line {
+  fill: none;
+  stroke-width: 2;
+}
+
+.load-line.fitness {
+  stroke: var(--fg);
+}
+
+.load-line.fatigue {
+  stroke: var(--fg-2);
+  stroke-dasharray: 5 4;
+}
+
+.load-dot {
+  stroke: var(--bg);
+  stroke-width: 2;
+}
+
+.load-dot.fitness {
+  fill: var(--fg);
+}
+
+.load-dot.fatigue {
+  fill: var(--fg-2);
+}
+
+.load-marker {
+  stroke: var(--fg-3);
+  stroke-dasharray: 2 4;
+}
+
+.load-marker.event {
+  stroke: var(--accent);
+  stroke-dasharray: none;
+}
+
+.crosshair {
+  stroke: var(--line-2);
+  pointer-events: none;
+}
+
+.legend-line {
+  display: inline-block;
+  width: 16px;
+  height: 0;
+  border-top: 2px solid var(--fg);
+}
+
+.legend-line.fatigue {
+  border-top: 2px dashed var(--fg-2);
+}
+
+.intensity-split {
+  margin-top: 22px;
+}
+
+.intensity-split h3 {
+  margin: 0 0 10px;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.intensity-row {
+  display: grid;
+  grid-template-columns: 64px minmax(0, 1fr) 80px;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 6px;
+}
+
+.intensity-bar {
+  display: flex;
+  gap: 2px;
+  height: 10px;
+}
+
+.intensity-bar span {
+  border-radius: 2px;
+}
+
+/* One accent ramp, quiet to salient in either theme; uncounted time is hatched, not a shade. */
+.intensity-easy {
+  background: color-mix(in oklab, var(--accent) 38%, var(--bg));
+}
+
+.intensity-moderate {
+  background: var(--accent);
+}
+
+.intensity-hard {
+  background: color-mix(in oklab, var(--accent) 45%, var(--fg));
+}
+
+.intensity-uncounted {
+  background: repeating-linear-gradient(-45deg, var(--line-2) 0 2px, transparent 2px 5px);
+  box-shadow: inset 0 0 0 1px var(--line-2);
+}
+
+.load-table tbody tr {
+  cursor: default;
+}
+
+.load-notes {
+  margin: 16px 0 0;
+  padding-left: 18px;
+}
+
+.load-notes li + li {
+  margin-top: 4px;
+}
+
+/* ---------- Prompts ---------- */
+
+.prompt-list {
+  display: grid;
+  gap: 8px;
+}
+
+.prompt-card {
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
+.prompt-card summary {
+  display: grid;
+  grid-template-columns: 10px 150px minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: baseline;
+  padding: 9px 12px;
+  font-size: 13px;
+  cursor: pointer;
+  list-style: none;
+}
+
+.prompt-card summary::-webkit-details-marker {
+  display: none;
+}
+
+.prompt-card summary::before {
+  content: '▸';
+  color: var(--fg-3);
+}
+
+.prompt-card[open] summary::before {
+  content: '▾';
+}
+
+.prompt-card summary:hover {
+  background: var(--hover);
+}
+
+.prompt-role {
+  color: var(--fg);
+}
+
+.prompt-text {
+  max-height: 420px;
+  margin: 0;
+  padding: 12px;
+  overflow: auto;
+  border-top: 1px solid var(--line);
+  font-family: var(--mono);
+  font-size: 11.5px;
+  line-height: 1.55;
+  color: var(--fg-2);
+  white-space: pre-wrap;
+}
+
+.rating-list {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.rating-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 12px;
+}
+
+.rating-scale {
+  display: flex;
+  border: 1px solid var(--line-2);
+  border-radius: 5px;
+  overflow: hidden;
+}
+
+.rating-scale button {
+  width: 24px;
+  height: 22px;
+  font-size: 11px;
+  color: var(--fg-3);
+}
+
+.rating-scale button + button {
+  border-left: 1px solid var(--line-2);
+}
+
+.rating-scale button[aria-pressed='true'] {
+  color: var(--on-accent);
+  background: var(--accent);
+}
+
+/* ---------- Phrase highlights ---------- */
+
+.highlight-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  margin-top: 10px;
+  padding: 8px;
+  border: 1px solid var(--line-2);
+  border-radius: 6px;
+  font-size: 11.5px;
+}
+
+.highlight-bar q {
+  flex-basis: 100%;
+  margin-bottom: 4px;
+  color: var(--fg-2);
+}
+
+.highlights {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
+  font-size: 12px;
+}
+
+.highlights li {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.highlights q {
+  flex: 1;
+  min-width: 0;
+  color: var(--fg-2);
+}
+
+.highlights button {
+  color: var(--fg-3);
+}

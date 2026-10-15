@@ -4,7 +4,14 @@ import { tmpdir } from 'node:os';
 import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import type { BenchmarkSnapshot } from '@askesis/api/benchmark';
-import { addDays, renderAthleteAction, resolveScenario } from './scenario.js';
+import {
+  addDays,
+  buildScenario,
+  generateRequest,
+  personaVoice,
+  renderAthleteAction,
+} from './scenario.js';
+import { loadDataset } from './datasets.js';
 import { hasExpectedCoverage, overallVerdict, checkPlan } from './checks.js';
 import {
   criteria,
@@ -15,9 +22,13 @@ import {
 } from './models.js';
 import { Artifacts, redact } from './artifacts.js';
 import { acquireLock, environmentFor } from './local.js';
-import raw from '../scenarios/running-poc.json' with { type: 'json' };
-
-const scenario = resolveScenario(raw, new Date('2026-10-09T12:00:00Z'));
+const dataset = await loadDataset();
+function datasetCase(id: string, now = new Date('2026-10-09T12:00:00Z')) {
+  const scenario = dataset.scenarios.find((item) => item.id === id)!;
+  const persona = dataset.personas.find((item) => item.id === scenario.persona.id)!;
+  return buildScenario(persona, scenario, now, personaVoice(persona));
+}
+const scenario = datasetCase('running-improver');
 function snapshot(coverage: { startDate: string; endDate: string; current: boolean }[]) {
   // These tests exercise coverage/reference checking independently of SQL export details.
   return {
@@ -42,11 +53,12 @@ const review = (): Review => ({
 
 describe('scenario and disclosure boundaries', () => {
   it('uses the London date and saves a four-week horizon within a twelve-week goal', () => {
-    const london = resolveScenario(raw, new Date('2026-07-05T23:30:00Z'));
+    const london = datasetCase('running-improver', new Date('2026-07-05T23:30:00Z'));
     expect(london.dates.today).toBe('2026-07-06');
     expect(london.dates.startDate).toBe('2026-07-13');
     expect(london.dates.coverageEndDate).toBe('2026-08-09');
-    expect(london.dates.eventDate).toBe('2026-10-04');
+    expect(london.dates.endDate).toBe('2026-10-04');
+    expect(london.evidence[0]!.observedOn).toBe('2026-06-22');
     expect(scenario.dates.startDate).toBe('2026-10-12');
     expect(addDays('2026-10-25', 1)).toBe('2026-10-26');
   });
@@ -62,6 +74,24 @@ describe('scenario and disclosure boundaries', () => {
       expect(() => renderAthleteAction(scenario, { factIds: [fact], intent: 'answer' })).toThrow(
         'unknown fact',
       );
+  });
+  it("words requests and unknowns from the scenario's horizon and the persona", () => {
+    const annual = datasetCase('hybrid-improver-annual');
+    expect(renderAthleteAction(annual, { factIds: [], intent: 'generate' }).statements).toEqual([
+      generateRequest(annual),
+    ]);
+    expect(generateRequest(annual)).toContain(`first ${annual.prescriptionWeeks} weeks`);
+    expect(renderAthleteAction(annual, { factIds: [], intent: 'unknown' }).content).toBe(
+      annual.persona.communication.unknownResponse,
+    );
+  });
+  it('resolves every pilot case with private facts that the coach never receives', () => {
+    for (const ref of dataset.suites[0]!.scenarios) {
+      const resolved = datasetCase(ref.id);
+      expect(resolved.openingMessage).not.toContain('{{');
+      for (const id of resolved.expectations.requiredDiscovery)
+        expect(resolved.facts[id], `${ref.id}:${id}`).toBeTruthy();
+    }
   });
 });
 
@@ -92,12 +122,13 @@ describe('saved completion and assessment', () => {
   });
   it('cannot award a pass to missing output, failed execution, or failed exact checks', () => {
     const checks = checkPlan({ plan: null } as BenchmarkSnapshot, scenario, []);
+    expect(checks.map((check) => check.id)).toEqual(['saved_plan']);
     expect(overallVerdict(checks, review(), 'completed')).toBe('incomplete');
     expect(overallVerdict([], review(), 'INTERRUPTED')).toBe('incomplete');
     expect(overallVerdict([], null, 'completed')).toBe('assessment_unavailable');
     expect(
       overallVerdict(
-        [{ id: 'available_days', status: 'fail', explanation: '', evidence: [] }],
+        [{ id: 'availability', status: 'fail', explanation: '', evidence: [] }],
         review(),
         'completed',
       ),
@@ -112,14 +143,14 @@ describe('saved completion and assessment', () => {
           {
             system: 'run_pace',
             provenance: 'user_supplied',
-            observedOn: scenario.dates.observedOn,
+            observedOn: scenario.evidence[0]!.observedOn,
             input: { method: 'race_result', distanceMetres: 5000, durationSeconds: 1680 },
           },
         ],
       },
       plan: {
         header: {
-          draft: { startDate: scenario.dates.startDate, endDate: scenario.dates.eventDate },
+          draft: { startDate: scenario.dates.startDate, endDate: scenario.dates.endDate },
         },
         brief: {
           coverage: complete().plan!.brief.coverage,
@@ -127,11 +158,20 @@ describe('saved completion and assessment', () => {
             sports: [
               {
                 sport: 'run',
-                currentSessions: { value: 3 },
+                currentSessions: { status: 'known', value: 3 },
                 desiredSessions: 3,
-                weeklyDistance: { value: 22000 },
-                longestDistance: { value: 9000 },
+                weeklyDistance: { status: 'known', value: 22000 },
+                longestDistance: { status: 'known', value: 9000 },
               },
+            ],
+            weekdays: [
+              'unavailable',
+              'available',
+              'unavailable',
+              'available',
+              'unavailable',
+              'unavailable',
+              'preferred',
             ],
           },
         },
@@ -143,9 +183,11 @@ describe('saved completion and assessment', () => {
               id: `run-${week}-${day}`,
               scheduledDate: addDays(scenario.dates.startDate, week * 7 + day),
               discipline: 'run',
+              estimatedDurationSeconds: day === 6 ? 5400 : 3000,
             },
             prescription: {
               kind: 'effort',
+              discipline: null,
               completion: { type: 'distance' },
               targets: [{ type: 'zone', zoneSystem: 'run_pace', resolvedZone: {} }],
             },
@@ -164,9 +206,11 @@ describe('saved completion and assessment', () => {
     const failures = checkPlan(value, scenario, disclosed)
       .filter((item) => item.status === 'fail')
       .map((item) => item.id);
-    expect(failures).toEqual(
-      expect.arrayContaining(['available_days', 'baseline', 'prescriptions']),
-    );
+    expect(failures).toEqual(expect.arrayContaining(['availability', 'baseline', 'prescriptions']));
+    value.plan!.workouts[2]!.workout.estimatedDurationSeconds = 7200;
+    expect(
+      checkPlan(value, scenario, disclosed).find((item) => item.id === 'time_budgets')?.status,
+    ).toBe('fail');
   });
   it('rejects fabricated evidence, missing criteria and contradictory judgments', () => {
     expect(() => validateReview(review(), complete())).not.toThrow();
@@ -185,6 +229,152 @@ describe('saved completion and assessment', () => {
       item.evidence = ['message:1'];
     });
     expect(() => validateReview(missing, absent)).toThrow('missing saved plan');
+  });
+  it('accepts timed strength rests but still requires an effort target for the lifts', () => {
+    const strength = datasetCase('strength-beginner');
+    strength.expectations.checks = ['prescriptions'];
+    const lift = {
+      kind: 'effort',
+      role: 'main',
+      discipline: 'strength',
+      completion: { type: 'repetitions', value: 10 },
+      targets: [{ type: 'rir', targetValue: 2 }],
+    };
+    const rest = {
+      kind: 'effort',
+      role: 'recovery',
+      discipline: 'strength',
+      completion: { type: 'duration', value: 60 },
+      targets: [],
+    };
+    const value = {
+      plan: {
+        findings: [],
+        workouts: [
+          {
+            workout: {
+              id: 'lift',
+              scheduledDate: strength.dates.startDate,
+              discipline: 'strength',
+            },
+            prescription: { kind: 'repeat', steps: [lift, rest] },
+          },
+        ],
+      },
+    } as unknown as BenchmarkSnapshot;
+    const result = () =>
+      checkPlan(value, strength, []).find((check) => check.id === 'prescriptions')!.status;
+    expect(result()).toBe('pass');
+    lift.targets = [];
+    expect(result()).toBe('fail');
+  });
+  it('distinguishes an explicitly unknown baseline from an unanswered one and from zero', () => {
+    const strength = datasetCase('strength-beginner');
+    strength.expectations.checks = ['baseline'];
+    const expected = strength.persona.sports[0]!;
+    expected.currentSessions = null;
+    const saved = {
+      sport: 'strength',
+      desiredSessions: expected.desiredSessions,
+      currentSessions: { status: 'unknown', value: null as number | null },
+    };
+    const value = {
+      plan: { findings: [], workouts: [], brief: { brief: { sports: [saved] } } },
+    } as unknown as BenchmarkSnapshot;
+    const result = () =>
+      checkPlan(value, strength, []).find((check) => check.id === 'baseline')!.status;
+    expect(result()).toBe('pass');
+    saved.currentSessions.status = 'unanswered';
+    expect(result()).toBe('fail');
+    expected.currentSessions = 0;
+    expect(result()).toBe('fail');
+    saved.currentSessions = { status: 'known', value: 0 };
+    expect(result()).toBe('pass');
+  });
+});
+
+describe('weekly sport frequency', () => {
+  it('preserves every pilot sport frequency in the offline fixture, including limited pool slots', async () => {
+    const { scriptedCoach } = await import('./scripted.js');
+    for (const ref of dataset.suites[0]!.scenarios) {
+      const scenario = datasetCase(ref.id);
+      const call = scriptedCoach(scenario)
+        .flatMap((turn) => (turn.type === 'tools' ? turn.calls : []))
+        .find((call) => call.name === 'apply_schedule_changes')!;
+      const workouts = call.input.workouts as { key: string; date: string; discipline: string }[];
+      const value = {
+        plan: {
+          findings: [],
+          workouts: workouts.map((workout) => ({
+            workout: {
+              id: workout.key,
+              scheduledDate: workout.date,
+              discipline: workout.discipline,
+            },
+            prescription: { kind: 'effort', discipline: workout.discipline },
+          })),
+        },
+      } as unknown as BenchmarkSnapshot;
+      expect(frequency(value, scenario), scenario.id).toMatchObject({ status: 'pass' });
+    }
+  });
+  const schedule = (scenario: ReturnType<typeof datasetCase>, sessions: string[][]) =>
+    ({
+      plan: {
+        findings: [],
+        workouts: Array.from({ length: scenario.prescriptionWeeks }, (_, week) =>
+          sessions.map((sports, index) => ({
+            workout: {
+              id: `${week}-${index}`,
+              scheduledDate: addDays(scenario.dates.startDate, week * 7 + Math.min(index, 6)),
+              discipline: sports.length === 1 ? sports[0] : 'mixed',
+            },
+            prescription: {
+              kind: 'repeat',
+              repeatCount: 3,
+              steps: sports.map((sport) => ({ kind: 'effort', discipline: sport })),
+            },
+          })),
+        ).flat(),
+      },
+    }) as unknown as BenchmarkSnapshot;
+  const frequency = (value: BenchmarkSnapshot, scenario: ReturnType<typeof datasetCase>) => {
+    scenario.expectations.checks = [];
+    return checkPlan(value, scenario, Object.keys(scenario.facts)).find(
+      (check) => check.id === 'weekly_frequency',
+    )!;
+  };
+  it('requires the requested session count in each prescribed week, ignoring later weeks', () => {
+    const running = datasetCase('running-improver');
+    const good = schedule(running, [['run'], ['run'], ['run']]);
+    good.plan!.workouts.push({
+      ...good.plan!.workouts[0]!,
+      workout: {
+        ...good.plan!.workouts[0]!.workout,
+        scheduledDate: addDays(running.dates.coverageEndDate, 1),
+      },
+    });
+    expect(frequency(good, running).status).toBe('pass');
+    expect(frequency(schedule(running, [['run']]), running).status).toBe('fail');
+    expect(frequency(schedule(running, [['run'], ['run'], ['run'], ['run']]), running).status).toBe(
+      'fail',
+    );
+  });
+  it('counts each sport in a brick once regardless of repeated effort count', () => {
+    const triathlon = datasetCase('triathlon-intermediate');
+    const good = [['cycle', 'run'], ['cycle'], ['cycle'], ['run'], ['run'], ['swim'], ['swim']];
+    expect(frequency(schedule(triathlon, good), triathlon).status).toBe('pass');
+    expect(
+      frequency(
+        schedule(
+          triathlon,
+          good.filter((sports) => !sports.includes('swim')),
+        ),
+        triathlon,
+      ).explanation,
+    ).toContain('swim: 0, expected 2');
+    triathlon.expectations.frequencyPolicy = 'workouts_per_sport';
+    expect(frequency(schedule(triathlon, good), triathlon).status).toBe('fail');
   });
 });
 

@@ -23,7 +23,7 @@ Reuse the existing Compose PostgreSQL and Atlas migration setup, with benchmark-
 The proof-of-concept command is:
 
 ```sh
-pnpm bench run --scenario running-poc --keep-alive
+pnpm bench run --scenario running-improver --keep-alive
 ```
 
 Its responsibilities are to resolve isolated configuration, start PostgreSQL, apply migrations, start the API and worker, wait for readiness, seed the scenario, run the conversation, export the saved plan, execute checks/review and write a report. Reuse a healthy benchmark environment when its identity and configuration match; refuse an occupied port belonging to an unrelated service.

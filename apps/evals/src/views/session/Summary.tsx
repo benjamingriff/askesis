@@ -43,6 +43,11 @@ export function SessionHeader({ run, color }: { run: RunDetail; color: string | 
         <span>
           {run.scenarioId} v{run.scenarioVersion ?? '?'}
         </span>
+        {run.voiceId && (
+          <span title="How the simulated athlete words its replies">
+            voice: {run.voiceId === 'persona' ? 'persona style' : run.voiceId}
+          </span>
+        )}
         {run.revision && (
           <span className="mono">
             {run.revision}

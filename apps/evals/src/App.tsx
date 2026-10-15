@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { VerdictBadge } from './components/Badges';
 import { useResultsIndex } from './lib/data';
 import { demoCalibration, demoRuns } from './lib/demo';
@@ -80,7 +80,9 @@ function viewTabs(route: Route): ViewTab[] {
       { id: 'decisions', label: 'Decisions' },
       'divider',
       { id: 'plan', label: 'Plan' },
+      { id: 'load', label: 'Load' },
       { id: 'assessment', label: 'Assessment' },
+      { id: 'prompts', label: 'Prompts' },
     ];
   }
   if (route.section === 'conversations') {
@@ -121,6 +123,11 @@ function useActiveSection(ids: string[]): string | null {
         const element = document.getElementById(id);
         if (element && element.getBoundingClientRect().top <= 140) current = id;
       }
+      // A short final section never reaches the threshold; at the page end, select it.
+      const atEnd =
+        window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 2;
+      const last = ids.filter((id) => document.getElementById(id)).at(-1);
+      if (atEnd && window.scrollY > 0 && last) current = last;
       setActive(current);
     };
     update();
@@ -145,6 +152,39 @@ function Header({
   const tabs = viewTabs(route);
   const ids = tabs.flatMap((tab) => (tab === 'divider' ? [] : [tab.id]));
   const active = useActiveSection(ids);
+  const tabKey = ids.join('|');
+  const nav = useRef<HTMLElement>(null);
+  const [overflow, setOverflow] = useState({ start: false, end: false });
+  useEffect(() => {
+    const element = nav.current;
+    if (!element) return;
+    // Fade whichever edge hides tabs, so a clipped tab bar reads as scrollable.
+    const update = () =>
+      setOverflow({
+        start: element.scrollLeft > 1,
+        end: element.scrollLeft + element.clientWidth < element.scrollWidth - 1,
+      });
+    update();
+    const observer = new ResizeObserver(update);
+    observer.observe(element);
+    // Tabs change width without the bar resizing, e.g. when web fonts finish loading.
+    for (const child of element.children) observer.observe(child);
+    element.addEventListener('scroll', update, { passive: true });
+    return () => {
+      observer.disconnect();
+      element.removeEventListener('scroll', update);
+    };
+  }, [tabKey]);
+  useEffect(() => {
+    // Keep the active tab visible without disturbing the page's own smooth scroll.
+    const element = nav.current;
+    const tab = element?.querySelector<HTMLElement>('button.active');
+    if (!element || !tab) return;
+    const left = tab.offsetLeft;
+    if (left < element.scrollLeft) element.scrollLeft = left - 40;
+    else if (left + tab.offsetWidth > element.scrollLeft + element.clientWidth)
+      element.scrollLeft = left + tab.offsetWidth - element.clientWidth + 40;
+  }, [active]);
   return (
     <header className="app-header">
       <a className="brand" href={href('overview')}>
@@ -163,7 +203,13 @@ function Header({
           </a>
         ))}
       </nav>
-      <nav className="view-tabs" aria-label="Views">
+      <nav
+        ref={nav}
+        className="view-tabs"
+        aria-label="Views"
+        data-overflow-start={overflow.start || undefined}
+        data-overflow-end={overflow.end || undefined}
+      >
         {tabs.map((tab, index) =>
           tab === 'divider' ? (
             <span key={`divider-${index}`} className="tab-divider" />

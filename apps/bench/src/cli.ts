@@ -1,11 +1,11 @@
-import { randomUUID, createHash } from 'node:crypto';
-import { execFileSync } from 'node:child_process';
+import { randomUUID } from 'node:crypto';
+import { execFileSync, spawn } from 'node:child_process';
 import { resolve } from 'node:path';
 import { parseArgs } from 'node:util';
 import { readFile, writeFile, unlink } from 'node:fs/promises';
 import { setTimeout as delay } from 'node:timers/promises';
-import { parseAgentConfig, PROMPT_VERSION } from '@askesis/agent/config';
-import { COACHING_PROMPT } from '@askesis/agent/prompt';
+import { parseAgentConfig } from '@askesis/agent/config';
+import { COACHING_PROMPT, PROMPT_HASH, PROMPT_VERSION } from '@askesis/agent/prompt';
 import type * as BenchmarkOperator from '@askesis/api/benchmark';
 import type { BenchmarkSnapshot } from '@askesis/api/benchmark';
 import { Artifacts, reportMarkdown } from './artifacts.js';
@@ -16,12 +16,20 @@ import {
   providerFailure,
   SIMULATOR_VERSION,
   REVIEW_VERSION,
-  REVIEW_PROMPT,
   type Review,
   type Disclosure,
   type ModelUsage,
 } from './models.js';
-import { loadScenario, renderAthleteAction } from './scenario.js';
+import {
+  loadScenario,
+  renderAthleteAction,
+  scenarioIds,
+  suiteScenarioIds,
+  type AthleteAction,
+  type Scenario,
+} from './scenario.js';
+import { EVALUATOR_PROMPTS, promptIdentity, sha256 } from './prompts.js';
+import { voiceProblems } from './voice.js';
 import { scriptedReview } from './scripted.js';
 import {
   root,
@@ -42,7 +50,9 @@ import { readOpenAiKeyFromOnePassword } from './one-password.js';
 const options = parseArgs({
   allowPositionals: true,
   options: {
-    scenario: { type: 'string', default: 'running-poc' },
+    scenario: { type: 'string' },
+    suite: { type: 'string' },
+    voice: { type: 'string', default: 'persona' },
     'env-file': { type: 'string' },
     'keep-alive': { type: 'boolean', default: false },
     scripted: { type: 'boolean', default: false },
@@ -74,9 +84,58 @@ async function benchmarkCredentials(requireClerk = true) {
   return credentials;
 }
 
+/** Runs each suite case in its own process, one after another, so every run is isolated. */
+async function runSuite(id: string) {
+  const ids = await suiteScenarioIds(id).catch((error: unknown) => {
+    throw new BenchmarkError(error instanceof Error ? error.message : 'Unknown suite.');
+  });
+  const values = options.values;
+  const passthrough = [
+    ...(values['env-file'] ? ['--env-file', values['env-file']] : []),
+    ...(values.scripted ? ['--scripted'] : []),
+    '--voice',
+    values.voice,
+    ...(values.op ? ['--op'] : []),
+    ...(values['op-item'] ? ['--op-item', values['op-item']] : []),
+    ...(values['op-vault'] ? ['--op-vault', values['op-vault']] : []),
+    ...(values['op-field'] ? ['--op-field', values['op-field']] : []),
+  ];
+  const results: { id: string; code: number }[] = [];
+  for (const scenario of ids) {
+    console.log(`\n=== ${scenario} (${results.length + 1}/${ids.length}) ===`);
+    const code = await new Promise<number>((done) => {
+      const child = spawn(
+        process.execPath,
+        [process.argv[1]!, 'run', '--scenario', scenario, ...passthrough],
+        { stdio: 'inherit' },
+      );
+      child.on('exit', (exitCode) => done(exitCode ?? 1));
+    });
+    results.push({ id: scenario, code });
+    // An interrupted case stops the suite rather than starting the next paid run.
+    if (code === 130) break;
+  }
+  console.log('\nSuite results:');
+  for (const result of results)
+    console.log(`  ${result.code === 0 ? 'ok  ' : 'fail'} ${result.id}`);
+  if (results.some((result) => result.code !== 0) || results.length < ids.length)
+    process.exitCode = 1;
+}
+
 async function run() {
-  if (options.values.scenario !== 'running-poc')
-    throw new BenchmarkError('Available scenario: running-poc.');
+  if (options.values.suite) {
+    if (options.values.scenario) throw new BenchmarkError('Use --scenario or --suite, not both.');
+    return runSuite(options.values.suite);
+  }
+  if (!options.values.scenario)
+    throw new BenchmarkError(
+      `Choose --scenario <id> or --suite pilot-v1. Scenarios: ${(await scenarioIds()).join(', ')}.`,
+    );
+  const scenario = await loadScenario(options.values.scenario, options.values.voice).catch(
+    (error: unknown) => {
+      throw new BenchmarkError(error instanceof Error ? error.message : 'Unknown scenario.');
+    },
+  );
   const credentials = await benchmarkCredentials();
   if (!options.values.scripted && !credentials.values.OPENAI_API_KEY)
     throw new BenchmarkError(
@@ -128,29 +187,48 @@ async function run() {
   try {
     await artifacts.init();
     releaseArtifacts = await acquireLock(artifacts.directory);
-    await artifacts.json('disclosures.json', []);
     await writeFile(resolve(artifacts.directory, 'tool-trace.jsonl'), '', { mode: 0o600 });
-    const scenario = await loadScenario();
+    await writeFile(resolve(artifacts.directory, 'athlete-actions.jsonl'), '', { mode: 0o600 });
     await artifacts.json('scenario.json', scenario);
-    await artifacts.json('manifest.json', {
+    // The opening request discloses its own facts before any simulator action.
+    disclosed.push({ sequence: 1, factIds: scenario.openingFactIds });
+    await artifacts.json('disclosures.json', disclosed);
+    await artifacts.text('prompts/coach.md', COACHING_PROMPT);
+    for (const [role, prompt] of Object.entries(EVALUATOR_PROMPTS))
+      await artifacts.text(`prompts/${role}.md`, prompt.text);
+    const manifest = {
       runId,
       startedAt: new Date().toISOString(),
       revision: execFileSync('git', ['rev-parse', 'HEAD'], { cwd: root, encoding: 'utf8' }).trim(),
       workingTreeDirty:
         execFileSync('git', ['status', '--porcelain'], { cwd: root, encoding: 'utf8' }).trim()
           .length > 0,
+      scenarioEdition: scenario.edition,
       scenarioId: scenario.id,
       scenarioVersion: scenario.version,
-      scenarioHash: createHash('sha256').update(JSON.stringify(scenario)).digest('hex'),
+      scenarioHash: sha256(JSON.stringify(scenario)),
+      personaId: scenario.persona.id,
+      personaVersion: scenario.persona.version,
+      voice: scenario.voice
+        ? { id: scenario.voice.id, version: scenario.voice.version, label: scenario.voice.label }
+        : null,
+      prompts: {
+        coach: { name: PROMPT_VERSION, hash: PROMPT_HASH, toolsHash: null as string | null },
+        simulator: promptIdentity(EVALUATOR_PROMPTS.simulator),
+        voice: scenario.voice ? promptIdentity(EVALUATOR_PROMPTS.voice) : null,
+        reviewer: promptIdentity(EVALUATOR_PROMPTS.reviewer),
+      },
+      // Flat fields kept for earlier dashboard readers.
       promptVersion: PROMPT_VERSION,
-      promptHash: createHash('sha256').update(COACHING_PROMPT).digest('hex'),
+      promptHash: PROMPT_HASH,
       simulatorVersion: SIMULATOR_VERSION,
       reviewerVersion: REVIEW_VERSION,
       scripted: options.values.scripted,
       environment,
       dates: scenario.dates,
       limits: scenario.limits,
-    });
+    };
+    await artifacts.json('manifest.json', manifest);
     timeout = setTimeout(
       () => abort.abort('TIME_LIMIT'),
       scenario.limits.maxElapsedMinutes * 60000,
@@ -162,6 +240,11 @@ async function run() {
     await compose(environment, ['run', '--rm', 'migrate'], abort.signal);
     configureApi(environment, credentials.secret, credentials.publishable);
     operator = await import('@askesis/api/benchmark');
+    // The coach's behaviour depends on its tool definitions as much as its prompt text.
+    const tools = operator.benchmarkToolDefinitions();
+    await artifacts.json('prompts/tools.json', tools);
+    manifest.prompts.coach.toolsHash = sha256(JSON.stringify(tools));
+    await artifacts.json('manifest.json', manifest);
     stopApi = await operator.startBenchmarkApi();
     const apiUrl = `http://127.0.0.1:${environment.apiPort}`;
     if (!(await fetch(`${apiUrl}/api/ready`, { signal: abort.signal })).ok)
@@ -189,6 +272,7 @@ async function run() {
         maxOutputTokens: config.AGENT_MAX_OUTPUT_TOKENS,
       },
       simulatorModel,
+      voiceModel: scenario.voice ? simulatorModel : null,
       reviewerModel,
     });
     worker = startWorker(config, artifacts.directory, options.values.scripted ? scenario : null);
@@ -234,19 +318,23 @@ async function run() {
       }
       if (turn + 1 === scenario.limits.maxAthleteMessages) break;
       await stage('Athlete response');
-      const action = options.values.scripted
-        ? { factIds: Object.keys(scenario.facts), intent: 'generate' as const }
-        : await simulator
-            .athlete(scenario, snapshot.messages, disclosed, abort.signal)
-            .then((result) => {
-              usage.push({ role: 'simulator', usage: result.usage });
-              return result.action;
-            });
-      const response = renderAthleteAction(scenario, action);
+      const response = await athleteResponse(
+        scenario,
+        snapshot,
+        disclosed,
+        simulator,
+        usage,
+        abort.signal,
+      );
       console.log(`Athlete: ${response.content}`);
       const accepted = await operator.sendBenchmarkMessage(owner, conversationId, response.content);
       disclosed.push({ sequence: accepted.message.sequence, factIds: response.factIds });
       await artifacts.json('disclosures.json', disclosed);
+      await artifacts.line('athlete-actions.jsonl', {
+        at: new Date().toISOString(),
+        sequence: accepted.message.sequence,
+        ...response.record,
+      });
       activeRun = accepted.run.id;
     }
     checks = checkPlan(
@@ -307,7 +395,7 @@ async function run() {
         await artifacts.snapshot(snapshot);
         checks = checkPlan(
           snapshot,
-          await loadResolvedScenario(artifacts.directory),
+          scenario,
           disclosed.flatMap((item) => item.factIds),
         );
       }
@@ -381,11 +469,77 @@ async function run() {
   }
 }
 
+/**
+ * The simulator selects facts; the voice step, when enabled, rewords exactly those facts. A
+ * voiced reply that changes a figure, date or weekday is retried once, then the authored text is
+ * used, so the disclosure ledger always matches what the coach read.
+ */
+async function athleteResponse(
+  scenario: Scenario,
+  snapshot: BenchmarkSnapshot,
+  disclosed: Disclosure[],
+  simulator: EvaluationModels,
+  usage: { role: string; usage: ModelUsage }[],
+  signal: AbortSignal,
+) {
+  const started = Date.now();
+  let action: AthleteAction;
+  if (options.values.scripted)
+    action = { factIds: Object.keys(scenario.facts), intent: 'generate' };
+  else {
+    const result = await simulator.athlete(scenario, snapshot.messages, disclosed, signal);
+    usage.push({ role: 'simulator', usage: result.usage });
+    action = result.action;
+  }
+  const authored = renderAthleteAction(scenario, action);
+  const record = {
+    factIds: authored.factIds,
+    intent: action.intent,
+    simulator: { ms: Date.now() - started, scripted: options.values.scripted },
+    authored: authored.content,
+    voice: null as null | {
+      id: string;
+      status: 'voiced' | 'fallback' | 'skipped';
+      attempts: { message: string; problems: string[]; usage: ModelUsage }[];
+    },
+    content: authored.content,
+  };
+  if (!scenario.voice) return { ...authored, record };
+  if (options.values.scripted) {
+    record.voice = { id: scenario.voice.id, status: 'skipped', attempts: [] };
+    return { ...authored, record };
+  }
+  const attempts: { message: string; problems: string[]; usage: ModelUsage }[] = [];
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const result = await simulator.voice(
+      scenario.voice,
+      authored.statements,
+      snapshot.messages,
+      signal,
+      attempts.at(-1)?.problems ?? [],
+    );
+    usage.push({ role: 'voice', usage: result.usage });
+    const problems = voiceProblems(result.message, authored.statements);
+    attempts.push({ message: result.message, problems, usage: result.usage });
+    if (!problems.length) {
+      record.voice = { id: scenario.voice.id, status: 'voiced', attempts };
+      record.content = result.message;
+      return { ...authored, content: result.message, record };
+    }
+  }
+  record.voice = { id: scenario.voice.id, status: 'fallback', attempts };
+  return { ...authored, record };
+}
+
 async function loadResolvedScenario(directory: string) {
   // Dates are saved at creation; a retry/review must not move them to another day.
-  return JSON.parse(await readFile(resolve(directory, 'scenario.json'), 'utf8')) as Awaited<
-    ReturnType<typeof loadScenario>
-  >;
+  const saved = JSON.parse(await readFile(resolve(directory, 'scenario.json'), 'utf8')) as
+    Scenario | { edition?: undefined };
+  if (saved.edition !== 'v1')
+    throw new BenchmarkError(
+      'This run used the retired running-poc scenario format and cannot be regraded.',
+    );
+  return saved;
 }
 
 async function grade() {
@@ -423,6 +577,7 @@ async function gradeSavedRun(runId: string, directory: string, signal: AbortSign
     stopReason: string;
     scripted: boolean;
   };
+  const scenario = await loadResolvedScenario(directory);
   const model = evaluatorModel(credentials.values, credentials.values.BENCH_REVIEW_MODEL);
   const result = await new EvaluationModels(credentials.values.OPENAI_API_KEY, model).review(
     snapshot,
@@ -431,7 +586,7 @@ async function gradeSavedRun(runId: string, directory: string, signal: AbortSign
   );
   const checks = checkPlan(
     snapshot,
-    await loadResolvedScenario(directory),
+    scenario,
     disclosures.flatMap((item) => item.factIds),
   );
   const verdict = overallVerdict(checks, result.review, assessment.stopReason);
@@ -448,11 +603,13 @@ async function gradeSavedRun(runId: string, directory: string, signal: AbortSign
     regradedAt: new Date().toISOString(),
     reviewerModel: model,
     reviewerVersion: REVIEW_VERSION,
+    reviewerPromptHash: promptIdentity(EVALUATOR_PROMPTS.reviewer).hash,
   });
   await artifacts.json(`review-${Date.now()}.json`, {
     ...result,
     model,
     reviewerVersion: REVIEW_VERSION,
+    reviewerPromptHash: promptIdentity(EVALUATOR_PROMPTS.reviewer).hash,
   });
   await writeFile(
     resolve(directory, 'report.md'),
@@ -473,7 +630,7 @@ async function gradeSavedRun(runId: string, directory: string, signal: AbortSign
 async function main() {
   if (options.values.help) {
     console.log(
-      'pnpm bench run [--scenario running-poc] [--env-file PATH] [--op] [--keep-alive] [--scripted]\npnpm bench grade --run RUN_ID [--env-file PATH] [--op]\npnpm bench calibrate [--split development|holdout|all] [--fixture ID] [--repeat 1..5] [--env-file PATH] [--op] [--list] [--assert] [--scripted]\n1Password: --op loads askesis-bench; override with --op-item ITEM --op-vault VAULT --op-field FIELD\npnpm bench stop\npnpm bench reset',
+      'pnpm bench run --scenario ID | --suite pilot-v1 [--voice persona|none|ID] [--env-file PATH] [--op] [--keep-alive] [--scripted]\npnpm bench grade --run RUN_ID [--env-file PATH] [--op]\npnpm bench calibrate [--split development|holdout|all] [--fixture ID] [--repeat 1..5] [--env-file PATH] [--op] [--list] [--assert] [--scripted]\n1Password: --op loads askesis-bench; override with --op-item ITEM --op-vault VAULT --op-field FIELD\npnpm bench stop\npnpm bench reset',
     );
     return;
   }
@@ -560,7 +717,7 @@ async function calibrate() {
     scripted,
     reviewerModel: scripted ? null : model,
     reviewerVersion: REVIEW_VERSION,
-    reviewerPromptHash: createHash('sha256').update(REVIEW_PROMPT).digest('hex'),
+    reviewerPromptHash: promptIdentity(EVALUATOR_PROMPTS.reviewer).hash,
     fixtures: suite.fixtures.map((f) => ({ id: f.id, split: f.split, hash: fixtureHash(f) })),
   });
   const abort = new AbortController();
