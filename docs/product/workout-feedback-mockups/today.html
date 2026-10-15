@@ -1,0 +1,197 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Mockup · Today with workout logging</title>
+    <link rel="stylesheet" href="mockups.css" />
+    <script src="icons.js"></script>
+    <script src="shell.js"></script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <template data-shell="today">
+      <div class="page today">
+        <header class="page-header">
+          <div class="page-heading">
+            <span class="label">Thursday 15 October</span>
+            <h1>Good evening</h1>
+          </div>
+        </header>
+        <a class="today-chip" href="#"
+          ><span class="pill pill-accent"
+            ><i data-icon="calendar-days" data-size="12"></i>Week 2 of 12</span
+          ><span class="muted">72 days to go · Olympic triathlon · 12 weeks</span></a
+        >
+
+        <div class="week-strip" role="group" aria-label="This week">
+          <button class="strip-day" style="--kind: var(--effort-easy)">
+            <span class="label">M</span><strong>12</strong
+            ><span class="strip-log done"><i data-icon="check" data-size="11"></i></span>
+          </button>
+          <button class="strip-day" style="--kind: var(--effort-threshold)">
+            <span class="label">T</span><strong>13</strong
+            ><span class="strip-log done"><i data-icon="check" data-size="11"></i></span>
+          </button>
+          <button class="strip-day" style="--kind: var(--effort-easy)">
+            <span class="label">W</span><strong>14</strong><span class="strip-log unlogged"></span>
+          </button>
+          <button class="strip-day selected today" style="--kind: var(--effort-easy)">
+            <span class="label">T</span><strong>15</strong><span class="strip-log planned"></span>
+          </button>
+          <button class="strip-day" style="--kind: var(--border)">
+            <span class="label">F</span><strong>16</strong><span class="strip-log planned"></span>
+          </button>
+          <button class="strip-day" style="--kind: var(--effort-easy)">
+            <span class="label">S</span><strong>17</strong><span class="strip-log planned"></span>
+          </button>
+          <button class="strip-day" style="--kind: var(--effort-easy)">
+            <span class="label">S</span><strong>18</strong><span class="strip-log planned"></span>
+          </button>
+        </div>
+
+        <div class="today-grid">
+          <div class="today-main">
+            <div class="notice notice-warning">
+              <i data-icon="circle-dashed" data-size="18" class="notice-icon"></i>
+              <div class="notice-body">
+                <strong>Wednesday’s Easy endurance ride isn’t logged</strong>
+                <span>60 min · Ride. One tap is enough — add detail only if it’s useful.</span>
+              </div>
+              <div class="log-actions notice-action">
+                <button class="btn btn-sm btn-secondary">
+                  <i data-icon="check" data-size="14"></i>Done
+                </button>
+                <button class="btn btn-sm btn-secondary">
+                  <i data-icon="x" data-size="14"></i>Skipped
+                </button>
+              </div>
+            </div>
+
+            <span class="label">Today’s workout</span>
+            <div class="hero-workout as-card" style="--kind: var(--effort-easy)">
+              <span class="hero-cover">
+                <span class="hero-kind"
+                  ><i data-icon="footprints" data-size="15"></i> Easy run</span
+                >
+                <div class="intensity-chart" style="height: 64px">
+                  <span
+                    style="flex-grow: 600; height: 37.6%; background: var(--effort-recovery)"
+                  ></span>
+                  <span
+                    style="flex-grow: 1500; height: 46.96%; background: var(--effort-easy)"
+                  ></span>
+                  <span
+                    style="flex-grow: 300; height: 37.6%; background: var(--effort-recovery)"
+                  ></span>
+                </div>
+              </span>
+              <span class="hero-body">
+                <strong class="hero-title">Easy aerobic run</strong>
+                <span class="hero-purpose"
+                  >Conversational running to absorb Tuesday’s threshold work.</span
+                >
+                <span class="hero-footer">
+                  <span class="hero-stats">
+                    <span class="stat stat-large"
+                      ><span class="label">Distance</span
+                      ><span class="stat-value"><strong>7.0</strong><small>km</small></span></span
+                    >
+                    <span class="stat stat-large"
+                      ><span class="label">Time</span
+                      ><span class="stat-value"><strong>40 min</strong></span></span
+                    >
+                    <span class="stat stat-large"
+                      ><span class="label">Avg pace</span
+                      ><span class="stat-value"><strong>5:43</strong><small>/km</small></span></span
+                    >
+                  </span>
+                  <span class="btn-view"
+                    >View workout <i data-icon="arrow-right" data-size="16"></i
+                  ></span>
+                </span>
+              </span>
+              <div class="hero-log">
+                <div class="hero-log-copy">
+                  <strong>How did it go?</strong>
+                  <small>Log it when you’re done. Easy sessions only need a tap.</small>
+                </div>
+                <div class="log-actions">
+                  <button class="btn btn-md btn-done">
+                    <i data-icon="check" data-size="16"></i>Done
+                  </button>
+                  <button class="btn btn-md btn-secondary">
+                    <i data-icon="pencil" data-size="15"></i>Changed it
+                  </button>
+                  <button class="btn btn-md btn-secondary">
+                    <i data-icon="x" data-size="16"></i>Skipped
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="today-side">
+            <section class="card">
+              <div class="section-header">
+                <h2>This week</h2>
+                <a class="text-link" href="#">See plan</a>
+              </div>
+              <div class="week-summary">
+                <span class="stat stat-large"
+                  ><span class="label">Done</span
+                  ><span class="stat-value"><strong>1h 47</strong></span
+                  ><span class="stat-sub">of 5h 50 planned</span></span
+                >
+                <span class="stat stat-large"
+                  ><span class="label">Sessions</span
+                  ><span class="stat-value"><strong>2</strong><small>/ 6</small></span
+                  ><span class="stat-sub">1 to log</span></span
+                >
+              </div>
+              <div class="day-bars" aria-hidden="true">
+                <span class="past"
+                  ><i class="logged" style="height: 38%; --kind: var(--effort-easy)"></i
+                  ><small>M</small></span
+                >
+                <span class="past"
+                  ><i class="logged" style="height: 52%; --kind: var(--effort-threshold)"></i
+                  ><small>T</small></span
+                >
+                <span class="past"
+                  ><i style="height: 50%; --kind: var(--effort-easy)"></i><small>W</small></span
+                >
+                <span class="today"
+                  ><i style="height: 34%; --kind: var(--effort-easy)"></i><small>T</small></span
+                >
+                <span><i style="height: 6%; --kind: var(--border)"></i><small>F</small></span>
+                <span
+                  ><i style="height: 100%; --kind: var(--effort-easy)"></i><small>S</small></span
+                >
+                <span><i style="height: 60%; --kind: var(--effort-easy)"></i><small>S</small></span>
+              </div>
+              <div class="adherence">
+                <div class="adherence-row">
+                  <span>Completed so far</span><strong>2 of 3 due</strong>
+                </div>
+                <div class="progress"><span class="done" style="width: 31%"></span></div>
+              </div>
+            </section>
+            <button class="feeling-link">
+              <i data-icon="thermometer" data-size="20"></i>
+              <span
+                ><strong>Not feeling 100%?</strong
+                ><small
+                  >Ill, sore, tired or short on time — adjust the next few days with your
+                  coach.</small
+                ></span
+              >
+              <i data-icon="chevron-right" data-size="18"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+    </template>
+    <span class="mock-caption">Mockup · Today</span>
+  </body>
+</html>

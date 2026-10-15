@@ -203,6 +203,10 @@ export class SdkRuntime implements CoachingRuntime {
       plan: context.plan,
       brief: context.brief,
       performance: context.performance,
+      trainingLog: context.trainingLog,
+      feedbackReferences: context.messages
+        .filter((m) => m.references?.length)
+        .map((m) => ({ sequence: m.sequence, references: m.references })),
       historyTruncated: context.historyTruncated,
     };
     const input = [

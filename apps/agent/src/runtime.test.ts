@@ -39,6 +39,7 @@ const context: ExecutionContext = {
   plan: null,
   brief: null,
   performance: null,
+  trainingLog: null,
   versionId: null,
   editNumber: null,
   tools: [
@@ -346,4 +347,38 @@ it('caps streamed Unicode replies without corrupting the durable final segment',
   );
   expect(result.content).toBe('x' + '😀'.repeat(15999));
   expect(result.finalOutputItemId).toBeTruthy();
+});
+
+it('delivers training summaries and current reference state to the model', async () => {
+  const model = new ScriptedModel([
+    modelResponse({
+      usage: new Usage(),
+      output: [assistantMessage('Let’s keep the next session easy.')],
+    }),
+  ]);
+  const input = {
+    ...context,
+    trainingLog: { summary: { harderKeySessions: 2 } },
+    messages: [
+      {
+        role: 'user' as const,
+        content: 'Talk through this session',
+        sequence: 1,
+        references: [
+          { type: 'workout_log', state: 'changed', current: { note: 'Corrected fatigue report' } },
+        ],
+      },
+    ],
+  };
+  await new SdkRuntime(config, model).execute(
+    input,
+    claim,
+    new AgentApi('http://localhost'),
+    new AbortController().signal,
+    new AbortController().signal,
+  );
+  const sent = JSON.stringify(model.calls[0]!.request.input);
+  expect(sent).toContain('harderKeySessions');
+  expect(sent).toContain('Corrected fatigue report');
+  expect(sent).toContain('feedbackReferences');
 });

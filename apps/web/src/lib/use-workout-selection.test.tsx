@@ -6,6 +6,9 @@ import { useWorkoutSelection } from './use-workout-selection';
 const workout: WorkoutSummary = {
   id: 'workout',
   planId: 'plan',
+  lineageId: 'test-lineage',
+  sessionType: null,
+  plannedRpe: null,
   planVersionId: 'version-1',
   planTitle: 'Training plan',
   weekNumber: 1,

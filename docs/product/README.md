@@ -17,6 +17,10 @@ These guides describe implemented behavior and were reconciled against code on 2
 
 - [Training-plan model benchmarks](./training-plan-benchmarks-proposal.md): headless model/prompt comparisons, simulated athletes, saved-plan checks and coaching evaluation. The local running proof of concept is implemented; broader comparisons remain proposed.
 
+## Proposals
+
+- [Workout logging and feedback](./workout-log-and-feedback-proposal.md): Done/Changed/Skipped logging, key-session feedback, coaching responses and the path to Strava. Proposed for owner review, with [design mockups](./workout-feedback-mockups/).
+
 ## Interface and pace policy
 
 - [Web design system](./web-design-system.md): themes, components, navigation and review patterns.
@@ -31,3 +35,5 @@ These guides describe implemented behavior and were reconciled against code on 2
 - [Validation dashboard roadmap](./validation-dashboard-roadmap.md): a launch panel for benchmark runs, data to add to the benchmark and further review views for the local validation dashboard.
 
 Completed delivery plans and test evidence live in the [archive](../archive/README.md). Runtime limits and recovery procedures live in [operations](../operations/README.md).
+
+- [Workout logs and feedback](./training-log.md): manual logging, corrections, coaching and the local demo.

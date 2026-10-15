@@ -1,3 +1,6 @@
+import { LogChip, WorkoutLogActions, useLogContext } from './TrainingLog';
+import { useLocalToday } from '../lib/use-local-today';
+import { effortFlag } from '../training-log';
 import type { StepTarget, WorkoutStep, WorkoutSummary } from '@askesis/api-client';
 import { CalendarOff, ChevronRight, MessageSquare, Moon, Repeat } from 'lucide-react';
 import type { CSSProperties } from 'react';
@@ -129,32 +132,46 @@ export function WorkoutCard({
 }) {
   const look = workoutLook(workout);
   const { pool } = useSportUnits();
+  const logContext = useLogContext(),
+    today = useLocalToday();
+  const log = logContext?.logs.find((l) => l.lineageId === workout.lineageId);
   return (
-    <button
-      type="button"
-      className="workout-card"
-      style={{ '--kind': look.color } as CSSProperties}
-      onClick={() => onOpen(workout)}
-      aria-label={`${workout.title}, ${look.label}, ${formatLong(workout.scheduledDate)}`}
-    >
-      <KindIcon icon={look.icon} color={look.color} />
-      <span className="workout-card-copy">
-        <span className="workout-card-kind">
-          {look.label}
-          {workout.racePriority ? (
-            <em className="race-badge" title={RACE_META[workout.racePriority].description}>
-              {RACE_META[workout.racePriority].label}
-            </em>
-          ) : workout.priority === 'high' ? (
-            <em>Key session</em>
+    <div className="workout-card-wrap">
+      <button
+        type="button"
+        className={`workout-card${log ? ' is-logged' : ''}${log?.status === 'skipped' ? ' is-skipped' : ''}`}
+        style={{ '--kind': look.color } as CSSProperties}
+        onClick={() => onOpen(workout)}
+        aria-label={`${workout.title}, ${look.label}, ${formatLong(workout.scheduledDate)}`}
+      >
+        <KindIcon icon={look.icon} color={look.color} />
+        <span className="workout-card-copy">
+          <span className="workout-card-kind">
+            {look.label}
+            {workout.racePriority ? (
+              <em className="race-badge" title={RACE_META[workout.racePriority].description}>
+                {RACE_META[workout.racePriority].label}
+              </em>
+            ) : workout.priority === 'high' ? (
+              <em>Key session</em>
+            ) : null}
+            <WorkoutChangeBadge id={workout.id} />
+          </span>
+          <strong>{workout.title}</strong>
+          <small>{workoutMeta(workout, units, pool)}</small>
+          {log ? (
+            <span className="workout-card-log">
+              <LogChip log={log} />
+              {effortFlag(log) ? <small>{effortFlag(log)}</small> : null}
+            </span>
           ) : null}
-          <WorkoutChangeBadge id={workout.id} />
         </span>
-        <strong>{workout.title}</strong>
-        <small>{workoutMeta(workout, units, pool)}</small>
-      </span>
-      <ChevronRight size={18} aria-hidden="true" className="chevron" />
-    </button>
+        <ChevronRight size={18} aria-hidden="true" className="chevron" />
+      </button>
+      {!log && logContext?.ready && logContext.writable && workout.scheduledDate < today ? (
+        <WorkoutLogActions workout={workout} compact />
+      ) : null}
+    </div>
   );
 }
 
@@ -367,6 +384,7 @@ export function WorkoutDialog({
       }
     >
       <div className="workout-detail">
+        <WorkoutLogActions workout={workout} detail />
         <div className="workout-stats">
           {workoutStats(workout, units, pool).map((stat) => (
             <Stat key={stat.label} label={stat.label} value={stat.value} unit={stat.unit} large />

@@ -64,7 +64,7 @@ async function worker() {
     provider: 'openai',
     model: 'gpt-6.1-sol',
     reasoning: 'medium',
-    promptVersion: 'multisport-coach-v3',
+    promptVersion: 'training-feedback-coach-v1',
     ready: true,
   });
   return id;
@@ -1278,7 +1278,7 @@ it('requires the current prompt contract before a worker contributes readiness o
     provider: 'openai',
     model: 'gpt-6.1-sol',
     reasoning: 'medium',
-    promptVersion: 'multisport-coach-v3',
+    promptVersion: 'training-feedback-coach-v1',
     ready: true,
   });
   expect((await chatCapabilities()).executionAvailable).toBe(true);

@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Mockup · Quick log on Today (phone)</title>
+    <link rel="stylesheet" href="mockups.css" />
+    <script src="icons.js"></script>
+    <script src="shell.js"></script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <template data-shell="today">
+      <div class="page today">
+        <header class="page-header">
+          <div class="page-heading">
+            <span class="label">Thursday 15 October</span>
+            <h1>Good evening</h1>
+          </div>
+        </header>
+        <div class="week-strip" role="group" aria-label="This week">
+          <button class="strip-day" style="--kind: var(--effort-easy)">
+            <span class="label">M</span><strong>12</strong
+            ><span class="strip-log done"><i data-icon="check" data-size="11"></i></span>
+          </button>
+          <button class="strip-day" style="--kind: var(--effort-threshold)">
+            <span class="label">T</span><strong>13</strong
+            ><span class="strip-log done"><i data-icon="check" data-size="11"></i></span>
+          </button>
+          <button class="strip-day" style="--kind: var(--effort-easy)">
+            <span class="label">W</span><strong>14</strong
+            ><span class="strip-log changed"><i data-icon="pencil" data-size="10"></i></span>
+          </button>
+          <button class="strip-day selected today" style="--kind: var(--effort-easy)">
+            <span class="label">T</span><strong>15</strong
+            ><span class="strip-log done"><i data-icon="check" data-size="11"></i></span>
+          </button>
+          <button class="strip-day" style="--kind: var(--border)">
+            <span class="label">F</span><strong>16</strong><span class="strip-log planned"></span>
+          </button>
+          <button class="strip-day" style="--kind: var(--effort-easy)">
+            <span class="label">S</span><strong>17</strong><span class="strip-log planned"></span>
+          </button>
+          <button class="strip-day" style="--kind: var(--effort-easy)">
+            <span class="label">S</span><strong>18</strong><span class="strip-log planned"></span>
+          </button>
+        </div>
+        <div class="today-grid">
+          <div class="today-main">
+            <span class="label">Today’s workout</span>
+            <div class="hero-workout as-card" style="--kind: var(--effort-easy)">
+              <span class="hero-cover" style="min-height: 112px">
+                <span class="hero-kind"
+                  ><i data-icon="footprints" data-size="15"></i> Easy run</span
+                >
+                <div class="intensity-chart" style="height: 44px">
+                  <span
+                    style="flex-grow: 600; height: 37.6%; background: var(--effort-recovery)"
+                  ></span>
+                  <span
+                    style="flex-grow: 1500; height: 46.96%; background: var(--effort-easy)"
+                  ></span>
+                  <span
+                    style="flex-grow: 300; height: 37.6%; background: var(--effort-recovery)"
+                  ></span>
+                </div>
+              </span>
+              <span class="hero-body">
+                <strong class="hero-title">Easy aerobic run</strong>
+                <span class="hero-footer" style="margin-top: 2px">
+                  <span class="hero-stats">
+                    <span class="stat stat-large"
+                      ><span class="label">Distance</span
+                      ><span class="stat-value"><strong>7.0</strong><small>km</small></span></span
+                    >
+                    <span class="stat stat-large"
+                      ><span class="label">Time</span
+                      ><span class="stat-value"><strong>40 min</strong></span></span
+                    >
+                  </span>
+                </span>
+              </span>
+              <div class="hero-log">
+                <div class="quick-rpe">
+                  <div class="quick-rpe-head">
+                    <strong
+                      ><span class="log-chip done"
+                        ><i data-icon="check" data-size="12"></i>Done</span
+                      >
+                      Nice work.</strong
+                    >
+                    <button class="btn btn-sm btn-plain">
+                      <i data-icon="undo-2" data-size="14"></i>Undo
+                    </button>
+                  </div>
+                  <small class="fb-hint"
+                    >How hard was it? Optional — it helps your coach spot fatigue early.</small
+                  >
+                  <div class="rpe-scale" style="padding-top: 20px">
+                    <button style="--rpe: var(--effort-recovery)">1</button>
+                    <button style="--rpe: var(--effort-recovery)">2</button>
+                    <button class="expected" style="--rpe: var(--effort-easy)">3</button>
+                    <button style="--rpe: var(--effort-easy)">4</button>
+                    <button style="--rpe: var(--effort-steady)">5</button>
+                    <button style="--rpe: var(--effort-threshold)">6</button>
+                    <button style="--rpe: var(--effort-threshold)">7</button>
+                    <button style="--rpe: var(--effort-hard)">8</button>
+                    <button style="--rpe: var(--effort-hard)">9</button>
+                    <button style="--rpe: var(--effort-max)">10</button>
+                  </div>
+                  <button class="btn btn-sm btn-ghost" style="align-self: flex-start">
+                    <i data-icon="sliders-horizontal" data-size="14"></i>Add details
+                  </button>
+                </div>
+              </div>
+            </div>
+            <button class="feeling-link">
+              <i data-icon="thermometer" data-size="20"></i>
+              <span
+                ><strong>Not feeling 100%?</strong
+                ><small>Adjust the next few days with your coach.</small></span
+              >
+              <i data-icon="chevron-right" data-size="18"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+    </template>
+  </body>
+</html>
