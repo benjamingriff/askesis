@@ -2,6 +2,26 @@ import { afterEach, expect, it, vi } from 'vitest';
 import { AgentApi, ApiError, type ExecutionContext } from './api.js';
 import { parseAgentConfig } from './config.js';
 import { Worker } from './worker.js';
+
+// Vitest's fake clock does not replace node:timers/promises. Use the fake-clock-backed
+// equivalent so registration backoff and shutdown can be exercised without real waits.
+vi.mock('node:timers/promises', () => ({
+  setTimeout: (delay: number, value?: unknown, options?: { signal?: AbortSignal }) =>
+    new Promise((resolve, reject) => {
+      const signal = options?.signal;
+      if (signal?.aborted) return reject(signal.reason);
+      const timer = setTimeout(() => {
+        signal?.removeEventListener('abort', abort);
+        resolve(value);
+      }, delay);
+      const abort = () => {
+        clearTimeout(timer);
+        reject(signal?.reason);
+      };
+      signal?.addEventListener('abort', abort, { once: true });
+    }),
+}));
+
 const config = parseAgentConfig({
   OPENAI_API_KEY: 'test',
   AGENT_BOOTSTRAP_TOKEN: 'test-bootstrap-token-32-characters',
@@ -26,6 +46,75 @@ const context: ExecutionContext = {
   editNumber: null,
 };
 afterEach(() => vi.useRealTimers());
+
+it.each([
+  ['incompatible API during rollout', new ApiError('VALIDATION_ERROR', 400)],
+  ['API unavailable', new ApiError('AGENT_UNAVAILABLE', 503)],
+  ['connection failure', new TypeError('Private connection detail')],
+])('waits for registration after a minute of %s before claiming work', async (_name, error) => {
+  vi.useFakeTimers();
+  const api = new AgentApi('http://localhost');
+  let available = false;
+  const register = vi.spyOn(api, 'register').mockImplementation(async () => {
+    if (!available) throw error;
+    return { registered: true };
+  });
+  const runtime = { execute: vi.fn() };
+  const report = vi.fn();
+  const worker = new Worker(config, api, runtime, report);
+  const claim = vi.spyOn(api, 'claim').mockImplementation(async () => {
+    worker.stop();
+    return { claim: null };
+  });
+  const running = worker.run();
+  await vi.advanceTimersByTimeAsync(60000);
+  expect(register).toHaveBeenCalledTimes(13);
+  expect(claim).not.toHaveBeenCalled();
+  expect(runtime.execute).not.toHaveBeenCalled();
+  expect(report).toHaveBeenCalledWith(
+    'REGISTRATION_FAILED',
+    undefined,
+    expect.objectContaining({
+      operation: 'register',
+      phase: 'startup',
+      attempt: 13,
+      retryInMs: 5000,
+      ...(error instanceof ApiError ? { httpStatus: error.status, apiCode: error.code } : {}),
+    }),
+  );
+  expect(JSON.stringify(report.mock.calls)).not.toContain('Private connection detail');
+
+  available = true;
+  await vi.advanceTimersByTimeAsync(6000);
+  await running;
+  expect(claim).toHaveBeenCalledExactlyOnceWith(config.AGENT_BOOTSTRAP_TOKEN, worker.id);
+  expect(register.mock.calls.every(([, input]) => (input as { id: string }).id === worker.id)).toBe(
+    true,
+  );
+  expect(register.mock.lastCall?.[1]).toMatchObject({ ready: false });
+  expect(report).toHaveBeenCalledWith('WORKER_READY', undefined, {
+    operation: 'register',
+    phase: 'startup',
+    attempt: 14,
+  });
+  expect(vi.getTimerCount()).toBe(0);
+});
+
+it('stops immediately during a registration retry delay without claiming or registering readiness', async () => {
+  vi.useFakeTimers();
+  const api = new AgentApi('http://localhost');
+  const register = vi.spyOn(api, 'register').mockRejectedValue(new ApiError('API_ERROR', 503));
+  const claim = vi.spyOn(api, 'claim');
+  const worker = new Worker(config, api, { execute: vi.fn() });
+  const running = worker.run();
+  await vi.advanceTimersByTimeAsync(0);
+  worker.stop();
+  await running;
+  expect(register).toHaveBeenCalledOnce();
+  expect(claim).not.toHaveBeenCalled();
+  expect(vi.getTimerCount()).toBe(0);
+});
+
 it('maps completed output and usage into one final API command', async () => {
   const api = new AgentApi('http://localhost');
   vi.spyOn(api, 'context').mockResolvedValue(context);
@@ -74,6 +163,55 @@ it('reports provider failure while leaving already committed tool receipts to th
   expect(finish).toHaveBeenCalledExactlyOnceWith(claim, {
     status: 'failed',
     failureCode: 'PROVIDER_ERROR',
+  });
+});
+
+it('logs a terminal delivery failure separately from the original provider failure', async () => {
+  const api = new AgentApi('http://localhost');
+  vi.spyOn(api, 'context').mockResolvedValue(context);
+  vi.spyOn(api, 'finish').mockRejectedValue(new ApiError('MACHINE_AUTH_REQUIRED', 401));
+  const report = vi.fn();
+  await new Worker(
+    config,
+    api,
+    {
+      execute: vi.fn().mockRejectedValue(new Error('private provider error')),
+    },
+    report,
+  ).execute(claim);
+  expect(report).toHaveBeenCalledExactlyOnceWith('FINISH_FAILED', claim.runId, {
+    operation: 'finish',
+    phase: 'running',
+    failureCode: 'PROVIDER_ERROR',
+    errorKind: 'http',
+    httpStatus: 401,
+    apiCode: 'MACHINE_AUTH_REQUIRED',
+  });
+  expect(JSON.stringify(report.mock.calls)).not.toContain('private');
+});
+
+it('logs queue polling failures with HTTP context and retry delay', async () => {
+  vi.useFakeTimers();
+  const api = new AgentApi('http://localhost');
+  vi.spyOn(api, 'register').mockResolvedValue({ registered: true });
+  const report = vi.fn();
+  const worker = new Worker(config, api, { execute: vi.fn() }, report);
+  vi.spyOn(api, 'claim')
+    .mockRejectedValueOnce(new ApiError('AGENT_UNAVAILABLE', 503))
+    .mockImplementation(async () => {
+      worker.stop();
+      return { claim: null };
+    });
+  const running = worker.run();
+  await vi.advanceTimersByTimeAsync(2000);
+  await running;
+  expect(report).toHaveBeenCalledWith('POLL_FAILED', undefined, {
+    operation: 'claim',
+    phase: 'running',
+    retryInMs: 1000,
+    errorKind: 'http',
+    httpStatus: 503,
+    apiCode: 'AGENT_UNAVAILABLE',
   });
 });
 it('survives a transient heartbeat failure but abandons the run after repeated ones', async () => {

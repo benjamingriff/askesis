@@ -51,6 +51,11 @@ const schema = z.discriminatedUnion('AGENT_PROVIDER', [
   }),
 ]);
 export type AgentConfig = z.infer<typeof schema>;
+export class AgentConfigError extends Error {
+  constructor(public fields: string[]) {
+    super(`Invalid agent environment configuration: ${fields.join(', ')}`);
+  }
+}
 export function parseAgentConfig(environment: NodeJS.ProcessEnv): AgentConfig {
   // Compose passes unset optional settings as empty strings; treat them as unset.
   const defined = Object.fromEntries(
@@ -58,8 +63,8 @@ export function parseAgentConfig(environment: NodeJS.ProcessEnv): AgentConfig {
   );
   const result = schema.safeParse({ AGENT_PROVIDER: 'openai', ...defined });
   if (!result.success)
-    throw new Error(
-      `Invalid agent environment configuration: ${result.error.issues.map((i) => i.path.join('.') || 'AGENT_PROVIDER').join(', ')}`,
+    throw new AgentConfigError(
+      result.error.issues.map((i) => i.path.join('.') || 'AGENT_PROVIDER'),
     );
   const url = new URL(result.data.AGENT_API_URL);
   if (
@@ -69,7 +74,7 @@ export function parseAgentConfig(environment: NodeJS.ProcessEnv): AgentConfig {
     url.hash ||
     !['http:', 'https:'].includes(url.protocol)
   )
-    throw new Error('Invalid agent environment configuration: AGENT_API_URL');
+    throw new AgentConfigError(['AGENT_API_URL']);
   return result.data;
 }
 export function modelProfile(config: AgentConfig): ModelProfile {
