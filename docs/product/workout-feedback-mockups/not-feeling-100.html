@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Mockup · Not feeling 100% (phone)</title>
+    <link rel="stylesheet" href="mockups.css" />
+    <script src="icons.js"></script>
+    <script src="shell.js"></script>
+  </head>
+  <body class="phone-sheet mock-static">
+    <div class="dialog-root">
+      <div class="dialog dialog-md" role="dialog">
+        <span class="grabber"></span>
+        <header class="dialog-header">
+          <div>
+            <h2>Not feeling 100%?</h2>
+            <p>
+              Tell your coach what’s going on and they’ll suggest how to adjust the next few days.
+            </p>
+          </div>
+          <button class="icon-btn icon-btn-filled"><i data-icon="x" data-size="18"></i></button>
+        </header>
+        <div class="dialog-body">
+          <section class="fb-section">
+            <div class="fb-question"><h3>What’s going on?</h3></div>
+            <div class="chips grid-2">
+              <button class="active">
+                <i data-icon="thermometer" data-size="15"></i>Feeling ill
+              </button>
+              <button><i data-icon="triangle-alert" data-size="15"></i>Pain or injury</button>
+              <button><i data-icon="battery-low" data-size="15"></i>Run down</button>
+              <button><i data-icon="briefcase" data-size="15"></i>Busy or travelling</button>
+            </div>
+          </section>
+          <section class="fb-section">
+            <div class="fb-question">
+              <h3>Where are the symptoms?</h3>
+              <small>Illness</small>
+            </div>
+            <div class="chips stacked">
+              <button class="active">
+                Above the neck<small>Runny nose, sore throat, sneezing</small>
+              </button>
+              <button>Below the neck<small>Chest, fever, aches, upset stomach</small></button>
+            </div>
+            <div class="notice notice-warning fb-safety">
+              <i data-icon="shield-alert" data-size="18" class="notice-icon"></i>
+              <div class="notice-body">
+                <span
+                  >With a fever, chest symptoms or chest pain, rest and speak to a doctor before
+                  training again.</span
+                >
+              </div>
+            </div>
+          </section>
+          <section class="fb-section">
+            <div class="fb-question"><h3>For how long?</h3></div>
+            <div class="segmented" style="align-self: stretch">
+              <button class="active" style="flex: 1">3 days</button>
+              <button style="flex: 1">1 week</button>
+              <button style="flex: 1">2 weeks</button>
+              <button style="flex: 1">Not sure</button>
+            </div>
+          </section>
+          <section class="fb-section">
+            <div class="fb-question"><h3>What would help?</h3></div>
+            <div class="chips stacked">
+              <button>Easy sessions only<small>Keep moving, drop the intensity</small></button>
+              <button class="active">Shorter sessions<small>Same pattern, less time</small></button>
+              <button>Rest completely<small>Pause training for now</small></button>
+              <button>Let my coach decide</button>
+            </div>
+          </section>
+          <section class="fb-section">
+            <div class="fb-question"><h3>Getting back to it</h3></div>
+            <div class="segmented" style="align-self: stretch">
+              <button style="flex: 1">Gently</button>
+              <button class="active" style="flex: 1">Balanced</button>
+              <button style="flex: 1">Quickly</button>
+            </div>
+            <p class="fb-hint">Saturday’s long ride and Sunday’s long run fall in this window.</p>
+          </section>
+        </div>
+        <footer class="dialog-footer">
+          <button class="btn btn-lg btn-primary">
+            <i data-icon="message-square" data-size="17"></i>Ask my coach to adjust
+          </button>
+          <p class="fb-footer-note">
+            Your coach suggests the changes in chat. You review them before they replace your locked
+            plan.
+          </p>
+        </footer>
+      </div>
+    </div>
+  </body>
+</html>

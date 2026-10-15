@@ -1,3 +1,4 @@
+import { inferSessionType } from '../modules/workouts/session-types.js';
 import { randomUUID } from 'node:crypto';
 import type { Transaction } from 'kysely';
 import type { DB } from '../database/generated.js';
@@ -80,6 +81,11 @@ export async function writeExample(
           description: blueprint.description,
           purpose: session.purpose,
           primary_discipline: session.sport,
+          session_type: inferSessionType({
+            title: session.title,
+            discipline: session.sport,
+            racePriority: session.race ?? null,
+          }),
           race_priority: session.race ?? null,
           priority: session.race || day === 5 ? 'high' : day === 0 ? 'low' : 'medium',
           estimated_duration_seconds: session.minutes * 60,

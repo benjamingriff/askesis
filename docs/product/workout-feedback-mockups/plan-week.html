@@ -1,0 +1,227 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Mockup · Plan week with logged workouts</title>
+    <link rel="stylesheet" href="mockups.css" />
+    <script src="icons.js"></script>
+    <script src="shell.js"></script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <template data-shell="plan">
+      <div class="page plan-view">
+        <header class="page-header plan-header">
+          <div class="page-heading">
+            <span class="label">Training plan</span>
+            <h1>Olympic triathlon · 12 weeks</h1>
+            <div class="plan-meta">
+              <span class="pill pill-locked"><i data-icon="lock" data-size="12"></i>Locked</span>
+              <span class="pill pill-neutral"><i data-icon="power" data-size="12"></i>Active</span>
+              <span class="muted">5 Oct – 27 Dec 2026</span>
+            </div>
+          </div>
+        </header>
+        <section class="schedule" style="max-width: 760px">
+          <div class="week-heading">
+            <div>
+              <h3>
+                Week 2<span class="pill phase-pill" style="--phase: var(--effort-easy)">Base</span
+                ><span class="pill">Last week</span>
+              </h3>
+              <span class="muted">12 Oct – 18 Oct 2026 · Aerobic foundation</span>
+            </div>
+            <div class="week-nav">
+              <button class="icon-btn icon-btn-filled">
+                <i data-icon="chevron-left" data-size="18"></i>
+              </button>
+              <button class="icon-btn icon-btn-filled">
+                <i data-icon="chevron-right" data-size="18"></i>
+              </button>
+            </div>
+          </div>
+          <section class="card week-stats">
+            <span class="stat"
+              ><span class="label">Planned</span
+              ><span class="stat-value"><strong>5h 50</strong></span></span
+            >
+            <span class="stat"
+              ><span class="label">Done</span
+              ><span class="stat-value"><strong>3h 12</strong></span></span
+            >
+            <span class="stat"
+              ><span class="label">Sessions</span
+              ><span class="stat-value"><strong>4</strong><small>/ 6</small></span></span
+            >
+          </section>
+          <ol class="day-list">
+            <li class="day-row past">
+              <time class="day-gutter"><span>Mon</span><strong>12</strong></time>
+              <div class="day-items">
+                <button class="workout-card is-logged" style="--kind: var(--effort-easy)">
+                  <span
+                    class="kind-icon"
+                    style="width: 36px; height: 36px; --kind: var(--effort-easy)"
+                    ><i data-icon="waves-horizontal" data-size="18"></i
+                  ></span>
+                  <span class="workout-card-copy">
+                    <span class="workout-card-kind">Swim</span>
+                    <strong>Technique and aerobic swim</strong>
+                    <small>2,000 m · 45 min</small>
+                    <span class="workout-card-log"
+                      ><span class="log-chip done"
+                        ><i data-icon="check" data-size="12"></i>Done<span class="rpe"
+                          >RPE 3</span
+                        ></span
+                      ></span
+                    >
+                  </span>
+                  <span class="log-mark done"><i data-icon="check" data-size="15"></i></span>
+                </button>
+              </div>
+            </li>
+            <li class="day-row past">
+              <time class="day-gutter"><span>Tue</span><strong>13</strong></time>
+              <div class="day-items">
+                <button class="workout-card is-logged" style="--kind: var(--effort-threshold)">
+                  <span
+                    class="kind-icon"
+                    style="width: 36px; height: 36px; --kind: var(--effort-threshold)"
+                    ><i data-icon="footprints" data-size="18"></i
+                  ></span>
+                  <span class="workout-card-copy">
+                    <span class="workout-card-kind">Threshold run<em>Key session</em></span>
+                    <strong>Threshold intervals 5 × 6 min</strong>
+                    <small>10.6 km · 56 min</small>
+                    <span class="workout-card-log"
+                      ><span class="log-chip done"
+                        ><i data-icon="check" data-size="12"></i>Done<span class="rpe"
+                          >RPE 8</span
+                        ></span
+                      ><span class="log-chip changed"
+                        ><i data-icon="trending-up" data-size="12"></i>Harder than planned</span
+                      ><small>Faded on the last reps · Tired</small></span
+                    >
+                  </span>
+                  <span class="log-mark done"><i data-icon="check" data-size="15"></i></span>
+                </button>
+              </div>
+            </li>
+            <li class="day-row past">
+              <time class="day-gutter"><span>Wed</span><strong>14</strong></time>
+              <div class="day-items">
+                <button class="workout-card is-logged" style="--kind: var(--effort-easy)">
+                  <span
+                    class="kind-icon"
+                    style="width: 36px; height: 36px; --kind: var(--effort-easy)"
+                    ><i data-icon="bike" data-size="18"></i
+                  ></span>
+                  <span class="workout-card-copy">
+                    <span class="workout-card-kind">Endurance ride</span>
+                    <strong>Easy endurance ride</strong>
+                    <small>40 of 60 min</small>
+                    <span class="workout-card-log"
+                      ><span class="log-chip changed"
+                        ><i data-icon="pencil" data-size="12"></i>Changed<span class="rpe"
+                          >RPE 3</span
+                        ></span
+                      ><small>Short on time</small></span
+                    >
+                  </span>
+                  <span class="log-mark changed"><i data-icon="pencil" data-size="14"></i></span>
+                </button>
+              </div>
+            </li>
+            <li class="day-row past">
+              <time class="day-gutter"><span>Thu</span><strong>15</strong></time>
+              <div class="day-items">
+                <button class="workout-card is-logged" style="--kind: var(--effort-easy)">
+                  <span
+                    class="kind-icon"
+                    style="width: 36px; height: 36px; --kind: var(--effort-easy)"
+                    ><i data-icon="footprints" data-size="18"></i
+                  ></span>
+                  <span class="workout-card-copy">
+                    <span class="workout-card-kind">Easy run</span>
+                    <strong>Easy aerobic run</strong>
+                    <small>7.0 km · 40 min</small>
+                    <span class="workout-card-log"
+                      ><span class="log-chip done"
+                        ><i data-icon="check" data-size="12"></i>Done</span
+                      ></span
+                    >
+                  </span>
+                  <span class="log-mark done"><i data-icon="check" data-size="15"></i></span>
+                </button>
+              </div>
+            </li>
+            <li class="day-row past">
+              <time class="day-gutter"><span>Fri</span><strong>16</strong></time>
+              <div class="day-items">
+                <div class="rest-card"><i data-icon="moon" data-size="16"></i> Rest day</div>
+              </div>
+            </li>
+            <li class="day-row past">
+              <time class="day-gutter"><span>Sat</span><strong>17</strong></time>
+              <div class="day-items">
+                <button
+                  class="workout-card is-logged is-skipped"
+                  style="--kind: var(--effort-easy)"
+                >
+                  <span
+                    class="kind-icon"
+                    style="width: 36px; height: 36px; --kind: var(--effort-easy)"
+                    ><i data-icon="bike" data-size="18"></i
+                  ></span>
+                  <span class="workout-card-copy">
+                    <span class="workout-card-kind">Long ride<em>Key session</em></span>
+                    <strong>Long endurance ride</strong>
+                    <small>2h 00</small>
+                    <span class="workout-card-log"
+                      ><span class="log-chip skipped"
+                        ><i data-icon="x" data-size="12"></i>Skipped</span
+                      ><small>Feeling ill · head cold</small></span
+                    >
+                  </span>
+                  <span class="log-mark skipped"><i data-icon="x" data-size="15"></i></span>
+                </button>
+              </div>
+            </li>
+            <li class="day-row past">
+              <time class="day-gutter"><span>Sun</span><strong>18</strong></time>
+              <div class="day-items">
+                <div class="workout-card" style="--kind: var(--effort-easy)">
+                  <span
+                    class="kind-icon"
+                    style="width: 36px; height: 36px; --kind: var(--effort-easy)"
+                    ><i data-icon="footprints" data-size="18"></i
+                  ></span>
+                  <span class="workout-card-copy">
+                    <span class="workout-card-kind">Long run<em>Key session</em></span>
+                    <strong>Steady long run</strong>
+                    <small>12.5 km · 1h 10</small>
+                    <span class="workout-card-log"
+                      ><span class="log-chip unlogged"
+                        ><i data-icon="circle-dashed" data-size="12"></i>Not logged</span
+                      ></span
+                    >
+                  </span>
+                  <span class="quick-log">
+                    <button class="btn btn-sm btn-secondary">
+                      <i data-icon="check" data-size="14"></i>Done
+                    </button>
+                    <button class="btn btn-sm btn-secondary">
+                      <i data-icon="x" data-size="14"></i>Skipped
+                    </button>
+                  </span>
+                </div>
+              </div>
+            </li>
+          </ol>
+        </section>
+      </div>
+    </template>
+    <span class="mock-caption">Mockup · Plan week (Monday 19 Oct)</span>
+  </body>
+</html>

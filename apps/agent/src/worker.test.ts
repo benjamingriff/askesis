@@ -20,6 +20,7 @@ const context: ExecutionContext = {
   plan: null,
   brief: null,
   performance: null,
+  trainingLog: null,
   tools: [],
   versionId: null,
   editNumber: null,

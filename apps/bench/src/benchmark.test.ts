@@ -394,6 +394,7 @@ describe('coach provider selection', () => {
         plan: null,
         brief: null,
         performance: null,
+        trainingLog: null,
         versionId: null,
         editNumber: null,
         tools: [

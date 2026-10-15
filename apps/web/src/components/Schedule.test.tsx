@@ -8,6 +8,9 @@ import { Schedule } from './Schedule';
 const workout: WorkoutSummary = {
   id: 'w1',
   planId: 'p',
+  lineageId: 'test-lineage',
+  sessionType: null,
+  plannedRpe: null,
   planVersionId: 'v',
   planTitle: 'Plan',
   weekNumber: 1,

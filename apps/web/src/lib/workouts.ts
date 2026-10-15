@@ -76,11 +76,13 @@ const NAMES: Partial<Record<Sport, Partial<Record<WorkoutKind, string>>>> = {
  * and colour; it never changes the prescription.
  */
 export function inferKind(
-  workout: Pick<WorkoutSummary, 'title' | 'purpose' | 'discipline' | 'racePriority'>,
+  workout: Pick<WorkoutSummary, 'title' | 'purpose' | 'discipline' | 'racePriority'> &
+    Partial<Pick<WorkoutSummary, 'sessionType'>>,
 ): WorkoutKind {
   const title = workout.title.toLowerCase();
   const sport = workout.discipline;
   if (workout.racePriority) return 'race';
+  if (workout.sessionType) return workout.sessionType;
   if (/time trial|\btest\b|benchmark/.test(title)) return 'test';
   if (/^rest\b|rest day/.test(title)) return 'rest';
   if (/mobility|yoga|stretch|flexibility/.test(title)) return 'mobility';
@@ -93,6 +95,7 @@ export function inferKind(
   if (/sprint|repetition|anaerobic|neuromuscular|\bspeed\b|all[- ]out/.test(title)) return 'speed';
   if (/threshold|cruise|sweet ?spot|\bcss\b|lactate/.test(title)) return 'tempo';
   // A running tempo is threshold work; on the bike or in the pool tempo sits just below it.
+  if (/tempo/.test(title) && /interval|repeats?/.test(title)) return 'intervals';
   if (/tempo/.test(title)) return sport === 'run' ? 'tempo' : 'steady';
   if (/interval|vo2|track|hill|fartlek|repeats?\b|\d+\s?[x×]\s?\d/.test(title)) return 'intervals';
   if (/steady|marathon pace|progression|moderate|race pace/.test(title)) return 'steady';
@@ -129,7 +132,8 @@ function strengthEffort(title: string): Effort {
 
 /** How a workout presents: the icon names the sport and the colour says how hard it is. */
 export function workoutLook(
-  workout: Pick<WorkoutSummary, 'title' | 'purpose' | 'discipline' | 'racePriority'>,
+  workout: Pick<WorkoutSummary, 'title' | 'purpose' | 'discipline' | 'racePriority'> &
+    Partial<Pick<WorkoutSummary, 'sessionType'>>,
 ): WorkoutLook {
   const kind = inferKind(workout);
   const sport = (workout.discipline in SPORT_META ? workout.discipline : 'other') as Sport;

@@ -205,7 +205,10 @@ it('uses a distinct key for changed brief input and retains the previous input k
     await waitFor(() => expect(screen.getByRole('button', { name: 'Save changes' })).toBeEnabled());
     expect(screen.getByRole('alert')).toHaveTextContent('Connection lost');
   }
-  const calls = vi.mocked(api.PUT).mock.calls;
+  const calls = vi.mocked(api.PUT).mock.calls as unknown as [
+    string,
+    { body: { idempotencyKey: string } },
+  ][];
   expect(calls).toHaveLength(3);
   expect(calls[1]?.[1]?.body?.idempotencyKey).not.toBe(calls[0]?.[1]?.body?.idempotencyKey);
   expect(calls[2]).toEqual(calls[0]);

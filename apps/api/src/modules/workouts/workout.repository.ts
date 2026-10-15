@@ -1,3 +1,6 @@
+import { inferSessionType } from './session-types.js';
+import type { Database } from '../plans/plan.aggregate.js';
+import { loadPlannedRpe, prescriptionRpe } from '../training-log/planned-rpe.js';
 import type { Selectable } from 'kysely';
 import { getDatabase } from '../../database/client.js';
 import type { Workouts } from '../../database/generated.js';
@@ -29,6 +32,8 @@ type TreeNode = Omit<WorkoutStep, 'steps'> & {
 type WorkoutRow = Pick<
   Selectable<Workouts>,
   | 'id'
+  | 'lineage_id'
+  | 'session_type'
   | 'plan_version_id'
   | 'scheduled_date'
   | 'title'
@@ -45,9 +50,18 @@ type WorkoutRow = Pick<
   week_number: number;
 };
 
-function toWorkoutSummary(row: WorkoutRow): WorkoutSummary {
+function toWorkoutSummary(row: WorkoutRow, plannedRpe: number | null = null): WorkoutSummary {
   return {
     id: row.id,
+    lineageId: row.lineage_id,
+    sessionType:
+      (row.session_type as WorkoutSummary['sessionType']) ??
+      inferSessionType({
+        title: row.title,
+        discipline: row.primary_discipline,
+        racePriority: row.race_priority,
+      }),
+    plannedRpe,
     planId: row.plan_id,
     planVersionId: row.plan_version_id,
     planTitle: row.plan_title,
@@ -68,8 +82,8 @@ function toWorkoutSummary(row: WorkoutRow): WorkoutSummary {
 export async function listWorkouts(
   athleteId: string,
   planVersionId: string,
+  database: Database = getDatabase(),
 ): Promise<WorkoutSummary[]> {
-  const database = getDatabase();
   const query = database
     .selectFrom('workouts')
     .innerJoin('plan_versions', 'plan_versions.id', 'workouts.plan_version_id')
@@ -77,6 +91,8 @@ export async function listWorkouts(
     .innerJoin('training_weeks', 'training_weeks.id', 'workouts.week_id')
     .select([
       'workouts.id',
+      'workouts.lineage_id',
+      'workouts.session_type',
       'plan_versions.plan_id',
       'workouts.plan_version_id',
       'workouts.scheduled_date',
@@ -99,7 +115,16 @@ export async function listWorkouts(
     .orderBy('workouts.position', 'asc')
     .execute();
 
-  return rows.map(toWorkoutSummary);
+  const efforts = await loadPlannedRpe(
+    database,
+    athleteId,
+    rows.map((row) => ({
+      id: row.id,
+      date: formatDate(row.scheduled_date),
+      discipline: row.primary_discipline,
+    })),
+  );
+  return rows.map((row) => toWorkoutSummary(row, efforts.get(row.id) ?? null));
 }
 
 export async function listBlocks(
@@ -158,8 +183,8 @@ function optionalNumber(value: string | null): number | null {
 export async function getWorkoutDetail(
   athleteId: string,
   workoutId: string,
+  database: Database = getDatabase(),
 ): Promise<WorkoutDetail | null> {
-  const database = getDatabase();
   const workoutRow = await database
     .selectFrom('workouts')
     .innerJoin('plan_versions', 'plan_versions.id', 'workouts.plan_version_id')
@@ -167,6 +192,8 @@ export async function getWorkoutDetail(
     .innerJoin('training_weeks', 'training_weeks.id', 'workouts.week_id')
     .select([
       'workouts.id',
+      'workouts.lineage_id',
+      'workouts.session_type',
       'plan_versions.plan_id',
       'workouts.plan_version_id',
       'workouts.scheduled_date',
@@ -360,9 +387,13 @@ export async function getWorkoutDetail(
     steps: node.steps.map(toPublicStep),
   });
 
+  const prescription = toPublicStep(root);
   return {
-    workout: toWorkoutSummary(workoutRow),
+    workout: toWorkoutSummary(
+      workoutRow,
+      prescriptionRpe(prescription, workoutRow.primary_discipline),
+    ),
     tags: tagRows.map(({ tag }) => tag),
-    prescription: toPublicStep(root),
+    prescription,
   };
 }

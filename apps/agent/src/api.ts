@@ -10,13 +10,19 @@ export const ClaimSchema = z.object({
 export type Claim = z.infer<typeof ClaimSchema>;
 export const ContextSchema = z.object({
   messages: z.array(
-    z.object({ role: z.enum(['user', 'assistant']), content: z.string(), sequence: z.number() }),
+    z.object({
+      role: z.enum(['user', 'assistant']),
+      content: z.string(),
+      sequence: z.number(),
+      references: z.array(z.unknown()).optional(),
+    }),
   ),
   historyTruncated: z.boolean(),
   plan: z.unknown(),
   brief: z.unknown(),
   /** The athlete's calibration timeline, today and timezone; present with or without a plan. */
   performance: z.unknown(),
+  trainingLog: z.unknown(),
   tools: z.array(
     z.object({
       name: z.string(),

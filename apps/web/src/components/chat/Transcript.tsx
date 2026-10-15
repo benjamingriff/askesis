@@ -1,3 +1,4 @@
+import { FeedbackCards } from './FeedbackCard';
 import { ArrowDown, Sparkles } from 'lucide-react';
 import { useEffect, useLayoutEffect, useRef, useState, type RefObject } from 'react';
 import type { Conversation, Run } from '../../chat';
@@ -204,6 +205,7 @@ export function Transcript({
                 {message.role === 'user' ? (
                   <article className="message user">
                     <span className="sr-only">You</span>
+                    <FeedbackCards references={message.references} />
                     <p className="chat-text">{message.content}</p>
                   </article>
                 ) : (

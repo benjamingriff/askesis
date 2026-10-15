@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Mockup · Key session feedback (phone)</title>
+    <link rel="stylesheet" href="mockups.css" />
+    <script src="icons.js"></script>
+    <script src="shell.js"></script>
+  </head>
+  <body class="phone-sheet mock-static">
+    <div class="dialog-root">
+      <div class="dialog dialog-md" role="dialog" style="--kind: var(--effort-threshold)">
+        <span class="grabber"></span>
+        <header class="dialog-header">
+          <div class="fb-title">
+            <span class="kind-line"
+              ><i data-icon="footprints" data-size="15"></i> Threshold run
+              <em>Key session</em></span
+            >
+            <h2>Threshold intervals 5 × 6 min</h2>
+            <div class="fb-planned">
+              <span><i data-icon="calendar-days" data-size="13"></i>Tue 13 Oct</span>
+              <span><i data-icon="route" data-size="13"></i>10.5 km</span>
+              <span><i data-icon="clock" data-size="13"></i>55 min</span>
+              <span><i data-icon="target" data-size="13"></i>4:08–4:18 /km</span>
+            </div>
+          </div>
+          <button class="icon-btn icon-btn-filled"><i data-icon="x" data-size="18"></i></button>
+        </header>
+        <div class="dialog-body">
+          <section class="fb-section">
+            <div class="fb-question"><h3>Did you do it?</h3></div>
+            <div class="status-choice">
+              <button class="done active">
+                <span class="ico"><i data-icon="check" data-size="16"></i></span>Done
+              </button>
+              <button class="changed">
+                <span class="ico"><i data-icon="pencil" data-size="15"></i></span>Changed it
+              </button>
+              <button class="skipped">
+                <span class="ico"><i data-icon="x" data-size="16"></i></span>Skipped
+              </button>
+            </div>
+            <div class="actuals">
+              <div class="actual-field">
+                <span class="label">Time</span><strong>56:10</strong><small>Planned 55 min</small>
+              </div>
+              <div class="actual-field">
+                <span class="label">Distance</span><strong>10.6 km</strong
+                ><small>Planned 10.5 km</small>
+              </div>
+            </div>
+            <p class="fb-hint">Filled in from the plan. Change them if you did more or less.</p>
+          </section>
+
+          <section class="fb-section">
+            <div class="fb-question">
+              <h3>How hard was it overall?</h3>
+              <small>Session RPE</small>
+            </div>
+            <div class="rpe-scale">
+              <button style="--rpe: var(--effort-recovery)">1</button>
+              <button style="--rpe: var(--effort-recovery)">2</button>
+              <button style="--rpe: var(--effort-easy)">3</button>
+              <button style="--rpe: var(--effort-easy)">4</button>
+              <button style="--rpe: var(--effort-steady)">5</button>
+              <button style="--rpe: var(--effort-threshold)">6</button>
+              <button class="expected" style="--rpe: var(--effort-threshold)">7</button>
+              <button class="active" style="--rpe: var(--effort-hard)">8</button>
+              <button style="--rpe: var(--effort-hard)">9</button>
+              <button style="--rpe: var(--effort-max)">10</button>
+            </div>
+            <div class="rpe-legend">
+              <span>Easy</span><span>Moderate</span><span>Hard</span><span>Max</span>
+            </div>
+            <div class="rpe-readout">
+              <b>8</b><span>Very hard — only a few words at a time</span>
+              <span class="log-chip changed"
+                ><i data-icon="trending-up" data-size="12"></i>Harder than planned</span
+              >
+            </div>
+          </section>
+
+          <section class="fb-section">
+            <div class="fb-question">
+              <h3>How did the intervals go?</h3>
+              <small>Key session</small>
+            </div>
+            <div class="chips stacked">
+              <button>All reps on target</button>
+              <button class="active">
+                Faded on the last reps<small>Hit pace early, slower by the end</small>
+              </button>
+              <button>Couldn’t hold the target pace</button>
+              <button>Stopped early</button>
+            </div>
+          </section>
+
+          <section class="fb-section">
+            <div class="fb-question"><h3>How did your body feel?</h3></div>
+            <div class="feel-scale">
+              <button><i data-icon="laugh" data-size="22"></i>Strong</button>
+              <button><i data-icon="smile" data-size="22"></i>Good</button>
+              <button><i data-icon="meh" data-size="22"></i>Normal</button>
+              <button class="active"><i data-icon="frown" data-size="22"></i>Tired</button>
+              <button><i data-icon="battery-low" data-size="22"></i>Drained</button>
+            </div>
+          </section>
+
+          <section class="fb-section">
+            <div class="fb-question">
+              <h3>What affected it?</h3>
+              <small>Choose any</small>
+            </div>
+            <div class="chips">
+              <button class="active"><i data-icon="bed" data-size="14"></i>Poor sleep</button>
+              <button class="active">
+                <i data-icon="battery-low" data-size="14"></i>Heavy legs
+              </button>
+              <button><i data-icon="utensils" data-size="14"></i>Under-fuelled</button>
+              <button><i data-icon="thermometer" data-size="14"></i>Feeling ill</button>
+              <button class="warn">
+                <i data-icon="triangle-alert" data-size="14"></i>Pain or niggle
+              </button>
+              <button><i data-icon="sun" data-size="14"></i>Heat</button>
+              <button><i data-icon="mountain" data-size="14"></i>Terrain</button>
+              <button><i data-icon="briefcase" data-size="14"></i>Life stress</button>
+              <button><i data-icon="clock" data-size="14"></i>Short on time</button>
+            </div>
+          </section>
+
+          <section class="fb-section">
+            <div class="fb-question">
+              <h3>Anything else for your coach?</h3>
+              <small>Optional</small>
+            </div>
+            <div class="note-field">
+              <textarea>
+Reps 4 and 5 were 4:21 and 4:24/km. Legs still heavy from Sunday’s long ride.</textarea>
+              <button class="icon-btn icon-btn-plain" aria-label="Dictate">
+                <i data-icon="mic" data-size="16"></i>
+              </button>
+            </div>
+          </section>
+        </div>
+        <footer class="dialog-footer">
+          <button class="btn btn-lg btn-primary">
+            <i data-icon="message-square" data-size="17"></i>Save and talk it through
+          </button>
+          <button class="btn btn-lg btn-secondary">Save</button>
+          <p class="fb-footer-note">
+            This was harder than planned. Your coach can look at whether anything should change —
+            nothing in your plan changes without your review.
+          </p>
+        </footer>
+      </div>
+    </div>
+  </body>
+</html>
