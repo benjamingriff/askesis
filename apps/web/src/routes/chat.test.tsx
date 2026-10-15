@@ -314,7 +314,10 @@ it.each(['/chat/c1', '/chat/archive/c1'])(
     await waitFor(() => expect(router.state.location.pathname).toBe('/chat/archive/c1'));
     expect(await screen.findByText(/archived and read-only/)).toBeInTheDocument();
     await waitFor(() =>
-      expect(screen.getByRole('radio', { name: 'Archived' })).toHaveAttribute('aria-checked', 'true'),
+      expect(screen.getByRole('radio', { name: 'Archived' })).toHaveAttribute(
+        'aria-checked',
+        'true',
+      ),
     );
     fireEvent.click(screen.getByRole('button', { name: 'Restore conversation' }));
     await waitFor(() => expect(router.state.location.pathname).toBe('/chat/c1'));
