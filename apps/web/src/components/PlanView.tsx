@@ -1,4 +1,4 @@
-import { TrainingLogProvider, TrainingHistory, CheckInButton } from './TrainingLog';
+import { TrainingLogProvider, TrainingHistory } from './TrainingLog';
 import { ClipboardList, Flag, Lock, PencilLine, Sparkles } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
 import { Link } from 'react-router';
@@ -158,7 +158,6 @@ export function PlanView({
           />
         ) : null}
 
-        <CheckInButton plan={plan} workouts={workouts.data ?? []} />
         <div className="plan-layout">
           <div className="plan-main">
             <Card className="plan-hero">
