@@ -50,7 +50,7 @@ async function accepted() {
     provider: 'openai',
     model: 'gpt-6.1-sol',
     reasoning: 'medium',
-    promptVersion: 'placeholder-sessions-coach-v1',
+    promptVersion: 'coach-v1',
     promptHash: 'a'.repeat(64),
     ready: true,
   });

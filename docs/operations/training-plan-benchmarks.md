@@ -53,7 +53,7 @@ Default coach configuration comes from the existing worker parser and current co
 
 ### Prompt versions
 
-Every prompt is identified by a name and the SHA-256 of its exact text: the coach (`placeholder-sessions-coach-v1`; older runs used `training-feedback-coach-v1` and `multisport-coach-v3`), simulator (`fact-selection-v2`), voice (`athlete-voice-v1`) and reviewer (`training-plan-v3`). Changing a prompt's text requires a new name. `apps/agent/prompts.lock.json` and `apps/bench/prompts.lock.json` record each name's hash, and their tests fail if a text changes under an existing name. Workers report the coach prompt's hash when registering, and each `agent_runs` row records the hash of the worker that claimed it. Each benchmark run also saves the prompt texts and the coach's tool definitions under `prompts/`, with their hashes, plus a `toolsHash`, in `manifest.json`.
+Every prompt is identified by a name and the SHA-256 of its exact text: the coach (`coach-v1`; older runs used `training-feedback-coach-v1` and `multisport-coach-v3`), simulator (`fact-selection-v2`), voice (`athlete-voice-v1`) and reviewer (`training-plan-v3`). Changing a prompt's text requires a new name; coach prompts are numbered `coach-vN` from `coach-v1`. `apps/agent/prompts.lock.json` and `apps/bench/prompts.lock.json` record each name's hash, and their tests fail if a text changes under an existing name. Workers report the coach prompt's hash when registering, and each `agent_runs` row records the hash of the worker that claimed it. Each benchmark run also saves the prompt texts and the coach's tool definitions under `prompts/`, with their hashes, plus a `toolsHash`, in `manifest.json`.
 
 ## Review the result
 
