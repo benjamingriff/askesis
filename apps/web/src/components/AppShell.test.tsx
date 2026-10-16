@@ -109,3 +109,30 @@ it('ignores mouse drags, opted-out areas and detail pages', async () => {
     vi.useRealTimers();
   }
 });
+
+it('lets a tab tapped mid-swipe win over the swipe', async () => {
+  vi.useFakeTimers();
+  try {
+    const router = renderShell('/today');
+    drag(screen.getByRole('heading', { name: 'Today page' }), 'touch', 300, 80);
+    fireEvent.click(within(screen.getByRole('banner')).getByRole('link', { name: 'Coach' }));
+    await act(() => vi.runAllTimersAsync());
+    expect(router.state.location.pathname).toBe('/chat');
+  } finally {
+    vi.useRealTimers();
+  }
+});
+
+it('opens the next tab at the top when motion is reduced', async () => {
+  // Narrow screen, reduced motion.
+  vi.stubGlobal('matchMedia', () => ({ matches: true }));
+  try {
+    const router = renderShell('/today');
+    drag(screen.getByRole('heading', { name: 'Today page' }), 'touch', 300, 80);
+    await act(async () => undefined);
+    expect(router.state.location.pathname).toBe('/plan');
+    expect(window.scrollTo).toHaveBeenCalledWith(0, 0);
+  } finally {
+    vi.unstubAllGlobals();
+  }
+});

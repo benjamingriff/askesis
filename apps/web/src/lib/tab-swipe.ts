@@ -63,6 +63,30 @@ export function useTabSwipe(
       dx: number;
       locked: boolean;
     } | null = null;
+    // Animation steps still to run. While any are pending, new swipes are ignored,
+    // and unmounting cancels them.
+    const timers = new Set<number>();
+    const frames = new Set<number>();
+    const later = (run: () => void, ms: number) => {
+      const id = window.setTimeout(() => {
+        timers.delete(id);
+        run();
+      }, ms);
+      timers.add(id);
+    };
+    const nextFrame = (run: () => void) => {
+      const id = requestAnimationFrame(() => {
+        frames.delete(id);
+        run();
+      });
+      frames.add(id);
+    };
+    const cancelPending = () => {
+      timers.forEach((id) => window.clearTimeout(id));
+      frames.forEach((id) => cancelAnimationFrame(id));
+      timers.clear();
+      frames.clear();
+    };
 
     const setOffset = (dx: number, animate: boolean, progress = -dx / node.clientWidth) => {
       node.style.transition = animate ? `transform ${SETTLE_MS}ms ${EASE}` : 'none';
@@ -81,6 +105,7 @@ export function useTabSwipe(
     const down = (event: PointerEvent) => {
       const { index: current } = latest.current;
       if (event.pointerType !== 'touch' || current < 0 || !event.isPrimary || !isNarrow()) return;
+      if (timers.size || frames.size) return;
       if (event.clientX < EDGE_PX || event.clientX > window.innerWidth - EDGE_PX) return;
       const target = event.target instanceof Element ? event.target : null;
       if (!target || target.closest(IGNORE) || scrollsSideways(target, node)) return;
@@ -128,29 +153,38 @@ export function useTabSwipe(
       const passed = Math.abs(dx) > width * COMMIT_RATIO || velocity > COMMIT_VELOCITY;
       if (cancelled || !passed || next < 0 || next >= total) {
         setOffset(0, true);
-        window.setTimeout(reset, SETTLE_MS);
+        later(reset, SETTLE_MS);
         return;
       }
+      // Like tapping a tab: the new page opens at the top.
+      const open = () => {
+        commit(next); // renders synchronously, so the indicator can settle on the new tab
+        window.scrollTo(0, 0);
+      };
       const direction = dx < 0 ? -1 : 1;
       if (prefersReducedMotion()) {
         reset();
-        commit(next);
+        open();
         return;
       }
       setOffset(direction * width, true);
-      window.setTimeout(() => {
-        commit(next); // renders synchronously, so the indicator can settle on the new tab
-        window.scrollTo(0, 0);
+      later(() => {
+        // A tab tapped while the old page slid away wins over the swipe.
+        if (latest.current.index !== current) {
+          reset();
+          return;
+        }
+        open();
         // Bring the new page in from the opposite side.
         setOffset(-direction * width * 0.3, false, 0);
         node.style.opacity = '0';
-        requestAnimationFrame(() =>
-          requestAnimationFrame(() => {
+        nextFrame(() =>
+          nextFrame(() => {
             node.style.transition = `transform ${SETTLE_MS}ms ${EASE}, opacity ${SETTLE_MS}ms ease`;
             node.style.transform = '';
             node.style.opacity = '';
             indicatorRoot.current?.classList.remove('tab-swiping');
-            window.setTimeout(reset, SETTLE_MS);
+            later(reset, SETTLE_MS);
           }),
         );
       }, SETTLE_MS * 0.8);
@@ -167,6 +201,7 @@ export function useTabSwipe(
       node.removeEventListener('pointermove', move);
       node.removeEventListener('pointerup', up);
       node.removeEventListener('pointercancel', cancel);
+      cancelPending();
       reset();
     };
   }, [surface, indicatorRoot]);
