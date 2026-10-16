@@ -8,9 +8,17 @@ import type { WorkoutSummary } from '@askesis/api-client';
 import type { Plan } from '../plan-data';
 import type * as Live from '../live';
 const mocks = vi.hoisted(() => ({ get: vi.fn(), put: vi.fn(), post: vi.fn(), remove: vi.fn() }));
-vi.mock('../api', () => ({
-  api: { GET: mocks.get, PUT: mocks.put, POST: mocks.post, DELETE: mocks.remove },
-}));
+vi.mock('../api', async () => {
+  const { withoutIntegrations } = await import('../../test/activity-mocks');
+  return {
+    api: {
+      GET: withoutIntegrations(mocks.get),
+      PUT: mocks.put,
+      POST: mocks.post,
+      DELETE: mocks.remove,
+    },
+  };
+});
 vi.mock('../live', async (original) => ({
   ...(await original<typeof Live>()),
   useLiveState: () => 'live',
