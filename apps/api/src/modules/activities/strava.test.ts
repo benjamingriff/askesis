@@ -129,5 +129,8 @@ describe('Strava client', () => {
     expect(new Headers(revokeInit?.headers).get('Authorization')).toBe(
       `Basic ${Buffer.from('12345:client-secret-value').toString('base64')}`,
     );
+    // A revoked refresh token is a 400 invalid grant: the athlete has to reconnect.
+    fetcher.mockResolvedValueOnce(Response.json({ message: 'Bad Request' }, { status: 400 }));
+    await expect(client.refresh('revoked')).rejects.toMatchObject({ kind: 'unauthorized' });
   });
 });

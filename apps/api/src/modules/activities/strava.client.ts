@@ -134,8 +134,18 @@ export class StravaClient {
     return this.token({ grant_type: 'authorization_code', code });
   }
 
-  refresh(refreshToken: string): Promise<StravaToken> {
-    return this.token({ grant_type: 'refresh_token', refresh_token: refreshToken });
+  /**
+   * Strava answers a revoked or superseded refresh token with 400 (invalid grant) rather than
+   * 401, so any rejected refresh means the athlete must reconnect.
+   */
+  async refresh(refreshToken: string): Promise<StravaToken> {
+    try {
+      return await this.token({ grant_type: 'refresh_token', refresh_token: refreshToken });
+    } catch (error) {
+      if (error instanceof StravaError && error.kind === 'rejected')
+        throw new StravaError('unauthorized', error.status);
+      throw error;
+    }
   }
 
   /** Revoke the app's access. Strava answers 200 whether or not the token still existed. */

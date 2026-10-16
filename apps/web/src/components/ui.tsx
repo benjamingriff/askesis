@@ -546,14 +546,9 @@ export function Dialog({
         aria-labelledby={titleId}
         tabIndex={-1}
       >
-        {aside ? (
-          <>
-            <div className="dialog-main">{main}</div>
-            <aside className="dialog-aside">{aside}</aside>
-          </>
-        ) : (
-          main
-        )}
+        {/* Always wrapped, so opening or closing the aside never remounts the dialog's content. */}
+        <div className="dialog-main">{main}</div>
+        {aside ? <aside className="dialog-aside">{aside}</aside> : null}
       </div>
     </div>,
     document.body,

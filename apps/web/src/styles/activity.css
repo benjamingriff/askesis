@@ -219,35 +219,7 @@
   font-weight: 700;
 }
 
-/* The log sheet's details panel: beside the form on wide screens, above it on narrow ones. */
-.dialog-with-aside {
-  flex-direction: row;
-  max-width: min(1000px, 100%);
-}
-.dialog-main {
-  display: flex;
-  flex: 1 1 560px;
-  flex-direction: column;
-  min-width: 0;
-  max-height: inherit;
-}
-.dialog-aside {
-  display: flex;
-  flex: 0 0 360px;
-  flex-direction: column;
-  min-width: 0;
-  overflow-y: auto;
-  border-left: 1px solid var(--border);
-  border-radius: 0 var(--radius-xl) var(--radius-xl) 0;
-  background: var(--surface);
-  animation: aside-in 0.2s ease-out;
-}
-@keyframes aside-in {
-  from {
-    opacity: 0;
-    transform: translateX(-12px);
-  }
-}
+/* The log sheet's details panel (the Dialog's aside). */
 .strava-panel {
   display: flex;
   flex: 1;
@@ -350,22 +322,6 @@
 }
 
 @media (max-width: 899px) {
-  .dialog-with-aside {
-    flex-direction: column;
-    max-width: 560px;
-  }
-  .dialog-main {
-    flex: 1 1 auto;
-    min-height: 0;
-  }
-  .dialog-aside {
-    flex: 0 1 auto;
-    order: -1;
-    max-height: 42dvh;
-    border-left: 0;
-    border-bottom: 1px solid var(--border);
-    border-radius: var(--radius-xl) var(--radius-xl) 0 0;
-  }
   .strava-stats {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }

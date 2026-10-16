@@ -43,6 +43,7 @@ const strava = {
   ],
   calls: [] as string[],
   failWith: null as number | null,
+  refreshFails: false,
   tokens: 0,
   expiresIn: 6 * 3600,
 };
@@ -50,6 +51,12 @@ const fake: typeof fetch = async (input, init) => {
   const url = new URL(String(input));
   strava.calls.push(`${init?.method ?? 'GET'} ${url.pathname}`);
   if (url.pathname === '/api/v3/oauth/token') {
+    // Strava answers a revoked refresh token with 400, not 401.
+    if (strava.refreshFails && String(init?.body).includes('grant_type=refresh_token'))
+      return Response.json(
+        { message: 'Bad Request', errors: [{ resource: 'RefreshToken', code: 'invalid' }] },
+        { status: 400 },
+      );
     strava.tokens += 1;
     return Response.json({
       access_token: `access-${strava.tokens}`,
@@ -224,6 +231,22 @@ it('refreshes an expiring token once and marks a rejected grant for reconnection
     code: 'STRAVA_REAUTHORIZATION_REQUIRED',
   });
   // Reconnecting restores the connection.
+  expect((await connect(owner)).strava.connection?.status).toBe('active');
+
+  // A refresh token Strava no longer accepts also asks for reconnection, not a retry later.
+  await db
+    .updateTable('integration_connections')
+    .set({ access_token_expires_at: now })
+    .where('athlete_id', '=', owner)
+    .execute();
+  strava.refreshFails = true;
+  await expect(readStravaActivity(owner, '1', now)).rejects.toMatchObject({
+    code: 'STRAVA_REAUTHORIZATION_REQUIRED',
+  });
+  strava.refreshFails = false;
+  expect((await readIntegrations(owner)).strava.connection?.status).toBe(
+    'reauthorization_required',
+  );
   expect((await connect(owner)).strava.connection?.status).toBe('active');
 });
 
