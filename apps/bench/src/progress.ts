@@ -1,4 +1,8 @@
 import { z } from 'zod';
+import type { BenchmarkSnapshot } from '@askesis/api/benchmark';
+import type { Scenario } from './scenario.js';
+import type { Check } from './checks.js';
+import type { Review } from './models.js';
 
 export const NoticeSchema = z.object({ type: z.literal('notice'), message: z.string() });
 
@@ -25,6 +29,27 @@ export const ResultSchema = z.object({
   failedChecks: z.array(z.string()),
 });
 export type RunResult = z.infer<typeof ResultSchema>;
+
+/** Generation and regrading publish the same current assessment summary. */
+export function buildRunResult(
+  scenario: Pick<Scenario, 'id' | 'limits'>,
+  snapshot: Pick<BenchmarkSnapshot, 'messages'> | null,
+  assessment: { stopReason: string; verdict: string; review: Review | null; checks: Check[] },
+  report: string,
+): RunResult {
+  return {
+    type: 'result',
+    scenario: scenario.id,
+    stopReason: assessment.stopReason,
+    verdict: assessment.verdict,
+    reviewCompleted: assessment.review !== null,
+    messages: snapshot?.messages.filter((m) => m.role === 'user').length ?? 0,
+    maxMessages: scenario.limits.maxAthleteMessages,
+    maxMinutes: scenario.limits.maxElapsedMinutes,
+    report,
+    failedChecks: assessment.checks.filter((c) => c.status === 'fail').map((c) => c.id),
+  };
+}
 
 export function bar(value: number, total: number, width = 12) {
   const filled = Math.max(0, Math.min(width, Math.round((value / Math.max(1, total)) * width)));

@@ -15,6 +15,7 @@ import {
   ResultSchema,
   bar,
   resultLines,
+  buildRunResult,
   type RunResult,
 } from './progress.js';
 import { Artifacts, reportMarkdown } from './artifacts.js';
@@ -569,18 +570,12 @@ async function run() {
         { mode: 0o600 },
       );
       await stage(`Assessment: ${verdict}`);
-      const result: RunResult = {
-        type: 'result',
-        scenario: scenario.id,
-        stopReason,
-        verdict,
-        reviewCompleted: review !== null,
-        messages: snapshot?.messages.filter((m) => m.role === 'user').length ?? interaction,
-        maxMessages: scenario.limits.maxAthleteMessages,
-        maxMinutes: scenario.limits.maxElapsedMinutes,
-        report: resolve(artifacts.directory, 'report.md'),
-        failedChecks: checks.filter((c) => c.status === 'fail').map((c) => c.id),
-      };
+      const result = buildRunResult(
+        scenario,
+        snapshot,
+        { stopReason, verdict, review, checks },
+        resolve(artifacts.directory, 'report.md'),
+      );
       await artifacts.json('result.json', result);
       if (process.send) process.send(result);
       else {
@@ -769,6 +764,13 @@ async function gradeSavedRun(runId: string, directory: string, signal: AbortSign
     reviewerVersion: REVIEW_VERSION,
     reviewerPromptHash: promptIdentity(EVALUATOR_PROMPTS.reviewer).hash,
   });
+  const summary = buildRunResult(
+    scenario,
+    snapshot,
+    { stopReason: assessment.stopReason, verdict, review: result.review, checks },
+    resolve(directory, 'report.md'),
+  );
+  await artifacts.json('result.json', summary);
   await artifacts.json(`review-${Date.now()}.json`, {
     ...result,
     model,
@@ -788,7 +790,7 @@ async function gradeSavedRun(runId: string, directory: string, signal: AbortSign
     ),
     { mode: 0o600 },
   );
-  console.log(`Assessment: ${verdict}\nReport: ${resolve(directory, 'report.md')}`);
+  console.log(resultLines(summary));
 }
 
 async function main() {

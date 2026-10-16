@@ -1,5 +1,13 @@
 import { describe, expect, it, vi } from 'vitest';
-import { BenchDisplay, executionDescription, resultLines, type RunResult } from './progress.js';
+import type { BenchmarkSnapshot } from '@askesis/api/benchmark';
+import type { Review } from './models.js';
+import {
+  BenchDisplay,
+  buildRunResult,
+  executionDescription,
+  resultLines,
+  type RunResult,
+} from './progress.js';
 
 const result: RunResult = {
   type: 'result',
@@ -15,6 +23,53 @@ const result: RunResult = {
 };
 
 describe('benchmark console', () => {
+  it('rebuilds reviewer status, verdict and failed checks when saved evidence is regraded', () => {
+    const scenario = {
+      id: 'cycle-beginner',
+      limits: { maxAthleteMessages: 18, maxElapsedMinutes: 30 },
+    };
+    const snapshot = {
+      messages: [{ role: 'user' }, { role: 'assistant' }, { role: 'user' }],
+    } as unknown as Pick<BenchmarkSnapshot, 'messages'>;
+    const original = buildRunResult(
+      scenario,
+      snapshot,
+      {
+        stopReason: 'completed',
+        verdict: 'assessment_unavailable',
+        review: null,
+        checks: [{ id: 'prescriptions', status: 'fail', explanation: 'Old check', evidence: [] }],
+      },
+      '/results/report.md',
+    );
+    expect(original).toMatchObject({
+      reviewCompleted: false,
+      verdict: 'assessment_unavailable',
+      failedChecks: ['prescriptions'],
+      messages: 2,
+    });
+    const regraded = buildRunResult(
+      scenario,
+      snapshot,
+      {
+        stopReason: original.stopReason,
+        verdict: 'acceptable',
+        review: { verdict: 'acceptable' } as Review,
+        checks: [
+          { id: 'prescriptions', status: 'pass', explanation: 'Corrected check', evidence: [] },
+        ],
+      },
+      original.report,
+    );
+    expect(regraded).toMatchObject({
+      reviewCompleted: true,
+      verdict: 'acceptable',
+      failedChecks: [],
+      messages: 2,
+      stopReason: 'completed',
+    });
+  });
+
   it('distinguishes successful execution, incomplete plan assessment and missing reviewer', () => {
     expect(resultLines(result)).toContain('Execution: completed');
     expect(resultLines(result)).toContain('Assessment: incomplete | Reviewer: completed');
