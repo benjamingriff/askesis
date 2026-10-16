@@ -15,7 +15,7 @@ import {
   ProvenanceSchema,
   SwimInputSchema,
 } from '../performance/performance.schemas.js';
-export const PROMPT_VERSION = 'coach-v1';
+export const PROMPT_VERSION = 'coach-v2';
 
 export const RegisterSchema = z
   .object({

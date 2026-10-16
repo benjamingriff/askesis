@@ -117,7 +117,7 @@ export function reportMarkdown(
   lines.push(
     '## Detailed evidence',
     '',
-    '[Plan and prescriptions](plan.json) · [Full snapshot and durable outputs](snapshot.json) · [Tool trace](tool-trace.jsonl) · [Assessment](assessment.json) · [Progress](progress.jsonl) · [Configuration](configuration.json) · [Manifest](manifest.json)',
+    '[Plan and prescriptions](plan.json) · [Full snapshot and durable outputs](snapshot.json) · [Tool trace](tool-trace.jsonl) · [Assessment](assessment.json) · [Progress](progress.jsonl) · [Configuration](configuration.json) · [Manifest](manifest.json) · [Subprocess diagnostics](execution.log)',
     '',
     'Token usage is recorded when available in metrics.json. Monetary cost is unknown; failed calls may have incomplete usage.',
     '',

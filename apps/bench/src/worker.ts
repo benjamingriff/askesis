@@ -24,6 +24,8 @@ class RecordingApi extends AgentApi {
     const request = z
       .object({ name: z.string(), operationId: z.string(), input: z.unknown() })
       .parse(command);
+    if (process.connected)
+      process.send?.({ type: 'tool', name: request.name, status: 'started' }, () => {});
     console.log(`Tool: ${request.name} — started`);
     const started = Date.now();
     const trace = async (value: unknown) =>
@@ -54,6 +56,8 @@ class RecordingApi extends AgentApi {
         runId: claim.runId,
         name: request.name,
       });
+      if (process.connected)
+        process.send?.({ type: 'tool', name: request.name, status: 'completed' }, () => {});
       console.log(`Tool: ${request.name} — completed`);
       return result;
     } catch (error) {
@@ -64,6 +68,8 @@ class RecordingApi extends AgentApi {
         name: request.name,
         status: 'failed',
       });
+      if (process.connected)
+        process.send?.({ type: 'tool', name: request.name, status: 'failed' }, () => {});
       console.log(`Tool: ${request.name} — failed`);
       throw error;
     }

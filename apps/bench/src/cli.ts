@@ -1,15 +1,30 @@
 import { randomUUID } from 'node:crypto';
-import { execFileSync, spawn } from 'node:child_process';
+import { execFileSync, fork } from 'node:child_process';
 import { resolve } from 'node:path';
 import { parseArgs } from 'node:util';
-import { readFile, writeFile, unlink } from 'node:fs/promises';
+import { readFile, writeFile, unlink, open } from 'node:fs/promises';
 import { setTimeout as delay } from 'node:timers/promises';
 import { parseAgentConfig } from '@askesis/agent/config';
 import { COACHING_PROMPT, PROMPT_HASH, PROMPT_VERSION } from '@askesis/agent/prompt';
 import type * as BenchmarkOperator from '@askesis/api/benchmark';
 import type { BenchmarkSnapshot } from '@askesis/api/benchmark';
+import {
+  BenchDisplay,
+  ProgressSchema,
+  NoticeSchema,
+  ResultSchema,
+  bar,
+  resultLines,
+  type RunResult,
+} from './progress.js';
 import { Artifacts, reportMarkdown } from './artifacts.js';
-import { checkPlan, hasExpectedCoverage, overallVerdict, type Check } from './checks.js';
+import {
+  checkPlan,
+  hasExpectedCoverage,
+  overallVerdict,
+  CHECKS_VERSION,
+  type Check,
+} from './checks.js';
 import {
   EvaluationModels,
   evaluatorModel,
@@ -56,6 +71,7 @@ const options = parseArgs({
     'env-file': { type: 'string' },
     'keep-alive': { type: 'boolean', default: false },
     scripted: { type: 'boolean', default: false },
+    verbose: { type: 'boolean', default: false },
     run: { type: 'string' },
     help: { type: 'boolean', default: false },
     repeat: { type: 'string', default: '1' },
@@ -93,6 +109,7 @@ async function runSuite(id: string) {
   const passthrough = [
     ...(values['env-file'] ? ['--env-file', values['env-file']] : []),
     ...(values.scripted ? ['--scripted'] : []),
+    ...(values.verbose ? ['--verbose'] : []),
     '--voice',
     values.voice,
     ...(values.op ? ['--op'] : []),
@@ -100,24 +117,79 @@ async function runSuite(id: string) {
     ...(values['op-vault'] ? ['--op-vault', values['op-vault']] : []),
     ...(values['op-field'] ? ['--op-field', values['op-field']] : []),
   ];
-  const results: { id: string; code: number }[] = [];
+  const results: { id: string; code: number; result: RunResult | undefined }[] = [];
+  console.log(
+    `Suite ${id}: ${ids.length} scenarios. Full conversations are saved in each report. Use --verbose for transcripts.`,
+  );
   for (const scenario of ids) {
-    console.log(`\n=== ${scenario} (${results.length + 1}/${ids.length}) ===`);
-    const code = await new Promise<number>((done) => {
-      const child = spawn(
-        process.execPath,
-        [process.argv[1]!, 'run', '--scenario', scenario, ...passthrough],
-        { stdio: 'inherit' },
-      );
-      child.on('exit', (exitCode) => done(exitCode ?? 1));
-    });
-    results.push({ id: scenario, code });
-    // An interrupted case stops the suite rather than starting the next paid run.
-    if (code === 130) break;
+    const prefix = `Suite ${bar(results.length, ids.length, 6)} ${results.length}/${ids.length} | `;
+    const display = new BenchDisplay(
+      prefix,
+      values.verbose
+        ? { write: (s) => process.stdout.write(s), isTTY: false, columns: 120 }
+        : process.stdout,
+    );
+    let result: RunResult | undefined;
+    let interrupted = false;
+    let code: number;
+    try {
+      code = await new Promise<number>((done) => {
+        const child = fork(process.argv[1]!, ['run', '--scenario', scenario, ...passthrough], {
+          stdio: ['inherit', 'inherit', 'inherit', 'ipc'],
+          execArgv: [],
+        });
+        const removeHandlers = installInterruptHandlers(() => {
+          interrupted = true;
+          child.kill('SIGINT');
+        });
+        child.on('message', (message: unknown) => {
+          const notice = NoticeSchema.safeParse(message);
+          if (notice.success) {
+            display.finish();
+            console.log(notice.data.message);
+          }
+          const progress = ProgressSchema.safeParse(message);
+          if (progress.success) display.update(progress.data);
+          const parsed = ResultSchema.safeParse(message);
+          if (parsed.success) result = parsed.data;
+        });
+        child.once('error', () => {
+          removeHandlers();
+          done(1);
+        });
+        child.once('exit', (exitCode) => {
+          removeHandlers();
+          done(exitCode ?? 1);
+        });
+      });
+    } finally {
+      display.finish();
+    }
+    results.push({ id: scenario, code, result });
+    console.log(
+      result
+        ? resultLines(result)
+        : `${scenario}: Execution failed before a report was available (exit ${code}).`,
+    );
+    if (interrupted || code === 130 || result?.stopReason === 'INTERRUPTED') break;
   }
-  console.log('\nSuite results:');
-  for (const result of results)
-    console.log(`  ${result.code === 0 ? 'ok  ' : 'fail'} ${result.id}`);
+  console.log(
+    `\nSuite results ${bar(results.length, ids.length)} ${results.length}/${ids.length}:`,
+  );
+  for (const item of results) {
+    console.log(
+      item.result
+        ? resultLines(item.result)
+        : `${item.id}: Execution failed; assessment unavailable (exit ${item.code}).`,
+    );
+    if (
+      item.result &&
+      item.code !== 0 &&
+      item.result.stopReason === 'completed' &&
+      item.result.reviewCompleted
+    )
+      console.log(`  Process/cleanup failed (exit ${item.code}); saved evaluation completed.`);
+  }
   if (results.some((result) => result.code !== 0) || results.length < ids.length)
     process.exitCode = 1;
 }
@@ -178,14 +250,50 @@ async function run() {
   let timeout: ReturnType<typeof setTimeout> | undefined;
   let releaseArtifacts: (() => Promise<void>) | undefined;
   let databaseStarted = false;
-  const stage = async (name: string) => {
-    phase = name;
-    console.log(name);
+  let outputLog: Awaited<ReturnType<typeof open>> | undefined;
+  let interaction = 0;
+  let toolCount = 0;
+  let toolStage = '';
+  const display = process.send
+    ? undefined
+    : new BenchDisplay(
+        '',
+        options.values.verbose
+          ? { write: (s) => process.stdout.write(s), isTTY: false, columns: 120 }
+          : process.stdout,
+      );
+  const progress = (name: string) => {
+    const value = {
+      type: 'progress' as const,
+      scenario: scenario.id,
+      stage: name,
+      interaction,
+      maxMessages: scenario.limits.maxAthleteMessages,
+      maxMinutes: scenario.limits.maxElapsedMinutes,
+      tools: toolCount,
+    };
+    if (process.send) process.send(value);
+    else display?.update(value);
+  };
+  const announce = (message: string) => {
+    if (process.send) process.send({ type: 'notice', message });
+    else {
+      display?.finish();
+      console.log(message);
+    }
+  };
+  const transcript = (message: string) => {
+    if (options.values.verbose) console.log(message);
+  };
+  const stage = async (name: string, executionPhase = phase) => {
+    phase = executionPhase;
+    progress(name);
     await artifacts.event({ stage: name });
     await artifacts.json('state.json', { runId, stage: name, owner, conversationId, activeRun });
   };
   try {
     await artifacts.init();
+    outputLog = await open(resolve(artifacts.directory, 'execution.log'), 'a', 0o600);
     releaseArtifacts = await acquireLock(artifacts.directory);
     await writeFile(resolve(artifacts.directory, 'tool-trace.jsonl'), '', { mode: 0o600 });
     await writeFile(resolve(artifacts.directory, 'athlete-actions.jsonl'), '', { mode: 0o600 });
@@ -203,6 +311,7 @@ async function run() {
       workingTreeDirty:
         execFileSync('git', ['status', '--porcelain'], { cwd: root, encoding: 'utf8' }).trim()
           .length > 0,
+      checksVersion: CHECKS_VERSION,
       scenarioEdition: scenario.edition,
       scenarioId: scenario.id,
       scenarioVersion: scenario.version,
@@ -233,11 +342,25 @@ async function run() {
       () => abort.abort('TIME_LIMIT'),
       scenario.limits.maxElapsedMinutes * 60000,
     );
-    console.log(`Run: ${runId}\nArtifacts: ${artifacts.directory}`);
+    transcript(`Run: ${runId}\nArtifacts: ${artifacts.directory}`);
+    announce(
+      `${scenario.id}: athlete message limit ${scenario.limits.maxAthleteMessages} (opening included); scenario time limit ${scenario.limits.maxElapsedMinutes} minutes.`,
+    );
+    await stage('Preparing isolated environment');
     await assertApiPortFree(environment.apiPort);
     databaseStarted = true;
-    await compose(environment, ['up', '-d', '--wait', 'postgres'], abort.signal);
-    await compose(environment, ['run', '--rm', 'migrate'], abort.signal);
+    await compose(
+      environment,
+      ['up', '-d', '--wait', 'postgres'],
+      abort.signal,
+      options.values.verbose ? undefined : outputLog.fd,
+    );
+    await compose(
+      environment,
+      ['run', '--rm', 'migrate'],
+      abort.signal,
+      options.values.verbose ? undefined : outputLog.fd,
+    );
     configureApi(environment, credentials.secret, credentials.publishable);
     operator = await import('@askesis/api/benchmark');
     // The coach's behaviour depends on its tool definitions as much as its prompt text.
@@ -275,7 +398,18 @@ async function run() {
       voiceModel: scenario.voice ? simulatorModel : null,
       reviewerModel,
     });
-    worker = startWorker(config, artifacts.directory, options.values.scripted ? scenario : null);
+    announce(
+      `Coach limits: ${config.AGENT_MAX_TURNS} model turns per reply, 200 tool operations, 15 minutes per run; ${config.AGENT_MAX_OUTPUT_TOKENS} output tokens per model response.`,
+    );
+    await stage('Starting coach');
+    worker = startWorker(config, artifacts.directory, options.values.scripted ? scenario : null, {
+      output: options.values.verbose ? undefined : outputLog.fd,
+      onTool(name, status) {
+        if (status === 'started') toolCount++;
+        toolStage = `${name} ${status}`;
+        progress(`Coach reply ${interaction}: ${toolStage}`);
+      },
+    });
     let workerFailure = false;
     workerTask = worker.done.catch(() => {
       workerFailure = true;
@@ -292,12 +426,14 @@ async function run() {
     const created = await operator.startBenchmarkConversation(owner, scenario.openingMessage);
     conversationId = created.conversation.id;
     activeRun = created.accepted!.run.id;
-    console.log(`Athlete: ${scenario.openingMessage}`);
+    transcript(`Athlete: ${scenario.openingMessage}`);
     const simulator = new EvaluationModels(evaluatorKey, simulatorModel);
     const reviewer = new EvaluationModels(evaluatorKey, reviewerModel);
     stopReason = 'message_limit';
     for (let turn = 0; turn < scenario.limits.maxAthleteMessages; turn++) {
-      await stage(`Coach turn ${turn + 1}`);
+      interaction = turn + 1;
+      toolStage = 'waiting for model';
+      await stage(`Coach reply ${interaction}: ${toolStage}`, 'coach');
       let status = await operator.benchmarkRun(owner, activeRun);
       while (['queued', 'running', 'cancelling'].includes(status.status)) {
         await delay(500, undefined, { signal: abort.signal });
@@ -307,7 +443,7 @@ async function run() {
       snapshot = await operator.benchmarkSnapshot(owner, conversationId);
       await artifacts.snapshot(snapshot);
       const last = snapshot.messages.at(-1);
-      if (last?.role === 'assistant') console.log(`Coach: ${last.content}`);
+      if (last?.role === 'assistant') transcript(`Coach: ${last.content}`);
       if (status.status !== 'completed') {
         stopReason = status.failureCode ?? status.status;
         break;
@@ -317,7 +453,7 @@ async function run() {
         break;
       }
       if (turn + 1 === scenario.limits.maxAthleteMessages) break;
-      await stage('Athlete response');
+      await stage('Athlete response', 'athlete');
       const response = await athleteResponse(
         scenario,
         snapshot,
@@ -326,7 +462,7 @@ async function run() {
         usage,
         abort.signal,
       );
-      console.log(`Athlete: ${response.content}`);
+      transcript(`Athlete: ${response.content}`);
       const accepted = await operator.sendBenchmarkMessage(owner, conversationId, response.content);
       disclosed.push({ sequence: accepted.message.sequence, factIds: response.factIds });
       await artifacts.json('disclosures.json', disclosed);
@@ -343,7 +479,7 @@ async function run() {
       disclosed.flatMap((item) => item.factIds),
     );
     await artifacts.json('checks.json', checks);
-    await stage('Review running');
+    await stage('Review running', 'review');
     if (options.values.scripted) review = scriptedReview(snapshot!);
     else {
       try {
@@ -403,6 +539,7 @@ async function run() {
       const verdict = overallVerdict(checks, review, stopReason);
       await artifacts.json('assessment.json', {
         verdict,
+        checksVersion: CHECKS_VERSION,
         stopReason,
         review,
         checks,
@@ -432,10 +569,28 @@ async function run() {
         { mode: 0o600 },
       );
       await stage(`Assessment: ${verdict}`);
+      const result: RunResult = {
+        type: 'result',
+        scenario: scenario.id,
+        stopReason,
+        verdict,
+        reviewCompleted: review !== null,
+        messages: snapshot?.messages.filter((m) => m.role === 'user').length ?? interaction,
+        maxMessages: scenario.limits.maxAthleteMessages,
+        maxMinutes: scenario.limits.maxElapsedMinutes,
+        report: resolve(artifacts.directory, 'report.md'),
+        failedChecks: checks.filter((c) => c.status === 'fail').map((c) => c.id),
+      };
+      await artifacts.json('result.json', result);
+      if (process.send) process.send(result);
+      else {
+        display?.finish();
+        console.log(resultLines(result));
+      }
       // Allow regrading completed evidence while --keep-alive retains only the API.
       await releaseArtifacts?.();
       releaseArtifacts = undefined;
-      console.log(`Report: ${resolve(artifacts.directory, 'report.md')}`);
+      transcript(`Report: ${resolve(artifacts.directory, 'report.md')}`);
       if (stopReason !== 'completed' || !review) process.exitCode = 1;
       if (options.values['keep-alive'] && stopApi && !abort.signal.aborted) {
         console.log(
@@ -455,12 +610,20 @@ async function run() {
           await releaseArtifacts?.();
         } finally {
           try {
-            if (databaseStarted) await compose(environment, ['down', '--remove-orphans']);
+            if (databaseStarted)
+              await compose(
+                environment,
+                ['down', '--remove-orphans'],
+                undefined,
+                options.values.verbose ? undefined : outputLog?.fd,
+              );
           } finally {
             try {
               await release();
             } finally {
               removeInterruptHandlers();
+              display?.finish();
+              await outputLog?.close();
             }
           }
         }
@@ -600,6 +763,7 @@ async function gradeSavedRun(runId: string, directory: string, signal: AbortSign
     review: result.review,
     checks,
     scripted: assessment.scripted,
+    checksVersion: CHECKS_VERSION,
     regradedAt: new Date().toISOString(),
     reviewerModel: model,
     reviewerVersion: REVIEW_VERSION,
@@ -630,7 +794,7 @@ async function gradeSavedRun(runId: string, directory: string, signal: AbortSign
 async function main() {
   if (options.values.help) {
     console.log(
-      'pnpm bench run --scenario ID | --suite pilot-v1 [--voice persona|none|ID] [--env-file PATH] [--op] [--keep-alive] [--scripted]\npnpm bench grade --run RUN_ID [--env-file PATH] [--op]\npnpm bench calibrate [--split development|holdout|all] [--fixture ID] [--repeat 1..5] [--env-file PATH] [--op] [--list] [--assert] [--scripted]\n1Password: --op loads askesis-bench; override with --op-item ITEM --op-vault VAULT --op-field FIELD\npnpm bench stop\npnpm bench reset',
+      'pnpm bench run --scenario ID | --suite pilot-v1 [--voice persona|none|ID] [--env-file PATH] [--op] [--keep-alive] [--scripted] [--verbose]\npnpm bench grade --run RUN_ID [--env-file PATH] [--op]\npnpm bench calibrate [--split development|holdout|all] [--fixture ID] [--repeat 1..5] [--env-file PATH] [--op] [--list] [--assert] [--scripted]\n1Password: --op loads askesis-bench; override with --op-item ITEM --op-vault VAULT --op-field FIELD\npnpm bench stop\npnpm bench reset',
     );
     return;
   }

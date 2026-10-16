@@ -3,6 +3,8 @@ import type { Scenario } from './scenario.js';
 import { addDays } from './scenario.js';
 import type { Review } from './models.js';
 
+export const CHECKS_VERSION = 'plan-checks-v2';
+
 export type Check = {
   id: string;
   status: 'pass' | 'fail';
@@ -75,6 +77,12 @@ function prescriptionComplete(workout: Workout, prescription: Step) {
     steps.every((effort) => {
       if (effort.completion === null) return false;
       const sport = effort.discipline ?? workout.discipline;
+      if (sport === 'cycle' && !effort.targets.some((t) => t.type === 'zone' || t.type === 'power'))
+        return effort.targets.some(
+          (t) =>
+            t.type === 'rpe' &&
+            (t.targetValue != null || (t.minimumValue != null && t.maximumValue != null)),
+        );
       if (sport === 'run' || sport === 'cycle' || sport === 'swim')
         return effort.targets.some(
           (target) =>
@@ -85,6 +93,9 @@ function prescriptionComplete(workout: Workout, prescription: Step) {
       if (sport === 'strength')
         return (
           (effort.role === 'recovery' && effort.completion.type === 'duration') ||
+          (['warmup', 'cooldown'].includes(effort.role ?? '') &&
+            effort.completion.type === 'duration' &&
+            effort.targets.some((target) => target.type === 'rpe' && target.targetValue != null)) ||
           (effort.completion.type === 'repetitions' &&
             effort.targets.some((target) => target.type === 'rir' || target.type === 'rpe'))
         );
@@ -240,7 +251,7 @@ export function checkPlan(
       return check(
         'prescriptions',
         !incomplete.length,
-        'Every effort needs a completion; run, ride and swim efforts a resolved zone; strength work reps with RIR or RPE, with timed rests allowed.',
+        'Every effort needs a completion; runs/swims need resolved zones; rides need resolved zones or explicit RPE without power targets; lifts need reps with RIR/RPE, with timed RPE preparation and timed rests allowed.',
         refs(incomplete),
       );
     },

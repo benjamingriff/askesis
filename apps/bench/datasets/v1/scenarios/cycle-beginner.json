@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "id": "cycle-beginner",
-  "version": 1,
+  "version": 2,
   "persona": {
     "id": "cycle-beginner",
     "version": 1
@@ -45,7 +45,7 @@
       "goal_fit": "Support comfortable recreational cycling without inventing a race.",
       "progression": "Use the current 90 minutes/week and 45-minute longest ride, not an experienced-rider baseline.",
       "recovery": "A manageable three-ride week with understandable easy efforts and recovery.",
-      "prescriptions": "Duration-based rides, sport-appropriate zones and usable RPE instructions for a rider without power measurement.",
+      "prescriptions": "Complete duration-based rides with explicit RPE and practical effort instructions when usable power data is unavailable. Do not require FTP, invented watts or power zones for effort-based cycling.",
       "personalization": "Respect bike access, available days and the longer Sunday slot; acknowledge limitations of power tests without equipment.",
       "conversation": "Discover relevant facts without unrelated sport questions; distinguish unknowns from unanswered facts, explain assumptions, and accurately describe what is saved and what remains unprescribed. Any recorded FTP must have estimated provenance and an explained basis; do not invent a measured result."
     }
