@@ -1,6 +1,6 @@
 # Workout logs and feedback
 
-Manual logs record what happened separately from immutable plan prescriptions. The accepted design and research are in [the proposal](./workout-log-and-feedback-proposal.md); the implementation covers its manual slices 1–3. Strava and automatic activity matching remain deferred.
+Manual logs record what happened separately from immutable plan prescriptions. The accepted design and research are in [the proposal](./workout-log-and-feedback-proposal.md); the implementation covers its manual slices 1–3. Automatic activity matching remains deferred; athletes can [link a Strava activity by hand](../operations/activity-connections.md) and read it beside the feedback sheet.
 
 ## Using the feature
 

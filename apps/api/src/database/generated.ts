@@ -244,6 +244,20 @@ export interface ExamplePlanEditions {
   published_state_version: number;
 }
 
+export interface IntegrationConnections {
+  access_token_ciphertext: string;
+  access_token_expires_at: Timestamp;
+  athlete_id: string;
+  connected_at: Generated<Timestamp>;
+  display_name: string | null;
+  id: Generated<string>;
+  provider: string;
+  provider_athlete_id: string;
+  refresh_token_ciphertext: string;
+  scopes: string[];
+  status: Generated<string>;
+}
+
 export interface LiveEventHeads {
   owner_id: string;
   sequence: Generated<Int8>;
@@ -438,6 +452,16 @@ export interface WeekTargets {
   week_id: string;
 }
 
+export interface WorkoutActivityLinks {
+  athlete_id: string;
+  connection_id: string;
+  id: Generated<string>;
+  linked_at: Generated<Timestamp>;
+  plan_id: string;
+  provider_activity_id: string;
+  workout_lineage_id: string;
+}
+
 export interface WorkoutLogs {
   actual_distance_metres: Numeric | null;
   actual_duration_seconds: number | null;
@@ -542,6 +566,7 @@ export interface DB {
   conversation_messages: ConversationMessages;
   conversations: Conversations;
   example_plan_editions: ExamplePlanEditions;
+  integration_connections: IntegrationConnections;
   live_event_heads: LiveEventHeads;
   live_events: LiveEvents;
   movement_definitions: MovementDefinitions;
@@ -558,6 +583,7 @@ export interface DB {
   training_weeks: TrainingWeeks;
   week_targets: WeekTargets;
   weekly_plan_summary: WeeklyPlanSummary;
+  workout_activity_links: WorkoutActivityLinks;
   workout_logs: WorkoutLogs;
   workout_prescription_totals: WorkoutPrescriptionTotals;
   workout_steps: WorkoutSteps;

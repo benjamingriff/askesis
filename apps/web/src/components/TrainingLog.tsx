@@ -46,6 +46,8 @@ import {
 import { Button, Dialog, Notice, ErrorState, LoadingState, SectionHeader } from './ui';
 import { PerformanceResult } from './TrainingResult';
 import type { Plan } from '../plan-data';
+import { useActivityLink } from '../activity-data';
+import { StravaActivityPanel, StravaConnectHint, StravaLinkRow } from './Strava';
 
 type Subject = {
   workout: WorkoutSummary;
@@ -278,6 +280,7 @@ export function WorkoutLogActions({
           {save.error?.message ?? clear.error?.message}
         </Notice>
       ) : null}
+      {!compact ? <StravaLinkRow workout={workout} writable={context.writable} /> : null}
       {!compact && log && log.status !== 'skipped' ? (
         <div className="quick-rpe">
           <div className="quick-rpe-head">
@@ -520,6 +523,12 @@ function FeedbackSheet({ subject, onClose }: { subject: Subject; onClose: () => 
     clear = useClearLog(workout.planId, workout.lineageId);
   const [resultBusy, setResultBusy] = useState(false);
   const busy = save.isPending || discuss.isPending || clear.isPending || resultBusy;
+  // The linked Strava activity opens beside the form on wide screens; the athlete can toggle it.
+  const activity = useActivityLink(workout.planId, workout.lineageId),
+    writable = !!useLogContext()?.writable;
+  const [panelChoice, setPanelChoice] = useState<boolean | null>(null);
+  const panelOpen =
+    !!activity && (panelChoice ?? window.matchMedia?.('(min-width: 900px)').matches ?? false);
   // Follow-up questions match what a placeholder turned out to be, once the athlete says.
   const kind =
       (status !== 'skipped' ? actualType : undefined) ??
@@ -624,6 +633,15 @@ function FeedbackSheet({ subject, onClose }: { subject: Subject; onClose: () => 
         </span>
       }
       description={formatLong(workout.scheduledDate)}
+      aside={
+        activity && panelOpen ? (
+          <StravaActivityPanel
+            activityId={activity.activityId}
+            url={activity.url}
+            onClose={() => setPanelChoice(false)}
+          />
+        ) : undefined
+      }
       footer={
         <>
           <Button
@@ -651,6 +669,13 @@ function FeedbackSheet({ subject, onClose }: { subject: Subject; onClose: () => 
             {localError}
           </Notice>
         ) : null}
+        <StravaLinkRow
+          workout={workout}
+          writable={writable}
+          details={{ open: panelOpen, toggle: () => setPanelChoice(!panelOpen) }}
+          onLinked={() => setPanelChoice(true)}
+        />
+        <StravaConnectHint />
         <section className="fb-section">
           <div className="fb-question">
             <h3>Did you do it?</h3>

@@ -16,6 +16,12 @@ export type CalibrationEntry = components['schemas']['CalibrationEntry'];
 export type CalibrationZone = components['schemas']['CalibrationZone'];
 export type RecordCalibration = components['schemas']['RecordCalibration'];
 export type SportBaseline = components['schemas']['SportBaseline'];
+export type IntegrationsState = components['schemas']['IntegrationsState'];
+export type StravaConnection = components['schemas']['StravaConnection'];
+export type ActivitySummary = components['schemas']['ActivitySummary'];
+export type ActivityDetail = components['schemas']['ActivityDetail'];
+export type ActivityLap = components['schemas']['ActivityLap'];
+export type ActivityLink = components['schemas']['ActivityLink'];
 
 export function createAskesisClient(baseUrl = '') {
   return createClient<paths>({ baseUrl });

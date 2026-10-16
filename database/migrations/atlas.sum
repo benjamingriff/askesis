@@ -1,4 +1,4 @@
-h1:cKVlLHCKk0v42fKPru0dSzqQILVkqnWc9XuxNR/+O30=
+h1:zkuKzbpty+ubx1kc5nDI67awPZdbIFrbhwfgclZMTLQ=
 20260318120000_initial_schema.sql h1:MbXNJ0M+x3PLnNTdaTG8cvpU2rBCnNk0xWUovu3fgUQ=
 20260722153000_auth_identities.sql h1:19sniiRUiZhRCTgVPObJFlC/QWk+jrhMoDVnq6p8riY=
 20260907120000_plan_versions.sql h1:y0idcRC1x5Umd86vNv9EHRqqZkGdkZQmG4js/z68Ty4=
@@ -18,3 +18,4 @@ h1:cKVlLHCKk0v42fKPru0dSzqQILVkqnWc9XuxNR/+O30=
 20261015120000_training_logs.sql h1:T9U6ptcS0R8lMsNt9BvcOWmEzJAVI2/+18NuG5Lw7d0=
 20261015130000_agent_prompt_hash_and_output_times.sql h1:xgqtOC4QkhRqsbL1wSaB7TSpInDMTebpkZLggyx/YM0=
 20261015180000_placeholder_sessions.sql h1:6uwnX4rc/vzN0Vo5yOGmYVDGlezljn2tGR9yxNPf6Ek=
+20261016120000_activity_links.sql h1:yiA6DynXUowxZ9t/7v9Y1lo9HV0cBxIhqSSMMRTu+Kk=
