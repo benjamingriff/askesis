@@ -191,7 +191,7 @@ form.card legend {
 }
 @media (max-width: 900px) {
   .save-bar {
-    bottom: calc(var(--tab-bar-height) + 24px);
+    bottom: calc(16px + env(safe-area-inset-bottom));
   }
   .weekday-chip small {
     display: none;
