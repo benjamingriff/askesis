@@ -23,7 +23,7 @@ A placeholder is training the coach books into a plan without prescribing it, be
 
 ## Contract changes
 
-- Coach prompt version `coach-v1`. Workers and the API must be deployed together.
+- Coach prompt version `coach-v2`. Workers and the API must be deployed together.
 - `apply_schedule_changes` and `replace_schedule_range` accept `placeholder` on workouts. Prescribed workouts still need at least one step.
 - `WorkoutSummary` gains `placeholder` and `expectedRpe`. `WorkoutLog` gains `placeholder` and `actualSessionType`. The training-log summary gains the two placeholder counts.
 - The canonical content hash version is now 9, because workouts carry `placeholder`. Stored locked hashes are left untouched.

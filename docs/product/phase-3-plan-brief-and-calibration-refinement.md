@@ -30,7 +30,7 @@ When the athlete reports a race in chat, the coach works out its date, compares 
 
 The human confirms current brief facts. Goal/date/baseline/availability changes invalidate that confirmation. Unit-only changes and description-only header edits preserve it. Schedule-only worker edits also preserve it. Relevant brief/date changes with workouts can require schedule review. Fitness changes never affect confirmation or review.
 
-Generation can begin before human confirmation. Lock requires current confirmation, valid aggregate structure, fitness for every calibrated sport its workouts or effort steps use (running, cycling, swimming), resolvable zone targets and acknowledgement of all warnings. Empty/partial planning remains possible; explicit coverage distinguishes prescribed rest days from dates not yet planned, and interrupted generation is explained separately.
+Generation can begin before human confirmation. Lock requires current confirmation, valid aggregate structure, resolvable zone targets and acknowledgement of all warnings. Running, swimming and power-based cycling require calibration; cycling prescribed entirely by explicit RPE does not require FTP. Empty/partial planning remains possible; explicit coverage distinguishes prescribed rest days from dates not yet planned, and interrupted generation is explained separately.
 
 Brief facts, confirmation, coverage and workouts clone, hash, lock and restore together. A locked version records which fitness entries were current when it was locked. The API returns resolved pace guidance with display units; consumers must not convert an already-converted pace twice.
 

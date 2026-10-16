@@ -104,7 +104,11 @@ function weekWorkouts(scenario: Scenario, weekKey: string, weekStart: string, in
             }
           : {
               completion: { type: 'duration', value: minutes * 60, unit: 'seconds' },
-              targets: [{ type: 'zone', key: ZONE[sport.sport] }],
+              targets:
+                sport.sport === 'cycle' &&
+                !scenario.evidence.some((e) => e.system === 'cycle_power')
+                  ? [{ type: 'rpe', value: 3 }]
+                  : [{ type: 'zone', key: ZONE[sport.sport] }],
               label: `Easy ${sport.sport}`,
             };
       workouts.push({
@@ -160,6 +164,7 @@ export function scriptedCoach(scenario: Scenario): ScriptedTurn[] {
     const evidence = scenario.evidence.find(
       (item) => ESTIMATES[sport.sport].system === item.system,
     );
+    if (sport.sport === 'cycle' && !evidence) return [];
     return [
       evidence
         ? call('record_performance', {

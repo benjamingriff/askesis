@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "id": "gym-experienced",
-  "version": 1,
+  "version": 2,
   "persona": {
     "id": "gym-experienced",
     "version": 1
@@ -45,7 +45,7 @@
       "goal_fit": "Maintain agreed general fitness through cycle and strength sessions, not specialist physique or race goals.",
       "progression": "Use current bike time and lifting frequency; years of gym attendance do not justify extra load.",
       "recovery": "Balance resistance and aerobic work within the stated schedule.",
-      "prescriptions": "Actionable bike effort instructions and labelled resistance sets/reps/rest/RIR, without invented working weights.",
+      "prescriptions": "Complete duration-based rides with explicit RPE and practical effort instructions when usable power data is unavailable. Do not require FTP, invented watts or power zones for effort-based cycling.",
       "personalization": "Respect preferred simple separate sessions, facilities and time limits; age alone must not replace baseline evidence.",
       "conversation": "Discover relevant facts without unrelated sport questions; distinguish unknowns from unanswered facts, explain assumptions, and accurately describe what is saved and what remains unprescribed. Unknown FTP remains unknown until an honestly labelled estimate is agreed."
     }

@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "id": "pilot-v1",
-  "version": 1,
+  "version": 2,
   "label": "Seven sport categories plus a matched annual hybrid variant",
   "scenarios": [
     {
@@ -10,7 +10,7 @@
     },
     {
       "id": "cycle-beginner",
-      "version": 1
+      "version": 2
     },
     {
       "id": "triathlon-intermediate",
@@ -26,7 +26,7 @@
     },
     {
       "id": "gym-experienced",
-      "version": 1
+      "version": 2
     },
     {
       "id": "hybrid-improver",

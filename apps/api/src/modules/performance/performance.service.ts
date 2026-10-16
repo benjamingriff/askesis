@@ -352,8 +352,8 @@ async function versionOwner(db: Database, versionId: string) {
 }
 
 /**
- * A plan can lock only when its athlete has calibrated every system its sports use. Sports are
- * read from each effort step as well as the workout, so a brick's ride and run both count.
+ * Running and swimming require calibration. Cycling can instead use explicit RPE on every
+ * effort, including efforts in mixed workouts. Power/zone targets still require calibration.
  */
 export async function performanceLockFindings(
   db: Database,
@@ -367,6 +367,25 @@ export async function performanceLockFindings(
     db,
   );
   const systems = new Set(rows.map((row) => systemForDiscipline(row.discipline)));
+  if (systems.has('cycle_power')) {
+    // A power target still needs calibration even when RPE is supplied alongside it.
+    // Keep the existing requirement for empty rides without explicit effort targets.
+    const needsPower = await sql<{ id: string }>`
+      SELECT w.id FROM workouts w
+      LEFT JOIN workout_steps s ON s.workout_id = w.id AND s.kind = 'effort'
+      WHERE w.plan_version_id = ${versionId}::uuid
+        AND COALESCE(s.discipline, w.primary_discipline) = 'cycle'
+        AND (s.id IS NULL OR NOT EXISTS (
+          SELECT 1 FROM step_targets t WHERE t.step_id = s.id
+            AND t.target_type = 'rpe' AND (t.target_value IS NOT NULL
+              OR (t.minimum_value IS NOT NULL AND t.maximum_value IS NOT NULL))
+        ) OR EXISTS (
+          SELECT 1 FROM step_targets t WHERE t.step_id = s.id
+            AND t.target_type IN ('zone', 'power')
+        ))
+      LIMIT 1`.execute(db);
+    if (!needsPower.rows.length) systems.delete('cycle_power');
+  }
   return PERFORMANCE_SYSTEMS.filter(
     (system) =>
       systems.has(system) &&

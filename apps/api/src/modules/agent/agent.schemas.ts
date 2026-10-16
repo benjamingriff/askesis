@@ -15,7 +15,7 @@ import {
   ProvenanceSchema,
   SwimInputSchema,
 } from '../performance/performance.schemas.js';
-export const PROMPT_VERSION = 'coach-v1';
+export const PROMPT_VERSION = 'coach-v2';
 
 export const RegisterSchema = z
   .object({
@@ -214,6 +214,9 @@ export const ToolSchemas = {
   validate_plan: z.object({}).strict(),
 } as const;
 export type ToolName = keyof typeof ToolSchemas;
+const prescriptionGuidance =
+  'Give every run and swim effort a calibrated zone target. For cycling, use calibrated zones for power-based rides, or prescribe every effort by explicit RPE with practical effort instructions and no watts or power-zone targets; RPE-only cycling needs no FTP. Strength working sets use reps with rir or rpe and an optional suggested load in kilograms; timed warmups/cooldowns use duration with rpe, timed rests need no target, and ergs use rpe. ';
+
 const descriptions: Record<ToolName, string> = {
   read_plan_context:
     'Read current plan assumptions, dates, calibration and explicit prescribed coverage. Does not retarget a stale execution.',
@@ -236,9 +239,13 @@ const descriptions: Record<ToolName, string> = {
   retract_performance:
     'Withdraw a mistaken entry the user asks to undo; the previous entry applies again. Never retract to hide an inconvenient result.',
   apply_schedule_changes:
-    'Atomically add/update/delete dated blocks, weeks and full workout trees. Every block names its training phase (base, build, peak, taper or recovery); phases may repeat. Mark deliberately lighter weeks cutback. Give each race a racePriority (A goal race, B tune-up, C raced as training); other workouts use null. Set generation to the whole intended horizon on the first schedule batch of this run; subsequent batches may repeat it or use null. Local keys reference new parents; existing UUIDs may be parent keys. Steps are ordered, first root parentIndex null, later parentIndex points to an earlier container. Efforts need a completion and containers need children. Every workout names its discipline; each effort inherits it or names its own (required in mixed workouts). Give every run, ride and swim effort a zone target for its sport; pace, swim_pace and power targets only refine it. Strength efforts use reps with rir or rpe and an optional suggested load in kilograms; ergs use rpe. A placeholder books training decided elsewhere (a club run, group ride, class, or another sport using discipline other): give it no steps, an estimatedDurationSeconds, the sessionType you assume for planning and an expected rpe range; the API writes one open effort. To turn one into a prescribed session, update it with placeholder null and full steps. Coverage asserts fully prescribed dates, including rest days; use null for unfinished chunks.',
+    'Atomically add/update/delete dated blocks, weeks and full workout trees. Every block names its training phase (base, build, peak, taper or recovery); phases may repeat. Mark deliberately lighter weeks cutback. Give each race a racePriority (A goal race, B tune-up, C raced as training); other workouts use null. Set generation to the whole intended horizon on the first schedule batch of this run; subsequent batches may repeat it or use null. Local keys reference new parents; existing UUIDs may be parent keys. Steps are ordered, first root parentIndex null, later parentIndex points to an earlier container. Efforts need a completion and containers need children. Every workout names its discipline; each effort inherits it or names its own (required in mixed workouts). ' +
+    prescriptionGuidance +
+    'A placeholder books training decided elsewhere (a club run, group ride, class, or another sport using discipline other): give it no steps, an estimatedDurationSeconds, the sessionType you assume for planning and an expected rpe range; the API writes one open effort. To turn one into a prescribed session, update it with placeholder null and full steps. Coverage asserts fully prescribed dates, including rest days; use null for unfinished chunks.',
   replace_schedule_range:
-    'Atomically replace workouts only inside the explicit range, preserving all content outside it. Set generation to the whole intended horizon on the first schedule batch of this run; subsequent batches may repeat it or use null. Existing parents may be referenced by UUID. New blocks/weeks must fit inside the range; each new block names its phase and each new week whether it is a cutback. Races carry a racePriority. Every workout names its discipline; mixed workouts name each effort’s. Give every run, ride and swim effort a zone target for its sport. Placeholders have no steps, an expected duration, an assumed sessionType and an rpe range. Never declare coverage for an unfinished chunk.',
+    'Atomically replace workouts only inside the explicit range, preserving all content outside it. Set generation to the whole intended horizon on the first schedule batch of this run; subsequent batches may repeat it or use null. Existing parents may be referenced by UUID. New blocks/weeks must fit inside the range; each new block names its phase and each new week whether it is a cutback. Races carry a racePriority. Every workout names its discipline; mixed workouts name each effort’s. ' +
+    prescriptionGuidance +
+    'Placeholders have no steps, an expected duration, an assumed sessionType and an rpe range. Never declare coverage for an unfinished chunk.',
   validate_plan:
     'Check draft structure and human review requirements; returns findings and current hashes. Does not confirm or lock.',
 };

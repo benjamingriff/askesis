@@ -268,6 +268,79 @@ describe('saved completion and assessment', () => {
     lift.targets = [];
     expect(result()).toBe('fail');
   });
+  it('allows timed RPE strength preparation without accepting timed working sets', () => {
+    const strength = datasetCase('strength-beginner');
+    strength.expectations.checks = ['prescriptions'];
+    const step = {
+      kind: 'effort',
+      role: 'warmup',
+      discipline: 'strength',
+      completion: { type: 'duration', value: 300 },
+      targets: [{ type: 'rpe', targetValue: 2 }],
+    };
+    const value = {
+      plan: {
+        findings: [],
+        workouts: [
+          {
+            workout: {
+              id: 'preparation',
+              scheduledDate: strength.dates.startDate,
+              discipline: 'strength',
+            },
+            prescription: step,
+          },
+        ],
+      },
+    } as unknown as BenchmarkSnapshot;
+    const status = () =>
+      checkPlan(value, strength, []).find((c) => c.id === 'prescriptions')!.status;
+    expect(status()).toBe('pass');
+    step.role = 'cooldown';
+    expect(status()).toBe('pass');
+    step.role = 'work';
+    expect(status()).toBe('fail');
+    step.role = 'warmup';
+    step.targets = [];
+    expect(status()).toBe('fail');
+  });
+  it('accepts explicit cycling RPE, including mixed efforts, but never unresolved power zones', () => {
+    const cycling = datasetCase('cycle-beginner');
+    cycling.expectations.checks = ['prescriptions'];
+    const targets: Record<string, unknown>[] = [{ type: 'rpe', targetValue: 3 }];
+    const step = {
+      kind: 'effort',
+      role: 'main',
+      discipline: 'cycle',
+      completion: { type: 'duration', value: 1800 },
+      targets,
+    };
+    const workout = { id: 'ride', scheduledDate: cycling.dates.startDate, discipline: 'cycle' };
+    const value = {
+      plan: { findings: [], workouts: [{ workout, prescription: step }] },
+    } as unknown as BenchmarkSnapshot;
+    const status = () =>
+      checkPlan(value, cycling, []).find((c) => c.id === 'prescriptions')!.status;
+    expect(status()).toBe('pass');
+    workout.discipline = 'mixed';
+    expect(status()).toBe('pass');
+    targets.push({ type: 'power', targetValue: 150 });
+    expect(status()).toBe('fail');
+    targets.pop();
+    targets.push({ type: 'zone', zoneSystem: 'cycle_power', resolvedZone: null });
+    expect(status()).toBe('fail');
+    targets[1]!.resolvedZone = { targetValue: 150 };
+    expect(status()).toBe('pass');
+    targets.length = 0;
+    expect(status()).toBe('fail');
+    targets.push({ type: 'rpe', targetValue: null });
+    expect(status()).toBe('fail');
+    targets[0]!.minimumValue = 2;
+    targets[0]!.maximumValue = 4;
+    expect(status()).toBe('pass');
+    step.discipline = 'run';
+    expect(status()).toBe('fail');
+  });
   it('distinguishes an explicitly unknown baseline from an unanswered one and from zero', () => {
     const strength = datasetCase('strength-beginner');
     strength.expectations.checks = ['baseline'];

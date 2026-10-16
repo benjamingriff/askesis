@@ -21,7 +21,7 @@ Regenerate with `pnpm --filter @askesis/bench datasets:coverage:update`. Validat
 
 ### cycling
 
-- [x] [cycle-beginner](./v1/personas/cycle-beginner.json) (beginner, development): Casual rider wants comfortable longer rides, no meter or known FTP. Actionable effort guidance alongside honestly labelled estimated calibration.
+- [x] [cycle-beginner](./v1/personas/cycle-beginner.json) (beginner, development): Casual rider wants comfortable longer rides, no meter or known FTP. Actionable effort guidance without requiring power calibration.
 - [ ] `cycle-improver` (improver, development): Regular recreational cyclist preparing for a first organised long ride. Known weekly riding time; uneven weekday/weekend availability; indoor trainer access.
 - [ ] `cycle-intermediate` (intermediate, holdout): Structured cyclist targeting a time trial with a recent power test. Appropriate power provenance, event specificity and time-based baseline.
 - [ ] `cycle-experienced` (experienced, development): Years of riding, high established recent volume, wants performance work within a fixed time budget. Substantial load grounded in actual history; technical language should not obscure constraints.
@@ -67,7 +67,7 @@ Regenerate with `pnpm --filter @askesis/bench datasets:coverage:update`. Validat
 - [x] [running-improver](./v1/scenarios/running-improver.json) (core:running-improver, development; family `running-improver`): Existing first-half-marathon runner: three weekly runs, 22 km, recent 5 km result, three available days. Prescribe four weeks within the twelve-week goal.
 - [ ] `run-intermediate` (core:run-intermediate, development; family `run-intermediate`): Consistent structured runner seeking a better 10 km result alongside a busy job. Use current evidence and limited time rather than treating ambition as capacity.
 - [ ] `run-experienced` (core:run-experienced, holdout; family `run-experienced`): Long-term runner maintaining fitness with fewer sessions and no race target. Detailed training knowledge, modest desired load, no invented event or return to past peak volume.
-- [x] [cycle-beginner](./v1/scenarios/cycle-beginner.json) (core:cycle-beginner, development; family `cycle-beginner`): Casual rider wants comfortable longer rides, no meter or known FTP. Actionable effort guidance alongside honestly labelled estimated calibration.
+- [x] [cycle-beginner](./v1/scenarios/cycle-beginner.json) (core:cycle-beginner, development; family `cycle-beginner`): Casual rider wants comfortable longer rides, no meter or known FTP. Actionable effort guidance without requiring power calibration.
 - [ ] `cycle-improver` (core:cycle-improver, development; family `cycle-improver`): Regular recreational cyclist preparing for a first organised long ride. Known weekly riding time; uneven weekday/weekend availability; indoor trainer access.
 - [ ] `cycle-intermediate` (core:cycle-intermediate, holdout; family `cycle-intermediate`): Structured cyclist targeting a time trial with a recent power test. Appropriate power provenance, event specificity and time-based baseline.
 - [ ] `cycle-experienced` (core:cycle-experienced, development; family `cycle-experienced`): Years of riding, high established recent volume, wants performance work within a fixed time budget. Substantial load grounded in actual history; technical language should not obscure constraints.
