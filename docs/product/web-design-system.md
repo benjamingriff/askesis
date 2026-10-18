@@ -35,7 +35,7 @@ Type scale: title 30/800, heading 20/700, subheading 16/600, body 15, caption 13
 ## Navigation
 
 - **Desktop:** a T3 Code-style sidebar with New chat, Today, Plan, Coach, All plans and recent chats.
-- **At 900 px and below:** the mobile floating tab bar (Today, Plan, Coach, You). On these screens the Coach list and the conversation are separate screens, and `/chat/new` opens a new conversation.
+- **At 900 px and below:** a slim bar above the page: the athlete's initials on the accent colour (You) on the left and Today, Plan and Coach as text tabs in the middle. Nothing is pinned to the screen; the bar scrolls away with the page, so scroll back to the top to switch screens. On touch screens a sideways swipe on the Today, Plan or Coach landing page moves to the neighbouring tab. Swipes are ignored near the screen edges (the browser's back gesture), inside sideways-scrolling areas, form fields and dialogs, and over anything marked `data-no-tab-swipe` (the Plan schedule). On these screens the Coach list and the conversation are separate screens, and `/chat/new` opens a new conversation.
 
 ## Known gaps
 
