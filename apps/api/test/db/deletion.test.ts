@@ -57,7 +57,11 @@ import {
   parseDeletionLog,
   shipDeletions,
 } from '../../src/modules/account/journal.js';
-import { purgeAccountRows, TABLE_RETENTION } from '../../src/modules/account/purge.js';
+import {
+  purgeAccountRows,
+  purgePlanRows,
+  TABLE_RETENTION,
+} from '../../src/modules/account/purge.js';
 
 const db = getDatabase();
 const DAY = 86_400_000;
@@ -1030,6 +1034,38 @@ describe('review regressions', () => {
     await undeletePlan(owner, plan.id);
     expect(await confirmBrief(owner, plan.id, command)).toEqual(confirmed);
     expect(deleted.deletedAt).toBeTruthy();
+  });
+
+  it('keeps a fitness command replayable after purging a plan its timeline named', async () => {
+    const { id: owner } = await athlete();
+    // The plan's coach recorded a calibration, so cached timelines name its conversation.
+    const doomed = await populatedPlan(owner);
+    const record = (secondsPerKilometre: number, idempotencyKey?: string) =>
+      recordCalibration(owner, {
+        system: 'run_pace',
+        input: { method: 'threshold_pace', secondsPerKilometre },
+        provenance: 'user_estimate',
+        estimateBasis: 'Retry fixture.',
+        ...(idempotencyKey ? { idempotencyKey } : {}),
+      });
+    const key = randomUUID();
+    const first = await record(305, key);
+    await record(295);
+    await deletePlan(owner, doomed.planId, (await getPlan(owner, doomed.planId)).stateVersion);
+    await db.transaction().execute((tx) => purgePlanRows(tx, doomed.planId));
+    expect(await jsonMentioning([doomed.conversationId, doomed.runId])).toEqual([]);
+    const before = await calibrationCount(owner);
+    // A retry of the first command replays it instead of recording 305 again over 295.
+    const replayed = await record(305, key);
+    expect(await calibrationCount(owner)).toBe(before);
+    expect(replayed.entries.length).toBe(first.entries.length);
+    const latest = await db
+      .selectFrom('athlete_calibrations')
+      .select('input')
+      .where('athlete_id', '=', owner)
+      .orderBy('recorded_at', 'desc')
+      .executeTakeFirstOrThrow();
+    expect(latest.input).toMatchObject({ secondsPerKilometre: 295 });
   });
 
   it('purges an account while a plan purge holds its plan, without deadlocking', async () => {

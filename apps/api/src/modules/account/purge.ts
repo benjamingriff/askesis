@@ -124,6 +124,19 @@ async function purgePlanContent(db: Tx, owner: string, planId: string, account =
     .where('plan_id', '=', planId)
     .execute();
   const conversationIds = conversations.map((row) => row.id);
+  if (!account) {
+    // Runs, then the athlete (the order coaching tools use): holding the athlete makes a
+    // performance command that is caching a timeline naming these runs finish first, so the
+    // cache cleanup below sees its row.
+    await db
+      .selectFrom('agent_runs')
+      .select('id')
+      .where(anyOf('conversation_id', conversationIds))
+      .orderBy('id')
+      .forUpdate()
+      .execute();
+    await db.selectFrom('athletes').select('id').where('id', '=', owner).forUpdate().execute();
+  }
   const runIds = await purgeConversations(db, conversationIds);
   await db.deleteFrom('workout_logs').where('plan_id', '=', planId).execute();
   await db.deleteFrom('athlete_check_ins').where('plan_id', '=', planId).execute();
@@ -134,9 +147,17 @@ async function purgePlanContent(db: Tx, owner: string, planId: string, account =
       await db.selectFrom('plan_versions').select('id').where('plan_id', '=', planId).execute()
     ).map((row) => row.id);
     const named = [planId, ...versionIds, ...conversationIds, ...runIds];
-    // Other cached command responses can still name the plan: fitness timelines list the
-    // conversation that recorded each entry, and records cached before plan_id existed have
-    // none. A retry with such a key runs afresh instead of replaying a deleted reference.
+    // Other cached command responses can still name the plan. Fitness timelines list the
+    // conversation that recorded each entry; the entries outlive the plan, so the reference is
+    // nulled and a retry still replays rather than recording the calibration again.
+    for (const id of named)
+      await sql`
+        UPDATE api_idempotency_keys
+        SET response_body = replace(response_body::text, ${`"${id}"`}, 'null')::jsonb
+        WHERE athlete_id = ${owner}::uuid AND command_scope LIKE 'performance.%'
+          AND strpos(response_body::text, ${id}) > 0`.execute(db);
+    // Plan and chat responses cached before plan_id existed: their replay would refuse anyway,
+    // because the plan or conversation is gone.
     await sql`
       DELETE FROM api_idempotency_keys WHERE athlete_id = ${owner}::uuid
         AND EXISTS (SELECT 1 FROM unnest(${named}::text[]) AS id
