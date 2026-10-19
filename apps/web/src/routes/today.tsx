@@ -426,15 +426,10 @@ function HeroWorkout({
       <span className="hero-body">
         <strong className="hero-title">{workout.title}</strong>
         {workout.purpose ? <span className="hero-purpose">{workout.purpose}</span> : null}
-        <span className="hero-footer">
-          <span className="hero-stats">
-            {workoutStats(workout, units, pool).map((stat) => (
-              <Stat key={stat.label} label={stat.label} value={stat.value} unit={stat.unit} large />
-            ))}
-          </span>
-          <span className="hero-cta">
-            View workout <ArrowRight size={16} aria-hidden="true" />
-          </span>
+        <span className="hero-stats">
+          {workoutStats(workout, units, pool).map((stat) => (
+            <Stat key={stat.label} label={stat.label} value={stat.value} unit={stat.unit} large />
+          ))}
         </span>
       </span>
     </button>

@@ -229,14 +229,6 @@ export default function TodayScreen() {
                   <View style={{ marginTop: 20 }}>
                     <IntensityChart steps={workout.steps} height={56} animate />
                   </View>
-                  <View
-                    style={{ flexDirection: 'row', alignItems: 'center', marginTop: 18, gap: 8 }}
-                  >
-                    <Text variant="subheading" color="accent" style={{ fontWeight: '800' }}>
-                      View workout
-                    </Text>
-                    <Ionicons name="arrow-forward" size={16} color={theme.accentText} />
-                  </View>
                 </View>
               </View>
             </PressableScale>

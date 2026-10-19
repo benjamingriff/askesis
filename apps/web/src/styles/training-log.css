@@ -189,14 +189,6 @@
   background: var(--locked);
   color: #04150a;
 }
-.hero-footer .btn-view {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  color: var(--text-dim);
-  font-weight: 700;
-  font-size: 14px;
-}
 .quick-rpe {
   display: flex;
   flex-direction: column;
