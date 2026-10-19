@@ -692,7 +692,15 @@ describe('account deletion', () => {
     });
     await runLocked;
     const deletion = request(owner, subject);
-    await new Promise((resolve) => setTimeout(resolve, 300));
+    // Barrier: the deletion is now waiting on the run lock the tool holds.
+    for (let waited = 0; ; waited += 25) {
+      const blocked = await sql<{ count: string }>`
+        SELECT count(*) FROM pg_stat_activity
+        WHERE datname = current_database() AND wait_event_type = 'Lock'`.execute(db);
+      if (Number(blocked.rows[0]!.count) > 0) break;
+      if (waited > 5000) throw new Error('The deletion never waited for the run lock.');
+      await new Promise((resolve) => setTimeout(resolve, 25));
+    }
     release();
     await Promise.all([tool, deletion]);
     expect((await getAccount(owner)).deletion).not.toBeNull();
@@ -742,6 +750,8 @@ describe('deletion journal', () => {
       level: 30,
       deletion: { sequence, event, subjectId, at: new Date().toISOString() },
     });
+  const checkpoint = (sequence: number) =>
+    JSON.stringify({ level: 30, deletionCheckpoint: { sequence, at: new Date().toISOString() } });
 
   it('replays shipped entries onto a restored backup, in sequence order, once each', async () => {
     const { id: owner } = await athlete();
@@ -752,6 +762,7 @@ describe('deletion journal', () => {
     const log = [
       shipped(from + 2, 'plan.deleted', soft.id),
       shipped(from + 1, 'plan.purged', purged.planId),
+      checkpoint(from + 2),
       shipped(from, 'plan.deleted', purged.planId),
       shipped(from + 1, 'plan.purged', purged.planId),
     ].join('\n');
@@ -774,28 +785,56 @@ describe('deletion journal', () => {
         [
           shipped(accountFrom, 'account.deletion_requested', owner),
           shipped(accountFrom + 1, 'account.purged', owner),
+          checkpoint(accountFrom + 1),
         ].join('\n'),
       ),
     );
     expect(await rowsReferencing(['athlete_id', 'owner_id'], [owner])).toEqual([]);
   });
 
-  it('refuses a replay with missing entries unless the loss is accepted', async () => {
+  it('refuses a replay that cannot show every entry up to the end of the journal', async () => {
     const { id: owner } = await athlete();
     const plan = await createPlan(owner, 'Gap', randomUUID());
     const from = (await head()) + 1;
-    const events = parseDeletionLog(
-      [shipped(from, 'plan.deleted', plan.id), shipped(from + 2, 'plan.purged', plan.id)].join(
-        '\n',
-      ),
+    const refused = async (log: string, through?: number) => {
+      await expect(replayDeletionEvents(parseDeletionLog(log), { through })).rejects.toBeInstanceOf(
+        ReplayGapError,
+      );
+      expect((await getPlan(owner, plan.id)).deletedAt).toBeNull();
+      expect(await head()).toBe(from - 1);
+    };
+    const deleted = shipped(from, 'plan.deleted', plan.id);
+    const purged = shipped(from + 1, 'plan.purged', plan.id);
+    // A missing entry in the middle.
+    await refused(
+      [deleted, shipped(from + 2, 'plan.purged', plan.id), checkpoint(from + 2)].join('\n'),
     );
-    await expect(replayDeletionEvents(events)).rejects.toBeInstanceOf(ReplayGapError);
-    expect((await getPlan(owner, plan.id)).deletedAt).toBeNull();
-    expect(await head()).toBe(from - 1);
-    expect((await replayDeletionEvents(events, { allowGaps: true })).applied).toBe(2);
+    // A truncated tail: the checkpoint shows an entry the export lost.
+    await refused([deleted, checkpoint(from + 1)].join('\n'));
+    // An empty export, and entries without any checkpoint: the end is unknown.
+    await refused('');
+    await refused([deleted, purged].join('\n'));
+    // An end supplied by the operator, from the damaged database's journal head.
+    await refused(deleted, from + 1);
+    expect(
+      (
+        await replayDeletionEvents(parseDeletionLog([deleted, purged].join('\n')), {
+          through: from + 1,
+        })
+      ).applied,
+    ).toBe(2);
     expect(await db.selectFrom('plans').select('id').where('id', '=', plan.id).execute()).toEqual(
       [],
     );
+  });
+
+  it('applies what it has when the loss is accepted', async () => {
+    const { id: owner } = await athlete();
+    const plan = await createPlan(owner, 'Accepted loss', randomUUID());
+    const from = (await head()) + 1;
+    const log = parseDeletionLog(shipped(from + 1, 'plan.deleted', plan.id));
+    expect((await replayDeletionEvents(log, { allowGaps: true })).applied).toBe(1);
+    expect((await listPlans(owner, 'deleted')).map((p) => p.id)).toEqual([plan.id]);
   });
 
   it('ships entries left behind by a crash after commit', async () => {

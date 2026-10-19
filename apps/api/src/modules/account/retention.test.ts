@@ -18,9 +18,14 @@ it('reads journal entries from pino JSON lines in sequence order, once each', ()
     entry(1, 'plan.deleted', planId),
     // Shipping is at least once.
     entry(2, 'account.deletion_cancelled', athleteId),
+    JSON.stringify({ level: 30, deletionCheckpoint: { sequence: 2, at: '2026-10-19T09:15:00Z' } }),
+    JSON.stringify({ level: 30, deletionCheckpoint: { sequence: 1, at: '2026-10-19T09:00:00Z' } }),
   ].join('\n');
-  expect(parseDeletionLog(log).map((event) => [event.sequence, event.event])).toEqual([
+  const parsed = parseDeletionLog(log);
+  expect(parsed.events.map((event) => [event.sequence, event.event])).toEqual([
     [1, 'plan.deleted'],
     [2, 'account.deletion_cancelled'],
   ]);
+  expect(parsed.checkpoint).toBe(2);
+  expect(parseDeletionLog('').checkpoint).toBeNull();
 });

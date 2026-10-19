@@ -7,7 +7,14 @@ import { transition } from '../chat/chat.service.js';
 import { readAggregate } from '../plans/plan.aggregate.js';
 import { readEntries } from '../performance/performance.service.js';
 import { purgeAccountRows, purgePlanRows } from './purge.js';
-import { appendDeletion, shipDeletions, shipSoon, type DeletionEvent } from './journal.js';
+import {
+  appendDeletion,
+  shipCheckpoint,
+  shipDeletions,
+  shipSoon,
+  type DeletionEvent,
+  type DeletionLog,
+} from './journal.js';
 import {
   ACCOUNT_GRACE_DAYS,
   DAY_MS,
@@ -211,39 +218,53 @@ export async function runRetention(
     .executeTakeFirst();
   result.liveEvents = Number(events.numDeletedRows);
   await shipDeletions();
+  await shipCheckpoint();
   return result;
 }
 
-/** The logs are missing journal entries, so replaying them could leave deleted data behind. */
+/** The logs cannot show that every deletion since the backup is present. */
 export class ReplayGapError extends Error {}
 
 /**
  * Re-applies shipped journal entries to a database restored from an older backup, before it takes
- * traffic. Entries at or below the restored journal head are already reflected. The rest must
- * continue the sequence without gaps unless `allowGaps` accepts the loss. Each entry commits with
- * its journal row, so an interrupted replay can simply be run again.
+ * traffic. Entries at or below the restored journal head are already reflected. The rest must run
+ * without gaps up to the journal's end: `through` when the operator knows it (the damaged
+ * database's head), otherwise the latest checkpoint in the logs. Missing entries, or no known end,
+ * refuse the replay before anything changes unless `allowGaps` accepts the loss. Each entry
+ * commits with its journal row, so an interrupted replay can simply be run again.
  */
 export async function replayDeletionEvents(
-  events: DeletionEvent[],
-  options: { allowGaps?: boolean } = {},
+  log: DeletionLog,
+  options: { through?: number | undefined; allowGaps?: boolean } = {},
 ) {
   const head = await getDatabase()
     .selectFrom('deletion_journal_head')
     .select('sequence')
     .executeTakeFirstOrThrow();
   const start = Number(head.sequence) + 1;
-  const pending = events
-    .filter((event) => event.sequence >= start)
-    .sort((a, b) => a.sequence - b.sequence);
-  let expected = start;
-  for (const event of pending) {
-    if (event.sequence !== expected && !options.allowGaps)
+  const pending = log.events.filter((event) => event.sequence >= start);
+  const end =
+    options.through ??
+    (log.checkpoint === null && !pending.length
+      ? null
+      : Math.max(log.checkpoint ?? 0, pending.at(-1)?.sequence ?? 0));
+  if (!options.allowGaps) {
+    if (end === null || (options.through === undefined && log.checkpoint === null))
       throw new ReplayGapError(
-        `Deletion journal entries ${expected} to ${event.sequence - 1} are missing from the logs.`,
+        "The logs have no deletion checkpoint, so missing entries cannot be ruled out. Pass --through with the damaged database's deletion_journal_head, or --allow-gaps to accept the risk.",
       );
-    expected = event.sequence + 1;
+    let expected = start;
+    for (const event of pending) {
+      if (event.sequence !== expected) break;
+      expected += 1;
+    }
+    if (expected <= end)
+      throw new ReplayGapError(
+        `Deletion journal entries from ${expected} to ${end} are missing from the logs.`,
+      );
   }
   for (const event of pending) {
+    if (end !== null && event.sequence > end && !options.allowGaps) break;
     await getDatabase()
       .transaction()
       .execute(async (db) => {
@@ -251,7 +272,7 @@ export async function replayDeletionEvents(
         await appendDeletion(db, event.event, event.subjectId, new Date(event.at), event.sequence);
       });
   }
-  return { from: start, to: expected - 1, applied: pending.length };
+  return { from: start, to: pending.at(-1)?.sequence ?? start - 1, applied: pending.length };
 }
 
 async function applyDeletion(db: Tx, { event, subjectId, at }: DeletionEvent) {

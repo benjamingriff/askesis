@@ -27,7 +27,7 @@ pnpm retention:run
 pnpm retention:run -- --as-of 2026-12-01T00:00:00Z
 
 # Re-apply deletions recorded after a backup was taken (see below).
-pnpm --filter @askesis/api retention:replay /path/to/api-logs.jsonl [--allow-gaps]
+pnpm --filter @askesis/api retention:replay /path/to/api-logs.jsonl [--through <sequence>] [--allow-gaps]
 ```
 
 The root `retention:run` runs inside this worktree's development environment. Against Railway, run the API package commands with the service's environment.
@@ -37,8 +37,9 @@ The root `retention:run` runs inside this worktree's development environment. Ag
 A restored backup predates later deletions. Every deletion transition is therefore recorded in `deletion_journal`, in the same transaction that makes it. Entries carry ids and times only, under a gapless sequence taken from one head row, so the sequence follows commit order. They are then shipped to the API logs as `{"deletion": {"sequence", "event", "subjectId", "at"}}`: right after commit, and again by every retention pass for anything a crash left unshipped. Shipping ignores `LOG_LEVEL` (only `silent` suppresses it), and the events are `plan.deleted`, `plan.restored`, `plan.purged`, `account.deletion_requested`, `account.deletion_cancelled` and `account.purged`.
 
 - Keep API logs for longer than the oldest backup you might restore.
-- After restoring a backup and applying migrations, and **before** the restored API takes traffic, export the API logs from the backup's timestamp onwards as JSON lines (any order; duplicates are fine) and run `retention:replay` on them. Entries at or below the restored journal head are skipped. The rest must continue the sequence without gaps, so a missing entry stops the replay before anything changes, naming the missing range. Find the missing lines, or accept the loss with `--allow-gaps`. Each entry commits with its journal row, so an interrupted replay can be run again. The [restore outline](./database-backup-and-restore.md#disaster-restore-outline) includes this step.
-- Remaining exposure: entries committed but not yet shipped when the database itself is lost (normally under a second, at most one retention interval if shipping keeps failing).
+- Every retention pass also logs a checkpoint, `{"deletionCheckpoint": {"sequence"}}`: the highest sequence up to which every entry has been shipped. It tells a replay where the journal ended.
+- After restoring a backup and applying migrations, and **before** the restored API takes traffic, export the API logs from the backup's timestamp up to now as JSON lines (any order; duplicates are fine) and run `retention:replay` on them. Entries at or below the restored journal head are skipped. The rest must run without gaps up to the journal's end: `--through <sequence>` if you can read `deletion_journal_head` from the damaged database (step 2 of the restore preserves it), otherwise the latest checkpoint in the export. A missing entry, a truncated tail or an export with no checkpoint stops the replay before anything changes, naming what is missing. Find the missing lines, or accept the loss with `--allow-gaps`. Each entry commits with its journal row, so an interrupted replay can be run again. The [restore outline](./database-backup-and-restore.md#disaster-restore-outline) includes this step.
+- Remaining exposure: entries committed after the last checkpoint and never shipped, when the damaged database cannot be read. Shipping normally follows commit within a second.
 
 ## Retention
 

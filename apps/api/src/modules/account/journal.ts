@@ -107,6 +107,29 @@ export async function shipDeletions() {
   }
 }
 
+/**
+ * Logs the checkpoint: the highest sequence up to which every entry has been shipped. Emitted on
+ * every retention pass, it tells a replay where the journal ended, so a log export that lost its
+ * last entries (or all of them) is detected rather than silently replayed short.
+ */
+export async function shipCheckpoint() {
+  const [head, unshipped] = await Promise.all([
+    getDatabase().selectFrom('deletion_journal_head').select('sequence').executeTakeFirstOrThrow(),
+    getDatabase()
+      .selectFrom('deletion_journal')
+      .select(({ fn }) => fn.min('sequence').as('sequence'))
+      .where('shipped_at', 'is', null)
+      .executeTakeFirst(),
+  ]);
+  const sequence =
+    unshipped?.sequence == null ? Number(head.sequence) : Number(unshipped.sequence) - 1;
+  shippingLogger().info(
+    { deletionCheckpoint: { sequence, at: new Date().toISOString() } },
+    'Data deletion checkpoint',
+  );
+  return sequence;
+}
+
 /** Ships right after a transition commits; the retention pass retries anything left behind. */
 export function shipSoon() {
   void shipDeletions().catch(() => logger.error('Deletion journal shipping failed; will retry.'));
@@ -119,19 +142,31 @@ const EventSchema = z.object({
   at: z.iso.datetime({ offset: true }),
 });
 
-/** The journal entries in pino JSON log lines, deduplicated and in sequence order. */
-export function parseDeletionLog(text: string): DeletionEvent[] {
+const CheckpointSchema = z.object({ sequence: z.number().int().nonnegative() });
+
+export type DeletionLog = {
+  /** Journal entries, deduplicated and in sequence order. */
+  events: DeletionEvent[];
+  /** The latest shipped checkpoint, if the log has one. */
+  checkpoint: number | null;
+};
+
+/** The journal entries and checkpoints in pino JSON log lines; other lines are ignored. */
+export function parseDeletionLog(text: string): DeletionLog {
   const events = new Map<number, DeletionEvent>();
+  let checkpoint: number | null = null;
   for (const line of text.split('\n')) {
-    if (!line.includes('"deletion"')) continue;
-    let record: unknown;
+    if (!line.includes('"deletion')) continue;
+    let record: { deletion?: unknown; deletionCheckpoint?: unknown };
     try {
-      record = JSON.parse(line);
+      record = JSON.parse(line) as typeof record;
     } catch {
       continue;
     }
-    const parsed = EventSchema.safeParse((record as { deletion?: unknown }).deletion);
-    if (parsed.success) events.set(parsed.data.sequence, parsed.data);
+    const event = EventSchema.safeParse(record.deletion);
+    if (event.success) events.set(event.data.sequence, event.data);
+    const mark = CheckpointSchema.safeParse(record.deletionCheckpoint);
+    if (mark.success) checkpoint = Math.max(checkpoint ?? 0, mark.data.sequence);
   }
-  return [...events.values()].sort((a, b) => a.sequence - b.sequence);
+  return { events: [...events.values()].sort((a, b) => a.sequence - b.sequence), checkpoint };
 }
