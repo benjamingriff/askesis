@@ -116,6 +116,18 @@ export interface AgentToolReceipts {
   tool_name: string;
 }
 
+export interface AgentUsageRollups {
+  day: Timestamp;
+  input_tokens: Generated<Int8>;
+  model: string;
+  output_tokens: Generated<Int8>;
+  prompt_version: string;
+  provider: string;
+  runs: number;
+  status: string;
+  tool_calls: Generated<Int8>;
+}
+
 export interface AgentWorkers {
   id: string;
   last_seen_at: Generated<Timestamp>;
@@ -134,6 +146,7 @@ export interface ApiIdempotencyKeys {
   expires_at: Timestamp | null;
   id: Generated<string>;
   idempotency_key: string;
+  plan_id: string | null;
   request_hash: string;
   response_body: Json;
   response_status: number;
@@ -151,6 +164,7 @@ export interface AthleteCalibrations {
   observed_on: Timestamp | null;
   provenance: string;
   recorded_at: Generated<Timestamp>;
+  recorded_by: Generated<string>;
   recorded_by_run_id: string | null;
   retracted_at: Timestamp | null;
   retracted_by_run_id: string | null;
@@ -189,8 +203,11 @@ export interface AthleteIdentities {
 
 export interface Athletes {
   created_at: Generated<Timestamp>;
+  deletion_requested_at: Timestamp | null;
   display_name: string;
   id: Generated<string>;
+  purge_after: Timestamp | null;
+  purge_started_at: Timestamp | null;
   timezone: Generated<string>;
   updated_at: Generated<Timestamp>;
 }
@@ -232,6 +249,19 @@ export interface Conversations {
   plan_id: string | null;
   state_version: Generated<number>;
   title: string;
+}
+
+export interface DeletionJournal {
+  event: string;
+  occurred_at: Timestamp;
+  sequence: Int8;
+  shipped_at: Timestamp | null;
+  subject_id: string;
+}
+
+export interface DeletionJournalHead {
+  sequence: Int8;
+  singleton: Generated<boolean>;
 }
 
 export interface ExamplePlanEditions {
@@ -314,6 +344,7 @@ export interface Plans {
   created_at: Generated<Timestamp>;
   current_draft_version_id: string | null;
   current_locked_version_id: string | null;
+  deleted_at: Timestamp | null;
   display_name: string;
   id: Generated<string>;
   owner_id: string;
@@ -531,6 +562,7 @@ export interface DB {
   agent_runs: AgentRuns;
   agent_tool_changes: AgentToolChanges;
   agent_tool_receipts: AgentToolReceipts;
+  agent_usage_rollups: AgentUsageRollups;
   agent_workers: AgentWorkers;
   api_idempotency_keys: ApiIdempotencyKeys;
   athlete_calibration_zones: AthleteCalibrationZones;
@@ -541,6 +573,8 @@ export interface DB {
   "atlas_schema_revisions.atlas_schema_revisions": AtlasSchemaRevisionsAtlasSchemaRevisions;
   conversation_messages: ConversationMessages;
   conversations: Conversations;
+  deletion_journal: DeletionJournal;
+  deletion_journal_head: DeletionJournalHead;
   example_plan_editions: ExamplePlanEditions;
   live_event_heads: LiveEventHeads;
   live_events: LiveEvents;

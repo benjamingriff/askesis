@@ -1,4 +1,5 @@
 import { createClerkClient } from '@clerk/backend';
+import { isClerkAPIResponseError } from '@clerk/backend/errors';
 import type { MiddlewareHandler } from 'hono';
 import { getApiConfig } from '../config.js';
 import { ensureAthlete, syncAthleteTimezone } from './athlete-provisioning.js';
@@ -36,10 +37,38 @@ export const requireAuthentication: MiddlewareHandler<AppEnvironment> = async (c
   }
 
   const auth = requestState.toAuth();
-  const athlete = await syncAthleteTimezone(
-    await ensureAthlete(clerk, auth.userId),
-    context.req.header(TIMEZONE_HEADER),
-  );
+  let provisioned;
+  try {
+    provisioned = await ensureAthlete(clerk, auth.userId);
+  } catch (error) {
+    // A session token can outlive its user for a minute after an account purge.
+    if (isClerkAPIResponseError(error) && error.status === 404)
+      return context.json(
+        {
+          error: {
+            code: 'AUTHENTICATION_REQUIRED',
+            message: 'Authentication is required.',
+            requestId: context.get('requestId'),
+          },
+        },
+        401,
+      );
+    throw error;
+  }
+  const athlete = await syncAthleteTimezone(provisioned, context.req.header(TIMEZONE_HEADER));
   context.set('athlete', athlete);
+  // During the grace period the athlete can only review, export or cancel the deletion.
+  if (athlete.deletionPending && !context.req.path.startsWith('/api/v1/account')) {
+    return context.json(
+      {
+        error: {
+          code: 'ACCOUNT_DELETION_PENDING',
+          message: 'This account is scheduled for deletion. Cancel the deletion to continue.',
+          requestId: context.get('requestId'),
+        },
+      },
+      403,
+    );
+  }
   await next();
 };

@@ -31,8 +31,15 @@ export async function readEntries(db: Database, athleteId: string): Promise<Cali
   const rows = await db
     .selectFrom('athlete_calibrations as c')
     .leftJoin('agent_runs as r', 'r.id', 'c.recorded_by_run_id')
+    .leftJoin('conversations as v', 'v.id', 'r.conversation_id')
+    .leftJoin('plans as p', 'p.id', 'v.plan_id')
     .selectAll('c')
-    .select('r.conversation_id')
+    // A deleted plan's chat is gone for the athlete, so the entry no longer links to it.
+    .select(
+      sql<string | null>`CASE WHEN p.deleted_at IS NULL THEN r.conversation_id END`.as(
+        'conversation_id',
+      ),
+    )
     .where('c.athlete_id', '=', athleteId)
     .orderBy('c.effective_from')
     .orderBy('c.recorded_at')
@@ -62,7 +69,7 @@ export async function readEntries(db: Database, athleteId: string): Promise<Cali
       observedOn: day(row.observed_on),
       effectiveFrom: day(row.effective_from),
       recordedAt: instant(row.recorded_at),
-      recordedBy: row.recorded_by_run_id ? 'coach' : 'athlete',
+      recordedBy: row.recorded_by,
       conversationId: row.conversation_id,
       retractedAt: row.retracted_at === null ? null : instant(row.retracted_at),
       zones: zones
@@ -204,6 +211,7 @@ export async function recordCalibrationRows(
       observed_on: input.observedOn ?? null,
       effective_from: today,
       recorded_by_run_id: options.runId ?? null,
+      recorded_by: options.runId ? 'coach' : 'athlete',
     })
     .returning('id')
     .executeTakeFirstOrThrow();

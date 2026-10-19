@@ -19,6 +19,11 @@ const ApiConfigSchema = z.object({
   LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent']).default('info'),
   SENTRY_DSN: z.string().url().optional().or(z.literal('')),
   SENTRY_RELEASE: z.string().optional(),
+  /** Enables the Clerk user.deleted webhook; Svix signing secret (whsec_…). */
+  CLERK_WEBHOOK_SIGNING_SECRET: z.preprocess(
+    (value) => (value === '' ? undefined : value),
+    z.string().startsWith('whsec_').optional(),
+  ),
 });
 
 export type ApiConfig = Omit<z.infer<typeof ApiConfigSchema>, 'CLERK_PUBLISHABLE_KEY'> & {
