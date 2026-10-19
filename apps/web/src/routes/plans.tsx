@@ -16,7 +16,7 @@ import {
   Pill,
   Segmented,
 } from '../components/ui';
-import { formatLong, formatRange } from '../lib/format';
+import { formatRange, formatShort } from '../lib/format';
 import { result } from '../lib/result';
 import { usePlan, type Plan, type PlanView as View } from '../plan-data';
 
@@ -147,7 +147,7 @@ function DeletedPlanCard({ plan }: { plan: Plan }) {
       <div className="plan-card-top">
         <Pill tone="danger" icon={Trash}>
           {plan.purgeAfter
-            ? `Deleted for good on ${formatLong(plan.purgeAfter.slice(0, 10))}`
+            ? `Deleted for good on ${formatShort(plan.purgeAfter.slice(0, 10))}`
             : 'Deleted'}
         </Pill>
       </div>

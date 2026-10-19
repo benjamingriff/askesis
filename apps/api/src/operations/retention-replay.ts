@@ -11,6 +11,7 @@ import { parseDeletionLog } from '../modules/account/journal.js';
  */
 try {
   const { values, positionals } = parseArgs({
+    args: process.argv.slice(2).filter((arg) => arg !== '--'),
     allowPositionals: true,
     options: { 'allow-gaps': { type: 'boolean', default: false } },
   });

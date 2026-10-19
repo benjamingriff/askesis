@@ -813,7 +813,7 @@ it('lists recently deleted plans with their purge date and restores them to the 
     response: new Response(),
   } as never);
   const router = mount('/plans/deleted');
-  await screen.findByText('Deleted for good on Wednesday 18 November');
+  await screen.findByText('Deleted for good on 18 Nov');
   expect(screen.queryByRole('link', { name: /Autumn running/ })).not.toBeInTheDocument();
   await act(async () =>
     fireEvent.click(screen.getByRole('button', { name: 'Restore to archive' })),

@@ -1611,6 +1611,10 @@
 .plan-card-deleted:active {
   transform: none;
 }
+.plan-card-deleted .pill {
+  max-width: 100%;
+  white-space: normal;
+}
 .plan-card-actions {
   display: flex;
   margin-top: 8px;
