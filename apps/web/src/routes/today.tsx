@@ -8,7 +8,7 @@ import {
 import { useTrainingLog } from '../training-log';
 import type { WorkoutSummary } from '@askesis/api-client';
 import { ArrowRight, CalendarDays, Library, MessageSquare, Moon, Sparkles } from 'lucide-react';
-import { useMemo, type CSSProperties } from 'react';
+import { useMemo, type CSSProperties, type ReactNode } from 'react';
 import { Link, useNavigate } from 'react-router';
 import { IntensityChart } from '../components/IntensityChart';
 import { useOpenPlanChat, PlanChatError } from '../components/PlanLifecycle';
@@ -272,16 +272,15 @@ function TodayForPlan({ plan, today }: { plan: Plan; today: string }) {
             </div>
           ) : null}
           {selectedWorkouts.map((workout) => (
-            <div className="training-hero" key={workout.id}>
-              <HeroWorkout
-                key={workout.id}
-                workout={workout}
-                version={version}
-                units={units}
-                onOpen={dialog.open}
-              />
+            <HeroWorkout
+              key={workout.id}
+              workout={workout}
+              version={version}
+              units={units}
+              onOpen={dialog.open}
+            >
               <WorkoutLogActions workout={workout} />
-            </div>
+            </HeroWorkout>
           ))}
 
           <CheckInButton plan={plan} workouts={all} />
@@ -396,43 +395,43 @@ function HeroWorkout({
   version,
   units,
   onOpen,
+  children,
 }: {
   workout: WorkoutSummary;
   version: PlanVersion | null;
   units: Units;
   onOpen: (workout: WorkoutSummary) => void;
+  children?: ReactNode;
 }) {
   const kind = workoutLook(workout);
   const detail = useWorkoutDetail(workout.id, version);
   const { pool } = useSportUnits();
   return (
-    <button
-      type="button"
-      className="hero-workout"
-      style={{ '--kind': kind.color } as CSSProperties}
-      onClick={() => onOpen(workout)}
-    >
-      <span className="hero-cover">
-        <span className="hero-kind">
-          <kind.icon size={15} aria-hidden="true" /> {kind.label}
-          {workout.placeholder ? ' · Placeholder' : ''}
+    <div className="hero-card" style={{ '--kind': kind.color } as CSSProperties}>
+      <button type="button" className="hero-workout" onClick={() => onOpen(workout)}>
+        <span className="hero-cover">
+          <span className="hero-kind">
+            <kind.icon size={15} aria-hidden="true" /> {kind.label}
+            {workout.placeholder ? ' · Placeholder' : ''}
+          </span>
+          {workout.placeholder ? (
+            <PlaceholderBand workout={workout} />
+          ) : detail.data ? (
+            <IntensityChart prescription={detail.data.prescription} height={64} />
+          ) : null}
         </span>
-        {workout.placeholder ? (
-          <PlaceholderBand workout={workout} />
-        ) : detail.data ? (
-          <IntensityChart prescription={detail.data.prescription} height={64} />
-        ) : null}
-      </span>
-      <span className="hero-body">
-        <strong className="hero-title">{workout.title}</strong>
-        {workout.purpose ? <span className="hero-purpose">{workout.purpose}</span> : null}
-        <span className="hero-stats">
-          {workoutStats(workout, units, pool).map((stat) => (
-            <Stat key={stat.label} label={stat.label} value={stat.value} unit={stat.unit} large />
-          ))}
+        <span className="hero-body">
+          <strong className="hero-title">{workout.title}</strong>
+          {workout.purpose ? <span className="hero-purpose">{workout.purpose}</span> : null}
+          <span className="hero-stats">
+            {workoutStats(workout, units, pool).map((stat) => (
+              <Stat key={stat.label} label={stat.label} value={stat.value} unit={stat.unit} large />
+            ))}
+          </span>
         </span>
-      </span>
-    </button>
+      </button>
+      {children}
+    </div>
   );
 }
 

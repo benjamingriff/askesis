@@ -1360,27 +1360,46 @@
   min-width: 0;
 }
 /* Today's session: a cover band in the session's colour with its effort profile rising from the
-   lower edge, then plain copy on the card surface. The kind colour stays in the cover. */
-.hero-workout {
+   lower edge, then plain copy on the card surface. The kind colour stays in the cover. The card
+   also holds the session's log, so hover, press and focus on the workout outline the whole card. */
+.hero-card {
+  --edge: var(--border);
   display: flex;
   flex-direction: column;
-  width: 100%;
-  padding: 0;
+  border: 1px solid var(--edge);
   border-radius: var(--radius-xl);
-  border: 1px solid var(--border);
   background: var(--surface);
-  color: var(--text);
-  text-align: left;
   overflow: hidden;
   transition:
     transform 0.12s ease,
     border-color 0.15s ease;
 }
-.hero-workout:hover {
-  border-color: color-mix(in srgb, var(--kind) 40%, var(--border));
+.hero-card:has(> .hero-workout:hover) {
+  --edge: color-mix(in srgb, var(--kind) 40%, var(--border));
 }
-.hero-workout:active {
+.hero-card:has(> .hero-workout:active) {
   transform: scale(0.99);
+}
+.hero-card:has(> .hero-workout:focus-visible) {
+  outline: 2px solid var(--accent-text);
+  outline-offset: 2px;
+}
+.hero-card > * + * {
+  border-top: 1px solid var(--edge);
+  transition: border-color 0.15s ease;
+}
+.hero-workout {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--text);
+  text-align: left;
+}
+.hero-workout:focus-visible {
+  outline: none;
 }
 .hero-cover {
   position: relative;
