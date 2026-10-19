@@ -71,11 +71,13 @@ async function markForDeletion(athleteId: string, now: Date, purgeAfter: Date) {
   const marked = await getDatabase()
     .transaction()
     .execute(async (db) => {
+      // NO KEY UPDATE: it still excludes run acceptance's share lock, but not the foreign-key
+      // checks a concurrent plan deletion makes at commit while holding the journal head.
       const athlete = await db
         .selectFrom('athletes')
         .select(['deletion_requested_at', 'purge_after'])
         .where('id', '=', athleteId)
-        .forUpdate()
+        .forNoKeyUpdate()
         .executeTakeFirst();
       if (!athlete) return false;
       const requested = athlete.deletion_requested_at === null;
@@ -113,7 +115,7 @@ export async function cancelAccountDeletion(athleteId: string, now = new Date())
         .selectFrom('athletes')
         .select(['deletion_requested_at', 'purge_started_at'])
         .where('id', '=', athleteId)
-        .forUpdate()
+        .forNoKeyUpdate()
         .executeTakeFirstOrThrow();
       if (!athlete.deletion_requested_at) return;
       if (athlete.purge_started_at)
@@ -427,7 +429,16 @@ export async function exportAccount(athleteId: string) {
       const messages = conversations.length
         ? await db
             .selectFrom('conversation_messages')
-            .select(['conversation_id', 'sequence', 'role', 'content', 'created_at'])
+            .select([
+              'id',
+              'conversation_id',
+              'sequence',
+              'role',
+              'content',
+              'references',
+              'producing_run_id',
+              'created_at',
+            ])
             .where(
               'conversation_id',
               'in',
@@ -437,6 +448,36 @@ export async function exportAccount(athleteId: string) {
             .orderBy('sequence')
             .execute()
         : [];
+      // Each message's coaching run: visible text beyond the final reply, including the partial
+      // reply of a run that was stopped or failed, as the chat shows it.
+      const runs = await db
+        .selectFrom('agent_runs')
+        .select(['id', 'user_message_id', 'status', 'failure_code'])
+        .where('owner_id', '=', athleteId)
+        .execute();
+      const outputs = runs.length
+        ? await db
+            .selectFrom('agent_run_outputs')
+            .select(['run_id', 'content', 'is_final'])
+            .where(
+              'run_id',
+              'in',
+              runs.map((run) => run.id),
+            )
+            .orderBy('run_id')
+            .orderBy('position')
+            .execute()
+        : [];
+      const coaching = (messageId: string) => {
+        const run = runs.find((candidate) => candidate.user_message_id === messageId);
+        if (!run) return undefined;
+        const reply = messages.find((message) => message.producing_run_id === run.id)?.content;
+        const shown = outputs
+          .filter((item) => item.run_id === run.id && item.content.trim())
+          .filter((item) => !(reply && (item.is_final || reply.startsWith(item.content))))
+          .map((item) => item.content);
+        return { status: run.status, failureCode: run.failure_code, shownText: shown };
+      };
       const logs = await db
         .selectFrom('workout_logs')
         .selectAll()
@@ -490,7 +531,10 @@ export async function exportAccount(athleteId: string) {
             .map((message) => ({
               role: message.role,
               content: message.content,
+              // Feedback attached to a message keeps the snapshot sent, even if the log changed.
+              references: message.references ?? [],
               createdAt: iso(message.created_at),
+              ...(message.role === 'user' ? { coaching: coaching(message.id) ?? null } : {}),
             })),
         })),
         trainingLog: logs.map(({ athlete_id: _owner, recorded_by_run_id: _run, ...log }) => log),

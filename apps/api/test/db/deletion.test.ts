@@ -4,6 +4,7 @@ import { afterAll, beforeEach, describe, expect, it } from 'vitest';
 import { getDatabase, closeDatabase } from '../../src/database/client.js';
 import { resetApiConfigForTests } from '../../src/config.js';
 import {
+  cancelRun,
   createConversation,
   getConversation,
   getRun,
@@ -1118,6 +1119,103 @@ describe('review regressions', () => {
     release();
     await Promise.all([deletion, purge]);
     expect(await rowsReferencing(['plan_id'], [expired.planId])).toEqual([]);
+  });
+
+  it('exports the transcript as the chat shows it', async () => {
+    const { id: owner } = await athlete();
+    const { planId } = await populatedPlan(owner);
+    const plan = await getPlan(owner, planId);
+    const [log] = (await readTrainingLog(db, owner, { planId })).logs;
+    // A message carrying feedback on a logged session.
+    await createConversation(
+      owner,
+      {
+        planId,
+        initialMessage: {
+          content: 'How did this one look?',
+          target: { versionId: plan.draft!.id, editNumber: plan.draft!.editNumber },
+          references: [{ type: 'workout_log', logId: log!.id }],
+        },
+      },
+      randomUUID(),
+    );
+    await sql`UPDATE agent_runs SET status='failed',failure_code='TEST_CLEANUP',finished_at=now() WHERE status IN ('queued','running','cancelling')`.execute(
+      db,
+    );
+    // A reply the athlete stopped half way.
+    const stopped = await createConversation(
+      owner,
+      { initialMessage: { content: 'Long question', target: null } },
+      randomUUID(),
+    );
+    const claim = (await claimRun(await worker())).claim!;
+    expect(claim.runId).toBe(stopped.accepted!.run.id);
+    await saveProgress(
+      claim.runId,
+      claim.token,
+      ProgressSchema.parse({
+        sequence: 1,
+        items: [{ itemId: 'reply', position: 0, content: 'Half a thought', revision: 1 }],
+      }),
+    );
+    await cancelRun(owner, claim.runId);
+    await finishRun(claim.runId, claim.token, { status: 'cancelled' });
+
+    const exported = await exportAccount(owner);
+    const all = exported.conversations.flatMap((conversation) => conversation.messages);
+    const feedback = all.find((message) => message.content === 'How did this one look?')!;
+    expect(feedback.references).toEqual([
+      expect.objectContaining({ type: 'workout_log', logId: log!.id }),
+    ]);
+    expect(all.find((message) => message.content === 'Long question')).toMatchObject({
+      coaching: { status: 'cancelled', shownText: ['Half a thought'] },
+    });
+    // A completed reply is exported once, as the assistant message.
+    const answered = all.find(
+      (message) =>
+        message.content === 'My calf has been sore since the race. Can you adjust things?',
+    )!;
+    expect(answered).toMatchObject({ coaching: { status: 'completed', shownText: [] } });
+    expect(all.filter((message) => message.content === REPLY)).toHaveLength(1);
+  });
+
+  it.each([
+    ['requesting', (owner: string) => requestAccountDeletion(owner)],
+    [
+      'cancelling',
+      async (owner: string) => {
+        await cancelAccountDeletion(owner);
+      },
+    ],
+  ])('does not deadlock %s account deletion against a plan deletion', async (name, change) => {
+    const { id: owner } = await athlete();
+    if (name === 'cancelling') await requestAccountDeletion(owner);
+    const other = await createPlan(owner, 'Deleted meanwhile', randomUUID());
+    let journalled!: () => void, release!: () => void;
+    const headHeld = new Promise<void>((resolve) => (journalled = resolve));
+    const released = new Promise<void>((resolve) => (release = resolve));
+    // A plan deletion holding the journal head, whose commit-time live event checks the athlete.
+    const deletion = db.transaction().execute(async (tx) => {
+      await sql`UPDATE plans SET state_version = state_version + 1 WHERE id = ${other.id}::uuid`.execute(
+        tx,
+      );
+      await appendDeletion(tx, 'plan.deleted', other.id, new Date());
+      journalled();
+      await released;
+    });
+    await headHeld;
+    const account = change(owner);
+    for (let waited = 0; ; waited += 25) {
+      const blocked = await sql<{ count: string }>`
+        SELECT count(*) FROM pg_stat_activity
+        WHERE datname = current_database() AND wait_event_type = 'Lock'`.execute(db);
+      if (Number(blocked.rows[0]!.count) > 0) break;
+      if (waited > 5000) throw new Error('The account change never waited for a lock.');
+      await new Promise((resolve) => setTimeout(resolve, 25));
+    }
+    release();
+    await Promise.all([deletion, account]);
+    expect((await getAccount(owner)).deletion === null).toBe(name === 'cancelling');
   });
 
   it('purges an account while a plan purge holds its plan, without deadlocking', async () => {
