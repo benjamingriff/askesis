@@ -1360,27 +1360,46 @@
   min-width: 0;
 }
 /* Today's session: a cover band in the session's colour with its effort profile rising from the
-   lower edge, then plain copy on the card surface. The kind colour stays in the cover. */
-.hero-workout {
+   lower edge, then plain copy on the card surface. The kind colour stays in the cover. The card
+   also holds the session's log, so hover, press and focus on the workout outline the whole card. */
+.hero-card {
+  --edge: var(--border);
   display: flex;
   flex-direction: column;
-  width: 100%;
-  padding: 0;
+  border: 1px solid var(--edge);
   border-radius: var(--radius-xl);
-  border: 1px solid var(--border);
   background: var(--surface);
-  color: var(--text);
-  text-align: left;
   overflow: hidden;
   transition:
     transform 0.12s ease,
     border-color 0.15s ease;
 }
-.hero-workout:hover {
-  border-color: color-mix(in srgb, var(--kind) 40%, var(--border));
+.hero-card:has(> .hero-workout:hover) {
+  --edge: color-mix(in srgb, var(--kind) 40%, var(--border));
 }
-.hero-workout:active {
+.hero-card:has(> .hero-workout:active) {
   transform: scale(0.99);
+}
+.hero-card:has(> .hero-workout:focus-visible) {
+  outline: 2px solid var(--accent-text);
+  outline-offset: 2px;
+}
+.hero-card > * + * {
+  border-top: 1px solid var(--edge);
+  transition: border-color 0.15s ease;
+}
+.hero-workout {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--text);
+  text-align: left;
+}
+.hero-workout:focus-visible {
+  outline: none;
 }
 .hero-cover {
   position: relative;
@@ -1432,33 +1451,11 @@
   max-width: 62ch;
   color: var(--text-dim);
 }
-.hero-footer {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 16px 28px;
-  margin-top: 10px;
-}
 .hero-stats {
   display: flex;
   flex-wrap: wrap;
-  gap: 28px;
-}
-.hero-cta {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 12px 18px 12px 20px;
-  border-radius: 999px;
-  background: var(--accent-fill);
-  color: var(--on-accent);
-  font-size: 15px;
-  font-weight: 800;
-  transition: filter 0.15s ease;
-}
-.hero-workout:hover .hero-cta {
-  filter: brightness(1.06);
+  gap: 16px 28px;
+  margin-top: 10px;
 }
 .rest-hero {
   display: flex;

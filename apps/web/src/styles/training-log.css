@@ -152,9 +152,6 @@
 }
 
 /* ---- Hero: log bar ---------------------------------------------------------------------------- */
-.hero-workout.as-card {
-  cursor: default;
-}
 .hero-log {
   display: flex;
   flex-wrap: wrap;
@@ -188,14 +185,6 @@
 .btn-done {
   background: var(--locked);
   color: #04150a;
-}
-.hero-footer .btn-view {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  color: var(--text-dim);
-  font-weight: 700;
-  font-size: 14px;
 }
 .quick-rpe {
   display: flex;
@@ -665,21 +654,15 @@
 .training-feedback .dialog-footer {
   flex-wrap: wrap;
 }
-.hero-log-wrapper {
-  border: 1px solid var(--border);
-  border-radius: 0 0 var(--radius-lg) var(--radius-lg);
-  background: var(--surface);
+.hero-log-wrapper .hero-log {
+  border-top: 0;
 }
 .hero-log-wrapper .quick-rpe {
-  padding: 0 20px 18px;
+  padding: 0 22px 18px;
 }
-.training-hero {
-  display: flex;
-  flex-direction: column;
-}
-.training-hero .hero-workout {
-  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
-  z-index: 1;
+.hero-card > .fb-hint {
+  margin: 0;
+  padding: 16px 22px 18px;
 }
 .training-history {
   display: grid;
@@ -774,10 +757,6 @@
   }
 }
 
-.training-hero > .hero-log-wrapper {
-  margin-top: -14px;
-  padding-top: 12px;
-}
 .training-unlogged {
   padding: 14px;
   border: 1px solid color-mix(in srgb, var(--warning) 35%, var(--border));
