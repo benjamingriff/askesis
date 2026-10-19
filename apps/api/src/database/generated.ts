@@ -3,11 +3,12 @@
  * Please do not edit it manually.
  */
 
-import type { ColumnType } from "kysely";
+import type { ColumnType } from 'kysely';
 
-export type Generated<T> = T extends ColumnType<infer S, infer I, infer U>
-  ? ColumnType<S, I | undefined, U>
-  : ColumnType<T, T | undefined, T>;
+export type Generated<T> =
+  T extends ColumnType<infer S, infer I, infer U>
+    ? ColumnType<S, I | undefined, U>
+    : ColumnType<T, T | undefined, T>;
 
 export type Int8 = ColumnType<string, bigint | number | string, bigint | number | string>;
 
@@ -116,6 +117,18 @@ export interface AgentToolReceipts {
   tool_name: string;
 }
 
+export interface AgentUsageRollups {
+  day: Timestamp;
+  input_tokens: Generated<Int8>;
+  model: string;
+  output_tokens: Generated<Int8>;
+  prompt_version: string;
+  provider: string;
+  runs: number;
+  status: string;
+  tool_calls: Generated<Int8>;
+}
+
 export interface AgentWorkers {
   id: string;
   last_seen_at: Generated<Timestamp>;
@@ -134,6 +147,7 @@ export interface ApiIdempotencyKeys {
   expires_at: Timestamp | null;
   id: Generated<string>;
   idempotency_key: string;
+  plan_id: string | null;
   request_hash: string;
   response_body: Json;
   response_status: number;
@@ -189,8 +203,11 @@ export interface AthleteIdentities {
 
 export interface Athletes {
   created_at: Generated<Timestamp>;
+  deletion_requested_at: Timestamp | null;
   display_name: string;
   id: Generated<string>;
+  purge_after: Timestamp | null;
+  purge_started_at: Timestamp | null;
   timezone: Generated<string>;
   updated_at: Generated<Timestamp>;
 }
@@ -232,6 +249,14 @@ export interface Conversations {
   plan_id: string | null;
   state_version: Generated<number>;
   title: string;
+}
+
+export interface DataDeletions {
+  id: Generated<string>;
+  kind: string;
+  purged_at: Generated<Timestamp>;
+  requested_at: Timestamp;
+  subject_id: string;
 }
 
 export interface ExamplePlanEditions {
@@ -314,6 +339,7 @@ export interface Plans {
   created_at: Generated<Timestamp>;
   current_draft_version_id: string | null;
   current_locked_version_id: string | null;
+  deleted_at: Timestamp | null;
   display_name: string;
   id: Generated<string>;
   owner_id: string;
@@ -531,6 +557,7 @@ export interface DB {
   agent_runs: AgentRuns;
   agent_tool_changes: AgentToolChanges;
   agent_tool_receipts: AgentToolReceipts;
+  agent_usage_rollups: AgentUsageRollups;
   agent_workers: AgentWorkers;
   api_idempotency_keys: ApiIdempotencyKeys;
   athlete_calibration_zones: AthleteCalibrationZones;
@@ -538,9 +565,10 @@ export interface DB {
   athlete_check_ins: AthleteCheckIns;
   athlete_identities: AthleteIdentities;
   athletes: Athletes;
-  "atlas_schema_revisions.atlas_schema_revisions": AtlasSchemaRevisionsAtlasSchemaRevisions;
+  'atlas_schema_revisions.atlas_schema_revisions': AtlasSchemaRevisionsAtlasSchemaRevisions;
   conversation_messages: ConversationMessages;
   conversations: Conversations;
+  data_deletions: DataDeletions;
   example_plan_editions: ExamplePlanEditions;
   live_event_heads: LiveEventHeads;
   live_events: LiveEvents;

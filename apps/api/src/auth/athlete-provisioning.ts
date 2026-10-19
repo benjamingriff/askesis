@@ -14,6 +14,7 @@ async function findAthlete(clerkUserId: string): Promise<AuthenticatedAthlete | 
       'athletes.id',
       'athletes.display_name',
       'athletes.timezone',
+      'athletes.deletion_requested_at',
       'athlete_identities.id as identity_id',
     ])
     .where('athlete_identities.provider', '=', provider)
@@ -33,6 +34,7 @@ async function findAthlete(clerkUserId: string): Promise<AuthenticatedAthlete | 
     displayName: row.display_name,
     clerkUserId,
     timezone: row.timezone,
+    deletionPending: row.deletion_requested_at !== null,
   };
 }
 
@@ -79,6 +81,7 @@ export async function ensureAthlete(
         displayName: athlete.display_name,
         clerkUserId,
         timezone: athlete.timezone,
+        deletionPending: false,
       };
     });
   } catch (error) {

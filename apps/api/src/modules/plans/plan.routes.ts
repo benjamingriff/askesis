@@ -17,6 +17,7 @@ import {
   RestorePreviewSchema,
   RestoreCommandSchema,
   DraftDetailSchema,
+  DeletionImpactSchema,
 } from './plan.schemas.js';
 import {
   createPlan,
@@ -34,6 +35,9 @@ import {
   previewRestore,
   restoreRevision,
   getDraft,
+  deletePlan,
+  undeletePlan,
+  deletionImpact,
 } from './plan.service.js';
 
 const errors = Object.fromEntries(
@@ -173,6 +177,45 @@ export function registerPlanRoutes(app: OpenAPIHono<AppEnvironment>): void {
         ),
     );
   }
+  app.openapi(
+    createRoute({
+      method: 'get',
+      path: '/api/v1/plans/{planId}/deletion-impact',
+      tags: ['Plans'],
+      request: { params: PlanParams },
+      responses: response(DeletionImpactSchema),
+    }),
+    async (c) =>
+      c.json(await deletionImpact(c.get('athlete').id, c.req.valid('param').planId), 200),
+  );
+  app.openapi(
+    createRoute({
+      method: 'post',
+      path: '/api/v1/plans/{planId}/delete',
+      tags: ['Plans'],
+      request: { params: PlanParams, body: body(StateCommandSchema) },
+      responses: response(PlanSchema),
+    }),
+    async (c) =>
+      c.json(
+        await deletePlan(
+          c.get('athlete').id,
+          c.req.valid('param').planId,
+          c.req.valid('json').expectedStateVersion,
+        ),
+        200,
+      ),
+  );
+  app.openapi(
+    createRoute({
+      method: 'post',
+      path: '/api/v1/plans/{planId}/undelete',
+      tags: ['Plans'],
+      request: { params: PlanParams },
+      responses: response(PlanSchema),
+    }),
+    async (c) => c.json(await undeletePlan(c.get('athlete').id, c.req.valid('param').planId), 200),
+  );
   app.openapi(
     createRoute({
       method: 'get',

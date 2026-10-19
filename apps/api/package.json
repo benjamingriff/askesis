@@ -18,6 +18,8 @@
     "build": "tsc -p tsconfig.json",
     "start": "node dist/operations/start.js",
     "example:seed": "tsx --env-file-if-exists=../../.env src/examples/cli.ts",
+    "retention:run": "tsx --env-file-if-exists=../../.env src/operations/retention.ts",
+    "retention:replay": "tsx --env-file-if-exists=../../.env src/operations/retention-replay.ts",
     "test": "vitest run --config vitest.config.ts",
     "test:db": "vitest run --config vitest.db.config.ts",
     "test:coverage": "vitest run --coverage --config vitest.config.ts",

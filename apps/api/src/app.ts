@@ -17,6 +17,7 @@ import { registerPerformanceRoutes } from './modules/performance/performance.rou
 import { PlanError } from './modules/plans/plan.service.js';
 import { ChatError } from './modules/chat/chat.core.js';
 import { registerChatRoutes } from './modules/chat/chat.routes.js';
+import { registerAccountRoutes } from './modules/account/account.routes.js';
 
 export const app = new OpenAPIHono<AppEnvironment>({
   defaultHook: (result, context) => {
@@ -93,7 +94,7 @@ app.get('/api/ready', async (context) => {
     select exists (
       select 1
       from atlas_schema_revisions.atlas_schema_revisions
-      where version = '20261015120000'
+      where version = '20261019120000'
     ) as migrated
   `.execute(getDatabase());
 
@@ -114,6 +115,7 @@ app.get('/api/ready', async (context) => {
 });
 app.use('/api/v1/*', requireAuthentication);
 
+registerAccountRoutes(app);
 registerAgentRoutes(app);
 registerLiveRoutes(app);
 registerWorkoutRoutes(app);

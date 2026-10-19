@@ -10,7 +10,7 @@ import type { z } from 'zod';
 import { getDatabase } from '../../database/client.js';
 import { getApiConfig } from '../../config.js';
 import type { DB, Json } from '../../database/generated.js';
-import { ChatError, activeStatuses } from '../chat/chat.core.js';
+import { ChatError, activeStatuses, assertAccountOpen } from '../chat/chat.core.js';
 import {
   appendEvent,
   appendMessage,
@@ -154,6 +154,13 @@ export async function claimRun(workerId: string) {
           await transition(db, run, 'failed', 'failed', 'CONVERSATION_ARCHIVED');
           continue;
         }
+        // A deletion request cancels queued runs; this covers one accepted just before it.
+        try {
+          await assertAccountOpen(db, run.owner_id, false);
+        } catch {
+          await transition(db, run, 'cancelled', 'cancelled');
+          continue;
+        }
         const token = randomBytes(32).toString('base64url');
         const generation = run.lease_generation + 1;
         const expires = new Date(
@@ -208,6 +215,11 @@ export async function authorized(db: Tx, id: string, token: string, allowCancell
     !(run.status === 'running' || (allowCancelling && run.status === 'cancelling'))
   )
     throw rejected();
+  // Only stopping remains for a run whose account is being deleted.
+  if (!allowCancelling)
+    await assertAccountOpen(db, run.owner_id, false).catch(() => {
+      throw rejected();
+    });
   return run;
 }
 async function target(db: Tx, run: Run, write = false) {
