@@ -755,7 +755,8 @@ describe('account deletion', () => {
     await sql`UPDATE athletes SET deletion_requested_at = now(), purge_after = now() + interval '7 days'
       WHERE id = ${owner}::uuid`.execute(db);
     const workerId = await worker();
-    expect((await claimRun(workerId)).claim).toBeNull();
+    // Claims are global: another queued run may be claimed, but never this one.
+    expect((await claimRun(workerId)).claim?.runId).not.toBe(created.accepted!.run.id);
     expect(
       (
         await db
@@ -1080,6 +1081,43 @@ describe('review regressions', () => {
       .orderBy('recorded_at', 'desc')
       .executeTakeFirstOrThrow();
     expect(latest.input).toMatchObject({ secondsPerKilometre: 295 });
+  });
+
+  it('purges a plan while another plan of the athlete is being deleted, without deadlocking', async () => {
+    const { id: owner } = await athlete();
+    const expired = await populatedPlan(owner);
+    const other = await createPlan(owner, 'Deleted meanwhile', randomUUID());
+    await deletePlan(owner, expired.planId, (await getPlan(owner, expired.planId)).stateVersion);
+    let journalled!: () => void, release!: () => void;
+    const headHeld = new Promise<void>((resolve) => (journalled = resolve));
+    const released = new Promise<void>((resolve) => (release = resolve));
+    // Another plan's deletion: it holds the journal head, and its commit-time live event checks
+    // the athlete foreign key.
+    const deletion = db.transaction().execute(async (tx) => {
+      await sql`UPDATE plans SET state_version = state_version + 1 WHERE id = ${other.id}::uuid`.execute(
+        tx,
+      );
+      await appendDeletion(tx, 'plan.deleted', other.id, new Date());
+      journalled();
+      await released;
+    });
+    await headHeld;
+    const purge = db.transaction().execute(async (tx) => {
+      await purgePlanRows(tx, expired.planId);
+      await appendDeletion(tx, 'plan.purged', expired.planId, new Date());
+    });
+    // Barrier: the purge is now waiting on the journal head.
+    for (let waited = 0; ; waited += 25) {
+      const blocked = await sql<{ count: string }>`
+        SELECT count(*) FROM pg_stat_activity
+        WHERE datname = current_database() AND wait_event_type = 'Lock'`.execute(db);
+      if (Number(blocked.rows[0]!.count) > 0) break;
+      if (waited > 5000) throw new Error('The purge never waited for a lock.');
+      await new Promise((resolve) => setTimeout(resolve, 25));
+    }
+    release();
+    await Promise.all([deletion, purge]);
+    expect(await rowsReferencing(['plan_id'], [expired.planId])).toEqual([]);
   });
 
   it('purges an account while a plan purge holds its plan, without deadlocking', async () => {

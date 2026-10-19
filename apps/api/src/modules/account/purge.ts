@@ -135,7 +135,9 @@ async function purgePlanContent(db: Tx, owner: string, planId: string, account =
       .orderBy('id')
       .forUpdate()
       .execute();
-    await db.selectFrom('athletes').select('id').where('id', '=', owner).forUpdate().execute();
+    // NO KEY UPDATE: it waits for performance commands (which lock the athlete FOR UPDATE) but
+    // not for the foreign-key checks of other transactions' commit-time journal inserts.
+    await db.selectFrom('athletes').select('id').where('id', '=', owner).forNoKeyUpdate().execute();
   }
   const runIds = await purgeConversations(db, conversationIds);
   await db.deleteFrom('workout_logs').where('plan_id', '=', planId).execute();
