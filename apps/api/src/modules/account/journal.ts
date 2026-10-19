@@ -16,6 +16,8 @@ export const DELETION_EVENTS = [
   'plan.restored',
   'plan.purged',
   'account.deletion_requested',
+  /** The purge was brought forward (the Clerk user was deleted); `at` is the new deadline. */
+  'account.purge_due',
   'account.deletion_cancelled',
   'account.purged',
 ] as const;

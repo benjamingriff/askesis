@@ -48,7 +48,8 @@ CREATE TABLE agent_usage_rollups (
 CREATE TABLE deletion_journal (
  sequence bigint PRIMARY KEY CHECK (sequence > 0),
  event text NOT NULL CHECK (event IN ('plan.deleted', 'plan.restored', 'plan.purged',
-   'account.deletion_requested', 'account.deletion_cancelled', 'account.purged')),
+   'account.deletion_requested', 'account.purge_due', 'account.deletion_cancelled',
+   'account.purged')),
  subject_id uuid NOT NULL,
  occurred_at timestamptz NOT NULL,
  shipped_at timestamptz

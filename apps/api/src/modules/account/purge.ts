@@ -130,10 +130,20 @@ async function purgePlanContent(db: Tx, owner: string, planId: string, account =
   await db.deleteFrom('example_plan_editions').where('plan_id', '=', planId).execute();
   await db.deleteFrom('api_idempotency_keys').where('plan_id', '=', planId).execute();
   if (!account) {
+    const versionIds = (
+      await db.selectFrom('plan_versions').select('id').where('plan_id', '=', planId).execute()
+    ).map((row) => row.id);
+    const named = [planId, ...versionIds, ...conversationIds, ...runIds];
+    // Other cached command responses can still name the plan: fitness timelines list the
+    // conversation that recorded each entry, and records cached before plan_id existed have
+    // none. A retry with such a key runs afresh instead of replaying a deleted reference.
+    await sql`
+      DELETE FROM api_idempotency_keys WHERE athlete_id = ${owner}::uuid
+        AND EXISTS (SELECT 1 FROM unnest(${named}::text[]) AS id
+          WHERE strpos(response_body::text, id) > 0)`.execute(db);
     // Tools in the athlete's other conversations can return this plan's logs and check-ins,
     // or name its conversations. Results are only replayed within their run, so they are
     // redacted rather than kept.
-    const named = [planId, ...conversationIds, ...runIds];
     await sql`
       UPDATE agent_tool_receipts SET response = ${JSON.stringify({ redacted: 'A plan in this result was deleted.' })}::jsonb
       WHERE run_id IN (SELECT id FROM agent_runs WHERE owner_id = ${owner}::uuid)
@@ -173,14 +183,16 @@ export async function purgePlanRows(db: Tx, planId: string, force = false) {
 
 /** Removes everything the athlete owns, then the athlete. `force` is for journal replay. */
 export async function purgeAccountRows(db: Tx, athleteId: string, force = false) {
-  // Runs before the athlete: the order coaching tools take them in.
-  await db
-    .selectFrom('agent_runs')
-    .select('id')
-    .where('owner_id', '=', athleteId)
-    .orderBy('id')
-    .forUpdate()
-    .execute();
+  // Plans, conversations, runs, then the athlete: the order worker calls and plan purges take
+  // them in, so a concurrent purge or finishing run waits rather than deadlocks.
+  for (const table of ['plans', 'conversations', 'agent_runs'] as const)
+    await db
+      .selectFrom(table)
+      .select('id')
+      .where('owner_id', '=', athleteId)
+      .orderBy('id')
+      .forUpdate()
+      .execute();
   const athlete = await db
     .selectFrom('athletes')
     .select(['id', 'deletion_requested_at'])

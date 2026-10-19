@@ -136,8 +136,22 @@ export async function claimRun(workerId: string) {
         .limit(20)
         .execute();
       for (const candidate of candidates) {
-        const run = await ownedRun(db, candidate.owner_id, candidate.id, true);
-        if (run.status !== 'queued') continue;
+        const run = await ownedRun(db, candidate.owner_id, candidate.id, true).catch(
+          async (error: unknown) => {
+            // A run whose plan was deleted (only possible on restored data) must not block the
+            // queue: it can never be claimed, so it is cancelled.
+            if (!(error instanceof ChatError && error.status === 404)) throw error;
+            const hidden = await db
+              .selectFrom('agent_runs')
+              .selectAll()
+              .where('id', '=', candidate.id)
+              .forUpdate()
+              .executeTakeFirstOrThrow();
+            if (hidden.status === 'queued') await transition(db, hidden, 'cancelled', 'cancelled');
+            return null;
+          },
+        );
+        if (!run || run.status !== 'queued') continue;
         if (Date.now() >= new Date(run.deadline_at).getTime()) {
           await transition(db, run, 'failed', 'failed', 'EXECUTION_TIMEOUT');
           continue;
@@ -818,8 +832,14 @@ export async function sweepAgentRuns() {
     await getDatabase()
       .transaction()
       .execute(async (db) => {
-        const run = await ownedRun(db, candidate.owner_id, candidate.id, true);
-        if (!activeStatuses.some((s) => s === run.status)) return;
+        // Expiry is system work: it locks the run alone, including one whose plan is deleted.
+        const run = await db
+          .selectFrom('agent_runs')
+          .selectAll()
+          .where('id', '=', candidate.id)
+          .forUpdate()
+          .executeTakeFirst();
+        if (!run || !activeStatuses.some((s) => s === run.status)) return;
         if (Date.now() >= new Date(run.deadline_at).getTime())
           await transition(db, run, 'failed', 'failed', 'EXECUTION_TIMEOUT');
         else if (run.lease_expires_at && Date.now() >= new Date(run.lease_expires_at).getTime()) {

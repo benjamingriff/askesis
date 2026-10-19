@@ -26,11 +26,13 @@ import {
   deletionImpact,
   getPlan,
   listPlans,
+  lockPlan,
   organizePlan,
+  previewLock,
   undeletePlan,
 } from '../../src/modules/plans/plan.service.js';
 import { cloneContent } from '../../src/modules/plans/plan.aggregate.js';
-import { getBrief } from '../../src/modules/plans/brief.service.js';
+import { confirmBrief, getBrief } from '../../src/modules/plans/brief.service.js';
 import { emptyBrief } from '../../src/modules/plans/brief.schemas.js';
 import { recordCalibration } from '../../src/modules/performance/performance.service.js';
 import {
@@ -55,7 +57,7 @@ import {
   parseDeletionLog,
   shipDeletions,
 } from '../../src/modules/account/journal.js';
-import { TABLE_RETENTION } from '../../src/modules/account/purge.js';
+import { purgeAccountRows, TABLE_RETENTION } from '../../src/modules/account/purge.js';
 
 const db = getDatabase();
 const DAY = 86_400_000;
@@ -317,6 +319,26 @@ describe('plan deletion', () => {
       checkIns: 1,
       restoreDays: 30,
     });
+    // Cached responses that name the plan: a fitness timeline listing the conversation that
+    // recorded an entry, and a record cached before cached responses carried their plan.
+    await recordCalibration(owner, {
+      system: 'run_pace',
+      input: { method: 'threshold_pace', secondsPerKilometre: 305 },
+      provenance: 'user_estimate',
+      estimateBasis: 'Keyed retry fixture.',
+      idempotencyKey: randomUUID(),
+    });
+    await db
+      .insertInto('api_idempotency_keys')
+      .values({
+        athlete_id: owner,
+        command_scope: 'plan.lock',
+        idempotency_key: randomUUID(),
+        request_hash: 'a'.repeat(64),
+        response_status: 200,
+        response_body: JSON.stringify({ id: doomed.planId }),
+      })
+      .execute();
     const calibrationsBefore = await calibrationCount(owner);
     const deleted = await deletePlan(owner, doomed.planId, plan.stateVersion);
     await deletePlan(owner, replayed.id, replayed.stateVersion);
@@ -872,4 +894,182 @@ it('prunes week-old command records and journal events', async () => {
   await runRetention({ now: later(8) });
   expect(await count('api_idempotency_keys')).toBe(0);
   expect(await count('live_events')).toBe(0);
+});
+
+describe('review regressions', () => {
+  it('keeps a restored coaching run of a deleted plan from blocking the queue', async () => {
+    const { id: owner } = await athlete();
+    const plan = await createPlan(owner, 'Restored with queued work', randomUUID());
+    const queued = await createConversation(
+      owner,
+      {
+        planId: plan.id,
+        initialMessage: {
+          content: 'Plan my week',
+          target: { versionId: plan.draft!.id, editNumber: plan.draft!.editNumber },
+        },
+      },
+      randomUUID(),
+    );
+    // As restored from a backup taken before the plan was deleted, with its run still queued.
+    await sql`UPDATE plans SET archived_at = now(), activated_at = NULL, deleted_at = now()
+      WHERE id = ${plan.id}::uuid`.execute(db);
+    const { id: other } = await athlete();
+    const waiting = await createConversation(
+      other,
+      { initialMessage: { content: 'Next in the queue', target: null } },
+      randomUUID(),
+    );
+    const claim = (await claimRun(await worker())).claim!;
+    expect(claim.runId).toBe(waiting.accepted!.run.id);
+    const status = async (id: string) =>
+      (
+        await db
+          .selectFrom('agent_runs')
+          .select(['status', 'failure_code'])
+          .where('id', '=', id)
+          .executeTakeFirstOrThrow()
+      ).status;
+    expect(await status(queued.accepted!.run.id)).toBe('cancelled');
+
+    // Replaying the deletion onto a backup ends the plan's coaching before hiding it.
+    const replayed = await createPlan(owner, 'Replayed with queued work', randomUUID());
+    const run = await createConversation(
+      owner,
+      {
+        planId: replayed.id,
+        initialMessage: {
+          content: 'Plan my week',
+          target: { versionId: replayed.draft!.id, editNumber: replayed.draft!.editNumber },
+        },
+      },
+      randomUUID(),
+    );
+    const from =
+      Number(
+        (await db.selectFrom('deletion_journal_head').select('sequence').executeTakeFirstOrThrow())
+          .sequence,
+      ) + 1;
+    await replayDeletionEvents({
+      events: [
+        {
+          sequence: from,
+          event: 'plan.deleted',
+          subjectId: replayed.id,
+          at: new Date().toISOString(),
+        },
+      ],
+      checkpoint: from,
+    });
+    expect(await status(run.accepted!.run.id)).toBe('failed');
+  });
+
+  it('journals a purge brought forward by the Clerk webhook and replays it', async () => {
+    const fresh = await athlete();
+    await scheduleImmediatePurge(fresh.subject);
+    expect(await journal(fresh.id)).toEqual(['account.deletion_requested', 'account.purge_due']);
+    const pending = await athlete();
+    await requestAccountDeletion(pending.id);
+    await scheduleImmediatePurge(pending.subject);
+    expect(await journal(pending.id)).toEqual(['account.deletion_requested', 'account.purge_due']);
+
+    const restored = await athlete();
+    const from =
+      Number(
+        (await db.selectFrom('deletion_journal_head').select('sequence').executeTakeFirstOrThrow())
+          .sequence,
+      ) + 1;
+    const at = new Date().toISOString();
+    await replayDeletionEvents({
+      events: [
+        { sequence: from, event: 'account.deletion_requested', subjectId: restored.id, at },
+        { sequence: from + 1, event: 'account.purge_due', subjectId: restored.id, at },
+      ],
+      checkpoint: from + 1,
+    });
+    expect((await getAccount(restored.id)).deletion?.purgeAfter).toBe(at);
+  });
+
+  it('replays a brief command after its plan was locked, deleted and restored', async () => {
+    const { id: owner } = await athlete();
+    let plan = await createPlan(owner, 'Brief replay', randomUUID(), {
+      startDate: '2026-05-11',
+      endDate: '2026-10-04',
+    });
+    await db.transaction().execute((tx) => cloneContent(tx, FIXTURE_VERSION, plan.draft!.id));
+    const brief = await getBrief(owner, plan.id);
+    const command = {
+      expectedDraftId: brief.versionId,
+      expectedEditNumber: brief.editNumber,
+      expectedHash: brief.hash,
+      acknowledgedWarningCodes: brief.findings
+        .filter((f) => f.severity === 'warning')
+        .map((f) => f.code),
+      idempotencyKey: randomUUID(),
+    };
+    const confirmed = await confirmBrief(owner, plan.id, command);
+    const preview = await previewLock(owner, plan.id);
+    plan = await lockPlan(
+      owner,
+      plan.id,
+      {
+        expectedStateVersion: preview.stateVersion,
+        expectedDraftId: preview.draftId,
+        expectedEditNumber: preview.editNumber,
+        expectedContentHash: preview.contentHash,
+        expectedValidationDigest: preview.validationDigest,
+        acknowledgedWarningCodes: preview.findings
+          .filter((f) => f.severity === 'warning')
+          .map((f) => f.code),
+      },
+      randomUUID(),
+    );
+    expect(await confirmBrief(owner, plan.id, command)).toEqual(confirmed);
+    const deleted = await deletePlan(owner, plan.id, plan.stateVersion);
+    await expect(confirmBrief(owner, plan.id, command)).rejects.toMatchObject({ status: 404 });
+    await undeletePlan(owner, plan.id);
+    expect(await confirmBrief(owner, plan.id, command)).toEqual(confirmed);
+    expect(deleted.deletedAt).toBeTruthy();
+  });
+
+  it('purges an account while a plan purge holds its plan, without deadlocking', async () => {
+    const { id: owner } = await athlete();
+    const doomed = await populatedPlan(owner);
+    await deletePlan(owner, doomed.planId, (await getPlan(owner, doomed.planId)).stateVersion);
+    await requestAccountDeletion(owner);
+    let locked!: () => void, release!: () => void;
+    const planLocked = new Promise<void>((resolve) => (locked = resolve));
+    const released = new Promise<void>((resolve) => (release = resolve));
+    // Another instance's plan purge: it locks the plan, then the plan's runs as it deletes them.
+    const planPurge = db.transaction().execute(async (tx) => {
+      await tx
+        .selectFrom('plans')
+        .select('id')
+        .where('id', '=', doomed.planId)
+        .forUpdate()
+        .execute();
+      locked();
+      await released;
+      await tx
+        .selectFrom('agent_runs')
+        .select('id')
+        .where('id', '=', doomed.runId)
+        .forUpdate()
+        .execute();
+    });
+    await planLocked;
+    const accountPurge = db.transaction().execute((tx) => purgeAccountRows(tx, owner));
+    // Barrier: the account purge is now waiting on a lock.
+    for (let waited = 0; ; waited += 25) {
+      const blocked = await sql<{ count: string }>`
+        SELECT count(*) FROM pg_stat_activity
+        WHERE datname = current_database() AND wait_event_type = 'Lock'`.execute(db);
+      if (Number(blocked.rows[0]!.count) > 0) break;
+      if (waited > 5000) throw new Error('The account purge never waited for a lock.');
+      await new Promise((resolve) => setTimeout(resolve, 25));
+    }
+    release();
+    await Promise.all([planPurge, accountPurge]);
+    expect(await rowsReferencing(['athlete_id', 'owner_id'], [owner])).toEqual([]);
+  });
 });

@@ -91,6 +91,9 @@ async function markForDeletion(athleteId: string, now: Date, purgeAfter: Date) {
         .where('id', '=', athleteId)
         .execute();
       if (requested) await appendDeletion(db, 'account.deletion_requested', athleteId, now);
+      // Replay assumes the standard grace period; record any earlier deadline explicitly.
+      if (purgeAfter.getTime() < now.getTime() + ACCOUNT_GRACE_DAYS * DAY_MS)
+        await appendDeletion(db, 'account.purge_due', athleteId, purgeAfter);
       return true;
     });
   await cancelActiveRuns(athleteId);
@@ -286,6 +289,19 @@ async function applyDeletion(db: Tx, { event, subjectId, at }: DeletionEvent) {
         .forUpdate()
         .executeTakeFirst();
       if (!plan || plan.deleted_at) return;
+      // The backup may hold coaching that was still queued or running for this plan. Deletion
+      // required it idle, so it ended before; end it here rather than leave it hidden.
+      const runs = await db
+        .selectFrom('agent_runs')
+        .selectAll()
+        .where('conversation_id', 'in', (eb) =>
+          eb.selectFrom('conversations').select('id').where('plan_id', '=', subjectId),
+        )
+        .where('status', 'in', activeStatuses)
+        .orderBy('id')
+        .forUpdate()
+        .execute();
+      for (const run of runs) await transition(db, run, 'failed', 'failed', 'PLAN_DELETED');
       await db
         .updateTable('plans')
         .set({
@@ -318,6 +334,14 @@ async function applyDeletion(db: Tx, { event, subjectId, at }: DeletionEvent) {
         })
         .where('id', '=', subjectId)
         .where('deletion_requested_at', 'is', null)
+        .execute();
+      return;
+    case 'account.purge_due':
+      await db
+        .updateTable('athletes')
+        .set({ purge_after: sql`least(purge_after, ${when})` })
+        .where('id', '=', subjectId)
+        .where('deletion_requested_at', 'is not', null)
         .execute();
       return;
     case 'account.deletion_cancelled':
