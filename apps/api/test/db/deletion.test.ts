@@ -45,9 +45,16 @@ import {
   exportAccount,
   getAccount,
   replayDeletionEvents,
+  ReplayGapError,
   requestAccountDeletion,
   runRetention,
+  scheduleImmediatePurge,
 } from '../../src/modules/account/account.service.js';
+import {
+  appendDeletion,
+  parseDeletionLog,
+  shipDeletions,
+} from '../../src/modules/account/journal.js';
 import { TABLE_RETENTION } from '../../src/modules/account/purge.js';
 
 const db = getDatabase();
@@ -222,6 +229,17 @@ async function calibrationCount(owner: string) {
   return Number(row.count);
 }
 
+/** The journal entries recorded for a subject, oldest first. */
+async function journal(subjectId: string) {
+  const rows = await db
+    .selectFrom('deletion_journal')
+    .select('event')
+    .where('subject_id', '=', subjectId)
+    .orderBy('sequence')
+    .execute();
+  return rows.map((row) => row.event);
+}
+
 async function publicTables() {
   const tables = await sql<{ table_name: string }>`
     SELECT table_name FROM information_schema.tables
@@ -249,7 +267,7 @@ async function rowsReferencing(columns: string[], ids: string[]) {
       AND c.column_name = ANY(${columns}::text[]) AND c.data_type = 'uuid'`.execute(db);
   const hits: string[] = [];
   for (const { table_name, column_name } of found.rows) {
-    if (table_name === 'data_deletions') continue;
+    if (table_name === 'deletion_journal') continue;
     const result = await sql<{ count: string }>`
       SELECT count(*) FROM ${sql.table(table_name)}
       WHERE ${sql.ref(column_name)} = ANY(${ids}::uuid[])`.execute(db);
@@ -420,13 +438,36 @@ describe('plan deletion', () => {
       .executeTakeFirstOrThrow();
     // Other tests' expired deletions may be purged in the same pass.
     expect(Number(rollupsAfter.runs) - Number(rollupsBefore.runs ?? 0)).toBeGreaterThanOrEqual(1);
+    expect(await journal(doomed.planId)).toEqual([
+      'plan.deleted',
+      'plan.restored',
+      'plan.deleted',
+      'plan.purged',
+    ]);
+  });
+
+  it('refuses to restore a plan once its 30 days are up, even before the purge', async () => {
+    const { id: owner } = await athlete();
+    const plan = await createPlan(owner, 'Window', randomUUID());
+    const deletedAt = new Date();
+    const window = 30 * DAY;
+    let deleted = await deletePlan(owner, plan.id, plan.stateVersion, deletedAt);
+    const restored = await undeletePlan(owner, plan.id, new Date(deletedAt.getTime() + window - 1));
+    expect(restored.deletedAt).toBeNull();
+    deleted = await deletePlan(owner, plan.id, restored.stateVersion, deletedAt);
+    for (const offset of [window, window + 1])
+      await expect(
+        undeletePlan(owner, plan.id, new Date(deletedAt.getTime() + offset)),
+      ).rejects.toMatchObject({ status: 404 });
+    expect(deleted.deletedAt).toBe(deletedAt.toISOString());
+    // Still present, but no longer offered for restoring.
     expect(
-      await db
-        .selectFrom('data_deletions')
-        .select('kind')
-        .where('subject_id', '=', doomed.planId)
-        .execute(),
-    ).toEqual([{ kind: 'plan' }]);
+      await db.selectFrom('plans').select('id').where('id', '=', plan.id).execute(),
+    ).toHaveLength(1);
+    const listed = async (offset: number) =>
+      (await listPlans(owner, 'deleted', new Date(deletedAt.getTime() + offset))).map((p) => p.id);
+    expect(await listed(window - 1)).toContain(plan.id);
+    expect(await listed(window)).not.toContain(plan.id);
   });
 
   it('refuses to delete a plan while its coach is working', async () => {
@@ -580,7 +621,8 @@ describe('account deletion', () => {
         // also pruned other tests' week-old command records and journal events.
         ![
           'agent_usage_rollups',
-          'data_deletions',
+          'deletion_journal',
+          'deletion_journal_head',
           'agent_workers',
           'api_idempotency_keys',
           'live_events',
@@ -592,13 +634,12 @@ describe('account deletion', () => {
     // Another athlete's data is untouched.
     expect((await getPlan(other.id, otherPlan.planId)).id).toBe(otherPlan.planId);
     expect((await readTrainingLog(db, other.id)).logs).toHaveLength(1);
-    expect(
-      await db
-        .selectFrom('data_deletions')
-        .select('kind')
-        .where('subject_id', '=', owner)
-        .execute(),
-    ).toEqual([{ kind: 'account' }]);
+    expect(await journal(owner)).toEqual([
+      'account.deletion_requested',
+      'account.deletion_cancelled',
+      'account.deletion_requested',
+      'account.purged',
+    ]);
   });
 
   it('fences coaching once deletion is requested', async () => {
@@ -628,6 +669,44 @@ describe('account deletion', () => {
     ).rejects.toMatchObject({ code: 'ACCOUNT_DELETION_PENDING' });
   });
 
+  it.each([
+    ['a deletion request', (owner: string) => requestAccountDeletion(owner)],
+    ['the Clerk webhook', (owner: string, subject: string) => scheduleImmediatePurge(subject)],
+  ])('does not deadlock %s against a coaching tool holding a run', async (_name, request) => {
+    const { id: owner, subject } = await athlete();
+    const created = await createConversation(
+      owner,
+      { initialMessage: { content: 'Record my new threshold', target: null } },
+      randomUUID(),
+    );
+    const runId = created.accepted!.run.id;
+    let locked!: () => void, release!: () => void;
+    const runLocked = new Promise<void>((resolve) => (locked = resolve));
+    const released = new Promise<void>((resolve) => (release = resolve));
+    // A tool locks its run first and the athlete later, as recording a calibration does.
+    const tool = db.transaction().execute(async (tx) => {
+      await tx.selectFrom('agent_runs').select('id').where('id', '=', runId).forUpdate().execute();
+      locked();
+      await released;
+      await tx.selectFrom('athletes').select('id').where('id', '=', owner).forUpdate().execute();
+    });
+    await runLocked;
+    const deletion = request(owner, subject);
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    release();
+    await Promise.all([tool, deletion]);
+    expect((await getAccount(owner)).deletion).not.toBeNull();
+    expect(
+      (
+        await db
+          .selectFrom('agent_runs')
+          .select('status')
+          .where('id', '=', runId)
+          .executeTakeFirstOrThrow()
+      ).status,
+    ).toBe('cancelled');
+  });
+
   it('does not let a worker claim a run whose account is being deleted', async () => {
     const { id: owner } = await athlete();
     const created = await createConversation(
@@ -652,30 +731,86 @@ describe('account deletion', () => {
   });
 });
 
-it('replays logged deletions onto a restored backup', async () => {
-  const { id: owner } = await athlete();
-  const purged = await populatedPlan(owner);
-  const softDeleted = await createPlan(owner, 'Deleted after the backup', randomUUID());
-  const at = new Date().toISOString();
-  // The "backup" still has both plans: replaying the log removes one and hides the other.
-  expect(
-    await replayDeletionEvents([
-      { event: 'plan.deleted', planId: purged.planId, at },
-      { event: 'plan.purged', planId: purged.planId, at },
-      { event: 'plan.deleted', planId: softDeleted.id, at },
-      { event: 'plan.purged', planId: randomUUID(), at },
-    ]),
-  ).toBe(3);
-  expect(await rowsReferencing(['plan_id'], [purged.planId])).toEqual([]);
-  expect((await listPlans(owner, 'deleted')).map((p) => p.id)).toEqual([softDeleted.id]);
+describe('deletion journal', () => {
+  const head = async () =>
+    Number(
+      (await db.selectFrom('deletion_journal_head').select('sequence').executeTakeFirstOrThrow())
+        .sequence,
+    );
+  const shipped = (sequence: number, event: string, subjectId: string) =>
+    JSON.stringify({
+      level: 30,
+      deletion: { sequence, event, subjectId, at: new Date().toISOString() },
+    });
 
-  expect(
-    await replayDeletionEvents([
-      { event: 'account.deletion_requested', athleteId: owner, at },
-      { event: 'account.purged', athleteId: owner, at },
-    ]),
-  ).toBe(2);
-  expect(await rowsReferencing(['athlete_id', 'owner_id'], [owner])).toEqual([]);
+  it('replays shipped entries onto a restored backup, in sequence order, once each', async () => {
+    const { id: owner } = await athlete();
+    const purged = await populatedPlan(owner);
+    const soft = await createPlan(owner, 'Deleted after the backup', randomUUID());
+    // This database plays the restored backup: neither deletion happened in it yet.
+    const from = (await head()) + 1;
+    const log = [
+      shipped(from + 2, 'plan.deleted', soft.id),
+      shipped(from + 1, 'plan.purged', purged.planId),
+      shipped(from, 'plan.deleted', purged.planId),
+      shipped(from + 1, 'plan.purged', purged.planId),
+    ].join('\n');
+    expect(await replayDeletionEvents(parseDeletionLog(log))).toEqual({
+      from,
+      to: from + 2,
+      applied: 3,
+    });
+    expect(await rowsReferencing(['plan_id'], [purged.planId])).toEqual([]);
+    expect((await listPlans(owner, 'deleted')).map((p) => p.id)).toEqual([soft.id]);
+    // The journal continues from the replayed entries, already shipped.
+    expect(await head()).toBe(from + 2);
+    expect(await journal(purged.planId)).toEqual(['plan.deleted', 'plan.purged']);
+    // Running it again changes nothing.
+    expect((await replayDeletionEvents(parseDeletionLog(log))).applied).toBe(0);
+
+    const accountFrom = (await head()) + 1;
+    await replayDeletionEvents(
+      parseDeletionLog(
+        [
+          shipped(accountFrom, 'account.deletion_requested', owner),
+          shipped(accountFrom + 1, 'account.purged', owner),
+        ].join('\n'),
+      ),
+    );
+    expect(await rowsReferencing(['athlete_id', 'owner_id'], [owner])).toEqual([]);
+  });
+
+  it('refuses a replay with missing entries unless the loss is accepted', async () => {
+    const { id: owner } = await athlete();
+    const plan = await createPlan(owner, 'Gap', randomUUID());
+    const from = (await head()) + 1;
+    const events = parseDeletionLog(
+      [shipped(from, 'plan.deleted', plan.id), shipped(from + 2, 'plan.purged', plan.id)].join(
+        '\n',
+      ),
+    );
+    await expect(replayDeletionEvents(events)).rejects.toBeInstanceOf(ReplayGapError);
+    expect((await getPlan(owner, plan.id)).deletedAt).toBeNull();
+    expect(await head()).toBe(from - 1);
+    expect((await replayDeletionEvents(events, { allowGaps: true })).applied).toBe(2);
+    expect(await db.selectFrom('plans').select('id').where('id', '=', plan.id).execute()).toEqual(
+      [],
+    );
+  });
+
+  it('ships entries left behind by a crash after commit', async () => {
+    const { id: owner } = await athlete();
+    await db
+      .transaction()
+      .execute((tx) => appendDeletion(tx, 'account.deletion_requested', owner, new Date()));
+    await shipDeletions();
+    const rows = await db
+      .selectFrom('deletion_journal')
+      .select('shipped_at')
+      .where('subject_id', '=', owner)
+      .execute();
+    expect(rows.map((row) => row.shipped_at !== null)).toEqual([true]);
+  });
 });
 
 it('prunes week-old command records and journal events', async () => {

@@ -32,9 +32,11 @@ export const TABLE_RETENTION = {
   agent_progress_batches: 'conversation',
   agent_run_measurements: 'conversation',
   agent_run_finishes: 'conversation',
-  // No personal data: anonymous usage, the deletion ledger, workers and shared vocabularies.
+  // No personal data: anonymous usage, the deletion journal (ids and times of purged subjects),
+  // workers and shared vocabularies.
   agent_usage_rollups: 'kept',
-  data_deletions: 'kept',
+  deletion_journal: 'kept',
+  deletion_journal_head: 'kept',
   agent_workers: 'kept',
   movement_definitions: 'kept',
   seed_runs: 'kept',
@@ -154,37 +156,38 @@ async function purgePlanContent(db: Tx, owner: string, planId: string, account =
 }
 
 /**
- * Removes a deleted plan with its conversations, training log and check-ins. Replaying a
- * recorded purge onto a restored backup passes `requestedAt`, as the plan may predate deletion.
+ * Removes a deleted plan with its conversations, training log and check-ins. `force` replays a
+ * journalled purge onto a restored backup, where the plan may predate its deletion.
  */
-export async function purgePlanRows(db: Tx, planId: string, requestedAt?: Date) {
+export async function purgePlanRows(db: Tx, planId: string, force = false) {
   const plan = await db
     .selectFrom('plans')
     .select(['owner_id', 'deleted_at'])
     .where('id', '=', planId)
     .forUpdate()
     .executeTakeFirst();
-  const deletedAt = plan?.deleted_at ?? requestedAt;
-  if (!plan || !deletedAt) return false;
+  if (!plan || (!plan.deleted_at && !force)) return false;
   await purging(db, () => purgePlanContent(db, plan.owner_id, planId));
-  await db
-    .insertInto('data_deletions')
-    .values({ kind: 'plan', subject_id: planId, requested_at: deletedAt })
-    .onConflict((oc) => oc.doNothing())
-    .execute();
   return true;
 }
 
-/** Removes everything the athlete owns, then the athlete. */
-export async function purgeAccountRows(db: Tx, athleteId: string, requestedAt?: Date) {
+/** Removes everything the athlete owns, then the athlete. `force` is for journal replay. */
+export async function purgeAccountRows(db: Tx, athleteId: string, force = false) {
+  // Runs before the athlete: the order coaching tools take them in.
+  await db
+    .selectFrom('agent_runs')
+    .select('id')
+    .where('owner_id', '=', athleteId)
+    .orderBy('id')
+    .forUpdate()
+    .execute();
   const athlete = await db
     .selectFrom('athletes')
     .select(['id', 'deletion_requested_at'])
     .where('id', '=', athleteId)
     .forUpdate()
     .executeTakeFirst();
-  const deletionRequestedAt = athlete?.deletion_requested_at ?? requestedAt;
-  if (!athlete || !deletionRequestedAt) return false;
+  if (!athlete || (!athlete.deletion_requested_at && !force)) return false;
   await purging(db, async () => {
     const plans = await db
       .selectFrom('plans')
@@ -219,14 +222,5 @@ export async function purgeAccountRows(db: Tx, athleteId: string, requestedAt?: 
     await db.deleteFrom('athlete_identities').where('athlete_id', '=', athleteId).execute();
     await db.deleteFrom('athletes').where('id', '=', athleteId).execute();
   });
-  await db
-    .insertInto('data_deletions')
-    .values({
-      kind: 'account',
-      subject_id: athleteId,
-      requested_at: deletionRequestedAt,
-    })
-    .onConflict((oc) => oc.doNothing())
-    .execute();
   return true;
 }

@@ -41,16 +41,24 @@ CREATE TABLE agent_usage_rollups (
  PRIMARY KEY (day, provider, model, prompt_version, status)
 );
 
--- Completed purges, so a restored backup can have them re-applied. The ids are random UUIDs
--- with nothing left to join to.
-CREATE TABLE data_deletions (
- id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
- kind text NOT NULL CHECK (kind IN ('plan', 'account')),
+-- Every deletion transition, written in its own transaction and shipped to the logs, so a
+-- database restored from an older backup can have later deletions replayed. Sequences come from
+-- a single head row, so they are gapless and follow commit order; a replay can tell when events
+-- are missing. Ids and times only: nothing left to join to once the subject is purged.
+CREATE TABLE deletion_journal (
+ sequence bigint PRIMARY KEY CHECK (sequence > 0),
+ event text NOT NULL CHECK (event IN ('plan.deleted', 'plan.restored', 'plan.purged',
+   'account.deletion_requested', 'account.deletion_cancelled', 'account.purged')),
  subject_id uuid NOT NULL,
- requested_at timestamptz NOT NULL,
- purged_at timestamptz NOT NULL DEFAULT now(),
- UNIQUE (kind, subject_id)
+ occurred_at timestamptz NOT NULL,
+ shipped_at timestamptz
 );
+CREATE INDEX deletion_journal_unshipped_idx ON deletion_journal (sequence) WHERE shipped_at IS NULL;
+CREATE TABLE deletion_journal_head (
+ singleton boolean PRIMARY KEY DEFAULT true CHECK (singleton),
+ sequence bigint NOT NULL CHECK (sequence >= 0)
+);
+INSERT INTO deletion_journal_head (sequence) VALUES (0);
 
 -- Archived plans stay read-only; only moving in and out of deletion is allowed while archived.
 CREATE OR REPLACE FUNCTION guard_archived_plan() RETURNS trigger LANGUAGE plpgsql AS $$

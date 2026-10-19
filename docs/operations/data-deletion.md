@@ -11,7 +11,7 @@ How plan and account deletion run, and what an operator configures or does. The 
 | Athlete deletes their account (You → Your data) | Coaching stops; every screen is replaced by the deletion notice, which offers Keep my account, Download my data and Sign out.          | After 7 days: the Clerk user is deleted (production only), then every database row the athlete owns. |
 | Clerk `user.deleted` webhook                    | Account scheduled for immediate purge.                                                                                                 | Next retention pass.                                                                                 |
 
-The retention sweeper runs inside every API process, 30 seconds after start and then every 15 minutes. Each pass purges expired plans and accounts, deletes cached command responses older than 7 days and prunes live-journal events older than 7 days. A purged run's usage is added to `agent_usage_rollups` (no identifiers or text). Purges are recorded in `data_deletions`.
+The retention sweeper runs inside every API process, 30 seconds after start and then every 15 minutes. Each pass purges expired plans and accounts, deletes cached command responses older than 7 days and prunes live-journal events older than 7 days. A purged run's usage is added to `agent_usage_rollups` (no identifiers or text). Each pass also cancels coaching left running for accounts pending deletion, and ships the deletion journal.
 
 ## Configuration
 
@@ -27,17 +27,18 @@ pnpm retention:run
 pnpm retention:run -- --as-of 2026-12-01T00:00:00Z
 
 # Re-apply deletions recorded after a backup was taken (see below).
-pnpm --filter @askesis/api retention:replay /path/to/api-logs.jsonl
+pnpm --filter @askesis/api retention:replay /path/to/api-logs.jsonl [--allow-gaps]
 ```
 
 The root `retention:run` runs inside this worktree's development environment. Against Railway, run the API package commands with the service's environment.
 
 ## Backups and replay
 
-A restored backup predates later deletions. Every deletion transition therefore also writes a structured log line after commit, `{"deletion": {"event": …}}`, with ids and times only. The events are `plan.deleted`, `plan.restored`, `plan.purged`, `account.deletion_requested`, `account.deletion_cancelled` and `account.purged`.
+A restored backup predates later deletions. Every deletion transition is therefore recorded in `deletion_journal`, in the same transaction that makes it. Entries carry ids and times only, under a gapless sequence taken from one head row, so the sequence follows commit order. They are then shipped to the API logs as `{"deletion": {"sequence", "event", "subjectId", "at"}}`: right after commit, and again by every retention pass for anything a crash left unshipped. Shipping ignores `LOG_LEVEL` (only `silent` suppresses it), and the events are `plan.deleted`, `plan.restored`, `plan.purged`, `account.deletion_requested`, `account.deletion_cancelled` and `account.purged`.
 
 - Keep API logs for longer than the oldest backup you might restore.
-- After restoring a backup and applying migrations, and **before** the restored API takes traffic, export the API logs from the backup's timestamp onwards, oldest first, as JSON lines. Then run `retention:replay` on them. It re-marks soft deletions and cancellations, and re-purges purged plans and accounts. Events for rows the backup never had are no-ops. The [restore outline](./database-backup-and-restore.md#disaster-restore-outline) includes this step.
+- After restoring a backup and applying migrations, and **before** the restored API takes traffic, export the API logs from the backup's timestamp onwards as JSON lines (any order; duplicates are fine) and run `retention:replay` on them. Entries at or below the restored journal head are skipped. The rest must continue the sequence without gaps, so a missing entry stops the replay before anything changes, naming the missing range. Find the missing lines, or accept the loss with `--allow-gaps`. Each entry commits with its journal row, so an interrupted replay can be run again. The [restore outline](./database-backup-and-restore.md#disaster-restore-outline) includes this step.
+- Remaining exposure: entries committed but not yet shipped when the database itself is lost (normally under a second, at most one retention interval if shipping keeps failing).
 
 ## Retention
 

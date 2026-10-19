@@ -1,6 +1,6 @@
 # Plan deletion, account deletion and data retention
 
-**Status:** proposal revision 2, 2026-10-19 (round 1 review findings F1–F7 addressed below). Owner decisions are recorded below. This supersedes the alpha constraint "no user-facing permanent deletion" in the [current handoff](../current-handoff.md).
+**Status:** proposal revision 3, 2026-10-19 (review findings F1–F8 addressed below). Owner decisions are recorded below. This supersedes the alpha constraint "no user-facing permanent deletion" in the [current handoff](../current-handoff.md).
 
 ## Why
 
@@ -29,7 +29,7 @@ Askesis stores personal data and health data. Chats mention injuries, illness an
 A deleted plan is a sub-state of an archived plan: `plans.deleted_at` with `CHECK (deleted_at IS NULL OR archived_at IS NOT NULL)`. Every existing archived-plan guard keeps it read-only, and every surface that already hides archived plans hides deleted ones too.
 
 - `POST /api/v1/plans/{planId}/delete` (`expectedStateVersion`) requires an idle plan (`assertPlanIdle`), archives it if needed, deactivates it and sets `deleted_at`.
-- `POST /api/v1/plans/{planId}/undelete` clears `deleted_at` within the window. The plan returns to Archived, so the athlete unarchives it deliberately.
+- `POST /api/v1/plans/{planId}/undelete` clears `deleted_at` while the window is open, checked under the plan lock. From `deleted_at + 30 days` it answers 404 even if the purge has not run, and the plan leaves Recently deleted (F8). A restored plan returns to Archived, so the athlete unarchives it deliberately.
 - `GET /api/v1/plans/{planId}/deletion-impact` returns counts for the confirmation dialog: locked versions, conversations, messages, logged sessions and check-ins.
 - `GET /api/v1/plans?collection=deleted` lists recently deleted plans with `deletedAt` and `purgeAfter`.
 - `guard_archived_plan` is replaced so an archived plan may change `deleted_at`, `state_version` and `updated_at`; every other archived-plan rule is unchanged.
@@ -41,8 +41,7 @@ A deleted plan is a sub-state of an archived plan: `plans.deleted_at` with `CHEC
 `athletes.deletion_requested_at` and `athletes.purge_after` (both set or both null), plus `purge_started_at`.
 
 - `GET /api/v1/account` returns the deletion state. `POST /api/v1/account/deletion` sets `purge_after = now + 7 days` and stops coaching. `DELETE /api/v1/account/deletion` cancels while `purge_started_at` is null.
-- **Fence (F4).** The deletion request cancels active runs, takes the athlete row lock, sets the marker, then cancels again. Run acceptance share-locks the athlete row just before inserting a run and refuses when the marker is set. So a message admitted before the marker either commits first, and its run is caught by the second cancellation, or waits and is refused. Both paths take run locks before the athlete lock, so they cannot deadlock. As a backstop, a worker claim cancels a queued run whose account is pending, and worker tool, context and heartbeat calls are rejected for such accounts; only cancellation and finish still work.
-- While deletion is pending, authentication still succeeds, but every `/api/v1` route except the account routes returns `403 ACCOUNT_DELETION_PENDING`. The web app shows a blocking screen with the deletion date, **Cancel deletion**, **Download my data** and **Sign out**.
+- **Fence (F4).** One rule: no transaction holds the athlete row lock while waiting for a run, because coaching tools lock their run first and the athlete later (recording a calibration). A deletion request and the Clerk webhook both commit the marker first, with only the athlete lock (plus the journal head), and then cancel active runs in a second transaction that locks runs only. Once the marker commits, run acceptance refuses: it share-locks the athlete just before inserting a run. A worker claim cancels a queued run of a pending account, and worker tool, context and heartbeat calls are rejected; only cancellation and finish work. So the second step sees every run that will exist. If a process stops between the two steps, the next retention pass cancels the leftovers. The account purge locks the athlete's runs before the athlete. Barrier-controlled tests hold a run lock in a tool-like transaction, start a deletion request or webhook, and only then take the athlete lock; both complete.
 - Purge order: commit a claim (`purge_started_at`, after which cancellation is refused), delete the Clerk user(s) (404 counts as done), then purge the database in one transaction. Deleting Clerk first prevents lazy provisioning from re-creating the athlete in between. A failure after the claim leaves the account claimed and pending. The next pass retries it: Clerk deletion is idempotent, and the database purge re-checks the athlete under its row lock. A session token that outlives a purged Clerk user gets 401, not a re-provisioned account.
 - Clerk users are deleted only when `NODE_ENV=production`. Local development shares one Clerk verification user across worktrees, so a local purge removes only database data and the next sign-in provisions an empty account.
 - `POST /api/webhooks/clerk` (Svix-verified with `verifyWebhook`, enabled only when `CLERK_WEBHOOK_SIGNING_SECRET` is set) handles `user.deleted` by scheduling an immediate purge. This covers deletion from the Clerk dashboard.
@@ -57,9 +56,15 @@ Plan purge, in dependency order: usage rollup → clear surviving references to 
 
 Account purge: every plan via the plan purge, then plan-less conversations, calibrations and zones, idempotency keys, live journal, identities and the athlete row.
 
-In the same transaction as the deletion, the purge adds the runs' usage into `agent_usage_rollups(day, provider, model, prompt_version, status)` (runs, input/output tokens, tool calls). A retried purge finds no runs, so it cannot double-count. That table holds no identifiers or text and is kept indefinitely. `data_deletions` records each purged plan and account in the database.
+In the same transaction as the deletion, the purge adds the runs' usage into `agent_usage_rollups(day, provider, model, prompt_version, status)` (runs, input/output tokens, tool calls). A retried purge finds no runs, so it cannot double-count. That table holds no identifiers or text and is kept indefinitely.
 
-**Backups (F6).** A restored backup predates later deletions, and so does its copy of the ledger. Every deletion transition therefore also writes a structured log line after commit. Lines are `{"deletion": {"event": …}}` for `plan.deleted`, `plan.restored`, `plan.purged`, `account.deletion_requested`, `account.deletion_cancelled` and `account.purged`, carrying ids and times only. Logs are kept independently of the database. `pnpm --filter @askesis/api retention:replay <log file>` re-applies the events in order to a restored database before it takes traffic: it re-marks soft deletions and cancellations, and re-purges purged plans and accounts. Unknown or already-purged ids are no-ops. The backup procedure gains this step, and the log retention must exceed the backup retention.
+**Backups (F6).** A restored backup predates later deletions, and so does its own copy of any ledger. The design therefore has three parts:
+
+- **Durable capture.** Every transition (`plan.deleted`, `plan.restored`, `plan.purged`, `account.deletion_requested`, `account.deletion_cancelled`, `account.purged`) is appended to `deletion_journal` in the transaction that makes it.
+- **Ordering and completeness.** Sequences come from a single head row (`deletion_journal_head`), the pattern `live_event_heads` uses. They are therefore gapless and follow commit order, including per subject, since callers already hold the subject's lock.
+- **Independent persistence.** Entries are shipped to the API logs, which are kept apart from the database: right after commit, and again by every retention pass for anything unshipped (crash recovery, at least once). Shipping uses its own logger level, so only `LOG_LEVEL=silent` suppresses it.
+
+`retention:replay` reads the shipped lines in any order and deduplicates them by sequence. It skips entries at or below the restored head, and refuses before changing anything if the remainder is not contiguous from there. That is the completeness checkpoint; `--allow-gaps` accepts a known loss. Each entry is then applied in sequence, committing with its journal row, so the journal continues and an interrupted replay can be repeated. Remaining exposure: entries committed but not yet shipped at the moment the database itself is lost.
 
 ### Retention job
 
@@ -96,7 +101,7 @@ Adding the eval set later needs no change to this design:
 - **Classification.** `purge.ts` exports `TABLE_RETENTION`, classifying every table as `account`, `plan`, `conversation` or `kept`. `kept` is only for tables without personal data: rollups, the ledger, workers, movement vocabulary and seed bookkeeping. A test fails for any public table missing from it.
 - **Coverage.** The account test populates every non-`kept` table for the athlete and fails if any is left empty. A new owner table therefore needs a fixture and a purge step.
 - **Identities.** After an account purge, no `athlete_id`/`owner_id` column and no JSON column mentions the athlete. After a plan purge, no plan, version, conversation, run or resource reference column, and no JSON column, mentions the purged ids. Another plan of the same athlete, and another athlete, stay readable with their logs. Whole-database row counts return to the pre-fixture snapshot as a supplementary check.
-- **Interleavings.** A message sent after the marker is refused; a run queued just before it is cancelled at claim. Cancellation after a failed Clerk deletion is refused, and the next pass completes the purge. Replays after deletion return 404 and work again after restore. Logged events are replayed onto pre-deletion data.
+- **Interleavings.** A message sent after the marker is refused; a run queued just before it is cancelled at claim. Deletion requests and the webhook complete against a tool holding a run lock and then taking the athlete lock. Cancellation after a failed Clerk deletion is refused, and the next pass completes the purge. Replays after deletion return 404 and work again after restore. Restoring a plan just before, at and after its deadline. Journal replay onto pre-deletion data from out-of-order, duplicated lines; refusal on a gap, with nothing changed; idempotent re-run; and shipping of entries left unshipped.
 
 ## Retention policy
 

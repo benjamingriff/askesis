@@ -28,7 +28,8 @@ import { validatePlan, VALIDATOR_VERSION } from './plan.validation.js';
 import { briefLockFindings, confirmBriefRows, readBrief } from './brief.service.js';
 import { calibrationBasis, performanceLockFindings } from '../performance/performance.service.js';
 import { PlanError } from './plan.common.js';
-import { logDeletionEvent, PLAN_RESTORE_DAYS, purgeDate } from '../account/retention.js';
+import { DAY_MS, PLAN_RESTORE_DAYS, purgeDate } from '../account/retention.js';
+import { appendDeletion, shipSoon } from '../account/journal.js';
 
 export { PlanError };
 const iso = (value: Date | string | null): string | null =>
@@ -119,6 +120,7 @@ export async function getDraft(athleteId: string, planId: string) {
 export async function listPlans(
   athleteId: string,
   collection: 'library' | 'active' | 'archive' | 'deleted' = 'library',
+  now = new Date(),
 ) {
   return getDatabase()
     .transaction()
@@ -131,8 +133,14 @@ export async function listPlans(
         .where('owner_id', '=', athleteId)
         .where('deleted_at', deleted ? 'is not' : 'is', null)
         .orderBy(deleted ? 'deleted_at' : 'created_at', 'desc');
-      if (!deleted)
-        query = query.where('archived_at', collection === 'archive' ? 'is not' : 'is', null);
+      if (deleted)
+        // Plans past their window can no longer be restored; the purge removes them.
+        query = query.where(
+          'deleted_at',
+          '>',
+          new Date(now.getTime() - PLAN_RESTORE_DAYS * DAY_MS),
+        );
+      else query = query.where('archived_at', collection === 'archive' ? 'is not' : 'is', null);
       if (collection === 'active') query = query.where('activated_at', 'is not', null);
       const plans = await query.execute();
       return Promise.all(plans.map((plan) => detail(db, athleteId, plan.id, deleted)));
@@ -266,7 +274,12 @@ export async function deletionImpact(athleteId: string, planId: string) {
 }
 
 /** Hides the plan at once; the retention job purges it after the restore window. */
-export async function deletePlan(athleteId: string, planId: string, expectedStateVersion: number) {
+export async function deletePlan(
+  athleteId: string,
+  planId: string,
+  expectedStateVersion: number,
+  now = new Date(),
+) {
   const plan = await getDatabase()
     .transaction()
     .execute(async (db) => {
@@ -277,37 +290,44 @@ export async function deletePlan(athleteId: string, planId: string, expectedStat
       await db
         .updateTable('plans')
         .set({
-          archived_at: sql`coalesce(archived_at, now())`,
+          archived_at: sql`coalesce(archived_at, ${now})`,
           activated_at: null,
-          deleted_at: new Date(),
+          deleted_at: now,
           state_version: sql`state_version + 1`,
-          updated_at: new Date(),
+          updated_at: now,
         })
         .where('id', '=', planId)
         .execute();
+      await appendDeletion(db, 'plan.deleted', planId, now);
       return detail(db, athleteId, planId, true);
     });
-  logDeletionEvent({ event: 'plan.deleted', planId, at: plan.deletedAt! });
+  shipSoon();
   return plan;
 }
 
-/** Restores a deleted plan to the archive, from where the athlete can unarchive it. */
-export async function undeletePlan(athleteId: string, planId: string) {
+/**
+ * Restores a deleted plan to the archive, from where the athlete can unarchive it. Refused once
+ * the window has closed, even if the purge has not run yet.
+ */
+export async function undeletePlan(athleteId: string, planId: string, now = new Date()) {
   let restored = false;
   const plan = await getDatabase()
     .transaction()
     .execute(async (db) => {
       const row = await ownerPlan(db, athleteId, planId, true, true);
       if (row.deleted_at === null) return detail(db, athleteId, planId);
+      if (now.getTime() >= new Date(row.deleted_at).getTime() + PLAN_RESTORE_DAYS * DAY_MS)
+        throw new PlanError('PLAN_NOT_FOUND', 'Plan not found.', 404);
       restored = true;
       await db
         .updateTable('plans')
-        .set({ deleted_at: null, state_version: sql`state_version + 1`, updated_at: new Date() })
+        .set({ deleted_at: null, state_version: sql`state_version + 1`, updated_at: now })
         .where('id', '=', planId)
         .execute();
+      await appendDeletion(db, 'plan.restored', planId, now);
       return detail(db, athleteId, planId);
     });
-  if (restored) logDeletionEvent({ event: 'plan.restored', planId });
+  if (restored) shipSoon();
   return plan;
 }
 

@@ -1,21 +1,28 @@
 import { readFile } from 'node:fs/promises';
+import { parseArgs } from 'node:util';
 import { closeDatabase } from '../database/client.js';
-import { replayDeletionEvents } from '../modules/account/account.service.js';
-import { parseDeletionLog } from '../modules/account/retention.js';
+import { ReplayGapError, replayDeletionEvents } from '../modules/account/account.service.js';
+import { parseDeletionLog } from '../modules/account/journal.js';
 
 /**
- * Re-applies the "Data deletion" log lines (pino JSON, oldest first) recorded after a backup
- * was taken, before a restored database takes traffic. Other log lines are ignored.
+ * Re-applies the deletion journal entries shipped to the API logs (pino JSON lines, any order,
+ * duplicates allowed) to a restored database, before it takes traffic. Refuses when entries after
+ * the restored journal head are missing, unless --allow-gaps accepts that loss.
  */
 try {
-  const file = process.argv[2];
-  if (!file) throw new Error('Usage: retention:replay <log file with JSON lines, oldest first>');
+  const { values, positionals } = parseArgs({
+    allowPositionals: true,
+    options: { 'allow-gaps': { type: 'boolean', default: false } },
+  });
+  const file = positionals[0];
+  if (!file) throw new ReplayGapError('Usage: retention:replay <log file> [--allow-gaps]');
   const events = parseDeletionLog(await readFile(file, 'utf8'));
-  const applied = await replayDeletionEvents(events);
-  console.log(JSON.stringify({ events: events.length, applied }));
+  console.log(
+    JSON.stringify(await replayDeletionEvents(events, { allowGaps: values['allow-gaps'] })),
+  );
 } catch (error) {
   console.error(
-    error instanceof Error && error.message.startsWith('Usage')
+    error instanceof ReplayGapError
       ? error.message
       : 'Deletion replay failed; check the log file, configuration and migrations.',
   );

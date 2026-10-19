@@ -7,14 +7,13 @@ import { transition } from '../chat/chat.service.js';
 import { readAggregate } from '../plans/plan.aggregate.js';
 import { readEntries } from '../performance/performance.service.js';
 import { purgeAccountRows, purgePlanRows } from './purge.js';
+import { appendDeletion, shipDeletions, shipSoon, type DeletionEvent } from './journal.js';
 import {
   ACCOUNT_GRACE_DAYS,
   DAY_MS,
   IDEMPOTENCY_RETENTION_DAYS,
   LIVE_EVENT_RETENTION_DAYS,
-  logDeletionEvent,
   PLAN_RESTORE_DAYS,
-  type DeletionEvent,
 } from './retention.js';
 
 type Tx = Transaction<DB>;
@@ -34,57 +33,69 @@ export async function getAccount(athleteId: string) {
   };
 }
 
-/** Stops coaching for the athlete; nothing can start while deletion is pending. */
-async function cancelActiveRuns(db: Tx, athleteId: string) {
-  const runs = await db
-    .selectFrom('agent_runs')
-    .selectAll()
-    .where('owner_id', '=', athleteId)
-    .where('status', 'in', activeStatuses)
-    .forUpdate()
-    .execute();
-  for (const run of runs) {
-    if (run.status === 'queued') await transition(db, run, 'cancelled', 'cancelled');
-    else if (run.status === 'running') await transition(db, run, 'cancelling', 'cancel_requested');
-  }
-}
-
-export async function requestAccountDeletion(athleteId: string, now = new Date()) {
+/** Stops coaching for the athlete. Holds run locks only, never the athlete's. */
+async function cancelActiveRuns(athleteId: string) {
   await getDatabase()
     .transaction()
     .execute(async (db) => {
-      // Runs before the athlete, the order coaching tools use, so the two cannot deadlock.
-      await cancelActiveRuns(db, athleteId);
+      const runs = await db
+        .selectFrom('agent_runs')
+        .selectAll()
+        .where('owner_id', '=', athleteId)
+        .where('status', 'in', activeStatuses)
+        .orderBy('id')
+        .forUpdate()
+        .execute();
+      for (const run of runs) {
+        if (run.status === 'queued') await transition(db, run, 'cancelled', 'cancelled');
+        else if (run.status === 'running')
+          await transition(db, run, 'cancelling', 'cancel_requested');
+      }
+    });
+}
+
+/**
+ * Marks the account and then stops coaching, in separate transactions. Once the marker commits,
+ * no run can be accepted (acceptance share-locks the athlete and checks it) and worker calls for
+ * the account are refused, so the second step sees every run that will ever exist. Neither step
+ * holds the athlete lock while waiting for a run, which coaching tools lock first.
+ */
+async function markForDeletion(athleteId: string, now: Date, purgeAfter: Date) {
+  const marked = await getDatabase()
+    .transaction()
+    .execute(async (db) => {
       const athlete = await db
         .selectFrom('athletes')
-        .select('deletion_requested_at')
+        .select(['deletion_requested_at', 'purge_after'])
         .where('id', '=', athleteId)
         .forUpdate()
-        .executeTakeFirstOrThrow();
-      if (athlete.deletion_requested_at) return;
+        .executeTakeFirst();
+      if (!athlete) return false;
+      const requested = athlete.deletion_requested_at === null;
+      if (!requested && new Date(athlete.purge_after!).getTime() <= purgeAfter.getTime())
+        return false;
       await db
         .updateTable('athletes')
         .set({
-          deletion_requested_at: now,
-          purge_after: new Date(now.getTime() + ACCOUNT_GRACE_DAYS * DAY_MS),
+          deletion_requested_at: athlete.deletion_requested_at ?? now,
+          purge_after: purgeAfter,
           updated_at: now,
         })
         .where('id', '=', athleteId)
         .execute();
-      // A message accepted while this waited for the athlete lock has committed its run.
-      await cancelActiveRuns(db, athleteId);
+      if (requested) await appendDeletion(db, 'account.deletion_requested', athleteId, now);
+      return true;
     });
-  const account = await getAccount(athleteId);
-  if (account.deletion)
-    logDeletionEvent({
-      event: 'account.deletion_requested',
-      athleteId,
-      at: account.deletion.requestedAt,
-    });
-  return account;
+  await cancelActiveRuns(athleteId);
+  if (marked) shipSoon();
 }
 
-export async function cancelAccountDeletion(athleteId: string) {
+export async function requestAccountDeletion(athleteId: string, now = new Date()) {
+  await markForDeletion(athleteId, now, new Date(now.getTime() + ACCOUNT_GRACE_DAYS * DAY_MS));
+  return getAccount(athleteId);
+}
+
+export async function cancelAccountDeletion(athleteId: string, now = new Date()) {
   await getDatabase()
     .transaction()
     .execute(async (db) => {
@@ -99,15 +110,12 @@ export async function cancelAccountDeletion(athleteId: string) {
         throw new ChatError('ACCOUNT_PURGE_STARTED', 'This account is already being deleted.');
       await db
         .updateTable('athletes')
-        .set({
-          deletion_requested_at: null,
-          purge_after: null,
-          updated_at: new Date(),
-        })
+        .set({ deletion_requested_at: null, purge_after: null, updated_at: now })
         .where('id', '=', athleteId)
         .execute();
+      await appendDeletion(db, 'account.deletion_cancelled', athleteId, now);
     });
-  logDeletionEvent({ event: 'account.deletion_cancelled', athleteId });
+  shipSoon();
   return getAccount(athleteId);
 }
 
@@ -120,25 +128,7 @@ export async function scheduleImmediatePurge(clerkUserId: string, now = new Date
     .where('provider_subject', '=', clerkUserId)
     .executeTakeFirst();
   if (!identity) return false;
-  await getDatabase()
-    .transaction()
-    .execute(async (db) => {
-      await db
-        .updateTable('athletes')
-        .set({
-          deletion_requested_at: sql`coalesce(deletion_requested_at, ${now})`,
-          purge_after: now,
-          updated_at: now,
-        })
-        .where('id', '=', identity.athlete_id)
-        .execute();
-      await cancelActiveRuns(db, identity.athlete_id);
-    });
-  logDeletionEvent({
-    event: 'account.deletion_requested',
-    athleteId: identity.athlete_id,
-    at: now.toISOString(),
-  });
+  await markForDeletion(identity.athlete_id, now, now);
   return true;
 }
 
@@ -181,29 +171,28 @@ export async function runRetention(
           .forUpdate()
           .skipLocked()
           .executeTakeFirst();
-        return due ? purgePlanRows(db, id) : false;
+        if (!due || !(await purgePlanRows(db, id))) return false;
+        await appendDeletion(db, 'plan.purged', id, now);
+        return true;
       });
-      if (purged) {
-        result.plans += 1;
-        logDeletionEvent({ event: 'plan.purged', planId: id, at: now.toISOString() });
-      }
+      if (purged) result.plans += 1;
     } catch {
       logger.error({ planId: id }, 'Plan purge failed; it will be retried.');
     }
   }
 
-  const accounts = await database
+  const pending = await database
     .selectFrom('athletes')
-    .select('id')
-    .where('purge_after', '<=', now)
+    .select(['id', 'purge_after'])
+    .where('deletion_requested_at', 'is not', null)
     .orderBy('purge_after')
     .execute();
-  for (const { id } of accounts) {
+  for (const { id, purge_after } of pending) {
     try {
-      if (await purgeAccount(id, now, options.deleteIdentity)) {
-        result.accounts += 1;
-        logDeletionEvent({ event: 'account.purged', athleteId: id, at: now.toISOString() });
-      }
+      // Backstop for a request interrupted between marking and stopping coaching.
+      await cancelActiveRuns(id);
+      if (new Date(purge_after!).getTime() > now.getTime()) continue;
+      if (await purgeAccount(id, now, options.deleteIdentity)) result.accounts += 1;
     } catch {
       // Clerk and database errors can carry personal details; the id is enough to retry.
       logger.error({ athleteId: id }, 'Account purge failed; it will be retried.');
@@ -221,85 +210,107 @@ export async function runRetention(
     .where('created_at', '<', new Date(now.getTime() - LIVE_EVENT_RETENTION_DAYS * DAY_MS))
     .executeTakeFirst();
   result.liveEvents = Number(events.numDeletedRows);
+  await shipDeletions();
   return result;
 }
 
+/** The logs are missing journal entries, so replaying them could leave deleted data behind. */
+export class ReplayGapError extends Error {}
+
 /**
- * Re-applies logged deletion events, in order, to a database restored from a backup taken
- * before them. Run it before the restored API takes traffic. Events for rows the backup never
- * had, or that are already gone, change nothing.
+ * Re-applies shipped journal entries to a database restored from an older backup, before it takes
+ * traffic. Entries at or below the restored journal head are already reflected. The rest must
+ * continue the sequence without gaps unless `allowGaps` accepts the loss. Each entry commits with
+ * its journal row, so an interrupted replay can simply be run again.
  */
-export async function replayDeletionEvents(events: DeletionEvent[]) {
-  let applied = 0;
-  for (const event of events) {
-    const changed = await getDatabase()
-      .transaction()
-      .execute(async (db): Promise<boolean> => {
-        switch (event.event) {
-          case 'plan.deleted': {
-            const plan = await db
-              .selectFrom('plans')
-              .select(['archived_at', 'deleted_at'])
-              .where('id', '=', event.planId)
-              .forUpdate()
-              .executeTakeFirst();
-            if (!plan || plan.deleted_at) return false;
-            await db
-              .updateTable('plans')
-              .set({
-                ...(plan.archived_at
-                  ? {}
-                  : { archived_at: new Date(event.at), activated_at: null }),
-                deleted_at: new Date(event.at),
-                state_version: sql`state_version + 1`,
-              })
-              .where('id', '=', event.planId)
-              .execute();
-            return true;
-          }
-          case 'plan.restored': {
-            const restored = await db
-              .updateTable('plans')
-              .set({ deleted_at: null, state_version: sql`state_version + 1` })
-              .where('id', '=', event.planId)
-              .where('deleted_at', 'is not', null)
-              .executeTakeFirst();
-            return restored.numUpdatedRows > 0n;
-          }
-          case 'plan.purged':
-            return purgePlanRows(db, event.planId, new Date(event.at));
-          case 'account.deletion_requested': {
-            const requested = await db
-              .updateTable('athletes')
-              .set({
-                deletion_requested_at: new Date(event.at),
-                purge_after: new Date(Date.parse(event.at) + ACCOUNT_GRACE_DAYS * DAY_MS),
-              })
-              .where('id', '=', event.athleteId)
-              .where('deletion_requested_at', 'is', null)
-              .executeTakeFirst();
-            if (requested.numUpdatedRows === 0n) return false;
-            await cancelActiveRuns(db, event.athleteId);
-            return true;
-          }
-          case 'account.deletion_cancelled': {
-            const cancelled = await db
-              .updateTable('athletes')
-              .set({ deletion_requested_at: null, purge_after: null })
-              .where('id', '=', event.athleteId)
-              .where('deletion_requested_at', 'is not', null)
-              .where('purge_started_at', 'is', null)
-              .executeTakeFirst();
-            return cancelled.numUpdatedRows > 0n;
-          }
-          case 'account.purged':
-            // The sign-in identity was deleted when the event was first recorded.
-            return purgeAccountRows(db, event.athleteId, new Date(event.at));
-        }
-      });
-    if (changed) applied += 1;
+export async function replayDeletionEvents(
+  events: DeletionEvent[],
+  options: { allowGaps?: boolean } = {},
+) {
+  const head = await getDatabase()
+    .selectFrom('deletion_journal_head')
+    .select('sequence')
+    .executeTakeFirstOrThrow();
+  const start = Number(head.sequence) + 1;
+  const pending = events
+    .filter((event) => event.sequence >= start)
+    .sort((a, b) => a.sequence - b.sequence);
+  let expected = start;
+  for (const event of pending) {
+    if (event.sequence !== expected && !options.allowGaps)
+      throw new ReplayGapError(
+        `Deletion journal entries ${expected} to ${event.sequence - 1} are missing from the logs.`,
+      );
+    expected = event.sequence + 1;
   }
-  return applied;
+  for (const event of pending) {
+    await getDatabase()
+      .transaction()
+      .execute(async (db) => {
+        await applyDeletion(db, event);
+        await appendDeletion(db, event.event, event.subjectId, new Date(event.at), event.sequence);
+      });
+  }
+  return { from: start, to: expected - 1, applied: pending.length };
+}
+
+async function applyDeletion(db: Tx, { event, subjectId, at }: DeletionEvent) {
+  const when = new Date(at);
+  switch (event) {
+    case 'plan.deleted': {
+      const plan = await db
+        .selectFrom('plans')
+        .select(['archived_at', 'deleted_at'])
+        .where('id', '=', subjectId)
+        .forUpdate()
+        .executeTakeFirst();
+      if (!plan || plan.deleted_at) return;
+      await db
+        .updateTable('plans')
+        .set({
+          ...(plan.archived_at ? {} : { archived_at: when, activated_at: null }),
+          deleted_at: when,
+          state_version: sql`state_version + 1`,
+        })
+        .where('id', '=', subjectId)
+        .execute();
+      return;
+    }
+    case 'plan.restored':
+      await db
+        .updateTable('plans')
+        .set({ deleted_at: null, state_version: sql`state_version + 1` })
+        .where('id', '=', subjectId)
+        .where('deleted_at', 'is not', null)
+        .execute();
+      return;
+    case 'plan.purged':
+      await purgePlanRows(db, subjectId, true);
+      return;
+    case 'account.deletion_requested':
+      // Coaching is not running against a database that has not taken traffic yet.
+      await db
+        .updateTable('athletes')
+        .set({
+          deletion_requested_at: when,
+          purge_after: new Date(when.getTime() + ACCOUNT_GRACE_DAYS * DAY_MS),
+        })
+        .where('id', '=', subjectId)
+        .where('deletion_requested_at', 'is', null)
+        .execute();
+      return;
+    case 'account.deletion_cancelled':
+      await db
+        .updateTable('athletes')
+        .set({ deletion_requested_at: null, purge_after: null, purge_started_at: null })
+        .where('id', '=', subjectId)
+        .execute();
+      return;
+    case 'account.purged':
+      // The sign-in identity was deleted when the entry was first recorded.
+      await purgeAccountRows(db, subjectId, true);
+      return;
+  }
 }
 
 async function purgeAccount(athleteId: string, now: Date, deleteIdentity?: DeleteIdentity) {
@@ -325,7 +336,12 @@ async function purgeAccount(athleteId: string, now: Date, deleteIdentity?: Delet
   if (subjects === null) return false;
   // Sign-in goes first: otherwise lazy provisioning could recreate the athlete after the purge.
   if (deleteIdentity) for (const subject of subjects) await deleteIdentity(subject);
-  return database.transaction().execute((db) => purgeAccountRows(db, athleteId));
+  const purged = await database.transaction().execute(async (db) => {
+    if (!(await purgeAccountRows(db, athleteId))) return false;
+    await appendDeletion(db, 'account.purged', athleteId, now);
+    return true;
+  });
+  return purged;
 }
 
 /** Everything the athlete gave us or the coach wrote for them, as one JSON document. */

@@ -251,12 +251,17 @@ export interface Conversations {
   title: string;
 }
 
-export interface DataDeletions {
-  id: Generated<string>;
-  kind: string;
-  purged_at: Generated<Timestamp>;
-  requested_at: Timestamp;
+export interface DeletionJournal {
+  event: string;
+  occurred_at: Timestamp;
+  sequence: Int8;
+  shipped_at: Timestamp | null;
   subject_id: string;
+}
+
+export interface DeletionJournalHead {
+  sequence: Int8;
+  singleton: Generated<boolean>;
 }
 
 export interface ExamplePlanEditions {
@@ -568,7 +573,8 @@ export interface DB {
   'atlas_schema_revisions.atlas_schema_revisions': AtlasSchemaRevisionsAtlasSchemaRevisions;
   conversation_messages: ConversationMessages;
   conversations: Conversations;
-  data_deletions: DataDeletions;
+  deletion_journal: DeletionJournal;
+  deletion_journal_head: DeletionJournalHead;
   example_plan_editions: ExamplePlanEditions;
   live_event_heads: LiveEventHeads;
   live_events: LiveEvents;
