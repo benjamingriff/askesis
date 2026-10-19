@@ -34,7 +34,10 @@ import {
 import { cloneContent } from '../../src/modules/plans/plan.aggregate.js';
 import { confirmBrief, getBrief } from '../../src/modules/plans/brief.service.js';
 import { emptyBrief } from '../../src/modules/plans/brief.schemas.js';
-import { recordCalibration } from '../../src/modules/performance/performance.service.js';
+import {
+  readEntries,
+  recordCalibration,
+} from '../../src/modules/performance/performance.service.js';
 import {
   createCheckInRows,
   logCommand,
@@ -1051,8 +1054,19 @@ describe('review regressions', () => {
     const key = randomUUID();
     const first = await record(305, key);
     await record(295);
+    const coachEntry = async () =>
+      (await readEntries(db, owner)).find(
+        (entry) => (entry.input as { secondsPerKilometre?: number }).secondsPerKilometre === 310,
+      )!;
+    expect(await coachEntry()).toMatchObject({
+      recordedBy: 'coach',
+      conversationId: doomed.conversationId,
+    });
     await deletePlan(owner, doomed.planId, (await getPlan(owner, doomed.planId)).stateVersion);
+    // The deleted plan's chat is no longer linked; the entry still reads as the coach's.
+    expect(await coachEntry()).toMatchObject({ recordedBy: 'coach', conversationId: null });
     await db.transaction().execute((tx) => purgePlanRows(tx, doomed.planId));
+    expect(await coachEntry()).toMatchObject({ recordedBy: 'coach', conversationId: null });
     expect(await jsonMentioning([doomed.conversationId, doomed.runId])).toEqual([]);
     const before = await calibrationCount(owner);
     // A retry of the first command replays it instead of recording 305 again over 295.

@@ -41,7 +41,7 @@ CREATE TABLE agent_usage_rollups (
  PRIMARY KEY (day, provider, model, prompt_version, status)
 );
 
--- Every deletion transition, written in its own transaction and shipped to the logs, so a
+-- Every deletion transition, written in the transaction that makes it and shipped to the logs, so a
 -- database restored from an older backup can have later deletions replayed. Sequences come from
 -- a single head row, so they are gapless and follow commit order; a replay can tell when events
 -- are missing. Ids and times only: nothing left to join to once the subject is purged.
@@ -221,3 +221,11 @@ DROP TRIGGER live_workout_logs ON workout_logs;
 CREATE CONSTRAINT TRIGGER live_workout_logs AFTER INSERT OR UPDATE OR DELETE ON workout_logs
  DEFERRABLE INITIALLY DEFERRED FOR EACH ROW WHEN (NOT askesis_purging())
  EXECUTE FUNCTION record_training_log_change();
+
+-- Who recorded a calibration outlives the run that recorded it: a purge clears the run reference
+-- of entries from a deleted plan's chats, and they must still read as the coach's.
+ALTER TABLE athlete_calibrations ADD COLUMN recorded_by text NOT NULL DEFAULT 'athlete'
+ CHECK (recorded_by IN ('athlete', 'coach'));
+ALTER TABLE athlete_calibrations DISABLE TRIGGER USER;
+UPDATE athlete_calibrations SET recorded_by = 'coach' WHERE recorded_by_run_id IS NOT NULL;
+ALTER TABLE athlete_calibrations ENABLE TRIGGER USER;

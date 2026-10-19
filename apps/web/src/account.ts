@@ -39,8 +39,11 @@ export function useDataExport() {
       const link = document.createElement('a');
       link.href = url;
       link.download = `askesis-export-${new Date().toISOString().slice(0, 10)}.json`;
+      document.body.append(link);
       link.click();
-      URL.revokeObjectURL(url);
+      link.remove();
+      // WebKit can read the blob after click() returns; revoking at once can empty the file.
+      window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
     },
   });
 }

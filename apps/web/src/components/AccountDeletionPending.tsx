@@ -1,7 +1,7 @@
 import { useClerk } from '@clerk/react';
 import { Download, LogOut, RotateCcw } from 'lucide-react';
 import { useAccountDeletion, useDataExport } from '../account';
-import { formatLong } from '../lib/format';
+import { formatInstantLong } from '../lib/format';
 import { Button, Notice } from './ui';
 
 /** Shown instead of the app while a requested account deletion can still be cancelled. */
@@ -13,7 +13,7 @@ export function AccountDeletionPending({ purgeAfter }: { purgeAfter: string }) {
     <main className="account-pending">
       <span className="brand-mark">A</span>
       <span className="label">Account deletion scheduled</span>
-      <h1>Your account will be deleted on {formatLong(purgeAfter.slice(0, 10))}</h1>
+      <h1>Your account will be deleted on {formatInstantLong(purgeAfter)}</h1>
       <p className="muted">
         Your plans, coach conversations, training log and fitness history will be permanently
         deleted then, along with your sign-in. Until then you can change your mind, or download a
