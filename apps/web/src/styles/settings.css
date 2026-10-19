@@ -255,3 +255,28 @@
   height: 46px;
   border-radius: 14px;
 }
+
+.account-pending {
+  display: grid;
+  max-width: 560px;
+  min-height: 100dvh;
+  margin: 0 auto;
+  align-content: center;
+  justify-items: start;
+  gap: 12px;
+  padding: 24px;
+}
+.account-pending h1 {
+  margin: 0;
+  font-size: 24px;
+  line-height: 1.25;
+}
+.account-pending p {
+  margin: 0;
+}
+.account-pending-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}

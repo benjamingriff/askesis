@@ -85,6 +85,8 @@ function mount(path = '/plans/plan-1') {
   const router = createMemoryRouter(
     [
       { path: '/plans', element: <PlansPage /> },
+      { path: '/plans/archive', element: <PlansPage collection="archive" /> },
+      { path: '/plans/deleted', element: <PlansPage collection="deleted" /> },
       { path: '/plan', element: <ActivePlansPage /> },
       { path: '/plans/:planId', element: <PlanPage /> },
       { path: '/chat/:conversationId', element: <h1>Plan chat</h1> },
@@ -752,4 +754,72 @@ it('guards unsaved plan details against navigation', async () => {
   fireEvent.click(screen.getByRole('button', { name: 'Keep editing' }));
   expect(screen.getByLabelText('Description')).toHaveValue('Unsaved');
   expect(screen.queryByText('Leave without saving?')).not.toBeInTheDocument();
+});
+
+it('deletes a plan after showing what goes with it', async () => {
+  const original = vi.mocked(api.GET).getMockImplementation()!;
+  vi.mocked(api.GET).mockImplementation((async (path: string, ...args: unknown[]) =>
+    path.endsWith('/deletion-impact')
+      ? {
+          data: {
+            versions: 2,
+            conversations: 1,
+            messages: 4,
+            workoutLogs: 3,
+            checkIns: 0,
+            restoreDays: 30,
+          },
+          response: new Response(),
+        }
+      : Reflect.apply(original, api, [path, ...args])) as typeof api.GET);
+  vi.mocked(api.POST).mockResolvedValue({
+    data: { ...current, archived: true, deletedAt: '2026-10-19T09:00:00.000Z' },
+    response: new Response(),
+  } as never);
+  const router = mount();
+  await openMenuItem('Delete plan…');
+  const dialog = await screen.findByRole('dialog', { name: 'Delete “Autumn running”?' });
+  await within(dialog).findByText(
+    /2 locked versions, 1 coach conversation \(4 messages\), 3 logged sessions\./,
+  );
+  within(dialog).getByText(/restore it from Recently deleted for 30 days/);
+  await act(async () =>
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Delete plan' })),
+  );
+  expect(api.POST).toHaveBeenCalledWith('/api/v1/plans/{planId}/delete', {
+    params: { path: { planId: 'plan-1' } },
+    body: { expectedStateVersion: 1 },
+  });
+  await waitFor(() => expect(router.state.location.pathname).toBe('/plans'));
+});
+
+it('lists recently deleted plans with their purge date and restores them to the archive', async () => {
+  const deleted = {
+    ...current,
+    archived: true,
+    deletedAt: '2026-10-19T09:00:00.000Z',
+    purgeAfter: '2026-11-18T09:00:00.000Z',
+  };
+  const original = vi.mocked(api.GET).getMockImplementation()!;
+  vi.mocked(api.GET).mockImplementation((async (
+    path: string,
+    options?: { params?: { query?: { collection?: string } } },
+  ) =>
+    path === '/api/v1/plans' && options?.params?.query?.collection === 'deleted'
+      ? { data: { plans: [deleted] }, response: new Response() }
+      : Reflect.apply(original, api, [path, options])) as typeof api.GET);
+  vi.mocked(api.POST).mockResolvedValue({
+    data: { ...deleted, deletedAt: null, purgeAfter: null },
+    response: new Response(),
+  } as never);
+  const router = mount('/plans/deleted');
+  await screen.findByText('Deleted for good on Wednesday 18 November');
+  expect(screen.queryByRole('link', { name: /Autumn running/ })).not.toBeInTheDocument();
+  await act(async () =>
+    fireEvent.click(screen.getByRole('button', { name: 'Restore to archive' })),
+  );
+  expect(api.POST).toHaveBeenCalledWith('/api/v1/plans/{planId}/undelete', {
+    params: { path: { planId: 'plan-1' } },
+  });
+  await waitFor(() => expect(router.state.location.pathname).toBe('/plans/archive'));
 });

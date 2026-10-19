@@ -14,6 +14,8 @@ Phase 8 remains the release-readiness checklist for invitations: access restrict
 
 ## Recent decisions
 
+- 2026-10-19: athletes can delete plans (with their chats, training log and check-ins; restorable for 30 days) and their account (7-day grace period, then purge including the Clerk user), and download their data ([proposal](./product/data-deletion-and-retention.md)). Inactive accounts are kept. An opt-in evaluation set of real chats is wanted later; the purge is built so its tables bolt on. A privacy notice and explicit health-data consent at sign-up still need legal review before invitations.
+
 - 2026-10-07: plans can train running, cycling, swimming and strength, alone or combined ([ADR 0006](./adr/0006-multisport-plans.md)). `cycle_power` (FTP) and `swim_pace` (CSS) join `run_pace`; strength uses reps in reserve and suggested loads without calibration; the brief holds one baseline per sport. No heart-rate zones for now. Development fixtures add an Olympic triathlon and a Hyrox plan beside Cardiff.
 - 2026-10-07: fitness calibration moved from plan versions to the athlete ([ADR 0005](./adr/0005-athlete-owned-performance.md)). An account has one athlete; every plan is for them. Results form an append-only timeline per system (`run_pace` today, designed for swim/bike/strength systems next), apply from today in every plan, and are recorded on the web Performance page or by the coach from any chat. The athlete's timezone now follows their device. The migration truncated pre-alpha plan and coaching data.
 
@@ -47,7 +49,8 @@ Phase 8 remains the release-readiness checklist for invitations: access restrict
 - Agents cannot lock or unlock plans; both require human confirmation.
 - Plan assumptions, coverage and workouts are versioned as one aggregate. Fitness calibration is athlete-owned and append-only; plans reference it by workout date and never copy it.
 - Intended alpha is invitation-only; invitation restrictions still need release configuration/verification. Plans may train running, cycling, swimming and strength (ADR 0006).
-- One athlete per account. No user-facing permanent deletion, plan sharing, or demographic athlete profile during alpha.
+- One athlete per account. No plan sharing or demographic athlete profile during alpha.
+- Deletion is real: plans are restorable for 30 days and accounts cancellable for 7, then a purge removes the rows ([data deletion](./operations/data-deletion.md)). Only `apps/api/src/modules/account/purge.ts` may bypass the history guards, and every new table needs a `TABLE_RETENTION` classification.
 - Do not add development seed data to Railway.
 
 ## Historical evidence
