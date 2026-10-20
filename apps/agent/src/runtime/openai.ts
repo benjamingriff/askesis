@@ -13,6 +13,7 @@ import {
 } from '@openai/agents';
 import type { ModelProfile } from '../config.js';
 import { COACHING_PROMPT } from '../prompt.js';
+import { observeOpenAIModel } from '../usage.js';
 import {
   ModelRuntime,
   TurnLimitError,
@@ -41,32 +42,10 @@ export class OpenAIRuntime extends ModelRuntime {
       traceIncludeSensitiveData: false,
     });
   }
-  protected async converse({ context, input, progress, tools, signal }: ModelRun) {
+  protected async converse({ context, input, progress, tools, signal, ledger }: ModelRun) {
     const delegate = this.modelOverride ?? (await this.provider.getModel(this.profile.model));
-    const measuredModel: Model = {
-      ...(delegate.supportsPromptModelSelection === undefined
-        ? {}
-        : { supportsPromptModelSelection: delegate.supportsPromptModelSelection }),
-      ...(delegate.getRetryAdvice
-        ? { getRetryAdvice: delegate.getRetryAdvice.bind(delegate) }
-        : {}),
-      getResponse: async (request) => {
-        const start = performance.now();
-        try {
-          return await delegate.getResponse(request);
-        } finally {
-          progress.recordModel(performance.now() - start);
-        }
-      },
-      getStreamedResponse: async function* (request) {
-        const start = performance.now();
-        try {
-          yield* delegate.getStreamedResponse(request);
-        } finally {
-          progress.recordModel(performance.now() - start);
-        }
-      },
-    };
+    // Records each request's raw usage and its timing; requests and events pass through unchanged.
+    const measuredModel = observeOpenAIModel(delegate, ledger, (ms) => progress.recordModel(ms));
     const agent = new Agent({
       name: 'Askesis coach',
       instructions: COACHING_PROMPT,
@@ -109,8 +88,6 @@ export class OpenAIRuntime extends ModelRuntime {
       if (result.error) throw result.error;
       return {
         content: typeof result.finalOutput === 'string' ? result.finalOutput : '',
-        inputTokens: result.runContext.usage.inputTokens,
-        outputTokens: result.runContext.usage.outputTokens,
       } satisfies ModelOutput;
     } catch (error) {
       if (error instanceof MaxTurnsExceededError) throw new TurnLimitError();

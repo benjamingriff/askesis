@@ -5,6 +5,8 @@ import { COACHING_PROMPT } from '../prompt.js';
 import { scriptedAnthropicClient, type AnthropicResponse } from '../testing.js';
 import { PROGRESS_UPDATES_BETA } from './anthropic.js';
 import { createRuntime, failureCode, ModelRefusalError } from './index.js';
+import { UsageLedger, coachRequestDefaults } from '../usage.js';
+import { modelProfile } from '../config.js';
 
 beforeEach(() => {
   vi.stubGlobal(
@@ -67,15 +69,17 @@ function run(responses: AnthropicResponse[]) {
   const tools = vi
     .spyOn(api, 'tool')
     .mockResolvedValue({ result: { ok: true }, versionId: null, editNumber: null, planId: null });
+  const ledger = new UsageLedger(coachRequestDefaults(modelProfile(config)));
   const execution = createRuntime(config, { anthropic: scripted.client }).execute(
     context,
     claim,
     api,
     new AbortController().signal,
     new AbortController().signal,
+    ledger,
   );
   const visible = () => deliveries.flatMap((delivery) => delivery.items);
-  return { ...scripted, execution, tools, deliveries, visible };
+  return { ...scripted, execution, tools, deliveries, visible, ledger };
 }
 
 it('sends the configured model, effort, serial tool choice, progress updates and cache markers', async () => {
