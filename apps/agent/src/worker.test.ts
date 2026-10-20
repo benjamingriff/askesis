@@ -501,6 +501,30 @@ it('reports completed usage when a later provider operation fails', async () => 
   expect(JSON.stringify(finish.mock.calls)).not.toContain('Private');
 });
 
+it('resends identical finish bytes including detailed usage after a transport failure', async () => {
+  const bodies: string[] = [];
+  const fetcher = vi.fn<typeof fetch>().mockImplementation(async (url, init) => {
+    if (!String(url).endsWith('/finish')) throw new Error('Unexpected request');
+    bodies.push(String(init!.body));
+    if (bodies.length === 1) throw new TypeError('fetch failed');
+    return new Response(JSON.stringify({ status: 'completed' }));
+  });
+  const api = new AgentApi('http://localhost', fetcher);
+  vi.spyOn(api, 'context').mockResolvedValue(context);
+  const runtime = {
+    execute: vi.fn<CoachingRuntime['execute']>(async (...args) => {
+      args[5]
+        .begin()
+        .fromOpenAIResponse({ status: 'completed', usage: { input_tokens: 12, output_tokens: 3 } });
+      return { content: 'Done.' };
+    }),
+  };
+  await new Worker(config, api, runtime).execute(claim);
+  expect(bodies).toHaveLength(2);
+  expect(bodies[1]).toBe(bodies[0]);
+  expect(JSON.parse(bodies[0]!).usage.requests).toHaveLength(1);
+});
+
 it('keeps completed and interrupted requests when the execution deadline aborts the worker', async () => {
   vi.useFakeTimers();
   const api = new AgentApi('http://localhost');

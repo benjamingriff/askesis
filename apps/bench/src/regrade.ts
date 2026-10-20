@@ -1,5 +1,6 @@
 import { readFile, readdir } from 'node:fs/promises';
 import { basename, resolve } from 'node:path';
+import { z } from 'zod';
 import type { BenchmarkSnapshot } from '@askesis/api/benchmark';
 import { safeIdentifier } from '@askesis/agent/usage';
 import { Artifacts, reportMarkdown } from './artifacts.js';
@@ -9,6 +10,7 @@ import {
   evaluatorLedger,
   evaluatorFailureOutcome,
   ReviewValidationError,
+  ReviewSchema,
   REVIEW_VERSION,
   providerFailure,
   type Disclosure,
@@ -17,6 +19,7 @@ import type { Scenario } from './scenario.js';
 import { buildRunResult } from './progress.js';
 import { EVALUATOR_PROMPTS, promptIdentity } from './prompts.js';
 import { pricingSnapshot, sumCosts } from './pricing.js';
+import { BenchmarkError } from './local.js';
 import {
   buildMetrics,
   coachRecords,
@@ -182,7 +185,7 @@ export async function regradeDirectory(
   };
   const scenario = (await json(resolve(directory, 'scenario.json'))) as Scenario;
   if (scenario.edition !== 'v1')
-    throw new Error(
+    throw new BenchmarkError(
       'This run used the retired running-poc scenario format and cannot be regraded.',
     );
   const metrics = await upgradeLegacyMetrics(directory, snapshot, assessment);
@@ -245,7 +248,40 @@ export async function regradeDirectory(
     usageDetail: detail,
   });
   await artifacts.json('metrics.json', updated);
-  if (failed) throw failure;
+  if (failed) {
+    // Refresh telemetry while retaining the last published assessment. Historical files may
+    // lack assessment fields; malformed fields must not mask the original reviewer error.
+    const previous = z
+      .object({
+        verdict: z.string().catch('unknown'),
+        checks: z
+          .array(
+            z.object({
+              id: z.string(),
+              status: z.enum(['pass', 'fail']),
+              explanation: z.string(),
+              evidence: z.array(z.string()),
+            }),
+          )
+          .catch([]),
+        review: ReviewSchema.nullable().catch(null),
+      })
+      .parse(originalAssessment);
+    await artifacts.text(
+      'report.md',
+      reportMarkdown(
+        basename(directory),
+        previous.verdict,
+        assessment.stopReason,
+        snapshot,
+        previous.checks,
+        previous.review,
+        assessment.scripted,
+        updated,
+      ),
+    );
+    throw failure;
+  }
   const checks = checkPlan(
     snapshot,
     scenario,

@@ -11,6 +11,7 @@ import { loadScenario } from './scenario.js';
 import { regradeDirectory, upgradeLegacyMetrics } from './regrade.js';
 import { buildMetrics, type UsageMetrics } from './usage-report.js';
 import { PRICE_TABLE } from './pricing-table.js';
+import { BenchmarkError } from './local.js';
 
 const { fixtures } = await loadFixtures('all', ['missing-plan']);
 const evidence = fixtures[0]!.evidence;
@@ -112,6 +113,48 @@ afterEach(async () => {
   await rm(directory, { recursive: true, force: true });
 });
 describe('real historical upgrade and regrade', () => {
+  it('refreshes report costs and coverage after rejected and failed regrades without replacing the assessment', async () => {
+    await artifacts.json('metrics.json', buildMetrics([], []));
+    await grade();
+    const originalAssessment = await readFile(resolve(directory, 'assessment.json'), 'utf8');
+    const report = () => readFile(resolve(directory, 'report.md'), 'utf8');
+    const assessmentSection = (text: string) => text.split('\n## Usage and estimated cost\n')[0];
+    const originalSection = assessmentSection(await report());
+    const initialCost = (await metrics()).combinedIncludingRegrades.costEstimate.knownUsd;
+
+    await expect(grade(1760000001000, models(undefined, true))).rejects.toMatchObject({
+      code: 'REVIEW_EVIDENCE_INVALID',
+    });
+    const rejectedReport = await report();
+    expect(rejectedReport).toContain('Regrade 2025-10-09T08:53:21.000Z');
+    expect(rejectedReport).toContain(`$${(initialCost * 2).toFixed(6)} (estimate)`);
+    expect(assessmentSection(rejectedReport)).toBe(originalSection);
+    expect(await readFile(resolve(directory, 'assessment.json'), 'utf8')).toBe(originalAssessment);
+
+    const failure = new Error('private connection failure');
+    await expect(grade(1760000002000, models(failure))).rejects.toBe(failure);
+    const failedReport = await report();
+    expect(failedReport).toContain('Regrade 2025-10-09T08:53:22.000Z');
+    expect(failedReport).toContain('2 of 3 recorded requests priced');
+    expect(failedReport).toContain('(incomplete)');
+    expect(failedReport).not.toContain('private connection');
+    expect(assessmentSection(failedReport)).toBe(originalSection);
+    expect(await readFile(resolve(directory, 'assessment.json'), 'utf8')).toBe(originalAssessment);
+  });
+
+  it('keeps the actionable CLI error for retired scenarios before making a review call', async () => {
+    await artifacts.json('scenario.json', { ...scenario, edition: undefined });
+    await expect(
+      grade(1760000000000, models(new Error('should not be called'))),
+    ).rejects.toMatchObject({
+      constructor: BenchmarkError,
+      message: 'This run used the retired running-poc scenario format and cannot be regraded.',
+    });
+    await expect(readFile(resolve(directory, 'metrics.json'))).rejects.toMatchObject({
+      code: 'ENOENT',
+    });
+  });
+
   for (const source of ['absent', 'empty'] as const)
     it(`keeps ${source} historical metrics unknown while pricing the new regrade`, async () => {
       if (source === 'empty')
@@ -234,6 +277,10 @@ describe('real historical upgrade and regrade', () => {
     expect(review).not.toHaveProperty('usage');
     expect(review.usageDetail).toEqual(m.regrades[0]);
     expect(JSON.stringify(review)).not.toContain('secret connection');
+    const report = await readFile(resolve(directory, 'report.md'), 'utf8');
+    expect(report).toContain('Regrade 2025-10-09T08:53:20.000Z');
+    expect(report).toContain('Historical/missing-ledger legacy totals');
+    expect(report).toContain('unknown (');
   });
   it('persists rejected output usage while leaving the prior assessment intact', async () => {
     await expect(grade(1760000000000, models(undefined, true))).rejects.toMatchObject({
@@ -296,4 +343,16 @@ it('records SDK schema parsing failures as rejected output with provider usage i
     requests: [{ usageSource: 'provider', status: 'completed' }],
   });
   expect(await json('assessment.json')).toEqual(assessment);
+});
+
+it('refreshes historical usage without masking a reviewer failure when the assessment is malformed', async () => {
+  const raw = '{ malformed assessment';
+  await artifacts.text('assessment.json', raw);
+  const failure = new Error('private provider failure');
+  await expect(grade(1760000000000, models(failure))).rejects.toBe(failure);
+  const report = await readFile(resolve(directory, 'report.md'), 'utf8');
+  expect(report).toContain('Overall assessment: **unknown**');
+  expect(report).toContain('Regrade 2025-10-09T08:53:20.000Z');
+  expect(report).not.toContain('private provider');
+  expect(await readFile(resolve(directory, 'assessment.json'), 'utf8')).toBe(raw);
 });
