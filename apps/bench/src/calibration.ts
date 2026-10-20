@@ -4,6 +4,8 @@ import { resolve } from 'node:path';
 import { Artifacts } from './artifacts.js';
 import {
   criteria,
+  evaluatorLedger,
+  evaluatorFailureOutcome,
   providerFailure,
   validateReview,
   ReviewValidationError,
@@ -13,6 +15,16 @@ import {
   type ReviewEvidence,
 } from './models.js';
 import type { CalibrationFixture, FixtureLabels } from './fixtures.js';
+import type { UsageLedger } from '@askesis/agent/usage';
+import {
+  ledgerRecord,
+  attributeRequests,
+  summarizeUsage,
+  legacyPair,
+  type LedgerRecord,
+  type AttributedRequest,
+} from './usage-report.js';
+import { pricingSnapshot, sumCosts, renderCost } from './pricing.js';
 
 type ResultName = Review['criteria'][number]['result'];
 export type Judgment = {
@@ -51,6 +63,8 @@ export type CalibrationAttempt = {
   fixtureId: string;
   repetition: number;
   elapsedMs: number;
+  ledger?: LedgerRecord;
+  requests?: AttributedRequest[];
 } & (
   | {
       status: 'completed';
@@ -70,6 +84,7 @@ export function summarizeCalibration(
   fixtures: CalibrationFixture[],
   repeat: number,
   attempts: CalibrationAttempt[],
+  scripted = false,
 ) {
   const completed = attempts.filter(
     (a): a is Extract<CalibrationAttempt, { status: 'completed' }> => a.status === 'completed',
@@ -121,6 +136,7 @@ export function summarizeCalibration(
     outputTokens: attempts.reduce((sum, a) => sum + (a.usage?.outputTokens ?? 0), 0),
     measuredLatencyMs: completed.map((a) => a.elapsedMs),
     monetaryCost: null,
+    ...calibrationUsage(attempts, scripted),
   };
 }
 
@@ -128,6 +144,7 @@ type Reviewer = (
   evidence: ReviewEvidence,
   disclosures: Disclosure[],
   signal: AbortSignal,
+  ledger: UsageLedger,
 ) => Promise<{ review: Review; usage: ModelUsage }>;
 export async function runCalibration(options: {
   directory: string;
@@ -136,6 +153,7 @@ export async function runCalibration(options: {
   scripted: boolean;
   signal: AbortSignal;
   reviewer: Reviewer;
+  reviewerModel?: string;
   onProgress?: (text: string) => void;
 }) {
   const { fixtures, repeat, directory, scripted, signal, reviewer } = options;
@@ -172,13 +190,27 @@ export async function runCalibration(options: {
         const started = performance.now();
         let attempt: CalibrationAttempt;
         let receivedUsage: ModelUsage | undefined;
+        const ledger = evaluatorLedger(options.reviewerModel ?? 'unknown', 'reviewer');
+        const record = ledgerRecord(
+          {
+            ledgerId: `calibration:${fixture.id}:${repetition}`,
+            role: 'reviewer',
+            phase: 'calibration',
+            fixtureId: fixture.id,
+            repetition,
+          },
+          ledger.toJSON(),
+          scripted,
+        );
         try {
           // Labels, descriptions, IDs and split are intentionally absent from the model request.
           const result = await reviewer(
             structuredClone(fixture.evidence),
             structuredClone(fixture.disclosures),
             signal,
+            ledger,
           );
+          record.outcome = 'succeeded';
           receivedUsage = result.usage;
           validateReview(result.review, fixture.evidence);
           attempt = {
@@ -194,6 +226,7 @@ export async function runCalibration(options: {
           );
         } catch (error) {
           operationalFailure = true;
+          record.outcome = evaluatorFailureOutcome(error, signal, ledger);
           attempt = {
             fixtureId: fixture.id,
             repetition,
@@ -213,6 +246,11 @@ export async function runCalibration(options: {
             `Grader failed: ${attempt.diagnostic.category} (${attempt.diagnostic.errorCode ?? attempt.diagnostic.errorType}).${attempt.diagnostic.validationReason ? ` ${attempt.diagnostic.validationReason}` : ''}`,
           );
         }
+        const saved = ledger.toJSON();
+        record.recordedRequests = scripted ? 0 : saved.requests.length;
+        record.omittedRequests = scripted ? 0 : saved.omittedRequests;
+        attempt.ledger = record;
+        attempt.requests = attributeRequests(record, saved);
         attempts.push(attempt);
         await new Artifacts(resolve(directory, fixture.id)).json(
           `attempt-${repetition}.json`,
@@ -236,7 +274,7 @@ export async function runCalibration(options: {
   }
   return {
     attempts,
-    summary: summarizeCalibration(fixtures, repeat, attempts),
+    summary: summarizeCalibration(fixtures, repeat, attempts, scripted),
     operationalFailure: operationalFailure || signal.aborted,
   };
 }
@@ -249,7 +287,7 @@ async function saveCalibrationReport(
   scripted: boolean,
 ) {
   const artifacts = new Artifacts(directory);
-  const summary = summarizeCalibration(fixtures, repeat, attempts);
+  const summary = summarizeCalibration(fixtures, repeat, attempts, scripted);
   await artifacts.json('results.json', {
     scripted,
     labelStatus: 'provisional-engineering-labels',
@@ -352,7 +390,7 @@ export function calibrationMarkdown(
     '',
     '## Usage',
     '',
-    `Recorded available usage, including rejected reviews: ${summary.inputTokens} input tokens; ${summary.outputTokens} output tokens. Monetary cost is unknown; cache breakdown and usage for failed provider calls are not recorded.`,
+    `Recorded legacy totals, including rejected reviews: ${summary.inputTokens} input tokens; ${summary.outputTokens} output tokens. Estimated cost: ${renderCost(summary.costEstimate)}. Cache reads / total input: ${summary.usage.cacheHitRatio.value === null ? 'unknown' : `${(summary.usage.cacheHitRatio.value * 100).toFixed(1)}%`}${summary.usage.cacheHitRatio.complete ? '' : ' (incomplete coverage)'}.`,
     '',
     '[Machine-readable results](results.json) · [Manifest](manifest.json) · [Progress](progress.jsonl)',
     '',
@@ -360,4 +398,50 @@ export function calibrationMarkdown(
     '',
   );
   return lines.join('\n');
+}
+
+/** Tolerant reader projection for old results; never rewrites the file or invents request counts. */
+export function calibrationUsage(
+  attempts: Pick<
+    CalibrationAttempt,
+    'fixtureId' | 'repetition' | 'usage' | 'ledger' | 'requests'
+  >[],
+  scripted = false,
+) {
+  const ledgers = attempts.map(
+    (a) =>
+      a.ledger ??
+      ledgerRecord(
+        {
+          ledgerId: `calibration:${a.fixtureId}:${a.repetition}`,
+          role: 'reviewer',
+          phase: 'calibration',
+          coverage: scripted ? 'scripted' : 'historical',
+          fixtureId: a.fixtureId,
+          repetition: a.repetition,
+          legacy: scripted ? null : legacyPair(a.usage),
+        },
+        null,
+        scripted,
+      ),
+  );
+  const requests = attempts.flatMap((a) => a.requests ?? []);
+  return {
+    pricing: pricingSnapshot(),
+    usage: summarizeUsage(ledgers, requests),
+    costEstimate: sumCosts(ledgers, requests),
+  };
+}
+export function readCalibrationResults(value: {
+  scripted?: boolean;
+  summary?: { scripted?: boolean };
+  attempts: CalibrationAttempt[];
+}) {
+  return {
+    ...value,
+    usageDetail: calibrationUsage(
+      value.attempts,
+      value.scripted === true || value.summary?.scripted === true,
+    ),
+  };
 }

@@ -1,3 +1,4 @@
+import { UsageLedger, coachRequestDefaults } from '@askesis/agent/usage';
 import { spawn } from 'node:child_process';
 import { mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -679,6 +680,14 @@ describe('coach provider selection', () => {
           api,
           new AbortController().signal,
           new AbortController().signal,
+          new UsageLedger(
+            coachRequestDefaults({
+              provider,
+              model: config.AGENT_MODEL ?? 'scripted',
+              reasoning: 'low',
+              maxOutputTokens: 1800,
+            }),
+          ),
         );
       expect((await run()).content).toContain('Please share your goal');
       expect((await run()).content).toContain('offline scripted fixture');

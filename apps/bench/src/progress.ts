@@ -27,6 +27,14 @@ export const ResultSchema = z.object({
   maxMinutes: z.number(),
   report: z.string(),
   failedChecks: z.array(z.string()),
+  usage: z
+    .object({
+      coachUsd: z.number().nullable(),
+      evaluatorUsd: z.number().nullable(),
+      cacheHitRatio: z.number().nullable(),
+      complete: z.boolean(),
+    })
+    .optional(),
 });
 export type RunResult = z.infer<typeof ResultSchema>;
 
@@ -88,6 +96,11 @@ export function resultLines(result: RunResult) {
     `  Assessment: ${result.verdict} | Reviewer: ${result.reviewCompleted ? 'completed' : 'unavailable'}`,
     `  Athlete messages: ${result.messages}/${result.maxMessages} (opening request included)`,
     ...(result.failedChecks.length ? [`  Failed checks: ${result.failedChecks.join(', ')}`] : []),
+    ...(result.usage
+      ? [
+          `  Cost estimate: coach ${result.usage.coachUsd === null ? 'unknown' : `$${result.usage.coachUsd.toFixed(6)}`}; evaluators ${result.usage.evaluatorUsd === null ? 'unknown' : `$${result.usage.evaluatorUsd.toFixed(6)}`} | Cache reads/input: ${result.usage.cacheHitRatio === null ? 'unknown' : `${(result.usage.cacheHitRatio * 100).toFixed(1)}%`}${result.usage.complete ? '' : ' (incomplete coverage)'}`,
+        ]
+      : []),
     `  Report: ${result.report}`,
   ].join('\n');
 }

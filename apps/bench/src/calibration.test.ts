@@ -1,3 +1,4 @@
+import type OpenAI from 'openai';
 import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { resolve } from 'node:path';
@@ -5,12 +6,18 @@ import { describe, expect, it } from 'vitest';
 import { loadFixtures, scriptedCalibrationReview } from './fixtures.js';
 import {
   calibrationMarkdown,
+  readCalibrationResults,
   runCalibration,
   scoreReview,
   summarizeCalibration,
   type CalibrationAttempt,
 } from './calibration.js';
-import { availableEvidenceReferences, ReviewValidationError, validateReview } from './models.js';
+import {
+  EvaluationModels,
+  availableEvidenceReferences,
+  ReviewValidationError,
+  validateReview,
+} from './models.js';
 
 describe('grader calibration fixtures', () => {
   it('keeps independent development/holdout cases and rejects unknown selections', async () => {
@@ -318,5 +325,117 @@ describe('calibration execution', () => {
     } finally {
       await rm(directory, { recursive: true, force: true });
     }
+  });
+});
+
+describe('detailed calibration usage', () => {
+  for (const terminal of ['completed', 'rejected', 'connection'] as const)
+    it(`persists the ${terminal} attempt ledger and applied cost through real SDK calls`, async () => {
+      const { fixtures } = await loadFixtures('all', ['missing-plan']);
+      const review = scriptedCalibrationReview(fixtures[0]!.evidence);
+      if (terminal === 'rejected') review.criteria[0]!.evidence = ['workout:invented'];
+      const client = {
+        responses: {
+          create: async () => {
+            if (terminal === 'connection') throw new Error('private provider failure');
+            return {
+              object: 'response',
+              id: 'calibration-test',
+              model: 'gpt-6.1-sol',
+              service_tier: 'flex',
+              status: 'completed',
+              output: [
+                {
+                  type: 'message',
+                  role: 'assistant',
+                  id: 'msg-test',
+                  status: 'completed',
+                  content: [{ type: 'output_text', text: JSON.stringify(review), annotations: [] }],
+                },
+              ],
+              usage: {
+                input_tokens: 272001,
+                input_tokens_details: { cached_tokens: 50, cache_write_tokens: 20 },
+                output_tokens: 40,
+                output_tokens_details: { reasoning_tokens: 25 },
+              },
+            };
+          },
+        },
+      } as unknown as OpenAI;
+      const models = new EvaluationModels('test', 'gpt-6.1-sol', client);
+      const directory = await mkdtemp(resolve(tmpdir(), 'bench-calibration-usage-'));
+      try {
+        const result = await runCalibration({
+          directory,
+          fixtures,
+          repeat: 2,
+          scripted: false,
+          reviewerModel: models.model,
+          signal: new AbortController().signal,
+          reviewer: models.review.bind(models),
+        });
+        const saved = JSON.parse(await readFile(resolve(directory, 'results.json'), 'utf8'));
+        const expectedAttempts = terminal === 'completed' ? 2 : 1;
+        expect(result.attempts).toHaveLength(expectedAttempts);
+        expect(saved.attempts).toHaveLength(expectedAttempts);
+        const attempt = saved.attempts[0];
+        expect(attempt.ledger).toMatchObject({
+          coverage: 'recorded',
+          recordedRequests: 1,
+          outcome:
+            terminal === 'completed'
+              ? 'succeeded'
+              : terminal === 'rejected'
+                ? 'rejected_output'
+                : 'failed',
+        });
+        expect(attempt.requests).toHaveLength(1);
+        expect(saved.summary.usage.requests.total).toBe(expectedAttempts);
+        expect(JSON.stringify(saved)).not.toContain('private provider failure');
+        if (terminal === 'connection') {
+          expect(attempt.requests[0]).toMatchObject({
+            usageSource: 'none',
+            cost: { usd: null, unpricedReason: 'usage_unverified' },
+          });
+          expect(saved.summary.usage.complete).toBe(false);
+          expect(saved.summary.costEstimate.usd).toBeNull();
+        } else {
+          const cost = (271931 * 2 + 50 * 0.1 + 20 * 2.5 + 40 * 7.5) / 1e6;
+          expect(attempt.requests[0].cost).toMatchObject({
+            lookup: { tier: 'flex', longContext: true },
+            rates: { inputPerMTok: 2 },
+            entry: { id: 'openai/gpt-6.1-sol/flex' },
+          });
+          expect(attempt.requests[0].cost.usd).toBeCloseTo(cost, 12);
+          expect(saved.summary.costEstimate.usd).toBeCloseTo(cost * expectedAttempts, 12);
+          expect(attempt.usage).toEqual({ inputTokens: 272001, outputTokens: 40 });
+        }
+        expect(readCalibrationResults(saved).usageDetail.costEstimate).toEqual(
+          saved.summary.costEstimate,
+        );
+        expect(readCalibrationResults(saved).usageDetail.usage).toEqual(saved.summary.usage);
+      } finally {
+        await rm(directory, { recursive: true, force: true });
+      }
+    });
+  it('keeps old attempts without ledgers historical, including absent usage, while scripted remains not applicable', () => {
+    const attempts = [
+      { fixtureId: 'one', repetition: 1, usage: { inputTokens: 100, outputTokens: 20 } },
+      { fixtureId: 'two', repetition: 1 },
+    ] as CalibrationAttempt[];
+    const original = JSON.stringify(attempts);
+    const detail = readCalibrationResults({ attempts }).usageDetail;
+    expect(detail.usage).toMatchObject({
+      requests: { total: null },
+      ledgers: { historical: 2 },
+      complete: false,
+      legacyTotals: { inputTokens: 100, outputTokens: 20 },
+    });
+    expect(detail.costEstimate.usd).toBeNull();
+    expect(JSON.stringify(attempts)).toBe(original);
+    const scripted = readCalibrationResults({ attempts, summary: { scripted: true } }).usageDetail;
+    expect(scripted.usage).toMatchObject({ complete: true, requests: { total: 0 } });
+    expect(scripted.costEstimate).toMatchObject({ scripted: true, usd: null });
   });
 });
