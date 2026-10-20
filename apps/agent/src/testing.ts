@@ -104,7 +104,13 @@ export type AnthropicResponse =
    * Raw stream events, then the connection fails (`error`) or stays open until the request is
    * aborted (`hang`). `before` runs once the events have been sent.
    */
-  | { type: 'events'; events: object[]; then: 'error' | 'hang'; before?: () => void };
+  | {
+      type: 'events';
+      events: object[];
+      then: 'error' | 'hang';
+      error?: Error;
+      before?: () => void;
+    };
 
 /** Server-sent events exactly as the Messages API streams one complete response. */
 export function anthropicEvents(
@@ -225,7 +231,8 @@ export function scriptedAnthropicClient(responses: AnthropicResponse[]) {
             );
             await new Promise((resolve) => setTimeout(resolve, 10));
             response.before?.();
-            if (response.then === 'error') controller.error(new Error(PROVIDER_FAILURE));
+            if (response.then === 'error')
+              controller.error(response.error ?? new Error(PROVIDER_FAILURE));
             else if (signal?.aborted) controller.error(signal.reason);
             else
               signal?.addEventListener('abort', () => controller.error(signal.reason), {

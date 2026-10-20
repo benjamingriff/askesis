@@ -193,6 +193,7 @@ export abstract class ModelRuntime implements CoachingRuntime {
     const tools = new ToolExecutor(context, claim, api, progress, providerSignal);
     let outcome: RuntimeResult;
     try {
+      providerSignal.throwIfAborted();
       const output = await this.converse({
         context,
         input: conversationInput(context),

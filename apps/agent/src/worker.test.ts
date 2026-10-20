@@ -2,6 +2,7 @@ import { afterEach, expect, it, vi } from 'vitest';
 import { AgentApi, ApiError, type ExecutionContext } from './api.js';
 import { parseAgentConfig } from './config.js';
 import { Worker } from './worker.js';
+import type { CoachingRuntime } from './runtime/index.js';
 
 // Vitest's fake clock does not replace node:timers/promises. Use the fake-clock-backed
 // equivalent so registration backoff and shutdown can be exercised without real waits.
@@ -120,9 +121,12 @@ it('maps completed output and usage into one final API command', async () => {
   vi.spyOn(api, 'context').mockResolvedValue(context);
   const finish = vi.spyOn(api, 'finish').mockResolvedValue({ status: 'completed' });
   const runtime = {
-    execute: vi
-      .fn()
-      .mockResolvedValue({ content: 'What is your goal?', inputTokens: 12, outputTokens: 5 }),
+    execute: vi.fn<CoachingRuntime['execute']>(async (...args) => {
+      args[5]
+        .begin()
+        .fromOpenAIResponse({ status: 'completed', usage: { input_tokens: 12, output_tokens: 5 } });
+      return { content: 'What is your goal?' };
+    }),
   };
   await new Worker(config, api, runtime).execute(claim);
   expect(finish).toHaveBeenCalledExactlyOnceWith(claim, {
@@ -130,6 +134,11 @@ it('maps completed output and usage into one final API command', async () => {
     content: 'What is your goal?',
     inputTokens: 12,
     outputTokens: 5,
+    usage: expect.objectContaining({
+      version: 1,
+      requests: [expect.objectContaining({ usageSource: 'provider', usageCompleteness: 'final' })],
+      omittedRequests: 0,
+    }),
   });
 });
 it('aborts the runtime on cancellation and acknowledges it without a final assistant reply', async () => {
@@ -152,7 +161,10 @@ it('aborts the runtime on cancellation and acknowledges it without a final assis
   const execution = new Worker(config, api, runtime).execute(claim);
   await vi.advanceTimersByTimeAsync(15000);
   await execution;
-  expect(finish).toHaveBeenCalledExactlyOnceWith(claim, { status: 'cancelled' });
+  expect(finish).toHaveBeenCalledExactlyOnceWith(claim, {
+    status: 'cancelled',
+    usage: { version: 1, requests: [], omittedRequests: 0 },
+  });
 });
 it('reports provider failure while leaving already committed tool receipts to the API', async () => {
   const api = new AgentApi('http://localhost');
@@ -163,6 +175,7 @@ it('reports provider failure while leaving already committed tool receipts to th
   expect(finish).toHaveBeenCalledExactlyOnceWith(claim, {
     status: 'failed',
     failureCode: 'PROVIDER_ERROR',
+    usage: { version: 1, requests: [], omittedRequests: 0 },
   });
 });
 
@@ -436,8 +449,103 @@ it.each(cancellationCases)(
       expect(fetcher).toHaveBeenCalledTimes(1);
     }
     expect(tool).not.toHaveBeenCalled();
-    expect(finish).toHaveBeenCalledExactlyOnceWith(run, { status: 'cancelled' });
+    expect(finish).toHaveBeenCalledExactlyOnceWith(
+      run,
+      expect.objectContaining({
+        status: 'cancelled',
+        usage: expect.objectContaining({
+          version: 1,
+          requests: [
+            expect.objectContaining({
+              status: expect.stringMatching(/interrupted|error_without_response/),
+            }),
+          ],
+        }),
+      }),
+    );
     expect(vi.getTimerCount()).toBe(0);
     vi.restoreAllMocks();
   },
 );
+
+it('reports completed usage when a later provider operation fails', async () => {
+  const api = new AgentApi('http://localhost');
+  vi.spyOn(api, 'context').mockResolvedValue(context);
+  const finish = vi.spyOn(api, 'finish').mockResolvedValue({ status: 'failed' });
+  const runtime = {
+    execute: vi.fn<CoachingRuntime['execute']>(async (...args) => {
+      args[5]
+        .begin()
+        .fromOpenAIResponse({ status: 'completed', usage: { input_tokens: 12, output_tokens: 3 } });
+      throw new Error('Private provider failure');
+    }),
+  };
+  await new Worker(config, api, runtime).execute(claim);
+  expect(finish).toHaveBeenCalledExactlyOnceWith(
+    claim,
+    expect.objectContaining({
+      status: 'failed',
+      failureCode: 'PROVIDER_ERROR',
+      inputTokens: 12,
+      outputTokens: 3,
+      usage: expect.objectContaining({
+        requests: [
+          expect.objectContaining({
+            status: 'completed',
+            tokens: expect.objectContaining({ input: 12 }),
+          }),
+        ],
+      }),
+    }),
+  );
+  expect(JSON.stringify(finish.mock.calls)).not.toContain('Private');
+});
+
+it('keeps completed and interrupted requests when the execution deadline aborts the worker', async () => {
+  vi.useFakeTimers();
+  const api = new AgentApi('http://localhost');
+  vi.spyOn(api, 'context').mockResolvedValue(context);
+  const finish = vi.spyOn(api, 'finish').mockResolvedValue({ status: 'failed' });
+  const runtime = {
+    execute: vi.fn<CoachingRuntime['execute']>(async (...args) => {
+      args[5]
+        .begin()
+        .fromOpenAIResponse({ status: 'completed', usage: { input_tokens: 12, output_tokens: 3 } });
+      const inFlight = args[5].begin();
+      inFlight.responseStarted();
+      return new Promise<never>((_resolve, reject) =>
+        args[3].addEventListener(
+          'abort',
+          () => {
+            inFlight.interrupted();
+            reject(args[3].reason);
+          },
+          { once: true },
+        ),
+      );
+    }),
+  };
+  const run = { ...claim, deadlineAt: new Date(Date.now() + 50).toISOString() };
+  const executing = new Worker(config, api, runtime).execute(run);
+  await vi.advanceTimersByTimeAsync(50);
+  await executing;
+  expect(finish).toHaveBeenCalledExactlyOnceWith(
+    run,
+    expect.objectContaining({
+      status: 'failed',
+      failureCode: 'EXECUTION_TIMEOUT',
+      inputTokens: 12,
+      outputTokens: 3,
+      usage: expect.objectContaining({
+        requests: [
+          expect.objectContaining({ status: 'completed' }),
+          expect.objectContaining({
+            status: 'interrupted',
+            tokens: expect.objectContaining({ input: null, output: null }),
+          }),
+        ],
+      }),
+    }),
+  );
+  expect(vi.getTimerCount()).toBe(0);
+});

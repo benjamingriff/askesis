@@ -7,6 +7,8 @@ import { PROGRESS_UPDATES_BETA } from './anthropic.js';
 import { createRuntime, failureCode, ModelRefusalError } from './index.js';
 import { UsageLedger, coachRequestDefaults } from '../usage.js';
 import { modelProfile } from '../config.js';
+import { AnthropicError } from '@anthropic-ai/sdk';
+import { anthropicEvents } from '../testing.js';
 
 beforeEach(() => {
   vi.stubGlobal(
@@ -237,7 +239,7 @@ it.each(['max_tokens', 'model_context_window_exceeded'] as const)(
 );
 
 it('sums uncached, cache-write and cache-read input with output across every model call', async () => {
-  const { execution } = run([
+  const { execution, ledger } = run([
     {
       type: 'message',
       content: [tool('read')],
@@ -251,7 +253,8 @@ it('sums uncached, cache-write and cache-read input with output across every mod
       usage: { input: 30, output: 10, cacheWrite: 50, cacheRead: 900 },
     },
   ]);
-  await expect(execution).resolves.toMatchObject({ inputTokens: 1980, outputTokens: 30 });
+  await execution;
+  expect(ledger.legacyTotals()).toEqual({ inputTokens: 1980, outputTokens: 30 });
 });
 
 it('returns an unknown tool name to the model as an error instead of calling the API', async () => {
@@ -266,4 +269,114 @@ it('returns an unknown tool name to the model as an error instead of calling the
   await execution;
   expect(tools).not.toHaveBeenCalled();
   expect(JSON.stringify(requests[1]!.messages.at(-1))).toContain('UNKNOWN_TOOL');
+});
+
+function partialEvents() {
+  const events = anthropicEvents(
+    {
+      type: 'message',
+      content: [{ type: 'text', text: 'Visible prefix' }],
+      stopReason: 'end_turn',
+      usage: {
+        input: 12,
+        output: 9,
+        cacheRead: 4,
+        cacheWrite: 0,
+        reasoning: 3,
+        serviceTier: 'standard',
+      },
+    },
+    'claude-opus-5-5',
+    'msg_partial',
+  );
+  const delta = events.find((event) => event.type === 'message_delta')!;
+  delta.usage = {
+    input_tokens: 14,
+    cache_read_input_tokens: 6,
+    output_tokens: 9,
+    output_tokens_details: { thinking_tokens: 3 },
+  };
+  // No message_stop: the provider has returned updated usage but transport has not completed.
+  return events.slice(0, -1);
+}
+
+it('retains the latest reported usage after a real Anthropic stream fails before message_stop', async () => {
+  const failure = new AnthropicError('synthetic interruption');
+  const { execution, ledger, requests } = run([
+    { type: 'events', events: partialEvents(), then: 'error', error: failure },
+  ]);
+  await expect(execution).rejects.toBe(failure);
+  expect(ledger.toJSON().requests[0]).toMatchObject({
+    status: 'interrupted',
+    usageSource: 'provider',
+    usageCompleteness: 'partial',
+    tokens: { input: 20, uncachedInput: 14, cacheRead: 6, cacheWrite: 0, output: 9, reasoning: 3 },
+  });
+  expect(requests[0]).toMatchObject({
+    model: 'claude-opus-5-5',
+    thinking: { type: 'adaptive', display: 'updates' },
+    output_config: { effort: 'medium' },
+    cache_control: { type: 'ephemeral' },
+  });
+  expect(JSON.stringify(ledger.toJSON())).not.toContain('Visible prefix');
+});
+
+it('retains cumulative usage on cancellation without counting provisional start output', async () => {
+  const controller = new AbortController();
+  const scripted = scriptedAnthropicClient([
+    {
+      type: 'events',
+      events: partialEvents(),
+      then: 'hang',
+      before: () => controller.abort('CANCELLED'),
+    },
+  ]);
+  const api = new AgentApi('http://localhost');
+  vi.spyOn(api, 'progress').mockResolvedValue({ status: 'running' });
+  const ledger = new UsageLedger(coachRequestDefaults(modelProfile(config)));
+  await expect(
+    createRuntime(config, { anthropic: scripted.client }).execute(
+      context,
+      claim,
+      api,
+      controller.signal,
+      new AbortController().signal,
+      ledger,
+    ),
+  ).rejects.toThrow();
+  expect(ledger.toJSON().requests[0]).toMatchObject({
+    status: 'interrupted',
+    usageCompleteness: 'partial',
+    tokens: { input: 20, output: 9, reasoning: 3 },
+  });
+
+  const startOnly = run([{ type: 'events', events: partialEvents().slice(0, 1), then: 'error' }]);
+  await expect(startOnly.execution).rejects.toThrow();
+  expect(startOnly.ledger.toJSON().requests[0]).toMatchObject({
+    usageCompleteness: 'partial',
+    tokens: { input: 16, output: null, reasoning: null },
+  });
+});
+
+it('retains every completed request before refusal and turn-limit failures', async () => {
+  const refusal = run([
+    {
+      type: 'message',
+      content: [tool('read')],
+      stopReason: 'tool_use',
+      usage: { input: 10, output: 2, cacheRead: 0, cacheWrite: 0 },
+    },
+    {
+      type: 'message',
+      content: [],
+      stopReason: 'refusal',
+      usage: { input: 8, output: 1, cacheRead: 5, cacheWrite: 0 },
+    },
+  ]);
+  await expect(refusal.execution).rejects.toBeInstanceOf(ModelRefusalError);
+  expect(refusal.ledger.toJSON().requests.map((request) => request.status)).toEqual([
+    'completed',
+    'refused',
+  ]);
+  expect(refusal.ledger.legacyTotals()).toEqual({ inputTokens: 23, outputTokens: 3 });
 });

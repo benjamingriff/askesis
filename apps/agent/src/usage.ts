@@ -125,7 +125,7 @@ function details(value: unknown): Record<string, number> | null {
 }
 const sum = (...values: TokenCount[]) =>
   values.every((value) => value !== null)
-    ? (values as number[]).reduce((total, value) => total + value, 0)
+    ? count((values as number[]).reduce((total, value) => total + value, 0))
     : null;
 const nullTokens = (): RequestTokens => ({
   input: null,
@@ -185,8 +185,7 @@ export function normalizeOpenAIUsage(
       input,
       cacheRead,
       cacheWrite,
-      uncachedInput:
-        input !== null && cached !== null && input >= cached ? input - cached : null,
+      uncachedInput: input !== null && cached !== null && input >= cached ? input - cached : null,
       cacheWrite5m: null,
       cacheWrite1h: null,
       output: count(raw.output_tokens),
@@ -270,8 +269,11 @@ export class AnthropicUsageObserver {
       this.returnedModel = safeIdentifier(event.message.model);
       this.responseId = safeIdentifier(event.message.id);
       if (isRecord(event.message.usage)) {
-        const { output_tokens: _output, output_tokens_details: _details, ...start } =
-          event.message.usage;
+        const {
+          output_tokens: _output,
+          output_tokens_details: _details,
+          ...start
+        } = event.message.usage;
         this.merge(start);
       }
     } else if (event.type === 'message_delta' && isRecord(event.usage)) this.merge(event.usage);
@@ -379,9 +381,14 @@ class Entry implements RequestHandle {
       ...this.base(),
       status: 'completed',
       usageSource: 'sdk_normalized',
-      returnedModel: safeIdentifier(meta.returnedModel) ?? safeIdentifier(this.started?.returnedModel),
+      returnedModel:
+        safeIdentifier(meta.returnedModel) ?? safeIdentifier(this.started?.returnedModel),
       returnedServiceTier: safeIdentifier(meta.returnedServiceTier),
-      tokens: { ...nullTokens(), input: count(totals.inputTokens), output: count(totals.outputTokens) },
+      tokens: {
+        ...nullTokens(),
+        input: count(totals.inputTokens),
+        output: count(totals.outputTokens),
+      },
     });
   }
   interrupted(partial: { anthropicUsage?: SafeUsage | null } & ResponseMeta = {}) {
@@ -475,13 +482,16 @@ export function coachRequestDefaults(profile: {
       reasoningEffort: profile.reasoning,
       maxOutputTokens: profile.maxOutputTokens,
       requestedServiceTier: null,
-      cacheControl: profile.provider === 'anthropic' ? 'anthropic_ephemeral_auto' : 'provider_default',
+      cacheControl:
+        profile.provider === 'anthropic' ? 'anthropic_ephemeral_auto' : 'provider_default',
     },
   };
 }
 
 /** The settings an Agents SDK request actually carries. */
-export function openAIRequestSettings(request: Pick<ModelRequest, 'modelSettings'>): RequestSettings {
+export function openAIRequestSettings(
+  request: Pick<ModelRequest, 'modelSettings'>,
+): RequestSettings {
   const settings = request.modelSettings ?? {};
   const providerData = isRecord(settings.providerData) ? settings.providerData : {};
   return {
@@ -589,19 +599,113 @@ export function observeOpenAIModel(
 export function readUsageLedger(value: unknown): UsageLedgerJson | null {
   if (!isRecord(value) || value.version !== USAGE_LEDGER_VERSION) return null;
   if (!Array.isArray(value.requests) || count(value.omittedRequests) === null) return null;
-  const requests = value.requests as unknown[];
+  if (value.requests.length > MAX_LEDGER_REQUESTS) return null;
+  if (!onlyKeys(value, ['version', 'requests', 'omittedRequests'])) return null;
+  let previous = 0;
+  for (const request of value.requests) {
+    if (!validRequest(request) || request.sequence <= previous) return null;
+    previous = request.sequence;
+  }
+  return value as UsageLedgerJson;
+}
+
+const onlyKeys = (value: Record<string, unknown>, keys: string[]) =>
+  Object.keys(value).every((key) => keys.includes(key));
+const nullableIdentifier = (value: unknown) => value === null || safeIdentifier(value) !== null;
+const nullableCount = (value: unknown) => value === null || count(value) !== null;
+function validRaw(value: unknown): boolean {
+  if (value === null) return true;
+  if (!isRecord(value)) return false;
+  const counts = [...OPENAI_COUNTS, ...ANTHROPIC_COUNTS, 'iterations_count'];
+  const maps = [...OPENAI_DETAILS, ...ANTHROPIC_DETAILS];
+  return Object.entries(value).every(([key, item]) => {
+    if (counts.includes(key)) return nullableCount(item);
+    if (maps.includes(key))
+      return (
+        item === null ||
+        (isRecord(item) &&
+          Object.keys(item).length <= MAX_DETAIL_KEYS &&
+          Object.entries(item).every(
+            ([name, number]) => DETAIL_KEY.test(name) && count(number) !== null,
+          ))
+      );
+    if (ANTHROPIC_LABELS.includes(key)) return item === null || lowerIdentifier(item) !== null;
+    return false;
+  });
+}
+function validRequest(value: unknown): value is ModelRequestUsage {
+  if (!isRecord(value) || count(value.sequence) === null || Number(value.sequence) < 1)
+    return false;
   if (
-    !requests.every(
-      (request) =>
-        isRecord(request) &&
-        typeof request.sequence === 'number' &&
-        (request.provider === 'openai' || request.provider === 'anthropic') &&
-        typeof request.usageSource === 'string' &&
-        typeof request.usageCompleteness === 'string' &&
-        isRecord(request.tokens) &&
-        isRecord(request.settings),
+    !onlyKeys(value, [
+      'sequence',
+      'provider',
+      'requestedModel',
+      'returnedModel',
+      'responseId',
+      'status',
+      'stopReason',
+      'settings',
+      'returnedServiceTier',
+      'speed',
+      'inferenceGeo',
+      'usageSource',
+      'usageCompleteness',
+      'tokens',
+      'raw',
+    ])
+  )
+    return false;
+  if (value.provider !== 'openai' && value.provider !== 'anthropic') return false;
+  if (safeIdentifier(value.requestedModel) === null) return false;
+  if (
+    !['returnedModel', 'responseId', 'stopReason', 'returnedServiceTier', 'speed'].every((key) =>
+      nullableIdentifier(value[key]),
     )
   )
-    return null;
-  return value as UsageLedgerJson;
+    return false;
+  if (value.inferenceGeo !== null && lowerIdentifier(value.inferenceGeo) === null) return false;
+  if (
+    ![
+      'completed',
+      'incomplete',
+      'refused',
+      'failed',
+      'interrupted',
+      'error_without_response',
+    ].includes(String(value.status))
+  )
+    return false;
+  if (
+    !['provider', 'provider_missing', 'sdk_normalized', 'none'].includes(String(value.usageSource))
+  )
+    return false;
+  if (!['final', 'partial', 'unknown'].includes(String(value.usageCompleteness))) return false;
+  const settings = value.settings;
+  if (
+    !isRecord(settings) ||
+    !onlyKeys(settings, [
+      'reasoningEffort',
+      'maxOutputTokens',
+      'requestedServiceTier',
+      'cacheControl',
+    ])
+  )
+    return false;
+  if (
+    !nullableIdentifier(settings.reasoningEffort) ||
+    !nullableIdentifier(settings.requestedServiceTier) ||
+    !nullableCount(settings.maxOutputTokens)
+  )
+    return false;
+  if (!['anthropic_ephemeral_auto', 'provider_default'].includes(String(settings.cacheControl)))
+    return false;
+  const tokenKeys = Object.keys(nullTokens());
+  const tokens = value.tokens;
+  return (
+    isRecord(tokens) &&
+    onlyKeys(tokens, tokenKeys) &&
+    tokenKeys.every((key) => nullableCount(tokens[key])) &&
+    validRaw(value.raw)
+  );
 }
