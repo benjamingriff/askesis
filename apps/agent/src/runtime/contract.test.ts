@@ -80,11 +80,15 @@ const context: ExecutionContext = {
 let ledger: UsageLedger;
 beforeEach(() => {
   ledger = new UsageLedger(
-    coachRequestDefaults({ provider: 'openai', model: 'm', reasoning: 'medium', maxOutputTokens: 1 }),
+    coachRequestDefaults({
+      provider: 'openai',
+      model: 'm',
+      reasoning: 'medium',
+      maxOutputTokens: 1,
+    }),
   );
 });
-const signals = () =>
-  [new AbortController().signal, new AbortController().signal, ledger] as const;
+const signals = () => [new AbortController().signal, new AbortController().signal, ledger] as const;
 const statuses = () => ledger.toJSON().requests.map((request) => request.status);
 const read = (id?: string) => ({ name: 'read_plan_context', input: {}, ...(id ? { id } : {}) });
 const noChange = { result: {}, versionId: null, editNumber: null, planId: null };
