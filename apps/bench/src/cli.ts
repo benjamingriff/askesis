@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { execFileSync, fork } from 'node:child_process';
 import { resolve } from 'node:path';
 import { parseArgs } from 'node:util';
-import { readFile, writeFile, unlink, open } from 'node:fs/promises';
+import { writeFile, unlink, open } from 'node:fs/promises';
 import { setTimeout as delay } from 'node:timers/promises';
 import { parseAgentConfig } from '@askesis/agent/config';
 import { COACHING_PROMPT, PROMPT_HASH, PROMPT_VERSION } from '@askesis/agent/prompt';
@@ -29,6 +29,8 @@ import {
 import {
   EvaluationModels,
   evaluatorModel,
+  evaluatorLedger,
+  evaluatorFailureOutcome,
   providerFailure,
   SIMULATOR_VERSION,
   REVIEW_VERSION,
@@ -62,6 +64,15 @@ import {
 import { loadFixtures, scriptedCalibrationReview, type Split } from './fixtures.js';
 import { fixtureHash, runCalibration } from './calibration.js';
 import { readOpenAiKeyFromOnePassword } from './one-password.js';
+import { regradeDirectory } from './regrade.js';
+import {
+  buildMetrics,
+  coachRecords,
+  ledgerRecord,
+  attributeRequests,
+  type LedgerRecord,
+  type AttributedRequest,
+} from './usage-report.js';
 
 const options = parseArgs({
   allowPositionals: true,
@@ -248,6 +259,8 @@ async function run() {
   let phase = 'setup';
   const disclosed: Disclosure[] = [];
   const usage: { role: string; usage: ModelUsage }[] = [];
+  const evaluatorLedgers: LedgerRecord[] = [];
+  const evaluatorRequests: AttributedRequest[] = [];
   let timeout: ReturnType<typeof setTimeout> | undefined;
   let releaseArtifacts: (() => Promise<void>) | undefined;
   let databaseStarted = false;
@@ -462,6 +475,9 @@ async function run() {
         simulator,
         usage,
         abort.signal,
+        evaluatorLedgers,
+        evaluatorRequests,
+        interaction,
       );
       transcript(`Athlete: ${response.content}`);
       const accepted = await operator.sendBenchmarkMessage(owner, conversationId, response.content);
@@ -481,13 +497,24 @@ async function run() {
     );
     await artifacts.json('checks.json', checks);
     await stage('Review running', 'review');
-    if (options.values.scripted) review = scriptedReview(snapshot!);
-    else {
+    const reviewLedger = evaluatorLedger(reviewer.model, 'reviewer');
+    const reviewRecord = ledgerRecord(
+      { ledgerId: 'run:reviewer', role: 'reviewer', phase: 'run' },
+      reviewLedger.toJSON(),
+      options.values.scripted,
+    );
+    evaluatorLedgers.push(reviewRecord);
+    if (options.values.scripted) {
+      review = scriptedReview(snapshot!);
+      reviewRecord.outcome = 'succeeded';
+    } else {
       try {
-        const result = await reviewer.review(snapshot!, disclosed, abort.signal);
+        const result = await reviewer.review(snapshot!, disclosed, abort.signal, reviewLedger);
         review = result.review;
         usage.push({ role: 'reviewer', usage: result.usage });
+        reviewRecord.outcome = 'succeeded';
       } catch (error) {
+        reviewRecord.outcome = evaluatorFailureOutcome(error, abort.signal, reviewLedger);
         await artifacts.event({
           stage: 'review_failed',
           ...providerFailure(error),
@@ -498,6 +525,11 @@ async function run() {
         console.error(
           'Review could not complete. Saved plan and checks remain available; use bench grade to retry only the review.',
         );
+      } finally {
+        const saved = reviewLedger.toJSON();
+        reviewRecord.recordedRequests = saved.requests.length;
+        reviewRecord.omittedRequests = saved.omittedRequests;
+        evaluatorRequests.push(...attributeRequests(reviewRecord, saved));
       }
     }
   } catch (error) {
@@ -546,7 +578,13 @@ async function run() {
         checks,
         scripted: options.values.scripted,
       });
+      const coach = coachRecords(snapshot?.runs ?? [], options.values.scripted);
+      const metrics = buildMetrics(
+        [...coach.ledgers, ...evaluatorLedgers],
+        [...coach.requests, ...evaluatorRequests],
+      );
       await artifacts.json('metrics.json', {
+        ...metrics,
         evaluationUsage: usage,
         coachUsage:
           snapshot?.runs.map((run) => ({
@@ -566,6 +604,7 @@ async function run() {
           checks,
           review,
           options.values.scripted,
+          metrics,
         ),
         { mode: 0o600 },
       );
@@ -576,6 +615,12 @@ async function run() {
         { stopReason, verdict, review, checks },
         resolve(artifacts.directory, 'report.md'),
       );
+      result.usage = {
+        coachUsd: metrics.costEstimate.coach.usd,
+        evaluatorUsd: metrics.costEstimate.evaluatorOverhead.usd,
+        cacheHitRatio: metrics.summary.combined.cacheHitRatio.value,
+        complete: metrics.summary.combined.complete,
+      };
       await artifacts.json('result.json', result);
       if (process.send) process.send(result);
       else {
@@ -639,15 +684,42 @@ async function athleteResponse(
   simulator: EvaluationModels,
   usage: { role: string; usage: ModelUsage }[],
   signal: AbortSignal,
+  ledgers: LedgerRecord[],
+  requests: AttributedRequest[],
+  interaction: number,
 ) {
   const started = Date.now();
   let action: AthleteAction;
-  if (options.values.scripted)
-    action = { factIds: Object.keys(scenario.facts), intent: 'generate' };
-  else {
-    const result = await simulator.athlete(scenario, snapshot.messages, disclosed, signal);
-    usage.push({ role: 'simulator', usage: result.usage });
-    action = result.action;
+  const ledger = evaluatorLedger(simulator.model, 'simulator');
+  const simulatorRecord = ledgerRecord(
+    { ledgerId: `run:simulator:${interaction}`, role: 'simulator', phase: 'run', interaction },
+    ledger.toJSON(),
+    options.values.scripted,
+  );
+  ledgers.push(simulatorRecord);
+  try {
+    if (options.values.scripted)
+      action = { factIds: Object.keys(scenario.facts), intent: 'generate' };
+    else {
+      const result = await simulator.athlete(
+        scenario,
+        snapshot.messages,
+        disclosed,
+        signal,
+        ledger,
+      );
+      usage.push({ role: 'simulator', usage: result.usage });
+      action = result.action;
+    }
+    simulatorRecord.outcome = 'succeeded';
+  } catch (error) {
+    simulatorRecord.outcome = evaluatorFailureOutcome(error, signal, ledger);
+    throw error;
+  } finally {
+    const saved = ledger.toJSON();
+    simulatorRecord.recordedRequests = saved.requests.length;
+    simulatorRecord.omittedRequests = saved.omittedRequests;
+    requests.push(...attributeRequests(simulatorRecord, saved));
   }
   const authored = renderAthleteAction(scenario, action);
   const record = {
@@ -658,7 +730,7 @@ async function athleteResponse(
     voice: null as null | {
       id: string;
       status: 'voiced' | 'fallback' | 'skipped';
-      attempts: { message: string; problems: string[]; usage: ModelUsage }[];
+      attempts: { message: string; problems: string[]; usage: ModelUsage; ledgerId: string }[];
     },
     content: authored.content,
   };
@@ -667,18 +739,50 @@ async function athleteResponse(
     record.voice = { id: scenario.voice.id, status: 'skipped', attempts: [] };
     return { ...authored, record };
   }
-  const attempts: { message: string; problems: string[]; usage: ModelUsage }[] = [];
+  const attempts: { message: string; problems: string[]; usage: ModelUsage; ledgerId: string }[] =
+    [];
   for (let attempt = 0; attempt < 2; attempt++) {
-    const result = await simulator.voice(
-      scenario.voice,
-      authored.statements,
-      snapshot.messages,
-      signal,
-      attempts.at(-1)?.problems ?? [],
+    const voiceLedger = evaluatorLedger(simulator.model, 'voice');
+    const voiceRecord = ledgerRecord(
+      {
+        ledgerId: `run:voice:${interaction}:${attempt + 1}`,
+        role: 'voice',
+        phase: 'run',
+        interaction,
+        voiceAttempt: attempt + 1,
+      },
+      voiceLedger.toJSON(),
     );
-    usage.push({ role: 'voice', usage: result.usage });
-    const problems = voiceProblems(result.message, authored.statements);
-    attempts.push({ message: result.message, problems, usage: result.usage });
+    ledgers.push(voiceRecord);
+    let result: Awaited<ReturnType<EvaluationModels['voice']>>;
+    let problems: string[];
+    try {
+      result = await simulator.voice(
+        scenario.voice,
+        authored.statements,
+        snapshot.messages,
+        signal,
+        attempts.at(-1)?.problems ?? [],
+        voiceLedger,
+      );
+      usage.push({ role: 'voice', usage: result.usage });
+      problems = voiceProblems(result.message, authored.statements);
+      voiceRecord.outcome = problems.length ? 'rejected_output' : 'succeeded';
+      attempts.push({
+        message: result.message,
+        problems,
+        usage: result.usage,
+        ledgerId: voiceRecord.ledgerId,
+      });
+    } catch (error) {
+      voiceRecord.outcome = evaluatorFailureOutcome(error, signal, voiceLedger);
+      throw error;
+    } finally {
+      const saved = voiceLedger.toJSON();
+      voiceRecord.recordedRequests = saved.requests.length;
+      voiceRecord.omittedRequests = saved.omittedRequests;
+      requests.push(...attributeRequests(voiceRecord, saved));
+    }
     if (!problems.length) {
       record.voice = { id: scenario.voice.id, status: 'voiced', attempts };
       record.content = result.message;
@@ -687,17 +791,6 @@ async function athleteResponse(
   }
   record.voice = { id: scenario.voice.id, status: 'fallback', attempts };
   return { ...authored, record };
-}
-
-async function loadResolvedScenario(directory: string) {
-  // Dates are saved at creation; a retry/review must not move them to another day.
-  const saved = JSON.parse(await readFile(resolve(directory, 'scenario.json'), 'utf8')) as
-    Scenario | { edition?: undefined };
-  if (saved.edition !== 'v1')
-    throw new BenchmarkError(
-      'This run used the retired running-poc scenario format and cannot be regraded.',
-    );
-  return saved;
 }
 
 async function grade() {
@@ -720,76 +813,16 @@ async function grade() {
   }
 }
 
-async function gradeSavedRun(runId: string, directory: string, signal: AbortSignal) {
+async function gradeSavedRun(_runId: string, directory: string, signal: AbortSignal) {
   const credentials = await benchmarkCredentials(false);
   signal.throwIfAborted();
   if (!credentials.values.OPENAI_API_KEY)
     throw new BenchmarkError('OPENAI_API_KEY is required to review saved outputs.');
-  const snapshot = JSON.parse(
-    await readFile(resolve(directory, 'snapshot.json'), 'utf8'),
-  ) as BenchmarkSnapshot;
-  const disclosures = JSON.parse(
-    await readFile(resolve(directory, 'disclosures.json'), 'utf8'),
-  ) as Disclosure[];
-  const assessment = JSON.parse(await readFile(resolve(directory, 'assessment.json'), 'utf8')) as {
-    stopReason: string;
-    scripted: boolean;
-  };
-  const scenario = await loadResolvedScenario(directory);
   const model = evaluatorModel(credentials.values, credentials.values.BENCH_REVIEW_MODEL);
-  const result = await new EvaluationModels(credentials.values.OPENAI_API_KEY, model).review(
-    snapshot,
-    disclosures,
+  const summary = await regradeDirectory(directory, {
+    models: new EvaluationModels(credentials.values.OPENAI_API_KEY, model),
     signal,
-  );
-  const checks = checkPlan(
-    snapshot,
-    scenario,
-    disclosures.flatMap((item) => item.factIds),
-  );
-  const verdict = overallVerdict(checks, result.review, assessment.stopReason);
-  // Once publication starts, finish all files even if interrupted during a write.
-  signal.throwIfAborted();
-  const artifacts = new Artifacts(directory);
-  await artifacts.json(`assessment-before-review-${Date.now()}.json`, assessment);
-  await artifacts.json('assessment.json', {
-    verdict,
-    stopReason: assessment.stopReason,
-    review: result.review,
-    checks,
-    scripted: assessment.scripted,
-    checksVersion: CHECKS_VERSION,
-    regradedAt: new Date().toISOString(),
-    reviewerModel: model,
-    reviewerVersion: REVIEW_VERSION,
-    reviewerPromptHash: promptIdentity(EVALUATOR_PROMPTS.reviewer).hash,
   });
-  const summary = buildRunResult(
-    scenario,
-    snapshot,
-    { stopReason: assessment.stopReason, verdict, review: result.review, checks },
-    resolve(directory, 'report.md'),
-  );
-  await artifacts.json('result.json', summary);
-  await artifacts.json(`review-${Date.now()}.json`, {
-    ...result,
-    model,
-    reviewerVersion: REVIEW_VERSION,
-    reviewerPromptHash: promptIdentity(EVALUATOR_PROMPTS.reviewer).hash,
-  });
-  await writeFile(
-    resolve(directory, 'report.md'),
-    reportMarkdown(
-      runId,
-      verdict,
-      assessment.stopReason,
-      snapshot,
-      checks,
-      result.review,
-      assessment.scripted,
-    ),
-    { mode: 0o600 },
-  );
   console.log(resultLines(summary));
 }
 
@@ -903,13 +936,14 @@ async function calibrate() {
       scripted,
       signal: abort.signal,
       onProgress: console.log,
-      reviewer: async (evidence, disclosures, signal) =>
+      reviewerModel: model,
+      reviewer: async (evidence, disclosures, signal, ledger) =>
         scripted
           ? {
               review: scriptedCalibrationReview(evidence),
               usage: { inputTokens: 0, outputTokens: 0 },
             }
-          : reviewer!.review(evidence, disclosures, signal),
+          : reviewer!.review(evidence, disclosures, signal, ledger),
     });
     console.log(
       `Completed ${result.summary.completed}/${result.summary.requested}; fixture agreement ${result.summary.fixtureMatches}/${result.summary.completed}. Missed defects: ${result.summary.missedDefects}; false alarms: ${result.summary.falseAlarms}.\nReport: ${resolve(directory, 'report.md')}`,

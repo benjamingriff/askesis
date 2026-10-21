@@ -3,6 +3,8 @@ import { AgentApi, type ExecutionContext } from '../api.js';
 import { parseAgentConfig } from '../config.js';
 import { scriptedOpenAI } from '../testing.js';
 import { createRuntime } from './index.js';
+import { UsageLedger, coachRequestDefaults } from '../usage.js';
+import { modelProfile } from '../config.js';
 
 beforeEach(() => {
   vi.spyOn(AgentApi.prototype, 'progress').mockResolvedValue({ status: 'running' });
@@ -64,6 +66,7 @@ it('streams through the SDK with serial tools, configured reasoning and explicit
     api,
     new AbortController().signal,
     new AbortController().signal,
+    new UsageLedger(coachRequestDefaults(modelProfile(config))),
   );
   expect(model.calls.every((call) => call.streamed)).toBe(true);
   expect(model.calls[0]!.request.modelSettings).toMatchObject({

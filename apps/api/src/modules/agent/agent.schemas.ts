@@ -17,6 +17,96 @@ import {
 } from '../performance/performance.schemas.js';
 export const PROMPT_VERSION = 'coach-v2';
 
+const usageCount = z.number().int().min(0).max(100000000);
+const usageIdentifier = z.string().regex(/^[\w.:@/-]{1,200}$/);
+const usageDetails = z
+  .record(z.string().regex(/^[a-z][a-z0-9_]{0,63}$/), usageCount)
+  .refine((value) => Object.keys(value).length <= 64);
+/** Counts and bounded identifiers only; never accept raw provider responses or text. */
+const safeUsage = z
+  .object({
+    input_tokens: usageCount.nullable().optional(),
+    input_tokens_details: usageDetails.nullable().optional(),
+    output_tokens: usageCount.nullable().optional(),
+    output_tokens_details: usageDetails.nullable().optional(),
+    total_tokens: usageCount.nullable().optional(),
+    cache_creation_input_tokens: usageCount.nullable().optional(),
+    cache_read_input_tokens: usageCount.nullable().optional(),
+    cache_creation: usageDetails.nullable().optional(),
+    service_tier: usageIdentifier.nullable().optional(),
+    speed: usageIdentifier.nullable().optional(),
+    inference_geo: z
+      .string()
+      .regex(/^[a-z0-9_-]{1,32}$/)
+      .nullable()
+      .optional(),
+    iterations_count: usageCount.optional(),
+  })
+  .strict();
+export const UsageLedgerSchema = z
+  .object({
+    version: z.literal(1),
+    requests: z
+      .array(
+        z
+          .object({
+            sequence: usageCount.min(1),
+            provider: z.enum(['openai', 'anthropic']),
+            requestedModel: usageIdentifier,
+            returnedModel: usageIdentifier.nullable(),
+            responseId: usageIdentifier.nullable(),
+            status: z.enum([
+              'completed',
+              'incomplete',
+              'refused',
+              'failed',
+              'interrupted',
+              'error_without_response',
+            ]),
+            stopReason: usageIdentifier.nullable(),
+            settings: z
+              .object({
+                reasoningEffort: usageIdentifier.nullable(),
+                maxOutputTokens: usageCount.nullable(),
+                requestedServiceTier: usageIdentifier.nullable(),
+                cacheControl: z.enum(['anthropic_ephemeral_auto', 'provider_default']),
+              })
+              .strict(),
+            returnedServiceTier: usageIdentifier.nullable(),
+            speed: usageIdentifier.nullable(),
+            inferenceGeo: z
+              .string()
+              .regex(/^[a-z0-9_-]{1,32}$/)
+              .nullable(),
+            usageSource: z.enum(['provider', 'provider_missing', 'sdk_normalized', 'none']),
+            usageCompleteness: z.enum(['final', 'partial', 'unknown']),
+            tokens: z
+              .object({
+                input: usageCount.nullable(),
+                uncachedInput: usageCount.nullable(),
+                cacheRead: usageCount.nullable(),
+                cacheWrite: usageCount.nullable(),
+                cacheWrite5m: usageCount.nullable(),
+                cacheWrite1h: usageCount.nullable(),
+                output: usageCount.nullable(),
+                reasoning: usageCount.nullable(),
+              })
+              .strict(),
+            raw: safeUsage.nullable(),
+          })
+          .strict(),
+      )
+      .max(200)
+      .refine((requests) =>
+        requests.every(
+          (request, index) => index === 0 || request.sequence > requests[index - 1]!.sequence,
+        ),
+      ),
+    omittedRequests: usageCount,
+  })
+  .strict();
+export type UsageLedgerJson = z.infer<typeof UsageLedgerSchema>;
+
 export const RegisterSchema = z
   .object({
     id: Id,

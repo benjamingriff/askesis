@@ -7,6 +7,7 @@ import { getDatabase, closeDatabase } from '../database/client.js';
 import { startAgentSweeper } from '../modules/agent/agent.sweeper.js';
 import { workerReady } from '../modules/agent/agent.service.js';
 import { toolDefinitions } from '../modules/agent/agent.schemas.js';
+export { UsageLedgerSchema } from '../modules/agent/agent.schemas.js';
 import {
   createConversation,
   sendMessage,
@@ -112,6 +113,7 @@ export async function benchmarkSnapshot(owner: string, conversationId: string) {
       'prompt_hash',
       'input_tokens',
       'output_tokens',
+      'usage',
       'created_at',
       'started_at',
       'finished_at',

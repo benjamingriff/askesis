@@ -1,10 +1,11 @@
 import { randomUUID } from 'node:crypto';
 import { setTimeout as pause } from 'node:timers/promises';
 import { type AgentApi, ApiError, type Claim } from './api.js';
-import type { AgentConfig } from './config.js';
+import { modelProfile, type AgentConfig } from './config.js';
 import { PROMPT_HASH, PROMPT_VERSION } from './prompt.js';
 import { failureCode, type CoachingRuntime } from './runtime/index.js';
 import { failureDetails, registrationDetails, type WorkerReporter } from './logger.js';
+import { coachRequestDefaults, UsageLedger } from './usage.js';
 
 const MAX_HEARTBEAT_FAILURES = 3;
 const REGISTRATION_RETRY_MS = 5000;
@@ -32,7 +33,12 @@ export class Worker {
       ready,
     });
   }
+  /** Every finish reports the run's ledger, even with no requests, so NULL usage means unreported. */
+  private usage(ledger: UsageLedger) {
+    return { ...ledger.legacyTotals(), usage: ledger.toJSON() };
+  }
   async execute(claim: Claim) {
+    const ledger = new UsageLedger(coachRequestDefaults(modelProfile(this.config)));
     const controller = new AbortController();
     const hardStop = new AbortController();
     this.active = { execution: controller, hardStop };
@@ -80,9 +86,12 @@ export class Worker {
         this.api,
         controller.signal,
         hardStop.signal,
+        ledger,
       );
       controller.signal.throwIfAborted();
-      const result = await this.api.finish(claim, { status: 'completed', ...output });
+      // Built once: a transport retry resends the identical body.
+      const body = { status: 'completed', ...output, ...this.usage(ledger) };
+      const result = await this.api.finish(claim, body);
       this.report(result.status, claim.runId);
     } catch (error) {
       const reason = controller.signal.reason as unknown;
@@ -100,6 +109,7 @@ export class Worker {
         const result = await this.api.finish(claim, {
           status,
           ...(status === 'failed' ? { failureCode: code } : {}),
+          ...this.usage(ledger),
         });
         this.report(
           result.status,
@@ -174,7 +184,11 @@ export class Worker {
           const { claim } = await this.api.claim(this.config.AGENT_BOOTSTRAP_TOKEN, this.id);
           if (claim) {
             if (this.stopping) {
-              await this.api.finish(claim, { status: 'failed', failureCode: 'WORKER_SHUTDOWN' });
+              await this.api.finish(claim, {
+                status: 'failed',
+                failureCode: 'WORKER_SHUTDOWN',
+                ...this.usage(new UsageLedger()),
+              });
             } else await this.execute(claim);
           } else await pause(this.config.AGENT_POLL_MS);
         } catch (error) {

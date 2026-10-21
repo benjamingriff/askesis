@@ -88,10 +88,29 @@ export type AnthropicResponse =
       id?: string;
       content: AnthropicBlock[];
       stopReason: BetaStopReason;
-      usage?: { input: number; output: number; cacheWrite?: number; cacheRead?: number };
+      usage?: {
+        input: number;
+        output: number;
+        cacheWrite?: number | null;
+        cacheRead?: number | null;
+        cacheCreation?: { ephemeral_5m_input_tokens: number; ephemeral_1h_input_tokens: number };
+        reasoning?: number;
+        serviceTier?: string;
+      };
     }
   | { type: 'interrupted'; text: string; before?: () => void; delayMs?: number }
-  | { type: 'status'; status: number };
+  | { type: 'status'; status: number }
+  /**
+   * Raw stream events, then the connection fails (`error`) or stays open until the request is
+   * aborted (`hang`). `before` runs once the events have been sent.
+   */
+  | {
+      type: 'events';
+      events: object[];
+      then: 'error' | 'hang';
+      error?: Error;
+      before?: () => void;
+    };
 
 /** Server-sent events exactly as the Messages API streams one complete response. */
 export function anthropicEvents(
@@ -114,8 +133,10 @@ export function anthropicEvents(
         usage: {
           input_tokens: usage.input,
           output_tokens: 0,
-          cache_creation_input_tokens: usage.cacheWrite ?? 0,
-          cache_read_input_tokens: usage.cacheRead ?? 0,
+          cache_creation_input_tokens: usage.cacheWrite === undefined ? 0 : usage.cacheWrite,
+          cache_read_input_tokens: usage.cacheRead === undefined ? 0 : usage.cacheRead,
+          ...(usage.cacheCreation ? { cache_creation: usage.cacheCreation } : {}),
+          ...(usage.serviceTier ? { service_tier: usage.serviceTier } : {}),
         },
       },
     },
@@ -166,7 +187,12 @@ export function anthropicEvents(
   events.push({
     type: 'message_delta',
     delta: { stop_reason: response.stopReason, stop_sequence: null },
-    usage: { output_tokens: usage.output },
+    usage: {
+      output_tokens: usage.output,
+      ...(usage.reasoning === undefined
+        ? {}
+        : { output_tokens_details: { thinking_tokens: usage.reasoning } }),
+    },
   });
   events.push({ type: 'message_stop' });
   return events;
@@ -195,6 +221,27 @@ export function scriptedAnthropicClient(responses: AnthropicResponse[]) {
       );
     const encoder = new TextEncoder();
     const model = requests.at(-1)!.model;
+    const signal = init?.signal;
+    if (response.type === 'events')
+      return new Response(
+        new ReadableStream<Uint8Array>({
+          async start(controller) {
+            controller.enqueue(
+              encoder.encode(serverSentEvents(response.events as { type: string }[])),
+            );
+            await new Promise((resolve) => setTimeout(resolve, 10));
+            response.before?.();
+            if (response.then === 'error')
+              controller.error(response.error ?? new Error(PROVIDER_FAILURE));
+            else if (signal?.aborted) controller.error(signal.reason);
+            else
+              signal?.addEventListener('abort', () => controller.error(signal.reason), {
+                once: true,
+              });
+          },
+        }),
+        { status: 200, headers: { 'content-type': 'text/event-stream' } },
+      );
     const body =
       response.type === 'message'
         ? new ReadableStream<Uint8Array>({
@@ -273,4 +320,96 @@ export function scriptedOverrides(provider: Provider, turns: ScriptedTurn[]): Ru
   return provider === 'openai'
     ? { openai: scriptedOpenAI(turns) }
     : { anthropic: scriptedAnthropicClient(anthropicScript(turns)).client };
+}
+
+/** What a scripted Responses API call returns. */
+export type ScriptedResponsesCall =
+  /** A complete raw Responses object; streamed requests receive `response.created` and its terminal. */
+  | { type: 'response'; response: Record<string, unknown> }
+  /** Raw stream events, then optionally a connection failure. */
+  | { type: 'events'; events: Record<string, unknown>[]; error?: Error }
+  /** `responses.create` rejects before any response. */
+  | { type: 'reject'; error: Error };
+
+/** A raw Responses API object with the given usage; omit `usage` to model a provider that sent none. */
+export function rawResponse(
+  options: {
+    id?: string;
+    model?: string;
+    status?: 'completed' | 'incomplete' | 'failed';
+    serviceTier?: string;
+    text?: string;
+    usage?: Record<string, unknown> | null;
+    incompleteReason?: string;
+  } = {},
+) {
+  const status = options.status ?? 'completed';
+  return {
+    id: options.id ?? 'resp_scripted',
+    object: 'response',
+    created_at: 1760000000,
+    model: options.model ?? 'gpt-6.1-sol',
+    status,
+    ...(options.serviceTier ? { service_tier: options.serviceTier } : {}),
+    incomplete_details: options.incompleteReason ? { reason: options.incompleteReason } : null,
+    error: status === 'failed' ? { code: 'server_error', message: 'Hidden provider detail' } : null,
+    output: [
+      {
+        type: 'message',
+        id: `msg_${options.id ?? 'scripted'}`,
+        role: 'assistant',
+        status: 'completed',
+        content: [{ type: 'output_text', text: options.text ?? 'Done.', annotations: [] }],
+      },
+    ],
+    ...(options.usage === undefined ? {} : { usage: options.usage }),
+  };
+}
+
+/**
+ * A stand-in for the OpenAI client's `responses.create`, so the real Agents SDK model and runner
+ * process raw provider payloads in tests. `calls` records each request body and its options.
+ */
+export function scriptedResponsesClient(script: ScriptedResponsesCall[]) {
+  const calls: { body: Record<string, unknown>; options: Record<string, unknown> }[] = [];
+  let next = 0;
+  const create = (body: Record<string, unknown>, options: Record<string, unknown> = {}) => {
+    calls.push({ body: structuredClone(body), options: { ...options } });
+    const call = script[next++];
+    if (!call) return Promise.reject(new Error('Scripted Responses calls are exhausted.'));
+    if (call.type === 'reject') return Promise.reject(call.error);
+    if (!body.stream) {
+      if (call.type !== 'response')
+        return Promise.reject(new Error('A non-streamed request needs a complete response.'));
+      return Promise.resolve(structuredClone(call.response));
+    }
+    const events =
+      call.type === 'events'
+        ? call.events
+        : [
+            {
+              type: 'response.created',
+              sequence_number: 0,
+              response: { ...call.response, status: 'in_progress', output: [], usage: null },
+            },
+            {
+              type: `response.${String(call.response.status)}`,
+              sequence_number: 1,
+              response: call.response,
+            },
+          ];
+    const failure = call.type === 'events' ? call.error : undefined;
+    const signal = options.signal as AbortSignal | undefined;
+    return Promise.resolve(
+      (async function* () {
+        for (const event of events) {
+          signal?.throwIfAborted();
+          yield structuredClone(event);
+          await new Promise((resolve) => setTimeout(resolve, 0));
+        }
+        if (failure) throw failure;
+      })(),
+    );
+  };
+  return { client: { responses: { create } }, calls };
 }

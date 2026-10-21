@@ -11,6 +11,7 @@ import {
   scriptedOpenAI,
   type ScriptedTurn,
 } from '../testing.js';
+import { coachRequestDefaults, UsageLedger } from '../usage.js';
 import { createRuntime, failureCode, TurnLimitError } from './index.js';
 
 beforeEach(() => {
@@ -76,7 +77,19 @@ const context: ExecutionContext = {
     },
   ],
 };
-const signals = () => [new AbortController().signal, new AbortController().signal] as const;
+let ledger: UsageLedger;
+beforeEach(() => {
+  ledger = new UsageLedger(
+    coachRequestDefaults({
+      provider: 'openai',
+      model: 'm',
+      reasoning: 'medium',
+      maxOutputTokens: 1,
+    }),
+  );
+});
+const signals = () => [new AbortController().signal, new AbortController().signal, ledger] as const;
+const statuses = () => ledger.toJSON().requests.map((request) => request.status);
 const read = (id?: string) => ({ name: 'read_plan_context', input: {}, ...(id ? { id } : {}) });
 const noChange = { result: {}, versionId: null, editNumber: null, planId: null };
 
@@ -107,6 +120,7 @@ describe.each(['openai', 'anthropic'] as const)('%s runtime contract', (provider
       new AgentApi('http://localhost'),
       new AbortController().signal,
       new AbortController().signal,
+      ledger,
     );
     const sent = h.modelInputs();
     expect(sent).toContain('harderKeySessions');
@@ -124,9 +138,9 @@ describe.each(['openai', 'anthropic'] as const)('%s runtime contract', (provider
     expect(result).toMatchObject({
       content: 'What would you like to achieve?',
       finalOutputItemId: expect.any(String),
-      inputTokens: expect.any(Number),
-      outputTokens: expect.any(Number),
     });
+    expect(result).not.toHaveProperty('inputTokens');
+    expect(statuses()).toEqual(['completed', 'completed']);
     expect(tool).toHaveBeenCalledOnce();
     expect(tool.mock.calls[0]![1]).toMatchObject({
       operationId: expect.any(String),
@@ -197,8 +211,10 @@ describe.each(['openai', 'anthropic'] as const)('%s runtime contract', (provider
         new AgentApi('http://localhost'),
         controller.signal,
         new AbortController().signal,
+        ledger,
       ),
     ).rejects.toThrow();
+    expect(statuses()).toEqual([]);
   });
 
   it('reports a provider rejection as a provider error', async () => {
@@ -208,6 +224,10 @@ describe.each(['openai', 'anthropic'] as const)('%s runtime contract', (provider
       .catch((e) => e);
     expect(failure).toBeInstanceOf(Error);
     expect(failureCode(failure)).toBe('PROVIDER_ERROR');
+    // The rejected request is recorded, with no usage invented for it.
+    expect(ledger.toJSON().requests).toMatchObject([
+      { status: 'error_without_response', usageSource: 'none', usageCompleteness: 'unknown' },
+    ]);
   });
 
   it('stops a model that keeps calling tools at the turn limit', async () => {
@@ -217,6 +237,7 @@ describe.each(['openai', 'anthropic'] as const)('%s runtime contract', (provider
     const failure = await runtime.execute(context, claim, api, ...signals()).catch((e) => e);
     expect(failure).toBeInstanceOf(TurnLimitError);
     expect(failureCode(failure)).toBe('TURN_LIMIT');
+    expect(statuses()).toEqual(['completed']);
   });
 
   it('rejects an empty reply', async () => {
@@ -276,8 +297,17 @@ describe.each(['openai', 'anthropic'] as const)('%s runtime contract', (provider
       const api = new AgentApi('http://localhost');
       const progress = vi.spyOn(api, 'progress').mockResolvedValue({ status: 'running' });
       await expect(
-        runtime.execute(context, claim, api, controller.signal, new AbortController().signal),
+        runtime.execute(
+          context,
+          claim,
+          api,
+          controller.signal,
+          new AbortController().signal,
+          ledger,
+        ),
       ).rejects.toThrow();
+      // The interrupted request stays in the ledger the worker reports.
+      expect(statuses()).toEqual(['interrupted']);
       expect(JSON.stringify(progress.mock.calls)).toContain('Visible before interruption');
       expect(JSON.stringify(progress.mock.calls)).not.toContain('Scripted provider failure');
     },

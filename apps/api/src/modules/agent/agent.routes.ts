@@ -8,7 +8,12 @@ import type { AppEnvironment } from '../../auth/types.js';
 import { getApiConfig } from '../../config.js';
 import { Id } from '../plans/plan.common.js';
 import { ChatError } from '../chat/chat.core.js';
-import { ClaimSchema, RegisterSchema, ToolRequestSchema } from './agent.schemas.js';
+import {
+  ClaimSchema,
+  RegisterSchema,
+  ToolRequestSchema,
+  UsageLedgerSchema,
+} from './agent.schemas.js';
 import {
   claimRun,
   digest,
@@ -39,6 +44,7 @@ const FinishSchema = z
       .optional(),
     inputTokens: z.number().int().nonnegative().max(100000000).optional(),
     outputTokens: z.number().int().nonnegative().max(100000000).optional(),
+    usage: UsageLedgerSchema.optional(),
   })
   .strict();
 const runId = (value: string) => {

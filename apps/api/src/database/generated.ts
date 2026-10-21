@@ -95,6 +95,7 @@ export interface AgentRuns {
   started_at: Timestamp | null;
   status: Generated<string>;
   tool_count: Generated<number>;
+  usage: Json | null;
   user_message_id: string;
   worker_id: string | null;
 }

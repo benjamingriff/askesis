@@ -39,6 +39,7 @@ import {
   type RegisterSchema,
   type ToolRequestSchema,
   type ToolName,
+  type UsageLedgerJson,
 } from './agent.schemas.js';
 import { writeSchedule } from './agent.schedule.js';
 import { CalibrationInputSchema } from '../performance/performance.schemas.js';
@@ -46,6 +47,7 @@ import { CalibrationInputSchema } from '../performance/performance.schemas.js';
 type Tx = Transaction<DB>;
 type Run = Selectable<DB['agent_runs']>;
 export const LEASE_MS = 90000;
+export const USAGE_REPORT_GRACE_MS = 5 * 60_000;
 /** Tools that commit plan content; reads and validation never count as saved changes. */
 export const MUTATING_TOOLS: ToolName[] = [
   'create_plan_draft',
@@ -686,9 +688,18 @@ export async function finishRun(
     failureCode?: string | undefined;
     inputTokens?: number | undefined;
     outputTokens?: number | undefined;
+    usage?: UsageLedgerJson | undefined;
   },
 ) {
-  return getDatabase()
+  const total = (field: 'input' | 'output') => {
+    const counts = input.usage?.requests.flatMap((request) =>
+      request.tokens[field] === null ? [] : [request.tokens[field]],
+    );
+    return counts?.length ? counts.reduce((sum, count) => sum + count, 0) : null;
+  };
+  const inputTokens = input.inputTokens ?? total('input');
+  const outputTokens = input.outputTokens ?? total('output');
+  const result = await getDatabase()
     .transaction()
     .execute(async (db) => {
       const hash = contentHash(json(input) as SemanticValue);
@@ -719,6 +730,23 @@ export async function finishRun(
       } catch (error) {
         const concurrent = await replay();
         if (concurrent) return concurrent;
+        if (error instanceof ChatError && error.code === 'LEASE_LOST' && input.usage) {
+          // Retain telemetry without granting a fenced worker execution authority. Return
+          // the marker so the transaction commits before reporting the original rejection.
+          await db
+            .updateTable('agent_runs')
+            .set({
+              usage: json(input.usage),
+              input_tokens: sql`coalesce(input_tokens, ${inputTokens})`,
+              output_tokens: sql`coalesce(output_tokens, ${outputTokens})`,
+            })
+            .where('id', '=', id)
+            .where('credential_digest', '=', digest(token))
+            .where('usage', 'is', null)
+            .where('deadline_at', '>', new Date(Date.now() - USAGE_REPORT_GRACE_MS))
+            .execute();
+          return { rejected: true as const };
+        }
         throw error;
       }
       const concurrent = await replay();
@@ -727,6 +755,15 @@ export async function finishRun(
       await db
         .insertInto('agent_run_finishes')
         .values({ run_id: id, input_hash: hash, status })
+        .execute();
+      await db
+        .updateTable('agent_runs')
+        .set({
+          input_tokens: inputTokens,
+          output_tokens: outputTokens,
+          ...(input.usage ? { usage: json(input.usage) } : {}),
+        })
+        .where('id', '=', id)
         .execute();
       if (run.status === 'cancelling') {
         await transition(db, run, 'cancelled', 'cancelled');
@@ -771,11 +808,6 @@ export async function finishRun(
           id,
         );
       }
-      await db
-        .updateTable('agent_runs')
-        .set({ input_tokens: input.inputTokens ?? null, output_tokens: input.outputTokens ?? null })
-        .where('id', '=', id)
-        .execute();
       await transition(
         db,
         run,
@@ -785,6 +817,8 @@ export async function finishRun(
       );
       return { status: input.status };
     });
+  if ('rejected' in result) throw rejected();
+  return result;
 }
 export async function sweepAgentRuns() {
   const candidates = await getDatabase()
