@@ -7,14 +7,17 @@ import {
   withTrace,
   type ModelRequest,
 } from '@openai/agents';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import {
   EvaluationModels,
   ObservedResponsesModel,
   evaluatorLedger,
   criteria,
   ReviewValidationError,
+  evaluatorFailureOutcome,
 } from './models.js';
+import { loadScenario } from './scenario.js';
+import { loadFixtures } from './fixtures.js';
 
 const usage = {
   input_tokens: 100,
@@ -38,6 +41,56 @@ const raw = (status = 'completed', counts: unknown = usage) => ({
     },
   ],
   ...(counts !== undefined ? { usage: counts } : {}),
+});
+
+describe('evaluator request deadlines', () => {
+  for (const role of ['simulator', 'voice', 'reviewer'] as const)
+    for (const outcome of ['timed_out', 'cancelled', 'failed'] as const)
+      it(`${role}: preserves the real SDK error and classifies ${outcome}`, async () => {
+        const deadline = new AbortController();
+        const parent = new AbortController();
+        const reason = new DOMException('private abort reason', 'TimeoutError');
+        const transport = new Error('private network failure');
+        const timeout = vi.spyOn(AbortSignal, 'timeout').mockReturnValue(deadline.signal);
+        try {
+          const client = new OpenAI({
+            apiKey: 'test',
+            maxRetries: 0,
+            fetch: async () => {
+              if (outcome === 'timed_out') deadline.abort(reason);
+              if (outcome === 'cancelled') parent.abort('STOPPED');
+              throw transport;
+            },
+          });
+          const models = new EvaluationModels('test', 'gpt-6.1-sol', client);
+          const ledger = evaluatorLedger(models.model, role);
+          const scenario = await loadScenario('running-improver');
+          const { fixtures } = await loadFixtures('all', ['missing-plan']);
+          let error: unknown;
+          try {
+            if (role === 'simulator') await models.athlete(scenario, [], [], parent.signal, ledger);
+            else if (role === 'voice')
+              await models.voice(scenario.voice!, ['hello'], [], parent.signal, [], ledger);
+            else await models.review(fixtures[0]!.evidence, [], parent.signal, ledger);
+          } catch (failure) {
+            error = failure;
+          }
+          expect(evaluatorFailureOutcome(error, parent.signal, ledger)).toBe(outcome);
+          expect(ledger.toJSON().requests).toHaveLength(1);
+          expect(ledger.toJSON().requests[0]!.usageSource).toBe('none');
+          if (outcome === 'timed_out') {
+            expect(error).toBeInstanceOf(OpenAI.APIUserAbortError);
+            expect((error as Error).cause).toBe(reason);
+            expect(parent.signal.aborted).toBe(false);
+            expect(timeout).toHaveBeenCalledWith(role === 'reviewer' ? 300000 : 120000);
+          } else if (outcome === 'cancelled')
+            expect(error).toBeInstanceOf(OpenAI.APIUserAbortError);
+          else expect(error).toBeInstanceOf(OpenAI.APIConnectionError);
+          expect(JSON.stringify(ledger)).not.toContain('private');
+        } finally {
+          timeout.mockRestore();
+        }
+      });
 });
 const getResponse = (model: OpenAIResponsesModel, request: ModelRequest) =>
   withTrace('test', () => model.getResponse(request));

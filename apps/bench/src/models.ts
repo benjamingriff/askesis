@@ -87,6 +87,11 @@ export function evaluatorFailureOutcome(
     return 'rejected_output';
   if (
     (error instanceof Error && error.name === 'TimeoutError') ||
+    // The SDK wraps AbortSignal.timeout's reason while the caller's parent signal stays live.
+    (error instanceof OpenAI.APIUserAbortError &&
+      error.cause instanceof Error &&
+      error.cause.name === 'TimeoutError') ||
+    (signal.aborted && signal.reason instanceof Error && signal.reason.name === 'TimeoutError') ||
     (signal.aborted && signal.reason === 'TIME_LIMIT')
   )
     return 'timed_out';

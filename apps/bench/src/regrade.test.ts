@@ -234,6 +234,43 @@ describe('real historical upgrade and regrade', () => {
     });
     expect(m.regrades[1]!.costEstimate.complete).toBe(true);
     expect(m.combinedIncludingRegrades.costEstimate.usd).toBeNull();
+    const report = await readFile(resolve(directory, 'report.md'), 'utf8');
+    expect(report).toContain('Combined including regrades |');
+    expect(report).toContain(`at least $${m.regrades[1]!.costEstimate.knownUsd.toFixed(6)}`);
+    expect(m.combinedIncludingRegrades.costEstimate.scripted).toBe(false);
+  });
+  it('shows measured regrade costs for scripted originals, including later incomplete attempts', async () => {
+    await artifacts.json('assessment.json', { ...assessment, scripted: true });
+    await grade();
+    const first = await metrics();
+    const cost = first.regrades[0]!.costEstimate.usd!;
+    expect(first.costEstimate.combined.scripted).toBe(true);
+    expect(first.combinedIncludingRegrades.costEstimate).toMatchObject({
+      scripted: false,
+      complete: true,
+      usd: cost,
+      pricedRequests: 1,
+    });
+    const combinedRow = async () =>
+      (await readFile(resolve(directory, 'report.md'), 'utf8'))
+        .split('\n')
+        .find((line) => line.startsWith('| Combined including regrades |'))!;
+    expect(await combinedRow()).toContain(`$${cost.toFixed(6)} (estimate)`);
+    expect(await combinedRow()).not.toContain('not applicable');
+
+    await grade(1760000001000);
+    expect((await metrics()).combinedIncludingRegrades.costEstimate.usd).toBe(cost * 2);
+    const failure = new Error('connection failure');
+    await expect(grade(1760000002000, models(failure))).rejects.toBe(failure);
+    expect((await metrics()).combinedIncludingRegrades.costEstimate).toMatchObject({
+      scripted: false,
+      complete: false,
+      usd: null,
+      knownUsd: cost * 2,
+    });
+    expect(await combinedRow()).toContain(`at least $${(cost * 2).toFixed(6)}`);
+    expect(await combinedRow()).toContain('2 of 3 recorded requests priced');
+    expect(await combinedRow()).not.toContain('not applicable');
   });
   it('backs up unreadable metrics byte for byte', async () => {
     const raw = '{ invalid JSON\n\t';

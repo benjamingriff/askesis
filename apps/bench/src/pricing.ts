@@ -156,9 +156,12 @@ export function sumCosts(ledgers: LedgerRecord[], requests: AttributedRequest[])
     (l) => l.coverage === 'missing' || l.coverage === 'historical',
   ).length;
   const omittedRequests = ledgers.reduce((s, l) => s + l.omittedRequests, 0);
+  // Scripted ledgers add no expenditure; they must not hide measured regrades or coverage gaps.
   const scripted =
-    ledgers.some((l) => l.coverage === 'scripted') ||
-    selected.some((r) => r.cost.unpricedReason === 'scripted');
+    (ledgers.some((l) => l.coverage === 'scripted') ||
+      selected.some((r) => r.cost.unpricedReason === 'scripted')) &&
+    ledgers.every((l) => l.coverage === 'scripted' || l.coverage === 'not_started') &&
+    selected.every((r) => r.cost.unpricedReason === 'scripted');
   const complete =
     !scripted && selected.length === priced.length && !missingLedgers && !omittedRequests;
   return {
