@@ -28,7 +28,8 @@ export async function writeSchedule(
   db: Tx,
   versionId: string,
   input: Schedule,
-  runId: string,
+  /** The coaching run tracking a generation horizon; null for an athlete's own agent. */
+  runId: string | null,
   range?: Range,
 ) {
   const version = await db
@@ -47,13 +48,17 @@ export async function writeSchedule(
       bad('The prescribed range must fit within the plan dates.');
   if (range && input.coverage && !inside(input.coverage.startDate, input.coverage.endDate, range))
     bad('Replacement coverage must fit inside its explicit range.');
-  const run = await db
-    .selectFrom('agent_runs')
-    .selectAll()
-    .where('id', '=', runId)
-    .executeTakeFirstOrThrow();
+  const run = runId
+    ? await db
+        .selectFrom('agent_runs')
+        .selectAll()
+        .where('id', '=', runId)
+        .executeTakeFirstOrThrow()
+    : null;
   let intended: Range;
-  if (run.generation_start_date && run.generation_end_date) {
+  // Without a run there is no generation horizon to track; the plan dates bound every batch.
+  if (!run) intended = planRange;
+  else if (run.generation_start_date && run.generation_end_date) {
     intended = {
       startDate: String(run.generation_start_date),
       endDate: String(run.generation_end_date),
@@ -77,7 +82,7 @@ export async function writeSchedule(
     await db
       .updateTable('agent_runs')
       .set({ generation_start_date: intended.startDate, generation_end_date: intended.endDate })
-      .where('id', '=', runId)
+      .where('id', '=', run.id)
       .execute();
     // Previous coverage cannot make an unfinished regeneration appear complete.
     // Workouts remain saved until the caller explicitly edits or replaces them.
@@ -230,7 +235,12 @@ export async function writeSchedule(
   // Explicit paces and powers also get the calibrated zone they fall in, so every client can
   // colour the effort by zone. The coach's value stays as written; a zone it chose is never
   // replaced. Zones come from the athlete's fitness on the workout date, as reads resolve them.
-  const calibrations = await readEntries(db, run.owner_id);
+  const plan = await db
+    .selectFrom('plans')
+    .select('owner_id')
+    .where('id', '=', version.plan_id)
+    .executeTakeFirstOrThrow();
+  const calibrations = await readEntries(db, plan.owner_id);
   const withZone = (targets: Target[], discipline: StepDiscipline, date: string): Target[] => {
     const system = systemForDiscipline(discipline);
     const explicit = targets.find(
@@ -487,11 +497,12 @@ export async function writeSchedule(
     if (prescribedThrough === intended.endDate) break;
     next = day(prescribedThrough, 1);
   }
-  await db
-    .updateTable('agent_runs')
-    .set({ generation_prescribed_through: prescribedThrough })
-    .where('id', '=', runId)
-    .execute();
+  if (run)
+    await db
+      .updateTable('agent_runs')
+      .set({ generation_prescribed_through: prescribedThrough })
+      .where('id', '=', run.id)
+      .execute();
   // Clear the stale review flag only when all existing workout dates have coverage
   // based on the current assumptions. A one-workout edit cannot clear it.
   if (

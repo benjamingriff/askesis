@@ -416,7 +416,7 @@ export async function executeTool(
       } else if (PERFORMANCE_TOOLS.includes(name)) {
         const conversation = await ownedConversation(db, run.owner_id, run.conversation_id);
         if (conversation.archived_at) throw rejected();
-        response = await performanceTool(db, run, name, command.input);
+        response = await performanceTool(db, run.owner_id, run.id, name, command.input);
       } else {
         const writing = mutating;
         const current = await target(db, run, writing);
@@ -428,85 +428,12 @@ export async function executeTool(
               plan: current.plan,
               brief: await readBrief(db, versionId, current.version.state === 'locked'),
             };
-          if (name === 'read_schedule') {
-            const input = ToolSchemas.read_schedule.parse(command.input);
-            // IDs are required for precise edits; the semantic revision projection deliberately excludes them.
-            // Structure (blocks, weeks) is small and returned whole; prescriptions are filtered in SQL.
-            let workoutQuery = db
-              .selectFrom('workouts')
-              .selectAll()
-              .where('plan_version_id', '=', versionId);
-            if (input.startDate)
-              workoutQuery = workoutQuery.where(
-                'scheduled_date',
-                '>=',
-                sql<Date>`${input.startDate}::date`,
-              );
-            if (input.endDate)
-              workoutQuery = workoutQuery.where(
-                'scheduled_date',
-                '<=',
-                sql<Date>`${input.endDate}::date`,
-              );
-            const [blocks, weeks, workouts] = await Promise.all([
-              db
-                .selectFrom('training_blocks')
-                .selectAll()
-                .where('plan_version_id', '=', versionId)
-                .execute(),
-              db
-                .selectFrom('training_weeks')
-                .selectAll()
-                .where('plan_version_id', '=', versionId)
-                .execute(),
-              workoutQuery.execute(),
-            ]);
-            const workoutIds = workouts.map((w) => w.id);
-            const steps = workoutIds.length
-              ? await db
-                  .selectFrom('workout_steps')
-                  .selectAll()
-                  .where('plan_version_id', '=', versionId)
-                  .where('workout_id', 'in', workoutIds)
-                  .execute()
-              : [];
-            const stepIds = steps.map((s) => s.id);
-            const [tags, completions, targets] = await Promise.all([
-              workoutIds.length
-                ? db
-                    .selectFrom('workout_tags')
-                    .selectAll()
-                    .where('plan_version_id', '=', versionId)
-                    .where('workout_id', 'in', workoutIds)
-                    .execute()
-                : [],
-              stepIds.length
-                ? db
-                    .selectFrom('step_completions')
-                    .selectAll()
-                    .where('plan_version_id', '=', versionId)
-                    .where('step_id', 'in', stepIds)
-                    .execute()
-                : [],
-              stepIds.length
-                ? db
-                    .selectFrom('step_targets')
-                    .selectAll()
-                    .where('plan_version_id', '=', versionId)
-                    .where('step_id', 'in', stepIds)
-                    .execute()
-                : [],
-            ]);
-            response = {
-              training_blocks: blocks,
-              training_weeks: weeks,
-              workouts,
-              workout_steps: steps,
-              step_completions: completions,
-              step_targets: targets,
-              workout_tags: tags,
-            };
-          }
+          if (name === 'read_schedule')
+            response = await readSchedule(
+              db,
+              versionId,
+              ToolSchemas.read_schedule.parse(command.input),
+            );
           if (name === 'update_plan_brief') {
             const input = ToolSchemas.update_plan_brief.parse(command.input);
             if (input.startDate && input.endDate && input.endDate < input.startDate)
@@ -638,6 +565,70 @@ export async function executeTool(
       throw error;
     });
 }
+/** A draft's structure and complete prescriptions; dates narrow the workouts only. */
+export async function readSchedule(
+  db: Tx,
+  versionId: string,
+  input: z.infer<typeof ToolSchemas.read_schedule>,
+) {
+  // IDs are required for precise edits; the semantic revision projection deliberately excludes them.
+  // Structure (blocks, weeks) is small and returned whole; prescriptions are filtered in SQL.
+  let workoutQuery = db.selectFrom('workouts').selectAll().where('plan_version_id', '=', versionId);
+  if (input.startDate)
+    workoutQuery = workoutQuery.where('scheduled_date', '>=', sql<Date>`${input.startDate}::date`);
+  if (input.endDate)
+    workoutQuery = workoutQuery.where('scheduled_date', '<=', sql<Date>`${input.endDate}::date`);
+  const [blocks, weeks, workouts] = await Promise.all([
+    db.selectFrom('training_blocks').selectAll().where('plan_version_id', '=', versionId).execute(),
+    db.selectFrom('training_weeks').selectAll().where('plan_version_id', '=', versionId).execute(),
+    workoutQuery.execute(),
+  ]);
+  const workoutIds = workouts.map((w) => w.id);
+  const steps = workoutIds.length
+    ? await db
+        .selectFrom('workout_steps')
+        .selectAll()
+        .where('plan_version_id', '=', versionId)
+        .where('workout_id', 'in', workoutIds)
+        .execute()
+    : [];
+  const stepIds = steps.map((s) => s.id);
+  const [tags, completions, targets] = await Promise.all([
+    workoutIds.length
+      ? db
+          .selectFrom('workout_tags')
+          .selectAll()
+          .where('plan_version_id', '=', versionId)
+          .where('workout_id', 'in', workoutIds)
+          .execute()
+      : [],
+    stepIds.length
+      ? db
+          .selectFrom('step_completions')
+          .selectAll()
+          .where('plan_version_id', '=', versionId)
+          .where('step_id', 'in', stepIds)
+          .execute()
+      : [],
+    stepIds.length
+      ? db
+          .selectFrom('step_targets')
+          .selectAll()
+          .where('plan_version_id', '=', versionId)
+          .where('step_id', 'in', stepIds)
+          .execute()
+      : [],
+  ]);
+  return {
+    training_blocks: blocks,
+    training_weeks: weeks,
+    workouts,
+    workout_steps: steps,
+    step_completions: completions,
+    step_targets: targets,
+    workout_tags: tags,
+  };
+}
 /** Each system accepts only its own input; the tool schema alone allows any pairing. */
 function matchingInput<Input extends { system: string; input: unknown }>(raw: Input) {
   const parsed = CalibrationInputSchema.safeParse({ system: raw.system, input: raw.input });
@@ -649,12 +640,19 @@ function matchingInput<Input extends { system: string; input: unknown }>(raw: In
     );
   return parsed.data;
 }
-async function performanceTool(db: Tx, run: Run, name: ToolName, raw: unknown) {
+/** Calibration tools; runId attributes entries to a coaching run, null to the athlete's own agent. */
+export async function performanceTool(
+  db: Tx,
+  owner: string,
+  runId: string | null,
+  name: ToolName,
+  raw: unknown,
+) {
   if (name === 'preview_performance')
     return {
       preview: await previewCalibration(
         db,
-        run.owner_id,
+        owner,
         matchingInput(ToolSchemas.preview_performance.parse(raw)),
       ),
     };
@@ -663,20 +661,20 @@ async function performanceTool(db: Tx, run: Run, name: ToolName, raw: unknown) {
       ToolSchemas.record_performance.parse(raw);
     const entry = await recordCalibrationRows(
       db,
-      run.owner_id,
+      owner,
       { ...matchingInput(input), provenance, estimateBasis, ...(observedOn ? { observedOn } : {}) },
-      { runId: run.id },
+      runId ? { runId } : {},
     );
-    return { recorded: entry, performance: await readPerformance(db, run.owner_id) };
+    return { recorded: entry, performance: await readPerformance(db, owner) };
   }
   if (name === 'retract_performance')
     await retractCalibrationRows(
       db,
-      run.owner_id,
+      owner,
       ToolSchemas.retract_performance.parse(raw).calibrationId,
-      run.id,
+      runId ?? undefined,
     );
-  return { performance: await readPerformance(db, run.owner_id) };
+  return { performance: await readPerformance(db, owner) };
 }
 export async function finishRun(
   id: string,

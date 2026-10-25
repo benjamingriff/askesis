@@ -307,7 +307,7 @@ export type ToolName = keyof typeof ToolSchemas;
 const prescriptionGuidance =
   'Give every run and swim effort a calibrated zone target. For cycling, use calibrated zones for power-based rides, or prescribe every effort by explicit RPE with practical effort instructions and no watts or power-zone targets; RPE-only cycling needs no FTP. Strength working sets use reps with rir or rpe and an optional suggested load in kilograms; timed warmups/cooldowns use duration with rpe, timed rests need no target, and ergs use rpe. ';
 
-const descriptions: Record<ToolName, string> = {
+export const TOOL_DESCRIPTIONS: Record<ToolName, string> = {
   read_plan_context:
     'Read current plan assumptions, dates, calibration and explicit prescribed coverage. Does not retarget a stale execution.',
   read_schedule:
@@ -342,7 +342,7 @@ const descriptions: Record<ToolName, string> = {
 export function toolDefinitions() {
   return Object.entries(ToolSchemas).map(([name, schema]) => ({
     name,
-    description: descriptions[name as ToolName],
+    description: TOOL_DESCRIPTIONS[name as ToolName],
     parameters: z.toJSONSchema(schema, { unrepresentable: 'any' }),
   }));
 }
