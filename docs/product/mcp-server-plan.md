@@ -16,7 +16,7 @@ Expose Askesis as a remote [Model Context Protocol](https://modelcontextprotocol
 ## What changes
 
 1. **Tools without runs.** Today every tool call is authorized by a run token bound to one conversation, plan, draft version and edit number (`authorized` and `target` in `agent.service.ts`). External calls carry a signed-in athlete instead. Plan tools take an explicit `planId`; a `list_plans` tool lets the agent find them.
-2. **Concurrency per call.** Reads return the draft's `editNumber`; writes send `expectedEditNumber` and fail with `STALE_CONTEXT` when another writer (the athlete, the coach or another agent) changed the draft. The run's generation horizon and run-scoped idempotency receipts need an external equivalent.
+2. **Concurrency per call.** Reads return the draft's id and `editNumber`; writes send both and fail with `STALE_CONTEXT` when another writer (the athlete, the coach or another agent) changed the draft. The run's generation horizon and run-scoped idempotency receipts need an external equivalent.
 3. **Bounded reads.** A full `read_schedule` can reach 500 KB, which floods a chat client's context. External clients need a compact projection plus per-week detail.
 4. **Authentication.** Claude.ai and ChatGPT connectors expect OAuth 2.1 under the MCP authorization specification. Clerk can be the authorization server (client ID metadata documents, or dynamic client registration where a client needs it). The API publishes protected-resource metadata, verifies Clerk OAuth access tokens and maps them to athletes through `athlete_identities`. Personal access tokens are a possible Claude Code fallback.
 5. **Coaching guidance.** The coaching prompt holds the product's expertise. External agents receive an adapted guide as MCP server instructions and a prompt. Clients load these inconsistently, so actionable tool error messages carry more weight.
@@ -49,7 +49,7 @@ Scope: learn, not ship. The spike lives behind development-only configuration an
 
 - `/mcp` on the API speaks stateless Streamable HTTP through `@modelcontextprotocol/server` (`apps/api/src/modules/mcp/`).
 - A bearer token from `MCP_DEV_TOKEN` acts as the athlete whose Clerk user is `MCP_DEV_CLERK_USER_ID`. `pnpm dev:mcp` writes both to the worktree `.env` and prints the `claude mcp add` command. The API refuses this configuration when `NODE_ENV=production`.
-- Tools mirror the coach's, with an explicit `planId` and a required `expectedEditNumber` on plan writes. There is no generation horizon and no idempotency receipt; external logs and calibrations are recorded without run attribution.
+- Tools mirror the coach's, with an explicit `planId`; plan writes require `expectedDraftId` and `expectedEditNumber`, because edit numbers restart in a new draft. There is no generation horizon and no idempotency receipt; external logs and calibrations are recorded without run attribution.
 - Server instructions adapt the coaching prompt to an external agent. The coach's prompt and version are unchanged.
 
 Questions the spike should answer:
@@ -83,7 +83,7 @@ Recorded 2026-10-25 from two headless Claude Code runs (`claude -p`, default mod
 
 **Context cost.** `read_schedule` for four weeks of placeholders returned 38 KB. Claude Code spilled it to a file and read it back with a shell `jq` call, which only worked because the client happened to allow it. Phase 2's compact schedule projection is necessary, not optional. Writes of 23–49 KB per batch were accepted without trouble.
 
-**Concurrency and identity.** `expectedEditNumber` was threaded correctly through every write without prompting. `today` from `list_plans` was used correctly ("Askesis still shows today as 25 October"). The database test covers stale edits, locked drafts and foreign plans.
+**Concurrency and identity.** The agent threaded `expectedEditNumber` correctly through every write without prompting; code review later added `expectedDraftId` beside it. `today` from `list_plans` was used correctly ("Askesis still shows today as 25 October"). The database test covers stale edits, locked drafts and foreign plans.
 
 **Not verified.** The live web view of external edits was not checked in the browser. The Clerk development secret that worktrees import from the main checkout's `.env` is rejected by Clerk (`clerk_key_invalid`, apparently rotated), so neither `pnpm dev:login` nor `pnpm dev:mcp` could reach Clerk; the spike seeded a local athlete identity directly instead. Live events come from database triggers, so web refresh is expected to work, but it remains unconfirmed.
 

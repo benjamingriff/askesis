@@ -32,9 +32,23 @@ async function current(db: Tx, owner: string, planId: string) {
   if (!version) throw new PlanError('DRAFT_NOT_FOUND', 'This plan has no version.', 404);
   return { plan, version };
 }
-/** Locks the draft row and checks the agent is building on the latest edit. */
-async function draft(db: Tx, owner: string, planId: string, expectedEditNumber: number) {
-  const { plan, version } = await current(db, owner, planId);
+/**
+ * Locks the plan, then its draft (the order human and coach writers use), and checks the agent
+ * is building on the latest edit of the same draft: edit numbers restart in a new draft.
+ */
+async function draft(
+  db: Tx,
+  owner: string,
+  input: { planId: string; expectedDraftId: string; expectedEditNumber: number },
+) {
+  await db
+    .selectFrom('plans')
+    .select('id')
+    .where('id', '=', input.planId)
+    .where('owner_id', '=', owner)
+    .forUpdate()
+    .executeTakeFirst();
+  const { plan, version } = await current(db, owner, input.planId);
   if (version.state !== 'draft')
     throw new PlanError(
       'DRAFT_REQUIRED',
@@ -46,20 +60,21 @@ async function draft(db: Tx, owner: string, planId: string, expectedEditNumber: 
     .where('id', '=', version.id)
     .forUpdate()
     .executeTakeFirstOrThrow();
-  if (row.edit_number !== expectedEditNumber)
+  if (version.id !== input.expectedDraftId || row.edit_number !== input.expectedEditNumber)
     throw new ChatError(
       'STALE_CONTEXT',
-      `The draft is at edit ${row.edit_number}, not ${expectedEditNumber}. Read it again before changing it.`,
+      `The current draft is ${version.id} at edit ${row.edit_number}. Read it again before changing it.`,
     );
   return { plan, versionId: version.id };
 }
-async function editNumber(db: Tx, versionId: string) {
+/** What the next write must name: the draft and its edit after this one. */
+async function nextEdit(db: Tx, versionId: string) {
   const row = await db
     .selectFrom('plan_versions')
     .select('edit_number')
     .where('id', '=', versionId)
     .executeTakeFirstOrThrow();
-  return row.edit_number;
+  return { draftId: versionId, editNumber: row.edit_number };
 }
 
 async function run(db: Tx, owner: string, name: McpToolName, raw: unknown): Promise<unknown> {
@@ -83,6 +98,7 @@ async function run(db: Tx, owner: string, name: McpToolName, raw: unknown): Prom
       return {
         ...(await today(db, owner)),
         plan,
+        draftId: plan.draft?.id ?? null,
         editNumber: plan.draft?.editNumber ?? null,
         brief: await readBrief(db, version.id, version.state === 'locked'),
       };
@@ -100,13 +116,17 @@ async function run(db: Tx, owner: string, name: McpToolName, raw: unknown): Prom
         ...(input.startDate ? { startDate: input.startDate } : {}),
         ...(input.endDate ? { endDate: input.endDate } : {}),
       });
-      return { plan: await detail(db, owner, created.planId), editNumber: 1 };
+      return {
+        plan: await detail(db, owner, created.planId),
+        draftId: created.draftId,
+        editNumber: 1,
+      };
     }
     case 'update_plan_brief': {
       const input = raw as Input<'update_plan_brief'>;
       if (input.startDate && input.endDate && input.endDate < input.startDate)
         throw new PlanError('INVALID_PLAN_RANGE', 'End date precedes start date.', 422);
-      const { plan, versionId } = await draft(db, owner, input.planId, input.expectedEditNumber);
+      const { plan, versionId } = await draft(db, owner, input);
       const state = await readBrief(db, versionId);
       if (
         state.startDate !== input.startDate ||
@@ -131,12 +151,13 @@ async function run(db: Tx, owner: string, name: McpToolName, raw: unknown): Prom
         );
       }
       await saveBriefRows(db, await readBrief(db, versionId), input.brief);
-      return { brief: await readBrief(db, versionId), editNumber: await editNumber(db, versionId) };
+      return { brief: await readBrief(db, versionId), ...(await nextEdit(db, versionId)) };
     }
     case 'apply_schedule_changes':
     case 'replace_schedule_range': {
-      const { planId, expectedEditNumber, ...schedule } = raw as Input<'replace_schedule_range'>;
-      const { versionId } = await draft(db, owner, planId, expectedEditNumber);
+      const { planId, expectedDraftId, expectedEditNumber, ...schedule } =
+        raw as Input<'replace_schedule_range'>;
+      const { versionId } = await draft(db, owner, { planId, expectedDraftId, expectedEditNumber });
       const result = await writeSchedule(
         db,
         versionId,
@@ -144,12 +165,16 @@ async function run(db: Tx, owner: string, name: McpToolName, raw: unknown): Prom
         null,
         name === 'replace_schedule_range' ? schedule.range : undefined,
       );
-      return { ...result, editNumber: await editNumber(db, versionId) };
+      return { ...result, ...(await nextEdit(db, versionId)) };
     }
     case 'validate_plan': {
       const { plan } = await current(db, owner, (raw as Input<'validate_plan'>).planId);
       return plan.draft
-        ? { ...(await preview(db, plan)), editNumber: plan.draft.editNumber }
+        ? {
+            ...(await preview(db, plan)),
+            draftId: plan.draft.id,
+            editNumber: plan.draft.editNumber,
+          }
         : { readOnly: true };
     }
     case 'read_training_log':

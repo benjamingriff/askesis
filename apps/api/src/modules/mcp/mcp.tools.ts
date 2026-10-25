@@ -15,7 +15,8 @@ import {
 const plan = { planId: Id };
 const write = {
   planId: Id,
-  /** The draft's current editNumber, from list_plans, read_plan_context or the previous write. */
+  /** The draft and its current edit, from list_plans, read_plan_context or the previous write. */
+  expectedDraftId: Id,
   expectedEditNumber: z.number().int().positive(),
 };
 export const McpToolSchemas = {
@@ -42,21 +43,21 @@ export const MCP_PLAN_WRITES: McpToolName[] = [
 ];
 
 const editing =
-  ' Pass the draft’s current editNumber as expectedEditNumber; the result returns the new editNumber for the next write. STALE_CONTEXT means someone else changed the draft: read it again before retrying.';
+  ' Pass the current draftId as expectedDraftId and its editNumber as expectedEditNumber; the result returns both for the next write. STALE_CONTEXT means someone else changed or replaced the draft: read it again before retrying.';
 /** The coach has no explicit horizon to declare here; coverage alone records finished chunks. */
 const withoutGeneration = (text: string) =>
   text.replace(/Set generation to the whole intended horizon[^.]*\. /, '');
 
 export const MCP_TOOL_DESCRIPTIONS: Record<McpToolName, string> = {
   list_plans:
-    'List the athlete’s unarchived plans with their draft and locked versions, editNumbers and dates, plus today’s date in the athlete’s timezone. Start here to find a planId.',
+    'List the athlete’s unarchived plans with their draft and locked versions (draft id and editNumber), dates, plus today’s date in the athlete’s timezone. Start here to find a planId.',
   read_plan_context:
-    'Read one plan’s assumptions (brief), dates, version state and editNumber, plus today’s date in the athlete’s timezone.',
+    'Read one plan’s assumptions (brief), dates, version state, draftId and editNumber, plus today’s date in the athlete’s timezone.',
   read_schedule:
     TOOL_DESCRIPTIONS.read_schedule +
     ' Narrow the dates for long plans; very large reads are refused.',
   create_plan_draft:
-    'Create one new plan draft for the athlete after they clearly ask for a new plan. Returns its planId and editNumber. Never locks.',
+    'Create one new plan draft for the athlete after they clearly ask for a new plan. Returns its planId, draftId and editNumber. Never locks.',
   update_plan_brief: TOOL_DESCRIPTIONS.update_plan_brief + editing,
   apply_schedule_changes: withoutGeneration(TOOL_DESCRIPTIONS.apply_schedule_changes) + editing,
   replace_schedule_range: withoutGeneration(TOOL_DESCRIPTIONS.replace_schedule_range) + editing,

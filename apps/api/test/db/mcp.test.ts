@@ -96,6 +96,7 @@ it('builds a plan over several batches for the athlete and enforces draft edits 
     endDate: null,
   });
   const planId = (created.plan as { id: string }).id;
+  const expectedDraftId = created.draftId as string;
   expect(created.editNumber).toBe(1);
   const listed = await call('list_plans', {});
   expect(listed.today).toMatch(/^\d{4}-\d{2}-\d{2}$/);
@@ -103,6 +104,7 @@ it('builds a plan over several batches for the athlete and enforces draft edits 
 
   let { editNumber } = await call('update_plan_brief', {
     planId,
+    expectedDraftId,
     expectedEditNumber: 1,
     brief,
     startDate: '2027-01-04',
@@ -122,13 +124,24 @@ it('builds a plan over several batches for the athlete and enforces draft edits 
     ...week(1, '2027-01-04', '2027-01-10', '2027-01-05'),
     blocks: [foundation],
     planId,
+    expectedDraftId,
     expectedEditNumber: editNumber,
   }));
   await expect(
     callMcpTool(owner, 'apply_schedule_changes', {
       ...week(2, '2027-01-11', '2027-01-17', '2027-01-12'),
       planId,
+      expectedDraftId,
       expectedEditNumber: editNumber - 1,
+    }),
+  ).rejects.toMatchObject({ code: 'STALE_CONTEXT' });
+  // Edit numbers restart in a replacement draft, so a matching number from another draft is stale.
+  await expect(
+    callMcpTool(owner, 'apply_schedule_changes', {
+      ...week(2, '2027-01-11', '2027-01-17', '2027-01-12'),
+      planId,
+      expectedDraftId: randomUUID(),
+      expectedEditNumber: editNumber,
     }),
   ).rejects.toMatchObject({ code: 'STALE_CONTEXT' });
   const block = (
@@ -141,6 +154,7 @@ it('builds a plan over several batches for the athlete and enforces draft edits 
     ...second,
     weeks: [{ ...second.weeks[0]!, blockKey: block.id }],
     planId,
+    expectedDraftId,
     expectedEditNumber: editNumber,
   }));
 
@@ -163,7 +177,7 @@ it('builds a plan over several batches for the athlete and enforces draft edits 
   });
   expect((schedule.workouts as unknown[]).length).toBe(1);
   const validated = await call('validate_plan', { planId });
-  expect(validated.editNumber).toBe(editNumber);
+  expect(validated).toMatchObject({ draftId: expectedDraftId, editNumber });
   expect(validated).toHaveProperty('findings');
 
   const state = await getBrief(owner, planId);
@@ -187,6 +201,7 @@ it('builds a plan over several batches for the athlete and enforces draft edits 
   await expect(
     callMcpTool(owner, 'update_plan_brief', {
       planId,
+      expectedDraftId,
       expectedEditNumber: editNumber,
       brief,
       startDate: '2027-01-04',

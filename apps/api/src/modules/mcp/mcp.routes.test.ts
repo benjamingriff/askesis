@@ -66,7 +66,7 @@ it('lists plan tools that name their plan and draft edit', async () => {
   expect(tools.map((tool) => tool.name)).toContain('list_plans');
   const apply = tools.find((tool) => tool.name === 'apply_schedule_changes')!;
   expect(apply.inputSchema.required).toEqual(
-    expect.arrayContaining(['planId', 'expectedEditNumber']),
+    expect.arrayContaining(['planId', 'expectedDraftId', 'expectedEditNumber']),
   );
   expect(apply.inputSchema.properties).not.toHaveProperty('generation');
   expect(apply.description).not.toMatch(/generation/i);
