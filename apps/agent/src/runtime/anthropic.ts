@@ -5,11 +5,11 @@ import type {
   BetaMessageStreamParams,
   BetaTool,
   BetaToolResultBlockParam,
-  BetaUsage,
 } from '@anthropic-ai/sdk/resources/beta/messages/messages';
 import type { ModelProfile } from '../config.js';
 import { ApiError } from '../api.js';
 import { COACHING_PROMPT } from '../prompt.js';
+import { AnthropicUsageObserver } from '../usage.js';
 import {
   ModelRefusalError,
   ModelRuntime,
@@ -36,7 +36,7 @@ export class AnthropicRuntime extends ModelRuntime {
     super(profile, limits);
     this.client = client ?? new Anthropic({ apiKey });
   }
-  protected async converse({ context, input, progress, tools, signal }: ModelRun) {
+  protected async converse({ context, input, progress, tools, signal, ledger }: ModelRun) {
     // Tools and system prompt are stable across turns; the cache marker covers both.
     const definitions: BetaTool[] = context.tools.map((definition) => ({
       name: definition.name,
@@ -45,7 +45,6 @@ export class AnthropicRuntime extends ModelRuntime {
     }));
     // History is append-only: thinking blocks stay valid only while earlier turns are unchanged.
     const messages: BetaMessageParam[] = input.map(({ role, content }) => ({ role, content }));
-    const usage = { inputTokens: 0, outputTokens: 0 };
     for (let turn = 0; ; turn++) {
       if (turn >= this.limits.maxTurns) throw new TurnLimitError();
       const params: BetaMessageStreamParams = {
@@ -62,6 +61,9 @@ export class AnthropicRuntime extends ModelRuntime {
         betas: [PROGRESS_UPDATES_BETA],
       };
       const start = performance.now();
+      const request = ledger.begin();
+      // Keeps the latest reported counts in case the stream ends before its final message.
+      const usage = new AnthropicUsageObserver();
       let message;
       try {
         const stream = this.client.beta.messages.stream(params, { signal });
@@ -69,6 +71,7 @@ export class AnthropicRuntime extends ModelRuntime {
         const textBlocks = new Set<number>();
         let messageId = `response-${turn + 1}`;
         for await (const event of stream) {
+          usage.observe(event);
           if (event.type === 'message_start') messageId = event.message.id;
           else if (event.type === 'content_block_start' && event.content_block.type === 'thinking')
             updates.set(event.index, '');
@@ -89,10 +92,15 @@ export class AnthropicRuntime extends ModelRuntime {
           }
         }
         message = await stream.finalMessage();
+      } catch (error) {
+        const interruption = usage.interruption();
+        if (interruption) request.interrupted(interruption);
+        else request.noResponse();
+        throw error;
       } finally {
         progress.recordModel(performance.now() - start);
       }
-      add(usage, message.usage);
+      request.fromAnthropicMessage(message);
       messages.push({ role: 'assistant', content: message.content });
       switch (message.stop_reason) {
         case 'tool_use': {
@@ -116,7 +124,7 @@ export class AnthropicRuntime extends ModelRuntime {
         case 'model_context_window_exceeded':
           throw new ApiError('OUTPUT_LIMIT', 409);
         default:
-          return { content: replyText(message.content), ...usage } satisfies ModelOutput;
+          return { content: replyText(message.content) } satisfies ModelOutput;
       }
     }
   }
@@ -126,12 +134,4 @@ function replyText(content: BetaContentBlock[]) {
   return content
     .flatMap((block) => (block.type === 'text' ? [block.text] : []))
     .join(TEXT_SEPARATOR);
-}
-function add(total: { inputTokens: number; outputTokens: number }, usage: BetaUsage) {
-  // Cached input is still input; count it so totals compare across providers.
-  total.inputTokens +=
-    usage.input_tokens +
-    (usage.cache_creation_input_tokens ?? 0) +
-    (usage.cache_read_input_tokens ?? 0);
-  total.outputTokens += usage.output_tokens;
 }

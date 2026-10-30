@@ -4,6 +4,7 @@ import { dirname, resolve } from 'node:path';
 import type { BenchmarkSnapshot } from '@askesis/api/benchmark';
 import type { Check } from './checks.js';
 import type { Review } from './models.js';
+import { usageMarkdown, type UsageMetrics } from './usage-report.js';
 
 // Defense in depth: exported state is explicitly selected, and credentials are never captured.
 export function redact(value: unknown): unknown {
@@ -77,6 +78,7 @@ export function reportMarkdown(
   checks: Check[],
   review: Review | null,
   scripted: boolean,
+  metrics?: UsageMetrics,
 ) {
   const lines = [
     `# Benchmark ${runId}`,
@@ -117,9 +119,11 @@ export function reportMarkdown(
   lines.push(
     '## Detailed evidence',
     '',
-    '[Plan and prescriptions](plan.json) · [Full snapshot and durable outputs](snapshot.json) · [Tool trace](tool-trace.jsonl) · [Assessment](assessment.json) · [Progress](progress.jsonl) · [Configuration](configuration.json) · [Manifest](manifest.json)',
+    '[Plan and prescriptions](plan.json) · [Full snapshot and durable outputs](snapshot.json) · [Tool trace](tool-trace.jsonl) · [Assessment](assessment.json) · [Progress](progress.jsonl) · [Configuration](configuration.json) · [Manifest](manifest.json) · [Subprocess diagnostics](execution.log)',
     '',
-    'Token usage is recorded when available in metrics.json. Monetary cost is unknown; failed calls may have incomplete usage.',
+    metrics
+      ? usageMarkdown(metrics)
+      : 'Detailed usage is unavailable for this historical report. Token totals alone do not establish cache coverage or cost.',
     '',
   );
   return lines.join('\n');

@@ -4,7 +4,9 @@ import { afterAll, expect, it } from 'vitest';
 import { closeDatabase, getDatabase } from '../../src/database/client.js';
 import { syncAthleteTimezone } from '../../src/auth/athlete-provisioning.js';
 import { cloneContent } from '../../src/modules/plans/plan.aggregate.js';
-import { createPlan, previewLock } from '../../src/modules/plans/plan.service.js';
+import { getBrief, saveBrief, confirmBrief } from '../../src/modules/plans/brief.service.js';
+import { emptyBrief } from '../../src/modules/plans/brief.schemas.js';
+import { createPlan, previewLock, lockPlan } from '../../src/modules/plans/plan.service.js';
 import { getWorkoutDetail, listWorkouts } from '../../src/modules/workouts/workout.repository.js';
 import type { WorkoutStep } from '../../src/modules/workouts/workout.schemas.js';
 import {
@@ -195,4 +197,138 @@ it('follows a valid device timezone and protects calibration history in the data
     .where('owner_id', '=', owner)
     .execute();
   expect(events).toEqual([{ type: 'performance.changed', metadata: { system: 'run_pace' } }]);
+});
+
+it('locks an RPE-only cycling plan without FTP and still blocks power-dependent efforts', async () => {
+  const owner = await athlete();
+  const plan = await fixturePlan(owner);
+  const versionId = plan.draft!.id;
+  await sql`UPDATE workouts SET primary_discipline = 'cycle' WHERE plan_version_id = ${versionId}::uuid`.execute(
+    db,
+  );
+  await sql`UPDATE workout_steps SET discipline = 'cycle' WHERE plan_version_id = ${versionId}::uuid AND kind = 'effort'`.execute(
+    db,
+  );
+  await sql`DELETE FROM step_targets WHERE plan_version_id = ${versionId}::uuid`.execute(db);
+  await sql`INSERT INTO step_targets (step_id, plan_version_id, position, target_type, target_value, unit)
+    SELECT id, plan_version_id, 1, 'rpe', 3, 'rpe' FROM workout_steps
+    WHERE plan_version_id = ${versionId}::uuid AND kind = 'effort'`.execute(db);
+  let brief = await getBrief(owner, plan.id);
+  brief = await saveBrief(owner, plan.id, {
+    expectedDraftId: brief.versionId,
+    expectedEditNumber: brief.editNumber,
+    brief: {
+      ...emptyBrief(),
+      goal: 'Build cycling consistency using perceived effort',
+      sports: [
+        {
+          sport: 'cycle',
+          currentSessions: { status: 'unknown', value: null },
+          desiredSessions: 3,
+          weeklyDuration: { status: 'unknown', value: null },
+          longestDuration: { status: 'unknown', value: null },
+        },
+      ],
+    },
+  });
+  await confirmBrief(owner, plan.id, {
+    expectedDraftId: brief.versionId,
+    expectedEditNumber: brief.editNumber,
+    expectedHash: brief.hash,
+    acknowledgedWarningCodes: brief.findings
+      .filter((f) => f.severity === 'warning')
+      .map((f) => f.code),
+  });
+  const codes = async () => (await previewLock(owner, plan.id)).findings.map((f) => f.code);
+  expect((await getPerformance(owner)).entries).toEqual([]);
+  expect(await codes()).not.toContain('performance.cycle_power_required');
+  // RPE in a mixed workout also qualifies; a single missing target removes the exception.
+  const workout = await db
+    .selectFrom('workouts')
+    .select('id')
+    .where('plan_version_id', '=', versionId)
+    .executeTakeFirstOrThrow();
+  await db
+    .updateTable('workouts')
+    .set({ primary_discipline: 'mixed' })
+    .where('id', '=', workout.id)
+    .execute();
+  expect(await codes()).not.toContain('performance.cycle_power_required');
+  const target = await db
+    .selectFrom('step_targets')
+    .selectAll()
+    .where('plan_version_id', '=', versionId)
+    .executeTakeFirstOrThrow();
+  await db
+    .updateTable('step_targets')
+    .set({ target_type: 'power', target_value: 150, unit: 'watts' })
+    .where('id', '=', target.id)
+    .execute();
+  expect(await codes()).toContain('performance.cycle_power_required');
+  await db
+    .updateTable('step_targets')
+    .set({
+      target_type: 'zone',
+      target_value: null,
+      unit: null,
+      zone_system: 'cycle_power',
+      zone_key: 'endurance',
+    })
+    .where('id', '=', target.id)
+    .execute();
+  expect(await codes()).toEqual(
+    expect.arrayContaining(['performance.cycle_power_required', 'ZONE_UNRESOLVED']),
+  );
+  await db
+    .updateTable('step_targets')
+    .set({ target_type: 'rpe', target_value: 3, unit: 'rpe', zone_system: null, zone_key: null })
+    .where('id', '=', target.id)
+    .execute();
+  // An explicit RPE range (as used by booked group rides) is also sufficient.
+  await db
+    .updateTable('step_targets')
+    .set({ target_value: null, minimum_value: 2, maximum_value: 4 })
+    .where('id', '=', target.id)
+    .execute();
+  expect(await codes()).not.toContain('performance.cycle_power_required');
+  // Adding a power target alongside RPE must still require FTP.
+  const power = await db
+    .insertInto('step_targets')
+    .values({
+      plan_version_id: versionId,
+      step_id: target.step_id,
+      position: 2,
+      target_type: 'power',
+      target_value: 150,
+      unit: 'watts',
+    })
+    .returning('id')
+    .executeTakeFirstOrThrow();
+  expect(await codes()).toContain('performance.cycle_power_required');
+  await db.deleteFrom('step_targets').where('id', '=', power.id).execute();
+  const preview = await previewLock(owner, plan.id);
+  expect(preview.findings.filter((f) => f.severity === 'error')).toEqual([]);
+  const locked = await lockPlan(
+    owner,
+    plan.id,
+    {
+      expectedStateVersion: preview.stateVersion,
+      expectedDraftId: preview.draftId,
+      expectedEditNumber: preview.editNumber,
+      expectedContentHash: preview.contentHash,
+      expectedValidationDigest: preview.validationDigest,
+      acknowledgedWarningCodes: preview.findings
+        .filter((f) => f.severity === 'warning')
+        .map((f) => f.code),
+    },
+    randomUUID(),
+  );
+  expect(locked.locked).not.toBeNull();
+  const detail = await getWorkoutDetail(owner, workout.id);
+  const targets = (step: WorkoutStep): WorkoutStep['targets'] => [
+    ...step.targets,
+    ...step.steps.flatMap(targets),
+  ];
+  expect(targets(detail!.prescription).every((t) => t.type === 'rpe')).toBe(true);
+  expect((await getPerformance(owner)).entries).toEqual([]);
 });

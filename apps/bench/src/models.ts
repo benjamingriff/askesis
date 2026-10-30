@@ -1,4 +1,14 @@
-import { Agent, Runner, OpenAIProvider, setTracingDisabled } from '@openai/agents';
+import {
+  Agent,
+  Runner,
+  OpenAIProvider,
+  OpenAIResponsesModel,
+  ModelBehaviorError,
+  setTracingDisabled,
+  type ModelRequest,
+} from '@openai/agents';
+import OpenAI from 'openai';
+import { UsageLedger, observeStream, type UsageRole } from '@askesis/agent/usage';
 import { z } from 'zod';
 import { DEFAULT_MODELS } from '@askesis/agent/config';
 import type { Scenario, AthleteAction, ScenarioVoice } from './scenario.js';
@@ -63,6 +73,31 @@ export class ReviewValidationError extends Error {
   }
 }
 
+/** Safe outcome classification; no exception messages are persisted. */
+export function evaluatorFailureOutcome(
+  error: unknown,
+  signal: AbortSignal,
+  ledger?: UsageLedger,
+): 'rejected_output' | 'timed_out' | 'cancelled' | 'failed' {
+  if (
+    error instanceof ReviewValidationError ||
+    error instanceof z.ZodError ||
+    (error instanceof ModelBehaviorError && ledger?.requests().at(-1)?.status === 'completed')
+  )
+    return 'rejected_output';
+  if (
+    (error instanceof Error && error.name === 'TimeoutError') ||
+    // The SDK wraps AbortSignal.timeout's reason while the caller's parent signal stays live.
+    (error instanceof OpenAI.APIUserAbortError &&
+      error.cause instanceof Error &&
+      error.cause.name === 'TimeoutError') ||
+    (signal.aborted && signal.reason instanceof Error && signal.reason.name === 'TimeoutError') ||
+    (signal.aborted && signal.reason === 'TIME_LIMIT')
+  )
+    return 'timed_out';
+  return signal.aborted ? 'cancelled' : 'failed';
+}
+
 export function availableEvidenceReferences(snapshot: ReviewEvidence) {
   return [
     snapshot.plan ? 'plan:brief' : 'plan:missing',
@@ -82,14 +117,64 @@ export function evaluatorModel(values: NodeJS.ProcessEnv, override: string | und
   return values.AGENT_MODEL || DEFAULT_MODELS.openai;
 }
 
+/** Captures the raw terminal before the SDK can reject incomplete/failed responses. */
+export class ObservedResponsesModel extends OpenAIResponsesModel {
+  private lastRaw: unknown;
+  constructor(
+    client: OpenAI,
+    model: string,
+    private ledger: UsageLedger,
+  ) {
+    super(client, model);
+  }
+  protected override async _fetchResponse(
+    ...args: Parameters<OpenAIResponsesModel['_fetchResponse']>
+  ) {
+    const response = await super._fetchResponse(...args);
+    this.lastRaw = response;
+    return response;
+  }
+  override async getResponse(request: ModelRequest) {
+    const handle = this.ledger.begin();
+    this.lastRaw = undefined;
+    try {
+      const response = await super.getResponse(request);
+      handle.fromOpenAIResponse(this.lastRaw);
+      return response;
+    } catch (error) {
+      if (this.lastRaw === undefined) handle.noResponse();
+      else handle.fromOpenAIResponse(this.lastRaw);
+      throw error;
+    }
+  }
+  override getStreamedResponse(request: ModelRequest) {
+    return observeStream(super.getStreamedResponse(request), this.ledger.begin());
+  }
+}
+export function evaluatorLedger(model: string, role: Exclude<UsageRole, 'coach'>) {
+  return new UsageLedger({
+    provider: 'openai',
+    requestedModel: model,
+    settings: {
+      reasoningEffort: role === 'reviewer' ? 'medium' : 'low',
+      maxOutputTokens: role === 'reviewer' ? 7000 : 1800,
+      requestedServiceTier: null,
+      cacheControl: 'provider_default',
+    },
+  });
+}
+
 export class EvaluationModels {
   private runner: Runner;
+  private client: OpenAI;
   constructor(
     private apiKey: string,
     readonly model: string,
+    client?: OpenAI,
   ) {
+    this.client = client ?? new OpenAI({ apiKey });
     this.runner = new Runner({
-      modelProvider: new OpenAIProvider({ apiKey, useResponses: true }),
+      modelProvider: new OpenAIProvider({ openAIClient: this.client, useResponses: true }),
       tracingDisabled: true,
       traceIncludeSensitiveData: false,
     });
@@ -99,6 +184,7 @@ export class EvaluationModels {
     messages: BenchmarkSnapshot['messages'],
     disclosed: Disclosure[],
     signal: AbortSignal,
+    ledger = evaluatorLedger(this.model, 'simulator'),
   ): Promise<{ action: AthleteAction; usage: ModelUsage }> {
     const ids = Object.keys(scenario.facts);
     const outputType = z
@@ -109,7 +195,7 @@ export class EvaluationModels {
       .strict();
     const agent = new Agent({
       name: 'Benchmark athlete',
-      model: this.model,
+      model: new ObservedResponsesModel(this.client, this.model, ledger),
       outputType,
       instructions: SIMULATOR_PROMPT,
       modelSettings: { store: false, reasoning: { effort: 'low' }, maxTokens: 1800 },
@@ -138,10 +224,11 @@ export class EvaluationModels {
     messages: BenchmarkSnapshot['messages'],
     signal: AbortSignal,
     feedback: string[] = [],
+    ledger = evaluatorLedger(this.model, 'voice'),
   ): Promise<{ message: string; usage: ModelUsage }> {
     const agent = new Agent({
       name: 'Benchmark athlete voice',
-      model: this.model,
+      model: new ObservedResponsesModel(this.client, this.model, ledger),
       instructions: VOICE_PROMPT,
       modelSettings: { store: false, reasoning: { effort: 'low' }, maxTokens: 1800 },
     });
@@ -171,10 +258,11 @@ export class EvaluationModels {
     snapshot: ReviewEvidence,
     disclosed: Disclosure[],
     signal: AbortSignal,
+    ledger = evaluatorLedger(this.model, 'reviewer'),
   ): Promise<{ review: Review; usage: ModelUsage }> {
     const agent = new Agent({
       name: 'Benchmark plan reviewer',
-      model: this.model,
+      model: new ObservedResponsesModel(this.client, this.model, ledger),
       outputType: ReviewSchema,
       instructions: REVIEW_PROMPT,
       modelSettings: { store: false, reasoning: { effort: 'medium' }, maxTokens: 7000 },

@@ -10,6 +10,7 @@ async function ownedPlan(owner: string, planId: string) {
     .select(['id', 'archived_at'])
     .where('id', '=', planId)
     .where('owner_id', '=', owner)
+    .where('deleted_at', 'is', null)
     .executeTakeFirst();
   if (!plan) throw new PlanError('PLAN_NOT_FOUND', 'Plan not found.', 404);
   return plan;

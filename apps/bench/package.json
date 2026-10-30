@@ -16,6 +16,7 @@
     "@askesis/api": "workspace:*",
     "@askesis/agent": "workspace:*",
     "@openai/agents": "0.18.0",
+    "openai": "7.25.0",
     "zod": "4.4.3"
   },
   "devDependencies": {

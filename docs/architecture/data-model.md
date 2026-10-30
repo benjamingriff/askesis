@@ -60,6 +60,10 @@ A conversation belongs to one athlete and may be associated with one logical pla
 
 Live journal rows notify an owner which resources changed, including `performance.changed` for calibration entries. They carry identifiers rather than authoritative plan content or model text. Clients refetch owner-authorized HTTP projections; durable output survives journal pruning.
 
+## Deletion
+
+A deleted plan is archived with `plans.deleted_at` set (`deleted_at` requires `archived_at`). Every read path hides it with its conversations, runs, training log and check-ins, and idempotent replays re-check visibility through `api_idempotency_keys.plan_id`. `athletes.deletion_requested_at`/`purge_after` mark an account in its grace period; only account routes answer, and new runs are refused. The retention sweeper purges both once their windows close. The purge is the one path past the append-only guards, enabled by a transaction-local `askesis.purge` setting. It redacts other conversations' tool results that named the plan and rolls run usage into `agent_usage_rollups`. Every transition is appended to `deletion_journal` in the transaction that makes it and shipped to the logs, so a restored backup can replay later deletions. See [data deletion](../operations/data-deletion.md).
+
 ## Removed early concepts
 
 `plan_goals`, `plan_constraints`, `plan_memberships`, `plan_revisions`, a mutable `movements` catalog and the version-owned `calibration_profiles`, `calibration_zones` and `plan_calibration_periods` are not current tables. Typed goals and generic constraints were replaced by the version-owned brief; plan calibration was replaced by the athlete timeline. There is no implemented plan merge lineage, user skill store or completed-workout log.

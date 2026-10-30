@@ -3,6 +3,7 @@ import type { ModelProfile } from '../config.js';
 import { ApiError, type AgentApi, type Claim, type ExecutionContext } from '../api.js';
 import { ProgressReporter } from '../progress.js';
 import { truncateText } from '../text.js';
+import type { UsageLedger } from '../usage.js';
 
 const MAX_MESSAGE_CHARACTERS = 32000;
 /** Tool rejections the model can correct; anything else stops the run. */
@@ -25,8 +26,6 @@ const SAVED_BATCH_TOOLS = ['apply_schedule_changes', 'replace_schedule_range'];
 
 export type RuntimeResult = {
   content: string;
-  inputTokens: number;
-  outputTokens: number;
   finalOutputItemId?: string;
 };
 export type CoachingRuntime = {
@@ -36,6 +35,8 @@ export type CoachingRuntime = {
     api: AgentApi,
     signal: AbortSignal,
     hardStopSignal: AbortSignal,
+    /** Records every provider request, including those of a run that throws. */
+    ledger: UsageLedger,
   ): Promise<RuntimeResult>;
 };
 export type RuntimeLimits = { maxTurns: number };
@@ -158,8 +159,9 @@ export type ModelRun = {
   progress: ProgressReporter;
   tools: ToolExecutor;
   signal: AbortSignal;
+  ledger: UsageLedger;
 };
-export type ModelOutput = { content: string; inputTokens: number; outputTokens: number };
+export type ModelOutput = { content: string };
 
 /**
  * The run lifecycle shared by every provider: cancellation, durable progress, the tool executor
@@ -177,6 +179,7 @@ export abstract class ModelRuntime implements CoachingRuntime {
     api: AgentApi,
     signal: AbortSignal,
     hardStopSignal: AbortSignal,
+    ledger: UsageLedger,
   ): Promise<RuntimeResult> {
     const cancellation = new AbortController();
     const providerSignal = AbortSignal.any([signal, hardStopSignal, cancellation.signal]);
@@ -190,12 +193,14 @@ export abstract class ModelRuntime implements CoachingRuntime {
     const tools = new ToolExecutor(context, claim, api, progress, providerSignal);
     let outcome: RuntimeResult;
     try {
+      providerSignal.throwIfAborted();
       const output = await this.converse({
         context,
         input: conversationInput(context),
         progress,
         tools,
         signal: providerSignal,
+        ledger,
       });
       if (cancellation.signal.reason === 'CANCELLED') progress.cancelled();
       providerSignal.throwIfAborted();
@@ -208,12 +213,7 @@ export abstract class ModelRuntime implements CoachingRuntime {
         final = progress.final(content);
       }
       if (!final) throw new ApiError('OUTPUT_LIMIT', 409);
-      outcome = {
-        content,
-        finalOutputItemId: final.itemId,
-        inputTokens: output.inputTokens,
-        outputTokens: output.outputTokens,
-      };
+      outcome = { content, finalOutputItemId: final.itemId };
     } catch (error) {
       // Keep the accepted prefix if possible, but report the original failure.
       await progress.close().catch(() => {});

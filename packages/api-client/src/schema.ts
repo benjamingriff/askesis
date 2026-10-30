@@ -4,6 +4,222 @@
  */
 
 export interface paths {
+    "/api/v1/account": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Successful response. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            deletion: {
+                                requestedAt: string;
+                                purgeAfter: string;
+                            } | null;
+                        };
+                    };
+                };
+                /** @description Request rejected. */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Request rejected. */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/account/deletion": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Schedules the account for deletion after a grace period and stops coaching. */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Successful response. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            deletion: {
+                                requestedAt: string;
+                                purgeAfter: string;
+                            } | null;
+                        };
+                    };
+                };
+                /** @description Request rejected. */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Request rejected. */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        /** @description Cancels a requested deletion during its grace period. */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Successful response. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            deletion: {
+                                requestedAt: string;
+                                purgeAfter: string;
+                            } | null;
+                        };
+                    };
+                };
+                /** @description Request rejected. */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Request rejected. */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/account/export": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Every plan, conversation, log, check-in and calibration, as one JSON document. */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Successful response. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            [key: string]: unknown;
+                        };
+                    };
+                };
+                /** @description Request rejected. */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Request rejected. */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/live/bootstrap": {
         parameters: {
             query?: never;
@@ -905,6 +1121,8 @@ export interface paths {
                             stateVersion: number;
                             active: boolean;
                             archived: boolean;
+                            deletedAt?: string | null;
+                            purgeAfter?: string | null;
                             draft: {
                                 id: string;
                                 /** @enum {string} */
@@ -1408,6 +1626,8 @@ export interface paths {
                             stateVersion: number;
                             active: boolean;
                             archived: boolean;
+                            deletedAt?: string | null;
+                            purgeAfter?: string | null;
                             draft: {
                                 id: string;
                                 /** @enum {string} */
@@ -1525,6 +1745,8 @@ export interface paths {
                             stateVersion: number;
                             active: boolean;
                             archived: boolean;
+                            deletedAt?: string | null;
+                            purgeAfter?: string | null;
                             draft: {
                                 id: string;
                                 /** @enum {string} */
@@ -1641,6 +1863,8 @@ export interface paths {
                             stateVersion: number;
                             active: boolean;
                             archived: boolean;
+                            deletedAt?: string | null;
+                            purgeAfter?: string | null;
                             draft: {
                                 id: string;
                                 /** @enum {string} */
@@ -1762,6 +1986,8 @@ export interface paths {
                             stateVersion: number;
                             active: boolean;
                             archived: boolean;
+                            deletedAt?: string | null;
+                            purgeAfter?: string | null;
                             draft: {
                                 id: string;
                                 /** @enum {string} */
@@ -1887,6 +2113,8 @@ export interface paths {
                             stateVersion: number;
                             active: boolean;
                             archived: boolean;
+                            deletedAt?: string | null;
+                            purgeAfter?: string | null;
                             draft: {
                                 id: string;
                                 /** @enum {string} */
@@ -2012,6 +2240,8 @@ export interface paths {
                             stateVersion: number;
                             active: boolean;
                             archived: boolean;
+                            deletedAt?: string | null;
+                            purgeAfter?: string | null;
                             draft: {
                                 id: string;
                                 /** @enum {string} */
@@ -2137,6 +2367,345 @@ export interface paths {
                             stateVersion: number;
                             active: boolean;
                             archived: boolean;
+                            deletedAt?: string | null;
+                            purgeAfter?: string | null;
+                            draft: {
+                                id: string;
+                                /** @enum {string} */
+                                state: "draft" | "locked";
+                                versionNumber: number | null;
+                                editNumber: number;
+                                description: string | null;
+                                /** Format: date */
+                                startDate: string | null;
+                                /** Format: date */
+                                endDate: string | null;
+                                basedOnVersionId: string | null;
+                                supersedesVersionId: string | null;
+                                lockedAt: string | null;
+                            } | null;
+                            locked: {
+                                id: string;
+                                /** @enum {string} */
+                                state: "draft" | "locked";
+                                versionNumber: number | null;
+                                editNumber: number;
+                                description: string | null;
+                                /** Format: date */
+                                startDate: string | null;
+                                /** Format: date */
+                                endDate: string | null;
+                                basedOnVersionId: string | null;
+                                supersedesVersionId: string | null;
+                                lockedAt: string | null;
+                            } | null;
+                        };
+                    };
+                };
+                /** @description Request rejected. */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Request rejected. */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Request rejected. */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Request rejected. */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Request rejected. */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/plans/{planId}/deletion-impact": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    planId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Successful response. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            versions: number;
+                            conversations: number;
+                            messages: number;
+                            workoutLogs: number;
+                            checkIns: number;
+                            restoreDays: number;
+                        };
+                    };
+                };
+                /** @description Request rejected. */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Request rejected. */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Request rejected. */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Request rejected. */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Request rejected. */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/plans/{planId}/delete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    planId: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        expectedStateVersion: number;
+                    };
+                };
+            };
+            responses: {
+                /** @description Successful response. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            conversationId?: string;
+                            id: string;
+                            displayName: string;
+                            stateVersion: number;
+                            active: boolean;
+                            archived: boolean;
+                            deletedAt?: string | null;
+                            purgeAfter?: string | null;
+                            draft: {
+                                id: string;
+                                /** @enum {string} */
+                                state: "draft" | "locked";
+                                versionNumber: number | null;
+                                editNumber: number;
+                                description: string | null;
+                                /** Format: date */
+                                startDate: string | null;
+                                /** Format: date */
+                                endDate: string | null;
+                                basedOnVersionId: string | null;
+                                supersedesVersionId: string | null;
+                                lockedAt: string | null;
+                            } | null;
+                            locked: {
+                                id: string;
+                                /** @enum {string} */
+                                state: "draft" | "locked";
+                                versionNumber: number | null;
+                                editNumber: number;
+                                description: string | null;
+                                /** Format: date */
+                                startDate: string | null;
+                                /** Format: date */
+                                endDate: string | null;
+                                basedOnVersionId: string | null;
+                                supersedesVersionId: string | null;
+                                lockedAt: string | null;
+                            } | null;
+                        };
+                    };
+                };
+                /** @description Request rejected. */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Request rejected. */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Request rejected. */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Request rejected. */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Request rejected. */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/plans/{planId}/undelete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    planId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Successful response. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            conversationId?: string;
+                            id: string;
+                            displayName: string;
+                            stateVersion: number;
+                            active: boolean;
+                            archived: boolean;
+                            deletedAt?: string | null;
+                            purgeAfter?: string | null;
                             draft: {
                                 id: string;
                                 /** @enum {string} */
@@ -2233,7 +2802,7 @@ export interface paths {
         get: {
             parameters: {
                 query?: {
-                    collection?: "library" | "active" | "archive";
+                    collection?: "library" | "active" | "archive" | "deleted";
                 };
                 header?: never;
                 path?: never;
@@ -2255,6 +2824,8 @@ export interface paths {
                                 stateVersion: number;
                                 active: boolean;
                                 archived: boolean;
+                                deletedAt?: string | null;
+                                purgeAfter?: string | null;
                                 draft: {
                                     id: string;
                                     /** @enum {string} */
@@ -2372,6 +2943,8 @@ export interface paths {
                             stateVersion: number;
                             active: boolean;
                             archived: boolean;
+                            deletedAt?: string | null;
+                            purgeAfter?: string | null;
                             draft: {
                                 id: string;
                                 /** @enum {string} */
@@ -2656,6 +3229,8 @@ export interface paths {
                             stateVersion: number;
                             active: boolean;
                             archived: boolean;
+                            deletedAt?: string | null;
+                            purgeAfter?: string | null;
                             draft: {
                                 id: string;
                                 /** @enum {string} */
@@ -2789,6 +3364,8 @@ export interface paths {
                             stateVersion: number;
                             active: boolean;
                             archived: boolean;
+                            deletedAt?: string | null;
+                            purgeAfter?: string | null;
                             draft: {
                                 id: string;
                                 /** @enum {string} */
@@ -2922,6 +3499,8 @@ export interface paths {
                             stateVersion: number;
                             active: boolean;
                             archived: boolean;
+                            deletedAt?: string | null;
+                            purgeAfter?: string | null;
                             draft: {
                                 id: string;
                                 /** @enum {string} */

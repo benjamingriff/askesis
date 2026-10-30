@@ -27,6 +27,10 @@
     "./testing": {
       "types": "./dist/testing.d.ts",
       "default": "./dist/testing.js"
+    },
+    "./usage": {
+      "types": "./dist/usage.d.ts",
+      "default": "./dist/usage.js"
     }
   },
   "scripts": {

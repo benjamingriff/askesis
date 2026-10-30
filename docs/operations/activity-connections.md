@@ -59,4 +59,5 @@ Restart the API, then connect from Settings. The consent page offers Authorize a
 - **Rate limits.** Strava allows 100 reads per 15 minutes and 1,000 per day per application. Opening the picker or the details panel costs one read. The browser reuses a response for five minutes.
 - **Errors.** A revoked or expired grant marks the connection `reauthorization_required`. Settings then offers Reconnect, and lookups hide until then. Existing links keep their View on Strava button. An activity deleted on Strava shows "Strava couldn't find that activity"; unlink it.
 - **Disconnect.** Revokes the grant at Strava (`oauth/revoke`) and deletes the connection and every link immediately.
+- **Deletion and export.** Deleted plans hide their links during the restore window; restoring brings the links back, and final plan purge removes them. Account purge deletes every connection and link. Account exports include connection metadata and activity links, excluding access and refresh credentials.
 - **Inspect.** `integration_connections` and `workout_activity_links`. Tokens are encrypted; never decrypt them in a shared session.

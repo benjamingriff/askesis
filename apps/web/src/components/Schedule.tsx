@@ -115,8 +115,9 @@ export function Schedule({
       </EmptyState>
     );
 
+  // `data-no-tab-swipe`: sideways drags over the schedule never switch tabs.
   return (
-    <section className="schedule" aria-labelledby="schedule-heading">
+    <section className="schedule" aria-labelledby="schedule-heading" data-no-tab-swipe>
       <div className="schedule-header">
         <h2 id="schedule-heading">Schedule</h2>
         {presentation === 'interactive' ? (

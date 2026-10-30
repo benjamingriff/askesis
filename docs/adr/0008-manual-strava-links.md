@@ -18,7 +18,7 @@ The owner chose a narrower design: no automatic matching. The athlete finds the 
 - **Read details live, each time.** The picker lists the week either side of the workout from `GET /athlete/activities`. The log sheet's panel reads `GET /activities/{id}` when it opens. The browser keeps responses for five minutes at most and never writes them to the log.
 - **The athlete is the only path from Strava to the log.** Nothing is pre-filled. The panel says: "Strava details are displayed temporarily for reference. Information you enter in your review is saved separately."
 - **The coach is excluded.** Activity routes are user-only; no `/internal/agent` route, prompt or feedback snapshot includes a link or Strava value.
-- **Links follow workout lineage**, like workout logs, so they survive unlock and relock. An activity belongs to at most one workout per plan.
+- **Links follow workout lineage**, like workout logs, so they survive unlock and relock. An activity belongs to at most one workout per plan. Deleted plans hide their links until restored; plan purge removes links and account purge also removes encrypted credentials. Data exports include metadata and links without credentials.
 - **Disconnecting revokes the grant and cascades** to every link. A Strava account connects to one Askesis athlete. Tokens are encrypted with AES-256-GCM; refreshes take a row lock because Strava rotates refresh tokens.
 
 ## Alternatives
@@ -35,4 +35,4 @@ The owner chose a narrower design: no automatic matching. The athlete finds the 
 
 ## Evidence
 
-[Migration](../../database/migrations/20261016120000_activity_links.sql), [integration service](../../apps/api/src/modules/activities/integration.service.ts), [link service](../../apps/api/src/modules/activities/activity-link.service.ts), [web components](../../apps/web/src/components/Strava.tsx), [database tests](../../apps/api/test/db/activities.test.ts) and [operations guide](../operations/activity-connections.md).
+[Migration](../../database/migrations/20261030130000_activity_links.sql), [integration service](../../apps/api/src/modules/activities/integration.service.ts), [link service](../../apps/api/src/modules/activities/activity-link.service.ts), [web components](../../apps/web/src/components/Strava.tsx), [database tests](../../apps/api/test/db/activities.test.ts) and [operations guide](../operations/activity-connections.md).

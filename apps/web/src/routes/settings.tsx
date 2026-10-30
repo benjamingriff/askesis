@@ -1,18 +1,21 @@
 import { useClerk, useUser } from '@clerk/react';
 import {
   Check,
+  Download,
   FileCode2,
   Gauge,
   Library,
   LogOut,
   RotateCcw,
+  Trash2,
   TriangleAlert,
   UserRound,
 } from 'lucide-react';
 import { useState, type CSSProperties, type ReactNode } from 'react';
 import { initialsFor } from '../components/AppShell';
 import { StravaConnection } from '../components/Strava';
-import { Button, ButtonLink, Card, Segmented, cx } from '../components/ui';
+import { ACCOUNT_GRACE_DAYS, useAccountDeletion, useDataExport } from '../account';
+import { Button, ButtonLink, Card, Dialog, Notice, Segmented, cx } from '../components/ui';
 import { formatPace, formatPower, formatSwimPace } from '../lib/format';
 import { usePerformance } from '../plan-data';
 import { currentEntry, SYSTEM_META, SYSTEMS } from '../lib/sports';
@@ -119,6 +122,68 @@ function AccentDot({
   );
 }
 
+const CONFIRMATION = 'DELETE';
+
+/** Schedules deletion after the grace period; the app is replaced by its countdown. */
+function DeleteAccountDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const [typed, setTyped] = useState('');
+  const { request } = useAccountDeletion();
+  const close = () => {
+    if (request.isPending) return;
+    setTyped('');
+    request.reset();
+    onClose();
+  };
+  return (
+    <Dialog
+      open={open}
+      size="sm"
+      busy={request.isPending}
+      onClose={close}
+      title="Delete your account?"
+      footer={
+        <>
+          <Button variant="ghost" disabled={request.isPending} onClick={close}>
+            Cancel
+          </Button>
+          <Button
+            variant="danger"
+            icon={Trash2}
+            busy={request.isPending}
+            disabled={request.isPending || typed.trim() !== CONFIRMATION}
+            onClick={() => request.mutate()}
+          >
+            Delete account
+          </Button>
+        </>
+      }
+    >
+      <p>
+        Every plan, coach conversation, training log entry, check-in and fitness result will be
+        permanently deleted, along with your sign-in. Your coach stops straight away.
+      </p>
+      <p>
+        You have {ACCOUNT_GRACE_DAYS} days to change your mind by signing in again. After that it
+        can’t be undone. Download your data first if you want a copy.
+      </p>
+      <label className="field">
+        <span>Type {CONFIRMATION} to confirm</span>
+        <input
+          value={typed}
+          autoComplete="off"
+          spellCheck={false}
+          onChange={(event) => setTyped(event.target.value)}
+        />
+      </label>
+      {request.error ? (
+        <Notice tone="danger" role="alert">
+          {request.error.message}
+        </Notice>
+      ) : null}
+    </Dialog>
+  );
+}
+
 /** "You": account, appearance and display preferences. */
 export function SettingsPage() {
   const { user } = useUser();
@@ -142,6 +207,8 @@ export function SettingsPage() {
   const preset = ACCENT_BY_ID[settings.accent];
   const [hex, setHex] = useState(preset ? '' : settings.accent);
   const clash = accentClash(hex);
+  const [deleting, setDeleting] = useState(false);
+  const download = useDataExport();
   const displayName = user?.fullName ?? user?.firstName ?? 'Askesis athlete';
   const email = user?.primaryEmailAddress?.emailAddress ?? '';
   const solids = ACCENTS.filter((accent) => accent.stops.length === 1);
@@ -385,6 +452,42 @@ export function SettingsPage() {
           </Row>
         </Card>
       </section>
+
+      <section className="settings-group" aria-labelledby="data-heading">
+        <h2 id="data-heading" className="label">
+          Your data
+        </h2>
+        <Card>
+          <Row
+            label="Download my data"
+            hint="Plans, coach conversations, training log, check-ins and fitness history as one JSON file."
+          >
+            <Button
+              size="sm"
+              icon={Download}
+              busy={download.isPending}
+              disabled={download.isPending}
+              onClick={() => download.mutate()}
+            >
+              Download
+            </Button>
+          </Row>
+          {download.error ? (
+            <Notice tone="danger" role="alert">
+              {download.error.message}
+            </Notice>
+          ) : null}
+          <Row
+            label="Delete account"
+            hint={`Permanently deletes everything after ${ACCOUNT_GRACE_DAYS} days. You can cancel until then.`}
+          >
+            <Button size="sm" variant="danger" icon={Trash2} onClick={() => setDeleting(true)}>
+              Delete account…
+            </Button>
+          </Row>
+        </Card>
+      </section>
+      <DeleteAccountDialog open={deleting} onClose={() => setDeleting(false)} />
 
       <section className="settings-group" aria-labelledby="more-heading">
         <h2 id="more-heading" className="label">

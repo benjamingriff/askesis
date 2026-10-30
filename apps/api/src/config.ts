@@ -32,6 +32,11 @@ const ApiConfigSchema = z.object({
   /** Overridable for the local Strava simulator; production requires HTTPS. */
   STRAVA_OAUTH_BASE_URL: z.string().url().default('https://www.strava.com'),
   STRAVA_API_BASE_URL: z.string().url().default('https://www.strava.com/api/v3'),
+  /** Enables the Clerk user.deleted webhook; Svix signing secret (whsec_…). */
+  CLERK_WEBHOOK_SIGNING_SECRET: z.preprocess(
+    (value) => (value === '' ? undefined : value),
+    z.string().startsWith('whsec_').optional(),
+  ),
 });
 
 export type ApiConfig = Omit<z.infer<typeof ApiConfigSchema>, 'CLERK_PUBLISHABLE_KEY'> & {

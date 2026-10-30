@@ -56,6 +56,8 @@ DO $$ BEGIN
  IF NOT EXISTS(SELECT 1 FROM agent_run_measurements WHERE run_id='00000000-0000-4000-8000-000000000903') THEN RAISE EXCEPTION 'Missing stream measurements'; END IF;
  IF NOT EXISTS(SELECT 1 FROM agent_run_events WHERE run_id='00000000-0000-4000-8000-000000000903' AND type='tool_started') THEN RAISE EXCEPTION 'Missing started activity'; END IF;
  IF (SELECT count(*) FROM conversation_messages WHERE producing_run_id='00000000-0000-4000-8000-000000000903') <> 1 THEN RAISE EXCEPTION 'Missing assistant reply'; END IF;
+ IF NOT EXISTS(SELECT 1 FROM agent_runs WHERE id='00000000-0000-4000-8000-000000000903'
+   AND usage->>'version'='1' AND jsonb_array_length(usage->'requests') > 0) THEN RAISE EXCEPTION 'Missing detailed model usage'; END IF;
 END $$;
 SQL
 # A provider interruption must retain accepted text without fabricating a final message.
@@ -81,6 +83,8 @@ test_compose exec -T postgres psql --username askesis_smoke --dbname askesis_smo
 DO $$ BEGIN
  IF NOT EXISTS(SELECT 1 FROM agent_run_outputs WHERE run_id='00000000-0000-4000-8000-000000000912' AND content='Visible text before a simulated provider failure.' AND NOT is_final) THEN RAISE EXCEPTION 'Missing incomplete output'; END IF;
  IF EXISTS(SELECT 1 FROM conversation_messages WHERE producing_run_id='00000000-0000-4000-8000-000000000912') THEN RAISE EXCEPTION 'Fabricated completed answer'; END IF;
+ IF NOT EXISTS(SELECT 1 FROM agent_runs WHERE id='00000000-0000-4000-8000-000000000912'
+   AND usage->>'version'='1' AND jsonb_array_length(usage->'requests') > 0) THEN RAISE EXCEPTION 'Missing failed model usage'; END IF;
 END $$;
 SQL
 private_status=$(curl --silent --output /dev/null --write-out '%{http_code}' http://127.0.0.1:${SMOKE_WEB_PORT}/internal/agent/claim)

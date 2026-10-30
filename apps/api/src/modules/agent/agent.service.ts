@@ -10,7 +10,7 @@ import type { z } from 'zod';
 import { getDatabase } from '../../database/client.js';
 import { getApiConfig } from '../../config.js';
 import type { DB, Json } from '../../database/generated.js';
-import { ChatError, activeStatuses } from '../chat/chat.core.js';
+import { ChatError, activeStatuses, assertAccountOpen } from '../chat/chat.core.js';
 import {
   appendEvent,
   appendMessage,
@@ -39,6 +39,7 @@ import {
   type RegisterSchema,
   type ToolRequestSchema,
   type ToolName,
+  type UsageLedgerJson,
 } from './agent.schemas.js';
 import { writeSchedule } from './agent.schedule.js';
 import { CalibrationInputSchema } from '../performance/performance.schemas.js';
@@ -46,6 +47,7 @@ import { CalibrationInputSchema } from '../performance/performance.schemas.js';
 type Tx = Transaction<DB>;
 type Run = Selectable<DB['agent_runs']>;
 export const LEASE_MS = 90000;
+export const USAGE_REPORT_GRACE_MS = 5 * 60_000;
 /** Tools that commit plan content; reads and validation never count as saved changes. */
 export const MUTATING_TOOLS: ToolName[] = [
   'create_plan_draft',
@@ -136,8 +138,22 @@ export async function claimRun(workerId: string) {
         .limit(20)
         .execute();
       for (const candidate of candidates) {
-        const run = await ownedRun(db, candidate.owner_id, candidate.id, true);
-        if (run.status !== 'queued') continue;
+        const run = await ownedRun(db, candidate.owner_id, candidate.id, true).catch(
+          async (error: unknown) => {
+            // A run whose plan was deleted (only possible on restored data) must not block the
+            // queue: it can never be claimed, so it is cancelled.
+            if (!(error instanceof ChatError && error.status === 404)) throw error;
+            const hidden = await db
+              .selectFrom('agent_runs')
+              .selectAll()
+              .where('id', '=', candidate.id)
+              .forUpdate()
+              .executeTakeFirstOrThrow();
+            if (hidden.status === 'queued') await transition(db, hidden, 'cancelled', 'cancelled');
+            return null;
+          },
+        );
+        if (!run || run.status !== 'queued') continue;
         if (Date.now() >= new Date(run.deadline_at).getTime()) {
           await transition(db, run, 'failed', 'failed', 'EXECUTION_TIMEOUT');
           continue;
@@ -152,6 +168,13 @@ export async function claimRun(workerId: string) {
         }
         if (conversation.archived_at) {
           await transition(db, run, 'failed', 'failed', 'CONVERSATION_ARCHIVED');
+          continue;
+        }
+        // A deletion request cancels queued runs; this covers one accepted just before it.
+        try {
+          await assertAccountOpen(db, run.owner_id, false);
+        } catch {
+          await transition(db, run, 'cancelled', 'cancelled');
           continue;
         }
         const token = randomBytes(32).toString('base64url');
@@ -208,6 +231,11 @@ export async function authorized(db: Tx, id: string, token: string, allowCancell
     !(run.status === 'running' || (allowCancelling && run.status === 'cancelling'))
   )
     throw rejected();
+  // Only stopping remains for a run whose account is being deleted.
+  if (!allowCancelling)
+    await assertAccountOpen(db, run.owner_id, false).catch(() => {
+      throw rejected();
+    });
   return run;
 }
 async function target(db: Tx, run: Run, write = false) {
@@ -686,9 +714,18 @@ export async function finishRun(
     failureCode?: string | undefined;
     inputTokens?: number | undefined;
     outputTokens?: number | undefined;
+    usage?: UsageLedgerJson | undefined;
   },
 ) {
-  return getDatabase()
+  const total = (field: 'input' | 'output') => {
+    const counts = input.usage?.requests.flatMap((request) =>
+      request.tokens[field] === null ? [] : [request.tokens[field]],
+    );
+    return counts?.length ? counts.reduce((sum, count) => sum + count, 0) : null;
+  };
+  const inputTokens = input.inputTokens ?? total('input');
+  const outputTokens = input.outputTokens ?? total('output');
+  const result = await getDatabase()
     .transaction()
     .execute(async (db) => {
       const hash = contentHash(json(input) as SemanticValue);
@@ -719,6 +756,23 @@ export async function finishRun(
       } catch (error) {
         const concurrent = await replay();
         if (concurrent) return concurrent;
+        if (error instanceof ChatError && error.code === 'LEASE_LOST' && input.usage) {
+          // Retain telemetry without granting a fenced worker execution authority. Return
+          // the marker so the transaction commits before reporting the original rejection.
+          await db
+            .updateTable('agent_runs')
+            .set({
+              usage: json(input.usage),
+              input_tokens: sql`coalesce(input_tokens, ${inputTokens})`,
+              output_tokens: sql`coalesce(output_tokens, ${outputTokens})`,
+            })
+            .where('id', '=', id)
+            .where('credential_digest', '=', digest(token))
+            .where('usage', 'is', null)
+            .where('deadline_at', '>', new Date(Date.now() - USAGE_REPORT_GRACE_MS))
+            .execute();
+          return { rejected: true as const };
+        }
         throw error;
       }
       const concurrent = await replay();
@@ -727,6 +781,15 @@ export async function finishRun(
       await db
         .insertInto('agent_run_finishes')
         .values({ run_id: id, input_hash: hash, status })
+        .execute();
+      await db
+        .updateTable('agent_runs')
+        .set({
+          input_tokens: inputTokens,
+          output_tokens: outputTokens,
+          ...(input.usage ? { usage: json(input.usage) } : {}),
+        })
+        .where('id', '=', id)
         .execute();
       if (run.status === 'cancelling') {
         await transition(db, run, 'cancelled', 'cancelled');
@@ -771,11 +834,6 @@ export async function finishRun(
           id,
         );
       }
-      await db
-        .updateTable('agent_runs')
-        .set({ input_tokens: input.inputTokens ?? null, output_tokens: input.outputTokens ?? null })
-        .where('id', '=', id)
-        .execute();
       await transition(
         db,
         run,
@@ -785,6 +843,8 @@ export async function finishRun(
       );
       return { status: input.status };
     });
+  if ('rejected' in result) throw rejected();
+  return result;
 }
 export async function sweepAgentRuns() {
   const candidates = await getDatabase()
@@ -806,8 +866,14 @@ export async function sweepAgentRuns() {
     await getDatabase()
       .transaction()
       .execute(async (db) => {
-        const run = await ownedRun(db, candidate.owner_id, candidate.id, true);
-        if (!activeStatuses.some((s) => s === run.status)) return;
+        // Expiry is system work: it locks the run alone, including one whose plan is deleted.
+        const run = await db
+          .selectFrom('agent_runs')
+          .selectAll()
+          .where('id', '=', candidate.id)
+          .forUpdate()
+          .executeTakeFirst();
+        if (!run || !activeStatuses.some((s) => s === run.status)) return;
         if (Date.now() >= new Date(run.deadline_at).getTime())
           await transition(db, run, 'failed', 'failed', 'EXECUTION_TIMEOUT');
         else if (run.lease_expires_at && Date.now() >= new Date(run.lease_expires_at).getTime()) {

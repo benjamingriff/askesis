@@ -95,7 +95,12 @@ export async function acquireLock(
   return () => unlink(lockPath);
 }
 
-export async function compose(environment: LocalEnvironment, args: string[], signal?: AbortSignal) {
+export async function compose(
+  environment: LocalEnvironment,
+  args: string[],
+  signal?: AbortSignal,
+  output?: number,
+) {
   // An explicit file/project and empty dotenv prevent inheriting another stack's configuration.
   if (process.env.DOCKER_HOST && !process.env.DOCKER_HOST.startsWith('unix://'))
     throw new BenchmarkError('Local benchmarks require a local Docker daemon.');
@@ -121,7 +126,7 @@ export async function compose(environment: LocalEnvironment, args: string[], sig
       ],
       {
         cwd: root,
-        stdio: 'inherit',
+        stdio: output === undefined ? 'inherit' : ['ignore', output, output],
         env: { ...process.env, BENCH_DATABASE_PORT: String(environment.databasePort) },
         ...(signal ? { signal } : {}),
       },
@@ -132,7 +137,13 @@ export async function compose(environment: LocalEnvironment, args: string[], sig
     child.once('exit', (code) =>
       code === 0
         ? done()
-        : reject(new BenchmarkError('Benchmark Docker command failed. Check the output above.')),
+        : reject(
+            new BenchmarkError(
+              output === undefined
+                ? 'Benchmark Docker command failed. Check the output above.'
+                : 'Benchmark Docker command failed. See execution.log beside the saved report.',
+            ),
+          ),
     );
   });
 }
@@ -220,6 +231,7 @@ export function startWorker(
   config: AgentConfig,
   directory: string,
   scriptedScenario: Scenario | null,
+  reporting: { output?: number | undefined; onTool?: (name: string, status: string) => void } = {},
 ) {
   const child = fork(new URL('./worker.js', import.meta.url), [], {
     cwd: root,
@@ -227,7 +239,17 @@ export function startWorker(
     execArgv: [],
     // Terminal signals go to the driver first, allowing normal run cancellation.
     detached: true,
-    stdio: ['ignore', 'inherit', 'inherit', 'ipc'],
+    stdio: ['ignore', reporting.output ?? 'inherit', reporting.output ?? 'inherit', 'ipc'],
+  });
+  child.on('message', (message: unknown) => {
+    const parsed = z
+      .object({
+        type: z.literal('tool'),
+        name: z.string(),
+        status: z.enum(['started', 'completed', 'failed']),
+      })
+      .safeParse(message);
+    if (parsed.success) reporting.onTool?.(parsed.data.name, parsed.data.status);
   });
   const done = new Promise<void>((resolve, reject) => {
     child.once('error', reject);

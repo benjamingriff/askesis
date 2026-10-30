@@ -85,6 +85,6 @@ The recorded workflow auto-deploys `main`; verify the active Railway source conf
 
 ## Friends-and-family readiness
 
-Repository code has owner checks and bounded execution, but no invitation-enforcement middleware, application rate limits, per-user model-spend ceiling or account-data removal command. Clerk registration restrictions, production keys, self-deletion policy, Railway automated backups/retention and secret rotation are hosted/operator checks that this audit cannot certify.
+Repository code has owner checks and bounded execution, but no invitation-enforcement middleware, application rate limits or per-user model-spend ceiling. Athletes can delete plans and their account ([data deletion](./data-deletion.md)); set `CLERK_WEBHOOK_SIGNING_SECRET` and the Clerk `user.deleted` endpoint, and keep Clerk self-deletion disabled. Clerk registration restrictions, production keys, Railway automated backups/retention, log retention and secret rotation are hosted/operator checks that this audit cannot certify.
 
 Use [Phase 8](../product/v1-poc-development-plan.md#phase-8-friends-and-family-release) for unfinished release work. [Backup/restore](./database-backup-and-restore.md) provides manual fallback; [observability](./observability.md) describes implemented reporting. Root documentation uses the responsive web app as the intended alpha surface; native integration is deferred.

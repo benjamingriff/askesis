@@ -550,8 +550,14 @@ export function PlanZones({
               </>
             ) : performance.isPending ? null : (
               <p className="muted">
-                No {meta.noun} yet. Add a result or an estimate on the Performance page, or share
-                one with your coach.
+                {system === 'cycle_power' ? (
+                  'Rides prescribed by perceived effort (RPE) do not need power zones. For power-based rides, add a result or a supported estimate on the Performance page, or discuss one with your coach.'
+                ) : (
+                  <>
+                    No {meta.noun} yet. Add a result or an estimate on the Performance page, or
+                    share one with your coach.
+                  </>
+                )}
               </p>
             )}
           </section>
