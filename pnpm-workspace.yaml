@@ -12,6 +12,7 @@ allowBuilds:
   unrs-resolver: true
 
 overrides:
-  undici: 7.29.1
+  undici: 7.30.1
   nanoid: 3.3.18
   source-map-js: 1.2.2
+  'zod@>=4 <4.6.6': 4.6.6
