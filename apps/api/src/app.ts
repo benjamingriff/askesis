@@ -1,6 +1,7 @@
 import { registerTrainingLogRoutes } from './modules/training-log/training-log.routes.js';
 import { registerLiveRoutes } from './modules/live/live.routes.js';
 import { registerAgentRoutes } from './modules/agent/agent.routes.js';
+import { registerMcpRoutes } from './modules/mcp/mcp.routes.js';
 import * as Sentry from '@sentry/node';
 import { swaggerUI } from '@hono/swagger-ui';
 import { OpenAPIHono } from '@hono/zod-openapi';
@@ -123,6 +124,7 @@ app.use('/api/v1/*', requireAuthentication);
 
 registerAccountRoutes(app);
 registerAgentRoutes(app);
+registerMcpRoutes(app);
 registerLiveRoutes(app);
 registerWorkoutRoutes(app);
 registerPlanRoutes(app);

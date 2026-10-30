@@ -18,6 +18,21 @@ describe('parseApiConfig', () => {
       parseApiConfig({ ...validEnvironment, NODE_ENV: 'production', CHAT_EXECUTION_MODE: 'test' }),
     ).toThrow('forbidden in production');
   });
+  it('accepts development MCP access only as a complete pair outside production', () => {
+    const mcp = { MCP_DEV_TOKEN: 'm'.repeat(43), MCP_DEV_CLERK_USER_ID: 'user_2abcDEF123' };
+    expect(parseApiConfig({ ...validEnvironment, ...mcp }).MCP_DEV_CLERK_USER_ID).toBe(
+      'user_2abcDEF123',
+    );
+    expect(
+      parseApiConfig({ ...validEnvironment, MCP_DEV_TOKEN: '' }).MCP_DEV_TOKEN,
+    ).toBeUndefined();
+    expect(() => parseApiConfig({ ...validEnvironment, MCP_DEV_TOKEN: mcp.MCP_DEV_TOKEN })).toThrow(
+      'MCP_DEV_TOKEN, MCP_DEV_CLERK_USER_ID',
+    );
+    expect(() => parseApiConfig({ ...validEnvironment, ...mcp, NODE_ENV: 'production' })).toThrow(
+      'Development MCP access is forbidden in production.',
+    );
+  });
   it('parses authorized parties and defaults', () => {
     const config = parseApiConfig({
       ...validEnvironment,

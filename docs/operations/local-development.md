@@ -95,6 +95,10 @@ A hidden tab (`visible: false`) can still support automation and screenshots; th
 
 Stop the managed preview with Ctrl+C or `pnpm dev:stop local`. Its database volume is retained. Configuration diagnostics are available with `pnpm --filter @askesis/api verification:check`.
 
+### Connect your own agent over MCP (development spike)
+
+`pnpm dev:mcp [--email you@example.com]` enables the development-only `/mcp` endpoint for one Clerk development user (the verification account by default). It writes `MCP_DEV_TOKEN` and `MCP_DEV_CLERK_USER_ID` to the private `.env` and prints a `claude mcp add` command. Restart `pnpm dev`, then run that command to connect Claude Code. The token is a credential; keep it out of commits and evidence. Remove the two lines from `.env` to disable the endpoint. Production refuses this configuration. See the [MCP server plan](../product/mcp-server-plan.md#phase-0-spike).
+
 ## Run the complete stack with Docker
 
 ```bash

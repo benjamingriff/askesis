@@ -22,6 +22,7 @@ These guides describe implemented behavior and were reconciled against code on 2
 ## Proposals
 
 - [Workout logging and feedback](./workout-log-and-feedback-proposal.md): Done/Changed/Skipped logging, key-session feedback, coaching responses and the path to Strava. Proposed for owner review, with [design mockups](./workout-feedback-mockups/).
+- [Bring-your-own-agent MCP server](./mcp-server-plan.md): let athletes plan with Claude or another MCP client against persisted Askesis plans. Accepted direction, Claude first; the Phase 0 spike and its findings are recorded.
 
 ## Interface and pace policy
 

@@ -19,6 +19,18 @@ const ApiConfigSchema = z.object({
   CLERK_PUBLISHABLE_KEY: z.string().min(1).optional(),
   VITE_CLERK_PUBLISHABLE_KEY: z.string().min(1).optional(),
   CLERK_AUTHORIZED_PARTIES: z.string().optional(),
+  /** Development-only bring-your-own-agent spike: a static MCP token acting as one Clerk user. */
+  MCP_DEV_TOKEN: z.preprocess(
+    (value) => (value === '' ? undefined : value),
+    z.string().min(32).max(200).optional(),
+  ),
+  MCP_DEV_CLERK_USER_ID: z.preprocess(
+    (value) => (value === '' ? undefined : value),
+    z
+      .string()
+      .regex(/^user_[A-Za-z0-9]{1,100}$/)
+      .optional(),
+  ),
   LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent']).default('info'),
   SENTRY_DSN: z.string().url().optional().or(z.literal('')),
   SENTRY_RELEASE: z.string().optional(),
@@ -63,6 +75,13 @@ export function parseApiConfig(environment: NodeJS.ProcessEnv): ApiConfig {
   if (result.data.NODE_ENV === 'production' && result.data.CHAT_EXECUTION_MODE === 'test') {
     throw new Error('Test chat execution is forbidden in production.');
   }
+  if (
+    result.data.NODE_ENV === 'production' &&
+    (result.data.MCP_DEV_TOKEN || result.data.MCP_DEV_CLERK_USER_ID)
+  )
+    throw new Error('Development MCP access is forbidden in production.');
+  if (!result.data.MCP_DEV_TOKEN !== !result.data.MCP_DEV_CLERK_USER_ID)
+    throw new Error('Invalid API environment configuration: MCP_DEV_TOKEN, MCP_DEV_CLERK_USER_ID');
   if (publishableKey === undefined) {
     throw new Error('Invalid API environment configuration: CLERK_PUBLISHABLE_KEY');
   }
