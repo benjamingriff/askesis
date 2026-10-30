@@ -33,6 +33,7 @@ export default tseslint.config(
       'packages/**/*.ts',
       'apps/evals/server/**/*.ts',
       'apps/evals/*.ts',
+      'apps/usage/*.ts',
       '*.js',
       'scripts/dev-*.mjs',
       'scripts/lib/*.mjs',
@@ -44,7 +45,11 @@ export default tseslint.config(
     },
   },
   {
-    files: ['apps/web/**/*.{ts,tsx}', 'apps/evals/src/**/*.{ts,tsx}'],
+    files: [
+      'apps/web/**/*.{ts,tsx}',
+      'apps/evals/src/**/*.{ts,tsx}',
+      'apps/usage/src/**/*.{ts,tsx}',
+    ],
     ...react.configs.flat.recommended,
     languageOptions: {
       ...react.configs.flat.recommended.languageOptions,

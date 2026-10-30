@@ -1,0 +1,431 @@
+/* Usage dashboard: reuses the shell, stat strip, sections and tables from
+   app.css; only the usage-specific marks live here. */
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 16px;
+  margin: -4px 0 10px;
+  font-size: 12px;
+  color: var(--fg-2);
+}
+
+.legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.swatch {
+  display: inline-block;
+  flex: none;
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+  margin-right: 7px;
+  vertical-align: -1px;
+}
+
+.legend .swatch {
+  margin-right: 0;
+}
+
+.swatch.line {
+  height: 2px;
+  border-radius: 1px;
+  vertical-align: 3px;
+}
+
+.time-marker line {
+  stroke: var(--accent);
+  stroke-dasharray: 3 4;
+  opacity: 0.7;
+}
+
+.time-marker text {
+  fill: var(--accent);
+  font-size: 11px;
+}
+
+.crosshair {
+  stroke: var(--line-2);
+}
+
+.subchart {
+  margin-top: 22px;
+  padding-top: 18px;
+  border-top: 1px dashed var(--line);
+}
+
+.subchart h3 {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.subchart p {
+  margin: 4px 0 8px;
+  max-width: 640px;
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--fg-3);
+}
+
+/* ---------- Share rows ---------- */
+
+.share-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.share-row {
+  display: grid;
+  grid-template-columns: 180px minmax(0, 1fr);
+  align-items: center;
+  gap: 14px;
+}
+
+.share-row + .share-row:nth-child(odd) {
+  margin-top: 12px;
+}
+
+.share-label {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+  font-size: 12.5px;
+}
+
+.share-label small {
+  color: var(--fg-3);
+  font-size: 11.5px;
+}
+
+.share-model {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.share-model .model-dot {
+  margin-right: 0;
+}
+
+.share-model.indent {
+  padding-left: 16px;
+  color: var(--fg-3);
+}
+
+.share-track {
+  display: flex;
+  gap: 2px;
+  height: 22px;
+}
+
+.share-track > div {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 2px;
+  font-size: 11px;
+  font-weight: 500;
+  color: #fff;
+}
+
+.share-track > div:first-child {
+  border-radius: 4px 0 0 4px;
+}
+
+.share-track > div:last-child {
+  border-radius: 0 4px 4px 0;
+}
+
+/* ---------- Curves & sparklines ---------- */
+
+.equality-line {
+  stroke: var(--line-2);
+  stroke-dasharray: 4 5;
+}
+
+.curve-line {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 2;
+}
+
+.curve-area {
+  fill: color-mix(in oklab, var(--accent) 12%, transparent);
+}
+
+.curve-mark line {
+  stroke: var(--accent);
+  stroke-dasharray: 2 4;
+}
+
+.curve-mark circle,
+.curve-hover {
+  fill: var(--accent);
+  stroke: var(--bg);
+  stroke-width: 2;
+}
+
+.curve-mark text {
+  fill: var(--fg-2);
+  font-size: 12px;
+}
+
+.sparkline {
+  display: block;
+}
+
+.sparkline line {
+  stroke: var(--line-2);
+}
+
+.sparkline rect {
+  fill: var(--accent);
+}
+
+/* ---------- Tables ---------- */
+
+.usage-table td {
+  padding-top: 7px;
+  padding-bottom: 7px;
+}
+
+.sort-button {
+  font-size: 11.5px;
+  font-weight: 500;
+  color: var(--fg-3);
+}
+
+.sort-button:hover,
+.sort-button.active {
+  color: var(--fg);
+}
+
+.athlete-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.athlete-cell strong {
+  font-weight: 500;
+}
+
+.athlete-cell small {
+  font-size: 11px;
+  color: var(--fg-3);
+}
+
+.share-cell {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.share-cell small {
+  width: 28px;
+  font-size: 11.5px;
+  color: var(--fg-2);
+  text-align: right;
+}
+
+.share-mini,
+.hit-track {
+  display: inline-block;
+  width: 60px;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--line-2);
+  overflow: hidden;
+}
+
+.share-mini span,
+.hit-track span {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+}
+
+.hit-cell {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  min-width: 88px;
+}
+
+.hit-track {
+  width: 40px;
+}
+
+.hit-good .hit-track span {
+  background: var(--good);
+}
+
+.hit-warn .hit-track span {
+  background: var(--warn);
+}
+
+.hit-bad .hit-track span {
+  background: var(--bad);
+}
+
+.table-more {
+  align-self: flex-start;
+  margin-top: 12px;
+}
+
+.disclosure {
+  display: inline-block;
+  width: 14px;
+  color: var(--fg-3);
+}
+
+.usage-table tr.expanded td {
+  background: var(--hover);
+  border-bottom-color: transparent;
+}
+
+.usage-table tr.request-detail td {
+  padding: 4px 10px 14px 34px;
+  background: var(--surface);
+  cursor: default;
+}
+
+.usage-table tr.request-detail:hover td {
+  background: var(--surface);
+}
+
+.request-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.request-table th {
+  padding: 8px 8px 6px;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--fg-3);
+  text-align: left;
+  border-bottom: 1px solid var(--line);
+}
+
+.request-table td {
+  padding: 5px 8px;
+  border-bottom: 1px solid var(--line);
+}
+
+.request-table .numeric {
+  text-align: right;
+}
+
+.request-empty {
+  margin: 10px 0 0;
+  font-size: 12px;
+}
+
+.mix-bar {
+  display: flex;
+  gap: 1px;
+  width: 140px;
+  height: 8px;
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.result-fail,
+.result-pass {
+  font-size: 12px;
+}
+
+/* ---------- Coverage ---------- */
+
+.coverage {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.coverage-strip {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
+.coverage-strip > div {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 12px 16px;
+}
+
+.coverage-strip > div + div {
+  border-left: 1px solid var(--line);
+}
+
+.coverage-strip strong {
+  font-size: 19px;
+  font-weight: 450;
+  letter-spacing: -0.4px;
+}
+
+.coverage-strip span {
+  font-size: 12px;
+  color: var(--fg-2);
+}
+
+.coverage-strip small {
+  font-size: 11px;
+  color: var(--fg-3);
+}
+
+.source-table tbody tr {
+  cursor: default;
+}
+
+.source-table td:last-child {
+  color: var(--fg-2);
+}
+
+/* ---------- Athlete page ---------- */
+
+.athlete-head {
+  padding: 18px 28px 16px;
+  border-bottom: 1px solid var(--line);
+}
+
+.back-link {
+  font-size: 12px;
+  color: var(--accent);
+}
+
+.athlete-head h1 {
+  margin: 8px 0 4px;
+  font-size: 24px;
+  font-weight: 450;
+  letter-spacing: -0.8px;
+}
+
+.athlete-head p {
+  margin: 0;
+  font-size: 12px;
+  color: var(--fg-3);
+}
+
+@media (max-width: 900px) {
+  .coverage-strip {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .share-row {
+    grid-template-columns: 1fr;
+    gap: 4px;
+  }
+}

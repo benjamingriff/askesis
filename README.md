@@ -38,7 +38,7 @@ pnpm dev:setup
 pnpm dev
 ```
 
-Use the printed URL. Ctrl+C closes owned servers/containers and retains database data. `pnpm dev --help` lists commands and dependencies. `pnpm dev:doctor [app]` checks prerequisites and configuration; `pnpm dev:list` inventories worktrees and Docker resources without changing them. `pnpm dev:status` shows managed sessions; `pnpm dev:stop` stops them. Marketing and evals run independently with `pnpm dev:marketing` and `pnpm dev:evals`, without Docker or authentication setup. The [local development guide](./docs/operations/local-development.md#run-individual-apps) lists every app command.
+Use the printed URL. Ctrl+C closes owned servers/containers and retains database data. `pnpm dev --help` lists commands and dependencies. `pnpm dev:doctor [app]` checks prerequisites and configuration; `pnpm dev:list` inventories worktrees and Docker resources without changing them. `pnpm dev:status` shows managed sessions; `pnpm dev:stop` stops them. Marketing, evals and the usage prototype run independently with `pnpm dev:marketing`, `pnpm dev:evals` and `pnpm dev:usage`, without Docker or authentication setup. The [local development guide](./docs/operations/local-development.md#run-individual-apps) lists every app command.
 
 ## Run with Docker
 
