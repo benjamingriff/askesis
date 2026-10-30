@@ -9,6 +9,8 @@ import {
   useLocation,
   useRouteError,
 } from 'react-router';
+import { useAccount } from './account';
+import { AccountDeletionPending } from './components/AccountDeletionPending';
 import { AppShell } from './components/AppShell';
 import { SignInPage, SignUpPage } from './routes/auth';
 import { ChatPage } from './routes/chat';
@@ -20,14 +22,26 @@ import { PlanDraftPage } from './routes/plan-draft';
 import { PlanBriefPage } from './routes/plan-brief';
 import { TodayPage } from './routes/today';
 import { PerformancePage } from './routes/performance';
+import { StravaCallbackPage } from './routes/strava-callback';
 
 function RequireAuthentication() {
   const { isSignedIn } = useAuth();
   const location = useLocation();
+  const account = useAccount(!!isSignedIn);
 
   if (!isSignedIn) {
     return <Navigate to="/sign-in" replace state={{ from: location.pathname }} />;
   }
+  // A pending deletion replaces the app; everything else is unavailable until it is cancelled.
+  if (account.isPending)
+    return (
+      <div className="auth-loading">
+        <span className="brand-mark">A</span>
+        <p>Loading Askesis…</p>
+      </div>
+    );
+  if (account.data?.deletion)
+    return <AccountDeletionPending purgeAfter={account.data.deletion.purgeAfter} />;
 
   return <Outlet />;
 }
@@ -72,7 +86,8 @@ export const router = createBrowserRouter([
           { index: true, element: <Navigate to="/today" replace /> },
           { path: '/today', element: <TodayPage /> },
           { path: '/plan', element: <ActivePlansPage /> },
-          { path: '/plans/archive', element: <PlansPage archived /> },
+          { path: '/plans/archive', element: <PlansPage collection="archive" /> },
+          { path: '/plans/deleted', element: <PlansPage collection="deleted" /> },
           { path: '/plans', element: <PlansPage /> },
           { path: '/plans/:planId', element: <PlanPage /> },
           { path: '/plans/:planId/draft', element: <PlanDraftPage /> },
@@ -86,6 +101,7 @@ export const router = createBrowserRouter([
           { path: '/chat/:conversationId', element: <ChatPage /> },
           { path: '/settings', element: <SettingsPage /> },
           { path: '/performance', element: <PerformancePage /> },
+          { path: '/connections/strava/callback', element: <StravaCallbackPage /> },
         ],
       },
     ],

@@ -18,6 +18,9 @@ import { registerPerformanceRoutes } from './modules/performance/performance.rou
 import { PlanError } from './modules/plans/plan.service.js';
 import { ChatError } from './modules/chat/chat.core.js';
 import { registerChatRoutes } from './modules/chat/chat.routes.js';
+import { registerActivityRoutes } from './modules/activities/activity.routes.js';
+import { IntegrationError } from './modules/activities/integration.service.js';
+import { registerAccountRoutes } from './modules/account/account.routes.js';
 
 export const app = new OpenAPIHono<AppEnvironment>({
   defaultHook: (result, context) => {
@@ -39,7 +42,11 @@ app.use('*', requestContext);
 
 app.onError((error, context) => {
   const requestId = context.get('requestId');
-  if (error instanceof PlanError || error instanceof ChatError) {
+  if (
+    error instanceof PlanError ||
+    error instanceof ChatError ||
+    error instanceof IntegrationError
+  ) {
     return context.json(
       { error: { code: error.code, message: error.message, requestId } },
       error.status,
@@ -94,7 +101,7 @@ app.get('/api/ready', async (context) => {
     select exists (
       select 1
       from atlas_schema_revisions.atlas_schema_revisions
-      where version = '20261015120000'
+      where version = '20261030120000'
     ) as migrated
   `.execute(getDatabase());
 
@@ -115,6 +122,7 @@ app.get('/api/ready', async (context) => {
 });
 app.use('/api/v1/*', requireAuthentication);
 
+registerAccountRoutes(app);
 registerAgentRoutes(app);
 registerMcpRoutes(app);
 registerLiveRoutes(app);
@@ -124,6 +132,7 @@ registerChatRoutes(app);
 registerBriefRoutes(app);
 registerPerformanceRoutes(app);
 registerTrainingLogRoutes(app);
+registerActivityRoutes(app);
 
 app.doc('/api/openapi.json', {
   openapi: '3.1.0',

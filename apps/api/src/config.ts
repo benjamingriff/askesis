@@ -1,5 +1,8 @@
 import { z } from 'zod';
 
+const optional = <T extends z.ZodType>(schema: T) =>
+  z.preprocess((value) => (value === '' ? undefined : value), schema.optional());
+
 const ApiConfigSchema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
   PORT: z.coerce.number().int().min(1).max(65535).default(3000),
@@ -31,6 +34,21 @@ const ApiConfigSchema = z.object({
   LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent']).default('info'),
   SENTRY_DSN: z.string().url().optional().or(z.literal('')),
   SENTRY_RELEASE: z.string().optional(),
+  // Activity connections. Strava stays unavailable until all three are set.
+  STRAVA_CLIENT_ID: optional(z.string().regex(/^\d{1,20}$/)),
+  STRAVA_CLIENT_SECRET: optional(z.string().min(8).max(200)),
+  /** 32 random bytes, base64: encrypts provider tokens at rest. `openssl rand -base64 32` */
+  INTEGRATION_ENCRYPTION_KEY: optional(
+    z.string().refine((value) => Buffer.from(value, 'base64').length === 32),
+  ),
+  /** Overridable for the local Strava simulator; production requires HTTPS. */
+  STRAVA_OAUTH_BASE_URL: z.string().url().default('https://www.strava.com'),
+  STRAVA_API_BASE_URL: z.string().url().default('https://www.strava.com/api/v3'),
+  /** Enables the Clerk user.deleted webhook; Svix signing secret (whsec_…). */
+  CLERK_WEBHOOK_SIGNING_SECRET: z.preprocess(
+    (value) => (value === '' ? undefined : value),
+    z.string().startsWith('whsec_').optional(),
+  ),
 });
 
 export type ApiConfig = Omit<z.infer<typeof ApiConfigSchema>, 'CLERK_PUBLISHABLE_KEY'> & {
@@ -67,6 +85,14 @@ export function parseApiConfig(environment: NodeJS.ProcessEnv): ApiConfig {
   if (publishableKey === undefined) {
     throw new Error('Invalid API environment configuration: CLERK_PUBLISHABLE_KEY');
   }
+
+  if (
+    result.data.NODE_ENV === 'production' &&
+    [result.data.STRAVA_OAUTH_BASE_URL, result.data.STRAVA_API_BASE_URL].some(
+      (url) => !url.startsWith('https://'),
+    )
+  )
+    throw new Error('Invalid API environment configuration: STRAVA_API_BASE_URL');
 
   if (result.data.CHAT_EXECUTION_MODE === 'agent' && !result.data.AGENT_BOOTSTRAP_TOKEN)
     throw new Error('Invalid API environment configuration: AGENT_BOOTSTRAP_TOKEN');

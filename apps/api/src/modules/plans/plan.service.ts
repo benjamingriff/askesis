@@ -28,25 +28,40 @@ import { validatePlan, VALIDATOR_VERSION } from './plan.validation.js';
 import { briefLockFindings, confirmBriefRows, readBrief } from './brief.service.js';
 import { calibrationBasis, performanceLockFindings } from '../performance/performance.service.js';
 import { PlanError } from './plan.common.js';
+import { DAY_MS, PLAN_RESTORE_DAYS, purgeDate } from '../account/retention.js';
+import { appendDeletion, shipSoon } from '../account/journal.js';
 
 export { PlanError };
 const iso = (value: Date | string | null): string | null =>
   value instanceof Date ? value.toISOString() : value;
 const json = (value: unknown): Json => JSON.parse(JSON.stringify(value)) as Json;
 
-async function ownerPlan(db: Database, athleteId: string, planId: string, lock = false) {
+async function ownerPlan(
+  db: Database,
+  athleteId: string,
+  planId: string,
+  lock = false,
+  includeDeleted = false,
+) {
   let query = db
     .selectFrom('plans')
     .selectAll()
     .where('id', '=', planId)
     .where('owner_id', '=', athleteId);
+  // A deleted plan only exists for restoring it; everything else treats it as gone.
+  if (!includeDeleted) query = query.where('deleted_at', 'is', null);
   if (lock) query = query.forUpdate();
   const plan = await query.executeTakeFirst();
   if (plan === undefined) throw new PlanError('PLAN_NOT_FOUND', 'Plan not found.', 404);
   return plan;
 }
-export async function detail(db: Database, athleteId: string, planId: string): Promise<Plan> {
-  const plan = await ownerPlan(db, athleteId, planId);
+export async function detail(
+  db: Database,
+  athleteId: string,
+  planId: string,
+  includeDeleted = false,
+): Promise<Plan> {
+  const plan = await ownerPlan(db, athleteId, planId, false, includeDeleted);
   const versions = await db
     .selectFrom('plan_versions')
     .selectAll()
@@ -75,6 +90,8 @@ export async function detail(db: Database, athleteId: string, planId: string): P
     stateVersion: plan.state_version,
     active: plan.activated_at !== null,
     archived: plan.archived_at !== null,
+    deletedAt: iso(plan.deleted_at),
+    purgeAfter: plan.deleted_at ? purgeDate(plan.deleted_at, PLAN_RESTORE_DAYS) : null,
     draft: version(plan.current_draft_version_id),
     locked: version(plan.current_locked_version_id),
   });
@@ -102,21 +119,31 @@ export async function getDraft(athleteId: string, planId: string) {
 }
 export async function listPlans(
   athleteId: string,
-  collection: 'library' | 'active' | 'archive' = 'library',
+  collection: 'library' | 'active' | 'archive' | 'deleted' = 'library',
+  now = new Date(),
 ) {
   return getDatabase()
     .transaction()
     .setIsolationLevel('repeatable read')
     .execute(async (db) => {
+      const deleted = collection === 'deleted';
       let query = db
         .selectFrom('plans')
         .select('id')
         .where('owner_id', '=', athleteId)
-        .where('archived_at', collection === 'archive' ? 'is not' : 'is', null)
-        .orderBy('created_at', 'desc');
+        .where('deleted_at', deleted ? 'is not' : 'is', null)
+        .orderBy(deleted ? 'deleted_at' : 'created_at', 'desc');
+      if (deleted)
+        // Plans past their window can no longer be restored; the purge removes them.
+        query = query.where(
+          'deleted_at',
+          '>',
+          new Date(now.getTime() - PLAN_RESTORE_DAYS * DAY_MS),
+        );
+      else query = query.where('archived_at', collection === 'archive' ? 'is not' : 'is', null);
       if (collection === 'active') query = query.where('activated_at', 'is not', null);
       const plans = await query.execute();
-      return Promise.all(plans.map((plan) => detail(db, athleteId, plan.id)));
+      return Promise.all(plans.map((plan) => detail(db, athleteId, plan.id, deleted)));
     });
 }
 export async function renamePlan(
@@ -191,6 +218,119 @@ export async function organizePlanRows(
   return detail(db, athleteId, planId);
 }
 
+/** What deleting the plan removes, for the confirmation. */
+export async function deletionImpact(athleteId: string, planId: string) {
+  return getDatabase()
+    .transaction()
+    .setIsolationLevel('repeatable read')
+    .execute(async (db) => {
+      await ownerPlan(db, athleteId, planId);
+      const count = async (query: Promise<{ count: string | number | bigint }>) =>
+        Number((await query).count);
+      const conversations = db
+        .selectFrom('conversations')
+        .select('id')
+        .where('plan_id', '=', planId);
+      return {
+        versions: await count(
+          db
+            .selectFrom('plan_versions')
+            .select(({ fn }) => fn.countAll().as('count'))
+            .where('plan_id', '=', planId)
+            .where('state', '=', 'locked')
+            .executeTakeFirstOrThrow(),
+        ),
+        conversations: await count(
+          db
+            .selectFrom('conversations')
+            .select(({ fn }) => fn.countAll().as('count'))
+            .where('plan_id', '=', planId)
+            .executeTakeFirstOrThrow(),
+        ),
+        messages: await count(
+          db
+            .selectFrom('conversation_messages')
+            .select(({ fn }) => fn.countAll().as('count'))
+            .where('conversation_id', 'in', conversations)
+            .executeTakeFirstOrThrow(),
+        ),
+        workoutLogs: await count(
+          db
+            .selectFrom('workout_logs')
+            .select(({ fn }) => fn.countAll().as('count'))
+            .where('plan_id', '=', planId)
+            .executeTakeFirstOrThrow(),
+        ),
+        checkIns: await count(
+          db
+            .selectFrom('athlete_check_ins')
+            .select(({ fn }) => fn.countAll().as('count'))
+            .where('plan_id', '=', planId)
+            .executeTakeFirstOrThrow(),
+        ),
+        restoreDays: PLAN_RESTORE_DAYS,
+      };
+    });
+}
+
+/** Hides the plan at once; the retention job purges it after the restore window. */
+export async function deletePlan(
+  athleteId: string,
+  planId: string,
+  expectedStateVersion: number,
+  now = new Date(),
+) {
+  const plan = await getDatabase()
+    .transaction()
+    .execute(async (db) => {
+      await ownerPlan(db, athleteId, planId, true);
+      const plan = await detail(db, athleteId, planId);
+      stateMatches(plan, expectedStateVersion);
+      await assertPlanIdle(db, planId);
+      await db
+        .updateTable('plans')
+        .set({
+          archived_at: sql`coalesce(archived_at, ${now})`,
+          activated_at: null,
+          deleted_at: now,
+          state_version: sql`state_version + 1`,
+          updated_at: now,
+        })
+        .where('id', '=', planId)
+        .execute();
+      await appendDeletion(db, 'plan.deleted', planId, now);
+      return detail(db, athleteId, planId, true);
+    });
+  shipSoon();
+  return plan;
+}
+
+/**
+ * Restores a deleted plan to the archive, from where the athlete can unarchive it. Refused once
+ * the window has closed, even if the purge has not run yet.
+ */
+export async function undeletePlan(athleteId: string, planId: string, now = new Date()) {
+  let restored = false;
+  const plan = await getDatabase()
+    .transaction()
+    .execute(async (db) => {
+      const row = await ownerPlan(db, athleteId, planId, true, true);
+      if (row.deleted_at === null) return detail(db, athleteId, planId);
+      if (now.getTime() >= new Date(row.deleted_at).getTime() + PLAN_RESTORE_DAYS * DAY_MS)
+        throw new PlanError('PLAN_NOT_FOUND', 'Plan not found.', 404);
+      restored = true;
+      await db
+        .updateTable('plans')
+        .set({ deleted_at: null, state_version: sql`state_version + 1`, updated_at: now })
+        .where('id', '=', planId)
+        .execute();
+      await appendDeletion(db, 'plan.restored', planId, now);
+      return detail(db, athleteId, planId);
+    });
+  if (restored) shipSoon();
+  return plan;
+}
+
 function editable(plan: Plan) {
   if (plan.archived)
     throw new PlanError('PLAN_ARCHIVED', 'Unarchive this plan before making changes.');
@@ -247,7 +387,10 @@ async function idempotent(
             'IDEMPOTENCY_CONFLICT',
             'This request key was already used for different input.',
           );
-        return PlanSchema.parse(existing.response_body);
+        // A replay must not reveal a plan deleted since.
+        const cached = PlanSchema.parse(existing.response_body);
+        await ownerPlan(db, athleteId, cached.id);
+        return cached;
       }
       const result = await run(db);
       await db
@@ -259,6 +402,7 @@ async function idempotent(
           request_hash: requestHash,
           response_status: 200,
           response_body: json(result),
+          plan_id: result.id,
         })
         .execute();
       return result;

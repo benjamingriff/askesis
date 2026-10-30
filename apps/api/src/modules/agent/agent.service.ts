@@ -10,7 +10,7 @@ import type { z } from 'zod';
 import { getDatabase } from '../../database/client.js';
 import { getApiConfig } from '../../config.js';
 import type { DB, Json } from '../../database/generated.js';
-import { ChatError, activeStatuses } from '../chat/chat.core.js';
+import { ChatError, activeStatuses, assertAccountOpen } from '../chat/chat.core.js';
 import {
   appendEvent,
   appendMessage,
@@ -138,8 +138,22 @@ export async function claimRun(workerId: string) {
         .limit(20)
         .execute();
       for (const candidate of candidates) {
-        const run = await ownedRun(db, candidate.owner_id, candidate.id, true);
-        if (run.status !== 'queued') continue;
+        const run = await ownedRun(db, candidate.owner_id, candidate.id, true).catch(
+          async (error: unknown) => {
+            // A run whose plan was deleted (only possible on restored data) must not block the
+            // queue: it can never be claimed, so it is cancelled.
+            if (!(error instanceof ChatError && error.status === 404)) throw error;
+            const hidden = await db
+              .selectFrom('agent_runs')
+              .selectAll()
+              .where('id', '=', candidate.id)
+              .forUpdate()
+              .executeTakeFirstOrThrow();
+            if (hidden.status === 'queued') await transition(db, hidden, 'cancelled', 'cancelled');
+            return null;
+          },
+        );
+        if (!run || run.status !== 'queued') continue;
         if (Date.now() >= new Date(run.deadline_at).getTime()) {
           await transition(db, run, 'failed', 'failed', 'EXECUTION_TIMEOUT');
           continue;
@@ -154,6 +168,13 @@ export async function claimRun(workerId: string) {
         }
         if (conversation.archived_at) {
           await transition(db, run, 'failed', 'failed', 'CONVERSATION_ARCHIVED');
+          continue;
+        }
+        // A deletion request cancels queued runs; this covers one accepted just before it.
+        try {
+          await assertAccountOpen(db, run.owner_id, false);
+        } catch {
+          await transition(db, run, 'cancelled', 'cancelled');
           continue;
         }
         const token = randomBytes(32).toString('base64url');
@@ -210,6 +231,11 @@ export async function authorized(db: Tx, id: string, token: string, allowCancell
     !(run.status === 'running' || (allowCancelling && run.status === 'cancelling'))
   )
     throw rejected();
+  // Only stopping remains for a run whose account is being deleted.
+  if (!allowCancelling)
+    await assertAccountOpen(db, run.owner_id, false).catch(() => {
+      throw rejected();
+    });
   return run;
 }
 async function target(db: Tx, run: Run, write = false) {
@@ -838,8 +864,14 @@ export async function sweepAgentRuns() {
     await getDatabase()
       .transaction()
       .execute(async (db) => {
-        const run = await ownedRun(db, candidate.owner_id, candidate.id, true);
-        if (!activeStatuses.some((s) => s === run.status)) return;
+        // Expiry is system work: it locks the run alone, including one whose plan is deleted.
+        const run = await db
+          .selectFrom('agent_runs')
+          .selectAll()
+          .where('id', '=', candidate.id)
+          .forUpdate()
+          .executeTakeFirst();
+        if (!run || !activeStatuses.some((s) => s === run.status)) return;
         if (Date.now() >= new Date(run.deadline_at).getTime())
           await transition(db, run, 'failed', 'failed', 'EXECUTION_TIMEOUT');
         else if (run.lease_expires_at && Date.now() >= new Date(run.lease_expires_at).getTime()) {

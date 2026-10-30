@@ -455,9 +455,12 @@ export function Dialog({
   size = 'md',
   className,
   style,
+  aside,
 }: {
   className?: string | undefined;
   style?: CSSProperties | undefined;
+  /** A reference panel beside the dialog (above it on narrow screens). */
+  aside?: ReactNode | undefined;
   open: boolean;
   onClose: () => void;
   title: ReactNode;
@@ -518,27 +521,34 @@ export function Dialog({
   }, [open, busy]);
 
   if (!open) return null;
+  const main = (
+    <>
+      <header className="dialog-header">
+        <div>
+          <h2 id={titleId}>{title}</h2>
+          {description ? <p>{description}</p> : null}
+        </div>
+        <IconButton icon={X} label="Close" tone="filled" disabled={busy} onClick={onClose} />
+      </header>
+      {children ? <div className="dialog-body">{children}</div> : null}
+      {footer ? <footer className="dialog-footer">{footer}</footer> : null}
+    </>
+  );
   return createPortal(
     <div className="dialog-root">
       <div className="dialog-backdrop" onClick={() => !busy && onClose()} aria-hidden="true" />
       <div
         ref={panel}
-        className={cx('dialog', `dialog-${size}`, className)}
+        className={cx('dialog', `dialog-${size}`, aside ? 'dialog-with-aside' : null, className)}
         style={style}
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
         tabIndex={-1}
       >
-        <header className="dialog-header">
-          <div>
-            <h2 id={titleId}>{title}</h2>
-            {description ? <p>{description}</p> : null}
-          </div>
-          <IconButton icon={X} label="Close" tone="filled" disabled={busy} onClick={onClose} />
-        </header>
-        {children ? <div className="dialog-body">{children}</div> : null}
-        {footer ? <footer className="dialog-footer">{footer}</footer> : null}
+        {/* Always wrapped, so opening or closing the aside never remounts the dialog's content. */}
+        <div className="dialog-main">{main}</div>
+        {aside ? <aside className="dialog-aside">{aside}</aside> : null}
       </div>
     </div>,
     document.body,

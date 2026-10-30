@@ -23,6 +23,8 @@
     "dev:login": "pnpm --filter @askesis/api verification:login",
     "dev:mcp": "node scripts/dev-local.mjs exec -- pnpm --filter @askesis/api mcp:access",
     "example:seed": "node scripts/dev-local.mjs exec -- pnpm --filter @askesis/api example:seed",
+    "strava:simulate": "node scripts/dev-local.mjs exec -- pnpm --filter @askesis/api strava:simulate",
+    "retention:run": "node scripts/dev-local.mjs exec -- pnpm --filter @askesis/api retention:run",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "lint": "eslint . --max-warnings=0",

@@ -103,7 +103,8 @@ export async function ensureExample(owner: string, now = new Date()) {
       }[] = [];
       if (existing.every(Boolean)) {
         for (const [index, edition] of existing.entries()) {
-          const current = await detail(db, owner, edition!.plan_id);
+          // A deleted example keeps its edition until purged; it counts as changed.
+          const current = await detail(db, owner, edition!.plan_id, true);
           results.push({
             kind: EXAMPLE_KINDS[index]!,
             status:
@@ -169,7 +170,7 @@ export async function ensureExample(owner: string, now = new Date()) {
       for (const [index, kind] of EXAMPLE_KINDS.entries()) {
         const edition = existing[index];
         if (edition) {
-          const current = await detail(db, owner, edition.plan_id);
+          const current = await detail(db, owner, edition.plan_id, true);
           results.push({
             kind,
             status:
@@ -239,7 +240,7 @@ export async function ensureExample(owner: string, now = new Date()) {
       }
       for (const edition of editions) {
         if (results.some((r) => r.planId === edition.plan_id)) continue;
-        const old = await detail(db, owner, edition.plan_id);
+        const old = await detail(db, owner, edition.plan_id, true);
         if (
           old.stateVersion !== edition.published_state_version ||
           old.draft ||

@@ -1,4 +1,4 @@
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   Archive,
   ArchiveRestore,
@@ -13,6 +13,7 @@ import {
   Power,
   PowerOff,
   Trash2,
+  Trash,
 } from 'lucide-react';
 import { useState } from 'react';
 import { useNavigate } from 'react-router';
@@ -26,7 +27,8 @@ import { EditDetailsDialog } from './EditDetailsDialog';
 import { LockReviewDialog } from './LockReviewDialog';
 
 type Action = 'unlock' | 'discard' | 'archive' | 'unarchive' | 'activate' | 'deactivate' | 'lock';
-type Confirm = 'unlock' | 'discard' | 'archive' | 'unarchive' | 'review' | 'details' | null;
+type Confirm =
+  'unlock' | 'discard' | 'archive' | 'unarchive' | 'review' | 'details' | 'delete' | null;
 
 /** Opens (or reuses) the plan's coaching conversation. */
 export function useOpenPlanChat(planId: string) {
@@ -313,6 +315,12 @@ export function PlanToolbar({
               danger: true,
               onSelect: () => open('archive'),
             },
+            {
+              label: 'Delete plan…',
+              icon: Trash,
+              danger: true,
+              onSelect: () => open('delete'),
+            },
           ]}
         />
       </div>
@@ -369,6 +377,18 @@ export function PlanToolbar({
         onLock={() => mutation.mutate('lock')}
         onClose={close}
       />
+      {confirm === 'delete' ? (
+        <DeletePlanDialog
+          plan={reviewedPlan ?? plan}
+          onClose={close}
+          onDeleted={() => {
+            setConfirm(null);
+            void client.invalidateQueries({ queryKey: ['plans'] });
+            void client.invalidateQueries({ queryKey: ['chat'] });
+            void navigate('/plans');
+          }}
+        />
+      ) : null}
       {confirm === 'details' ? (
         <EditDetailsDialog
           plan={plan}
@@ -380,6 +400,94 @@ export function PlanToolbar({
         />
       ) : null}
     </>
+  );
+}
+
+const count = (value: number, one: string, many = `${one}s`) =>
+  `${value} ${value === 1 ? one : many}`;
+
+/** Lists what goes with the plan; it can be restored from Recently deleted until purged. */
+function DeletePlanDialog({
+  plan,
+  onClose,
+  onDeleted,
+}: {
+  plan: Plan;
+  onClose: () => void;
+  onDeleted: () => void;
+}) {
+  const params = { path: { planId: plan.id } };
+  const impact = useQuery({
+    queryKey: ['plans', plan.id, 'deletion-impact'],
+    queryFn: async () =>
+      result(await api.GET('/api/v1/plans/{planId}/deletion-impact', { params })),
+  });
+  const remove = useMutation({
+    mutationFn: async () =>
+      result(
+        await api.POST('/api/v1/plans/{planId}/delete', {
+          params,
+          body: { expectedStateVersion: plan.stateVersion },
+        }),
+      ),
+    onSuccess: onDeleted,
+  });
+  const data = impact.data;
+  const removed = data
+    ? [
+        data.versions ? count(data.versions, 'locked version') : null,
+        data.conversations
+          ? `${count(data.conversations, 'coach conversation')} (${count(data.messages, 'message')})`
+          : null,
+        data.workoutLogs ? count(data.workoutLogs, 'logged session') : null,
+        data.checkIns ? count(data.checkIns, 'check-in') : null,
+      ].filter(Boolean)
+    : [];
+  return (
+    <Dialog
+      open
+      size="sm"
+      busy={remove.isPending}
+      onClose={onClose}
+      title={`Delete “${plan.displayName}”?`}
+      footer={
+        <>
+          <Button variant="ghost" disabled={remove.isPending} onClick={onClose}>
+            Cancel
+          </Button>
+          <Button
+            variant="danger"
+            icon={Trash}
+            busy={remove.isPending}
+            disabled={remove.isPending || !data}
+            onClick={() => remove.mutate()}
+          >
+            Delete plan
+          </Button>
+        </>
+      }
+    >
+      {impact.isPending ? <p className="muted">Checking what this plan holds…</p> : null}
+      {data ? (
+        <>
+          <p>
+            {removed.length
+              ? `This deletes the plan with its ${removed.join(', ')}.`
+              : 'This deletes the plan and everything in it.'}{' '}
+            Your fitness results stay with you.
+          </p>
+          <p>
+            You can restore it from Recently deleted for {data.restoreDays} days. After that it is
+            permanently deleted.
+          </p>
+        </>
+      ) : null}
+      {impact.error || remove.error ? (
+        <Notice tone="danger" role="alert">
+          {(remove.error ?? impact.error)!.message}
+        </Notice>
+      ) : null}
+    </Dialog>
   );
 }
 

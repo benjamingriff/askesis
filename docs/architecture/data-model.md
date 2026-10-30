@@ -50,11 +50,19 @@ A workout's sport is `run`, `cycle`, `swim`, `strength` or `mixed`; an effort's 
 
 `workout_prescription_totals` derives explicit distance/duration through nested repeats. `weekly_plan_summary` aggregates prescribed workout estimates. These views do not estimate completion from zone pace or calculate actual training load.
 
+## Activity links
+
+`integration_connections` holds one encrypted Strava grant per athlete; a Strava account connects to only one athlete. `workout_activity_links` records the athlete's manual choice of activity for a workout, keyed by plan and workout lineage like `workout_logs`. It stores only the provider activity id. Activity details are read live from Strava for display and never stored, and the coaching worker cannot read links. Disconnecting deletes the connection and its links by cascade ([ADR 0008](../adr/0008-manual-strava-links.md)).
+
 ## Conversations, execution and delivery
 
 A conversation belongs to one athlete and may be associated with one logical plan. Messages and runs retain context/version/edit attribution independently of later draft deletion. Runs own credentials, leases, model settings, usage, safe events, receipts, output and timing records. No per-user spending enforcement or monetary cost calculation is implemented.
 
 Live journal rows notify an owner which resources changed, including `performance.changed` for calibration entries. They carry identifiers rather than authoritative plan content or model text. Clients refetch owner-authorized HTTP projections; durable output survives journal pruning.
+
+## Deletion
+
+A deleted plan is archived with `plans.deleted_at` set (`deleted_at` requires `archived_at`). Every read path hides it with its conversations, runs, training log and check-ins, and idempotent replays re-check visibility through `api_idempotency_keys.plan_id`. `athletes.deletion_requested_at`/`purge_after` mark an account in its grace period; only account routes answer, and new runs are refused. The retention sweeper purges both once their windows close. The purge is the one path past the append-only guards, enabled by a transaction-local `askesis.purge` setting. It redacts other conversations' tool results that named the plan and rolls run usage into `agent_usage_rollups`. Every transition is appended to `deletion_journal` in the transaction that makes it and shipped to the logs, so a restored backup can replay later deletions. See [data deletion](../operations/data-deletion.md).
 
 ## Removed early concepts
 
