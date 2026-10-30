@@ -16,6 +16,7 @@ vi.mock('../../auth/middleware.js', () => ({
       displayName: 'Route test',
       clerkUserId: 'user_test',
       timezone: 'UTC',
+      deletionPending: false,
     });
     await next();
   }) satisfies MiddlewareHandler<AppEnvironment>,

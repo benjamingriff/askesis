@@ -5,6 +5,7 @@ The owner is continuing development of the responsive web app and will choose fu
 ## Behavior contracts
 
 - [Plan lifecycle](./phase-2-plan-lifecycle-refinement.md): drafts, immutable revisions, activation, archive and human review.
+- [Deletion and retention](./data-deletion-and-retention.md): plan and account deletion, restore windows, the purge and the retention policy.
 - [Plan brief and athlete training zones](./phase-3-plan-brief-and-calibration-refinement.md): plan-specific context and per-sport baselines, confirmation and athlete-owned, effective-dated zones for running, cycling and swimming shared by every plan.
 - [Conversations and runs](./phase-4-design.md): ownership, durable messages, cancellation, archive and concurrency.
 - [Coaching and domain tools](./phase-5-design.md): conversational generation, worker permissions and partial planning horizons.

@@ -146,7 +146,8 @@ export async function listWorkouts(
       'plans.display_name as plan_title',
       'training_weeks.week_number',
     ])
-    .where('plans.owner_id', '=', athleteId);
+    .where('plans.owner_id', '=', athleteId)
+    .where('plans.deleted_at', 'is', null);
 
   const rows = await query
     .where('workouts.plan_version_id', '=', planVersionId)
@@ -192,6 +193,7 @@ export async function listBlocks(
       'training_blocks.end_date',
     ])
     .where('plans.owner_id', '=', athleteId)
+    .where('plans.deleted_at', 'is', null)
     .where('training_blocks.plan_version_id', '=', planVersionId)
     .orderBy('training_blocks.start_date', 'asc')
     .orderBy('training_blocks.position', 'asc')
@@ -258,6 +260,7 @@ export async function getWorkoutDetail(
     ])
     .where('workouts.id', '=', workoutId)
     .where('plans.owner_id', '=', athleteId)
+    .where('plans.deleted_at', 'is', null)
     .executeTakeFirst();
 
   if (workoutRow === undefined) return null;

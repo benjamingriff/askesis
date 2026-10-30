@@ -414,6 +414,7 @@ it('replays a PUT without recreating cleared data, validates answers, and archiv
       key,
       { planId, lineageId: workout.lineageId, input },
       LogSchema,
+      planId,
       (tx) => saveLogRows(tx, owner, planId, workout.lineageId, input, { now }),
     );
   const first = await put();

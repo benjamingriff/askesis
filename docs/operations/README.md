@@ -14,6 +14,7 @@
 
 - [Live runtime](./phase-6-runtime.md): streamed output, replay, query invalidation, measurements and rollout order.
 - [Backup and restore](./database-backup-and-restore.md): manual fallback, restore verification and hosted-backup requirements.
+- [Data deletion and retention](./data-deletion.md): plan and account deletion, the retention sweeper, the Clerk webhook and replay after a restore.
 - [Observability](./observability.md): logs, request correlation, Sentry and redaction.
 - [Example queries](./example-queries.md): inspecting plans, prescriptions, totals and athlete calibrations.
 

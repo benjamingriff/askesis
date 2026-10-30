@@ -68,7 +68,12 @@ function checkInView(row: Selectable<DB['athlete_check_ins']>) {
   });
 }
 async function ownedPlan(db: Database, owner: string, planId: string, write = false) {
-  let q = db.selectFrom('plans').selectAll().where('id', '=', planId).where('owner_id', '=', owner);
+  let q = db
+    .selectFrom('plans')
+    .selectAll()
+    .where('id', '=', planId)
+    .where('owner_id', '=', owner)
+    .where('deleted_at', 'is', null);
   if (write) q = q.forUpdate();
   const plan = await q.executeTakeFirst();
   if (!plan) throw new PlanError('PLAN_NOT_FOUND', 'Plan not found.', 404);
@@ -102,11 +107,22 @@ export async function readTrainingLog(
   const from = options.from ?? '1900-01-01',
     to = options.to ?? '9999-12-31';
   if (to < from) throw new PlanError('LOG_RANGE_INVALID', 'End date precedes start date.', 422);
-  let lq = db.selectFrom('workout_logs').selectAll().where('athlete_id', '=', owner);
+  // A deleted plan takes its log and check-ins with it.
+  const visible = db
+    .selectFrom('plans')
+    .select('id')
+    .where('owner_id', '=', owner)
+    .where('deleted_at', 'is', null);
+  let lq = db
+    .selectFrom('workout_logs')
+    .selectAll()
+    .where('athlete_id', '=', owner)
+    .where('plan_id', 'in', visible);
   let cq = db
     .selectFrom('athlete_check_ins')
     .selectAll()
     .where('athlete_id', '=', owner)
+    .where('plan_id', 'in', visible)
     .where('starts_on', '<=', sql<Date>`${to}::date`)
     .where((eb) =>
       eb.or([eb('ends_on', 'is', null), eb('ends_on', '>=', sql<Date>`${from}::date`)]),
@@ -114,7 +130,8 @@ export async function readTrainingLog(
   let pq = db
     .selectFrom('plans')
     .select(['id', 'current_locked_version_id'])
-    .where('owner_id', '=', owner);
+    .where('owner_id', '=', owner)
+    .where('deleted_at', 'is', null);
   if (options.planId) {
     lq = lq.where('plan_id', '=', options.planId);
     cq = cq.where('plan_id', '=', options.planId);
@@ -337,6 +354,7 @@ export async function logCommand<T>(
   key: string | undefined,
   input: unknown,
   schema: z.ZodType<T>,
+  planId: string,
   run: (db: Transaction<DB>) => Promise<T>,
 ) {
   return getDatabase()
@@ -360,6 +378,8 @@ export async function logCommand<T>(
               'IDEMPOTENCY_CONFLICT',
               'Request key was used for different input.',
             );
+          // A replay must not reveal a plan deleted since.
+          await ownedPlan(db, owner, planId);
           return schema.parse(cached.response_body);
         }
       }
@@ -374,6 +394,7 @@ export async function logCommand<T>(
             request_hash: hash,
             response_status: 200,
             response_body: json(response),
+            plan_id: planId,
           })
           .execute();
       return response;
