@@ -12,7 +12,7 @@ Failure records distinguish HTTP errors, network errors, timeouts, malformed res
 
 Pino redaction covers specific configured credential/header/token paths. It is not arbitrary recursive detection of every possible secret. Do not add authorization headers, environment objects, full prompts, plan context or raw provider errors to logs.
 
-For an incident, locate the request ID in API logs, then follow run ID through worker/API records. Durable run usage and [live timing measurements](./phase-6-runtime.md#measurements) support investigation without private content. Monetary cost calculation and per-user spend controls are absent.
+For an incident, locate the request ID in API logs, then follow run ID through worker/API records. Durable run usage and [live timing measurements](./phase-6-runtime.md#measurements) support investigation without private content. `agent_runs.usage` preserves bounded per-request cache-read/write, input, output and reasoning counts, effective settings, returned model/tier and final/partial/unknown provenance. Usage contains allowlisted counts and identifiers, never hidden reasoning text or raw provider responses. Failed and cancelled finishes retain available usage; NULL means no report was received. See the [late-report bounds and rollout order](./phase-6-runtime.md#rollout-order). Benchmark reports compute versioned list-price estimates with explicit missing coverage; production cost columns and per-user spend controls remain unused.
 
 ## Liveness and readiness
 

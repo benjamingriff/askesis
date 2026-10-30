@@ -149,7 +149,20 @@ BEGIN
         END IF;
         RETURN NEW;
     END IF;
-    IF OLD.status IN ('completed', 'failed', 'cancelled') THEN RAISE EXCEPTION 'Terminal run is immutable'; END IF;
+    IF OLD.status IN ('completed', 'failed', 'cancelled') THEN
+        -- A fenced worker may attach its first usage report after the sweeper wins.
+        -- Compare every other column, including future columns, to keep history immutable.
+        IF OLD.usage IS NULL AND NEW.usage IS NOT NULL
+           AND jsonb_typeof(NEW.usage) = 'object'
+           AND (to_jsonb(NEW) - ARRAY['usage', 'input_tokens', 'output_tokens'])
+               IS NOT DISTINCT FROM
+               (to_jsonb(OLD) - ARRAY['usage', 'input_tokens', 'output_tokens'])
+           AND (OLD.input_tokens IS NULL OR NEW.input_tokens IS NOT DISTINCT FROM OLD.input_tokens)
+           AND (OLD.output_tokens IS NULL OR NEW.output_tokens IS NOT DISTINCT FROM OLD.output_tokens) THEN
+            RETURN NEW;
+        END IF;
+        RAISE EXCEPTION 'Terminal run is immutable';
+    END IF;
     IF ROW(NEW.id, NEW.owner_id, NEW.conversation_id, NEW.plan_id, NEW.user_message_id, NEW.context, NEW.created_at, NEW.deadline_at)
        IS DISTINCT FROM ROW(OLD.id, OLD.owner_id, OLD.conversation_id, OLD.plan_id, OLD.user_message_id, OLD.context, OLD.created_at, OLD.deadline_at) THEN
         RAISE EXCEPTION 'Run attribution is immutable';

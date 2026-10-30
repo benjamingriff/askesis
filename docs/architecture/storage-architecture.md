@@ -44,7 +44,7 @@ Canonical distance is metres and canonical absolute running pace is seconds per 
 
 ## Migrations and development data
 
-The latest required migration is `20261007120000_athlete_performance.sql`. Apply the full ordered history, not only this file. That migration and the older plan-version cutover and brief migrations truncated pre-alpha plan data as one-off historical transformations; they are not a current permission to reset user data. Athlete calibration rows are append-only and reject deletion, except by the account purge (`20261019120000_data_deletion.sql`), which is the only code allowed past the history guards ([data deletion](../operations/data-deletion.md)).
+Apply the full ordered migration history through `20261030120000_data_deletion.sql`, which the API readiness check requires. The older athlete-performance, plan-version cutover and brief migrations truncated pre-alpha plan data as one-off historical transformations; they are not a current permission to reset user data. Athlete calibration rows are append-only and reject deletion, except by the account purge (`20261030120000_data_deletion.sql`), which is the only code allowed past the history guards ([data deletion](../operations/data-deletion.md)).
 
 The development seed is guarded by `seed_runs`. It creates a synthetic-owner draft. The separate development fixture publisher confirms, locks and activates it through domain services. Neither belongs in Railway. The publisher rejects production/Railway execution.
 

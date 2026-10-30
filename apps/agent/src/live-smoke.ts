@@ -1,6 +1,7 @@
 import { AgentApi, type Claim, type ExecutionContext } from './api.js';
-import { parseAgentConfig } from './config.js';
+import { modelProfile, parseAgentConfig } from './config.js';
 import { createRuntime } from './runtime/index.js';
+import { coachRequestDefaults, UsageLedger } from './usage.js';
 // Bounded provider check: proves the configured provider and model complete a streamed tool
 // round trip through the production runtime. It uses no API, database or private plan data.
 const environment = {
@@ -59,6 +60,18 @@ const claim: Claim = {
   versionId: null,
   editNumber: null,
 };
+const ledger = new UsageLedger(coachRequestDefaults(modelProfile(config)));
+// Counts, tiers and identifiers only; never text, headers or keys.
+const requests = () =>
+  ledger.toJSON().requests.map((request) => ({
+    sequence: request.sequence,
+    status: request.status,
+    returnedModel: request.returnedModel,
+    returnedServiceTier: request.returnedServiceTier,
+    usageSource: request.usageSource,
+    usageCompleteness: request.usageCompleteness,
+    tokens: request.tokens,
+  }));
 try {
   const signal = AbortSignal.timeout(120000);
   const result = await createRuntime(config).execute(
@@ -67,6 +80,7 @@ try {
     new LocalApi('http://127.0.0.1'),
     signal,
     signal,
+    ledger,
   );
   if (!visibleCharacters) throw new Error('No streamed visible text.');
   if (calls !== 1 || !result.content.includes('3'))
@@ -78,8 +92,8 @@ try {
       model: config.AGENT_MODEL,
       toolCalls: calls,
       streamedVisibleCharacters: visibleCharacters,
-      inputTokens: result.inputTokens,
-      outputTokens: result.outputTokens,
+      ...ledger.legacyTotals(),
+      requests: requests(),
     }),
   );
 } catch (error) {
@@ -90,6 +104,7 @@ try {
       code: 'PROVIDER_CHECK_FAILED',
       provider: config.AGENT_PROVIDER,
       ...(typeof status === 'number' ? { status } : {}),
+      requests: requests(),
     }),
   );
   process.exitCode = 1;

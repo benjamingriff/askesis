@@ -130,12 +130,36 @@ No output/tool sample is invented when a category was not observed. Provider
 failure can lack final token usage. Worker loss retains accepted output but can
 lack a final timing summary.
 
-Model, provider, reasoning, prompt version and completed token usage already live
-on `agent_runs`. Correlate them with `agent_run_measurements` using run ID. Existing
+Model, provider, reasoning and prompt version live on `agent_runs`. Its nullable
+`usage` JSONB records bounded per-request input, cache-read/write, output and
+reasoning counts, returned model/tier and effective settings. Missing fields stay
+unknown; partial stream observations are labelled partial. Legacy input/output
+columns retain the available totals. Correlate these with `agent_run_measurements`
+using run ID. Existing
 worker logs contain run ID and bounded status/failure codes; do not log text,
 prompts, provider exceptions or tool payloads to collect timing evidence.
 
 ## Rollout order
+
+For detailed usage reporting, apply `20261020140000_agent_run_usage.sql`, deploy
+the API, then deploy the worker. The finish schema is strict: a new worker cannot
+finish against an old API. Old workers remain compatible and leave `usage` NULL.
+Keep the column when rolling back the worker; historical rows are not backfilled.
+
+Every worker finish carries a stable usage snapshot, including failures and
+cancellation. Finish transport retains its existing maximum of three attempts on
+network errors, timeouts and HTTP 5xx; a returned 409 is not retried. A matching
+execution credential can attach the first usage report within five minutes after
+the run deadline even after lease expiry or a sweeper transition. That late path
+commits only usage and missing legacy counts, then returns the same `LEASE_LOST` 409. It grants no execution authority and changes no terminal outcome, messages,
+outputs, events or lease fields. The database guard permits only that first usage
+attachment on terminal rows and preserves all other history protections.
+
+A crashed worker, exhausted delivery retries, an invalid report, an old worker,
+or a report outside the grace window can leave usage unknown. Requests hidden
+inside provider SDK transport retries cannot be individually reconstructed.
+
+The original streamed-output rollout was:
 
 1. Apply the additive `20261005120000_live_coaching.sql` migration.
 2. Deploy the API, checking `/api/ready` against that migration.

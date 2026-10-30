@@ -245,6 +245,7 @@ erDiagram
         text status
         uuid execution_version_id "scalar provenance"
         integer execution_edit_number
+        jsonb usage "nullable per-request counts and provenance"
     }
     agent_tool_receipts {
         uuid run_id PK, FK
@@ -264,6 +265,12 @@ Each run is caused by one user message; an assistant message is attributed to it
 `agent_runs.execution_plan_id`, `execution_version_id` and receipt `target_version_id` are scalar provenance rather than foreign keys to draft rows. That permits unpublished draft deletion while retaining conversation and tool history. Runtime checks enforce the current owner, plan, version, edit and lease. A worker can serve many runs over time, but each worker process has one active slot; active-run indexes also exclude concurrent runs for the same conversation/execution plan.
 
 Tool receipts key `(run_id, operation_id)` and store the committed result. Change summaries refer to that exact receipt. Output items key `(run_id, item_id)`; progress deliveries key `(run_id, sequence)`; events key `(run_id, sequence)`. Finishes and measurements each key `run_id`. These are execution records, outside immutable plan content.
+
+`agent_runs.usage` stores the worker's bounded per-request usage ledger. NULL
+means not reported; unknown token fields are not zero-filled. Terminal rows allow
+only the first usage attachment and NULL-to-known legacy token fills, with every
+other column immutable. The API also checks the execution credential and bounds
+late reporting to five minutes after the deadline.
 
 ## Supporting tables and links
 
