@@ -17,7 +17,7 @@ import {
  */
 const envPath = fileURLToPath(new URL('../../../../.env', import.meta.url));
 
-export function upsertEnvironment(text: string, values: Record<string, string>) {
+function upsertEnvironment(text: string, values: Record<string, string>) {
   const lines = text.split('\n').filter((line, index, all) => line || index < all.length - 1);
   for (const [key, value] of Object.entries(values)) {
     const line = `${key}=${JSON.stringify(value)}`;

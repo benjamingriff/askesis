@@ -91,5 +91,5 @@ Recorded 2026-10-25 from two headless Claude Code runs (`claude -p`, default mod
 
 1. Phase 1 should merge the spike's executor (`mcp.service.ts`) with the coach's, rather than keep two copies of the brief and schedule logic.
 2. Phase 2 needs a compact `read_schedule` and schedule errors that name the offending workout or step.
-3. Rewrite the guidance and tool descriptions around unfinished horizons, placeholders and range replacement. Evaluate them with the benchmark's simulated athletes driving the MCP tools, which avoids paying for headless client runs.
+3. Rewrite the guidance and tool descriptions around unfinished horizons, placeholders and range replacement. A first pass is in: the MCP guide now carries the coach's full placeholder contract (club commitments are always placeholders, never stubs for unwritten weeks) and both the guide and the `replace_schedule_range` description say what a range replacement deletes. It has not been re-run against Claude. Evaluate it with the benchmark's simulated athletes driving the MCP tools, which avoids paying for headless client runs.
 4. External logs and calibrations currently appear as the athlete's own entries; give them their own provenance.

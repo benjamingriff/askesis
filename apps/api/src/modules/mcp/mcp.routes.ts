@@ -24,7 +24,7 @@ const text = (value: string, isError = false): CallToolResult => ({
 });
 
 /** One server per request, bound to the authenticated athlete; nothing is kept between requests. */
-export function mcpServer(owner: string) {
+function mcpServer(owner: string) {
   const server = new McpServer(
     { name: 'askesis', title: 'Askesis', version: '0.1.0' },
     { instructions: MCP_INSTRUCTIONS },
