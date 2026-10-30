@@ -3,7 +3,7 @@ import type { z } from 'zod';
 import { getDatabase } from '../../database/client.js';
 import type { DB } from '../../database/generated.js';
 import { localDate } from '../athletes/timezone.js';
-import { ChatError } from '../chat/chat.core.js';
+import { assertAccountOpen, ChatError } from '../chat/chat.core.js';
 import { performanceTool, readSchedule } from '../agent/agent.service.js';
 import { writeSchedule } from '../agent/agent.schedule.js';
 import { readBrief, recordDraftChange, saveBriefRows } from '../plans/brief.service.js';
@@ -85,6 +85,7 @@ async function run(db: Tx, owner: string, name: McpToolName, raw: unknown): Prom
         .select('id')
         .where('owner_id', '=', owner)
         .where('archived_at', 'is', null)
+        .where('deleted_at', 'is', null)
         .orderBy('created_at', 'desc')
         .execute();
       return {
@@ -199,6 +200,8 @@ export async function callMcpTool(owner: string, name: McpToolName, input: unkno
   return getDatabase()
     .transaction()
     .execute(async (db) => {
+      // Share-locks the athlete like a coaching run, so a deletion request cannot slip past a write.
+      await assertAccountOpen(db, owner);
       const text = JSON.stringify(await run(db, owner, name, McpToolSchemas[name].parse(input)));
       // Refuse before commit: a refused write rolls back instead of saving behind an error.
       if (text.length > MAX_RESULT_CHARACTERS)

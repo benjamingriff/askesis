@@ -60,7 +60,10 @@ export const MCP_TOOL_DESCRIPTIONS: Record<McpToolName, string> = {
     'Create one new plan draft for the athlete after they clearly ask for a new plan. Returns its planId, draftId and editNumber. Never locks.',
   update_plan_brief: TOOL_DESCRIPTIONS.update_plan_brief + editing,
   apply_schedule_changes: withoutGeneration(TOOL_DESCRIPTIONS.apply_schedule_changes) + editing,
-  replace_schedule_range: withoutGeneration(TOOL_DESCRIPTIONS.replace_schedule_range) + editing,
+  replace_schedule_range:
+    withoutGeneration(TOOL_DESCRIPTIONS.replace_schedule_range) +
+    ' Every workout dated in the range is deleted and the workouts sent are saved as new ones, so send no workout ids and empty deletion lists; to edit individual workouts, use apply_schedule_changes.' +
+    editing,
   validate_plan: TOOL_DESCRIPTIONS.validate_plan,
   read_training_log: TOOL_DESCRIPTIONS.read_training_log,
   record_workout_log: TOOL_DESCRIPTIONS.record_workout_log,

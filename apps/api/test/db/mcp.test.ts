@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { afterAll, expect, it } from 'vitest';
 import { closeDatabase, getDatabase } from '../../src/database/client.js';
+import { requestAccountDeletion } from '../../src/modules/account/account.service.js';
 import { emptyBrief } from '../../src/modules/plans/brief.schemas.js';
 import { getBrief } from '../../src/modules/plans/brief.service.js';
 import { getPlan, lockPlan, previewLock } from '../../src/modules/plans/plan.service.js';
@@ -215,4 +216,15 @@ it('keeps other athletes’ plans out of reach', async () => {
   await expect(
     callMcpTool(owner, 'read_plan_context', { planId: randomUUID() }),
   ).rejects.toMatchObject({ code: 'PLAN_NOT_FOUND' });
+});
+it('refuses every tool while the account is scheduled for deletion', async () => {
+  const pending = randomUUID();
+  await db
+    .insertInto('athletes')
+    .values({ id: pending, display_name: 'MCP deletion', timezone: 'UTC' })
+    .execute();
+  await requestAccountDeletion(pending);
+  await expect(callMcpTool(pending, 'list_plans', {})).rejects.toMatchObject({
+    code: 'ACCOUNT_DELETION_PENDING',
+  });
 });
