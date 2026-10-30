@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { useState, type CSSProperties, type ReactNode } from 'react';
 import { initialsFor } from '../components/AppShell';
+import { StravaConnection } from '../components/Strava';
 import { ACCOUNT_GRACE_DAYS, useAccountDeletion, useDataExport } from '../account';
 import { Button, ButtonLink, Card, Dialog, Notice, Segmented, cx } from '../components/ui';
 import { formatPace, formatPower, formatSwimPace } from '../lib/format';
@@ -268,6 +269,15 @@ export function SettingsPage() {
               Performance
             </ButtonLink>
           </Row>
+        </Card>
+      </section>
+
+      <section className="settings-group" aria-labelledby="connections-heading" id="connections">
+        <h2 id="connections-heading" className="label">
+          Connections
+        </h2>
+        <Card>
+          <StravaConnection />
         </Card>
       </section>
 

@@ -47,6 +47,11 @@ import {
 import { CheckInSchema } from '../../src/modules/training-log/training-log.schemas.js';
 import { listWorkouts } from '../../src/modules/workouts/workout.repository.js';
 import {
+  linkActivity,
+  readActivityLinks,
+  unlinkActivity,
+} from '../../src/modules/activities/activity-link.service.js';
+import {
   cancelAccountDeletion,
   exportAccount,
   getAccount,
@@ -230,6 +235,36 @@ async function populatedPlan(owner: string) {
   return { planId: plan.id, versionId: plan.draft!.id, checkIn, checkInKey, ...run };
 }
 
+/** Synthetic stored link: no provider network or usable credentials needed for retention tests. */
+async function activityLink(owner: string, planId: string) {
+  const connection = await db
+    .insertInto('integration_connections')
+    .values({
+      athlete_id: owner,
+      provider: 'strava',
+      provider_athlete_id: randomUUID(),
+      display_name: 'Test runner',
+      scopes: ['activity:read_all'],
+      access_token_ciphertext: 'encrypted-access-fixture',
+      refresh_token_ciphertext: 'encrypted-refresh-fixture',
+      access_token_expires_at: later(1),
+    })
+    .returning('id')
+    .executeTakeFirstOrThrow();
+  const lineage = randomUUID();
+  await db
+    .insertInto('workout_activity_links')
+    .values({
+      athlete_id: owner,
+      plan_id: planId,
+      workout_lineage_id: lineage,
+      connection_id: connection.id,
+      provider_activity_id: '123456',
+    })
+    .execute();
+  return { connectionId: connection.id, lineage };
+}
+
 async function calibrationCount(owner: string) {
   const row = await db
     .selectFrom('athlete_calibrations')
@@ -316,6 +351,7 @@ describe('plan deletion', () => {
     const doomed = await populatedPlan(owner);
     // Created second, so its coach's training-log read includes the doomed plan's log.
     const kept = await populatedPlan(owner);
+    const linked = await activityLink(owner, doomed.planId);
     const plan = await getPlan(owner, doomed.planId);
     const createKey = randomUUID();
     const replayed = await createPlan(owner, 'Replay check', createKey);
@@ -355,6 +391,11 @@ describe('plan deletion', () => {
 
     // Every read path treats the plan, its conversation, runs and log as gone.
     const gone = { status: 404 };
+    await expect(readActivityLinks(owner, doomed.planId)).rejects.toMatchObject(gone);
+    await expect(
+      linkActivity(owner, doomed.planId, linked.lineage, '123456'),
+    ).rejects.toMatchObject(gone);
+    await expect(unlinkActivity(owner, doomed.planId, linked.lineage)).rejects.toMatchObject(gone);
     await expect(getPlan(owner, doomed.planId)).rejects.toMatchObject(gone);
     await expect(getBrief(owner, doomed.planId)).rejects.toMatchObject(gone);
     await expect(getConversation(owner, doomed.conversationId)).rejects.toMatchObject(gone);
@@ -396,6 +437,9 @@ describe('plan deletion', () => {
     // Restoring returns the plan to the archive with its history and replays intact.
     const restored = await undeletePlan(owner, doomed.planId);
     expect(restored).toMatchObject({ archived: true, deletedAt: null });
+    expect((await readActivityLinks(owner, doomed.planId)).links).toEqual([
+      expect.objectContaining({ lineageId: linked.lineage, activityId: '123456' }),
+    ]);
     expect((await listPlans(owner, 'archive')).map((p) => p.id)).toContain(doomed.planId);
     expect((await getConversation(owner, doomed.conversationId)).id).toBe(doomed.conversationId);
     await undeletePlan(owner, replayed.id);
@@ -555,9 +599,11 @@ describe('account deletion', () => {
   it('waits out the grace period, deletes sign-in first, then removes every row', async () => {
     const other = await athlete();
     const otherPlan = await populatedPlan(other.id);
+    await activityLink(other.id, otherPlan.planId);
     const before = await tableCounts();
     const { id: owner, subject } = await athlete();
     const { planId } = await populatedPlan(owner);
+    await activityLink(owner, planId);
     await coachedRun(owner, null);
     await deletePlan(owner, planId, (await getPlan(owner, planId)).stateVersion);
     await populatedPlan(owner);
@@ -609,6 +655,14 @@ describe('account deletion', () => {
     expect(exported.conversations).toHaveLength(3);
     expect(exported.trainingLog).toHaveLength(2);
     expect(exported.calibrations).toHaveLength(await calibrationCount(owner));
+    expect(exported.activityLinks).toEqual([
+      expect.objectContaining({ plan_id: planId, provider_activity_id: '123456' }),
+    ]);
+    expect(exported.activityConnections).toHaveLength(1);
+    expect(exported.activityConnections[0]).not.toHaveProperty('access_token_ciphertext');
+    expect(exported.activityConnections[0]).not.toHaveProperty('refresh_token_ciphertext');
+    expect(JSON.stringify(exported)).not.toContain('encrypted-access-fixture');
+    expect(JSON.stringify(exported)).not.toContain('encrypted-refresh-fixture');
     expect(JSON.stringify(exported)).toContain('Calf tight at the end.');
 
     const requested = await requestAccountDeletion(owner);

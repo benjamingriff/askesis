@@ -540,6 +540,33 @@ export async function exportAccount(athleteId: string) {
         trainingLog: logs.map(({ athlete_id: _owner, recorded_by_run_id: _run, ...log }) => log),
         checkIns: checkIns.map(({ athlete_id: _owner, ...checkIn }) => checkIn),
         calibrations: await readEntries(db, athleteId),
+        // Export connection metadata and the athlete's chosen links, never usable credentials.
+        activityConnections: await db
+          .selectFrom('integration_connections')
+          .select([
+            'id',
+            'provider',
+            'provider_athlete_id',
+            'display_name',
+            'scopes',
+            'status',
+            'connected_at',
+          ])
+          .where('athlete_id', '=', athleteId)
+          .orderBy('connected_at')
+          .execute(),
+        activityLinks: await db
+          .selectFrom('workout_activity_links')
+          .select([
+            'plan_id',
+            'workout_lineage_id',
+            'connection_id',
+            'provider_activity_id',
+            'linked_at',
+          ])
+          .where('athlete_id', '=', athleteId)
+          .orderBy('linked_at')
+          .execute(),
       };
     });
 }

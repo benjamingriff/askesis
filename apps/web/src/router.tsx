@@ -22,6 +22,7 @@ import { PlanDraftPage } from './routes/plan-draft';
 import { PlanBriefPage } from './routes/plan-brief';
 import { TodayPage } from './routes/today';
 import { PerformancePage } from './routes/performance';
+import { StravaCallbackPage } from './routes/strava-callback';
 
 function RequireAuthentication() {
   const { isSignedIn } = useAuth();
@@ -100,6 +101,7 @@ export const router = createBrowserRouter([
           { path: '/chat/:conversationId', element: <ChatPage /> },
           { path: '/settings', element: <SettingsPage /> },
           { path: '/performance', element: <PerformancePage /> },
+          { path: '/connections/strava/callback', element: <StravaCallbackPage /> },
         ],
       },
     ],

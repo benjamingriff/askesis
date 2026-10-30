@@ -16,6 +16,7 @@
 - [Backup and restore](./database-backup-and-restore.md): manual fallback, restore verification and hosted-backup requirements.
 - [Data deletion and retention](./data-deletion.md): plan and account deletion, the retention sweeper, the Clerk webhook and replay after a restore.
 - [Observability](./observability.md): logs, request correlation, Sentry and redaction.
+- [Strava activity links](./activity-connections.md): connecting your own Strava account or the local simulator, and the link/detail behaviour.
 - [Example queries](./example-queries.md): inspecting plans, prescriptions, totals and athlete calibrations.
 
 Runtime guides retain their phase names because they describe the deployed mechanisms introduced in those phases. Their historical acceptance notes do not establish current release readiness. Consult the [current handoff](../current-handoff.md) and [Phase 8 checklist](../product/v1-poc-development-plan.md#phase-8-friends-and-family-release) before invitations; consult the [archive](../archive/README.md) for past validation evidence.

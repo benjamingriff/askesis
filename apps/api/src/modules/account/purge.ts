@@ -20,6 +20,8 @@ export const TABLE_RETENTION = {
   plan_versions: 'plan',
   ...Object.fromEntries(contentTables.map((table) => [table, 'plan' as const])),
   workout_logs: 'plan',
+  workout_activity_links: 'plan',
+  integration_connections: 'account',
   athlete_check_ins: 'plan',
   example_plan_editions: 'plan',
   conversations: 'conversation',
@@ -140,6 +142,7 @@ async function purgePlanContent(db: Tx, owner: string, planId: string, account =
     await db.selectFrom('athletes').select('id').where('id', '=', owner).forNoKeyUpdate().execute();
   }
   const runIds = await purgeConversations(db, conversationIds);
+  await db.deleteFrom('workout_activity_links').where('plan_id', '=', planId).execute();
   await db.deleteFrom('workout_logs').where('plan_id', '=', planId).execute();
   await db.deleteFrom('athlete_check_ins').where('plan_id', '=', planId).execute();
   await db.deleteFrom('example_plan_editions').where('plan_id', '=', planId).execute();
@@ -254,6 +257,8 @@ export async function purgeAccountRows(db: Tx, athleteId: string, force = false)
     await db.deleteFrom('example_plan_editions').where('owner_id', '=', athleteId).execute();
     await db.deleteFrom('live_events').where('owner_id', '=', athleteId).execute();
     await db.deleteFrom('live_event_heads').where('owner_id', '=', athleteId).execute();
+    // Deleting credentials also cascades any remaining activity links.
+    await db.deleteFrom('integration_connections').where('athlete_id', '=', athleteId).execute();
     await db.deleteFrom('athlete_identities').where('athlete_id', '=', athleteId).execute();
     await db.deleteFrom('athletes').where('id', '=', athleteId).execute();
   });
