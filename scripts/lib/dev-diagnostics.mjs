@@ -18,6 +18,7 @@ const matrix = [
   ['agent', 'pnpm dev:agent', 'Worker; running API/provider required; apps/agent/.env'],
   ['marketing', 'pnpm dev:marketing', 'Astro; no Docker or auth'],
   ['evals', 'pnpm dev:evals', 'Artifact viewer; no Docker or auth'],
+  ['usage', 'pnpm dev:usage', 'Usage dashboard prototype; synthetic data, no Docker or auth'],
   ['mobile', 'pnpm dev:mobile', 'Expo/npm; npm ci --prefix apps/mobile first'],
   ['exec', 'pnpm dev:exec -- COMMAND [ARGS]', 'One-off command + temporary PostgreSQL'],
 ];
@@ -192,6 +193,7 @@ export async function developmentDoctor(app = 'local') {
     web: ['WEB_PORT'],
     marketing: ['MARKETING_PORT'],
     evals: ['EVALS_PORT'],
+    usage: ['USAGE_PORT'],
     agent: [],
     mobile: [],
   }[app];
@@ -257,10 +259,9 @@ export function developmentInventory(json = false) {
       project: environment.COMPOSE_PROJECT_NAME,
       benchmarkProject: `askesis-bench-${worktreeDefaults(path).COMPOSE_PROJECT_NAME.slice(-12)}`,
       ports: Object.fromEntries(
-        ['PORT', 'WEB_PORT', 'POSTGRES_PORT', 'MARKETING_PORT', 'EVALS_PORT'].map((key) => [
-          key,
-          environment[key],
-        ]),
+        ['PORT', 'WEB_PORT', 'POSTGRES_PORT', 'MARKETING_PORT', 'EVALS_PORT', 'USAGE_PORT'].map(
+          (key) => [key, environment[key]],
+        ),
       ),
       sessions: sessions(path),
     };

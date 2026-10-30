@@ -18,6 +18,7 @@
     "dev:web": "node scripts/dev-local.mjs web",
     "dev:marketing": "node scripts/dev-local.mjs marketing",
     "dev:evals": "node scripts/dev-local.mjs evals",
+    "dev:usage": "node scripts/dev-local.mjs usage",
     "dev:setup": "node scripts/dev-setup.mjs",
     "dev:local": "node scripts/dev-local.mjs",
     "dev:login": "pnpm --filter @askesis/api verification:login",
