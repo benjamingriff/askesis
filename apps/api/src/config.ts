@@ -6,6 +6,7 @@ const optional = <T extends z.ZodType>(schema: T) =>
 const ApiConfigSchema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
   PORT: z.coerce.number().int().min(1).max(65535).default(3000),
+  IN_APP_COACH: z.enum(['enabled', 'hidden']).default('enabled'),
   CHAT_EXECUTION_MODE: z.enum(['unavailable', 'test', 'agent']).default('unavailable'),
   AGENT_BOOTSTRAP_TOKEN: z.preprocess(
     (value) => (value === '' ? undefined : value),

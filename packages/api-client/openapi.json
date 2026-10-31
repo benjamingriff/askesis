@@ -3018,6 +3018,17 @@
                 "schema": {
                   "type": "object",
                   "properties": {
+                    "features": {
+                      "type": "object",
+                      "properties": {
+                        "inAppCoach": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "inAppCoach"
+                      ]
+                    },
                     "deletion": {
                       "type": "object",
                       "nullable": true,
@@ -3036,6 +3047,7 @@
                     }
                   },
                   "required": [
+                    "features",
                     "deletion"
                   ]
                 }
@@ -3079,6 +3091,17 @@
                 "schema": {
                   "type": "object",
                   "properties": {
+                    "features": {
+                      "type": "object",
+                      "properties": {
+                        "inAppCoach": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "inAppCoach"
+                      ]
+                    },
                     "deletion": {
                       "type": "object",
                       "nullable": true,
@@ -3097,6 +3120,7 @@
                     }
                   },
                   "required": [
+                    "features",
                     "deletion"
                   ]
                 }
@@ -3138,6 +3162,17 @@
                 "schema": {
                   "type": "object",
                   "properties": {
+                    "features": {
+                      "type": "object",
+                      "properties": {
+                        "inAppCoach": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "inAppCoach"
+                      ]
+                    },
                     "deletion": {
                       "type": "object",
                       "nullable": true,
@@ -3156,6 +3191,7 @@
                     }
                   },
                   "required": [
+                    "features",
                     "deletion"
                   ]
                 }
@@ -10979,6 +11015,16 @@
               }
             }
           },
+          "403": {
+            "description": "COACH_NOT_OFFERED: the in-app coach is hidden.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
           "404": {
             "description": "Request rejected.",
             "content": {
@@ -12086,6 +12132,16 @@
               }
             }
           },
+          "403": {
+            "description": "COACH_NOT_OFFERED: the in-app coach is hidden.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
           "404": {
             "description": "Request rejected.",
             "content": {
@@ -12761,6 +12817,16 @@
           },
           "401": {
             "description": "Request rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "COACH_NOT_OFFERED: the in-app coach is hidden.",
             "content": {
               "application/json": {
                 "schema": {

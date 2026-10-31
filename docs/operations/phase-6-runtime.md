@@ -6,6 +6,8 @@ The responsive web client now reviews live coaching beside the saved plan. Expo
 remains a reference prototype. The implementation keeps the Phase 5 model,
 reasoning, prompt and domain tool contracts.
 
+`IN_APP_COACH=hidden` removes the in-app coach from the product; production for the MCP release sets `hidden`.
+
 ## Delivery and recovery
 
 The worker consumes the pinned Agents SDK's streamed response. Only visible text

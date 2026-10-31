@@ -34,6 +34,12 @@ const errors = Object.fromEntries(
     { description: 'Request rejected.', content: { 'application/json': { schema: ErrorSchema } } },
   ]),
 );
+const coachNotOffered = {
+  403: {
+    description: 'COACH_NOT_OFFERED: the in-app coach is hidden.',
+    content: { 'application/json': { schema: ErrorSchema } },
+  },
+};
 const response = <T extends z.ZodType>(schema: T) => ({
   description: 'Successful response.',
   content: { 'application/json': { schema } },
@@ -90,7 +96,7 @@ export function registerChatRoutes(app: OpenAPIHono<AppEnvironment>) {
       path: '/api/v1/conversations',
       tags: ['Chat'],
       request: { headers, body: body(CreateConversationSchema) },
-      responses: { ...errors, 201: response(CreatedSchema) },
+      responses: { ...errors, ...coachNotOffered, 201: response(CreatedSchema) },
     }),
     async (c) =>
       c.json(
@@ -159,7 +165,7 @@ export function registerChatRoutes(app: OpenAPIHono<AppEnvironment>) {
       path: '/api/v1/plans/{planId}/conversations/open',
       tags: ['Chat'],
       request: { params: z.object({ planId: Id }) },
-      responses: { ...errors, 200: response(ConversationSchema) },
+      responses: { ...errors, ...coachNotOffered, 200: response(ConversationSchema) },
     }),
     async (c) =>
       c.json(await openPlanConversation(c.get('athlete').id, c.req.valid('param').planId), 200),
@@ -197,7 +203,7 @@ export function registerChatRoutes(app: OpenAPIHono<AppEnvironment>) {
       path: '/api/v1/conversations/{conversationId}/messages',
       tags: ['Chat'],
       request: { params, headers, body: body(SendSchema) },
-      responses: { ...errors, 202: response(AcceptedSchema) },
+      responses: { ...errors, ...coachNotOffered, 202: response(AcceptedSchema) },
     }),
     async (c) =>
       c.json(
