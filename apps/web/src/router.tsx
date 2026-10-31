@@ -12,6 +12,7 @@ import {
 import { useAccount } from './account';
 import { AccountDeletionPending } from './components/AccountDeletionPending';
 import { AppShell } from './components/AppShell';
+import { Button } from './components/ui';
 import { SignInPage, SignUpPage } from './routes/auth';
 import { ChatPage } from './routes/chat';
 import { RequireInAppCoach } from './coach';
@@ -25,7 +26,7 @@ import { TodayPage } from './routes/today';
 import { PerformancePage } from './routes/performance';
 import { StravaCallbackPage } from './routes/strava-callback';
 
-function RequireAuthentication() {
+export function RequireAuthentication() {
   const { isSignedIn } = useAuth();
   const location = useLocation();
   const account = useAccount(!!isSignedIn);
@@ -41,7 +42,18 @@ function RequireAuthentication() {
         <p>Loading Askesis…</p>
       </div>
     );
-  if (account.data?.deletion)
+  // Features such as the in-app coach come with the account, so pages wait for it.
+  if (!account.data)
+    return (
+      <div className="auth-loading" role="alert">
+        <span className="brand-mark">A</span>
+        <p>Couldn’t load your account.</p>
+        <Button size="sm" onClick={() => void account.refetch()}>
+          Retry
+        </Button>
+      </div>
+    );
+  if (account.data.deletion)
     return <AccountDeletionPending purgeAfter={account.data.deletion.purgeAfter} />;
 
   return <Outlet />;

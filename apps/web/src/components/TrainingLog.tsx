@@ -522,7 +522,7 @@ function FeedbackSheet({ subject, onClose }: { subject: Subject; onClose: () => 
     log?.actualSessionType ?? undefined,
   );
   const save = useSaveLog(workout.planId, workout.lineageId),
-    discuss = useDiscussFeedback(workout.planId),
+    discuss = useDiscussFeedback({ id: workout.planId, name: workout.planTitle }),
     clear = useClearLog(workout.planId, workout.lineageId);
   const [resultBusy, setResultBusy] = useState(false);
   const busy = save.isPending || discuss.isPending || clear.isPending || resultBusy;
@@ -1148,20 +1148,21 @@ export function CheckInButton({ plan, workouts }: { plan: Plan; workouts: Workou
         </span>
       </button>
       {open ? (
-        <CheckInSheet planId={plan.id} workouts={workouts} onClose={() => setOpen(false)} />
+        <CheckInSheet plan={plan} workouts={workouts} onClose={() => setOpen(false)} />
       ) : null}
     </>
   );
 }
 function CheckInSheet({
-  planId,
+  plan,
   workouts,
   onClose,
 }: {
-  planId: string;
+  plan: Plan;
   workouts: WorkoutSummary[];
   onClose: () => void;
 }) {
+  const planId = plan.id;
   const coach = useCoachWord();
   const today = useLocalToday(),
     navigate = useNavigate(),
@@ -1194,7 +1195,7 @@ function CheckInSheet({
     },
     onSuccess: () => void client.invalidateQueries({ queryKey: ['training-log'] }),
   });
-  const discuss = useDiscussFeedback(planId),
+  const discuss = useDiscussFeedback({ id: planId, name: plan.displayName }),
     busy = create.isPending || discuss.isPending;
   const amend = <K extends keyof typeof details>(name: K, value: (typeof details)[K]) => {
     setSaved(null);

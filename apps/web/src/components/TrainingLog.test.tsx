@@ -204,8 +204,10 @@ it('saves feedback, then hands it to the athlete’s agent when the in-app coach
   fireEvent.click(screen.getByRole('button', { name: 'Save and talk it through' }));
   const ask = await screen.findByRole('dialog', { name: 'Ask your agent' });
   const prompt = (within(ask).getByLabelText('Prompt for your agent') as HTMLTextAreaElement).value;
-  expect(prompt).toContain('(planId plan)');
-  expect(prompt).toContain('Easy ride, 2026-10-14. Heavy legs\nRead my training log first.');
+  expect(prompt).toContain('for my plan “Example” (planId plan)');
+  expect(prompt).toContain(
+    'Easy ride, 2026-10-14. Heavy legs\nRead my training log first (workout log log).',
+  );
   await waitFor(() => expect(writeText).toHaveBeenCalledWith(prompt));
   expect(await within(ask).findByRole('status')).toHaveTextContent('Copied to your clipboard.');
   expect(logs[0]?.note).toBe('Heavy legs');

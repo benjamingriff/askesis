@@ -43,7 +43,7 @@ Extend `AccountSchema`:
 features: z.object({ inAppCoach: z.boolean() });
 ```
 
-The account query already loads before any signed-in page renders, so the shell never shows the Coach tab and then removes it. A per-user allowlist could later change this value for some accounts without changing the client. The existing `chat-capabilities` endpoint keeps reporting whether a run can execute.
+The account query already loads before any signed-in page renders, so the shell never shows the Coach tab and then removes it. If the account cannot load, the app shows an error with Retry, rather than rendering pages without knowing which features are offered. A per-user allowlist could later change this value for some accounts without changing the client. The existing `chat-capabilities` endpoint keeps reporting whether a run can execute.
 
 ### 3. The API rejects chat writes while the coach is hidden
 
@@ -88,8 +88,8 @@ Every prompt starts with `Using Askesis, for my plan “{name}” (planId {id}):
 | Plan toolbar (**Agent**)                        | Help me review and edit this plan. Read the plan context first.                                                                     |
 | Unplanned weeks                                 | Plan the remaining weeks                                                                                                            |
 | Workout dialog                                  | About “{title}” on {date}:                                                                                                          |
-| Workout feedback (**Save and talk it through**) | The existing feedback message, then `Read my training log first.`                                                                   |
-| Not feeling 100% (**Ask my agent to adjust**)   | The existing check-in message, then `Read my training log first.`                                                                   |
+| Workout feedback (**Save and talk it through**) | The existing feedback message, then `Read my training log first (workout log {id}).`                                                |
+| Not feeling 100% (**Ask my agent to adjust**)   | The existing check-in message, then `Read my training log first (check-in {id}).`                                                   |
 | Performance (**Update with my agent**)          | Help me update my {pace guides or zones}. Read my performance first, then ask me about recent results. (no plan prefix)             |
 
 Two hooks are the switch points, so every caller changes at once: `useOpenPlanChat` and `useDiscussFeedback`. While hidden, they call `useAskAgent()` instead of the conversation routes, and resolve to `null` instead of a conversation. Only a real conversation navigates to `/chat`. The provider sits in the app shell. A dialog that closes beneath it (the check-in sheet) no longer takes focus back from it.

@@ -68,7 +68,8 @@ export function useClearLog(planId: string, lineageId: string) {
  * Only this explicit action sends a coaching message; a log save never invokes the model. Without the
  * in-app coach, it hands the request to the athlete's own agent and resolves to null.
  */
-export function useDiscussFeedback(planId: string) {
+export function useDiscussFeedback(plan: { id: string; name: string }) {
+  const planId = plan.id;
   const key = useRequestKey();
   const coach = useInAppCoach();
   const askAgent = useAskAgent();
@@ -81,8 +82,12 @@ export function useDiscussFeedback(planId: string) {
       reference: FeedbackReferenceInput;
     }): Promise<string | null> => {
       if (!coach) {
-        // The agent finds the saved log or check-in through read_training_log.
-        askAgent(agentPrompt(`${content}\nRead my training log first.`, { id: planId }));
+        // The agent finds the saved log or check-in by its id through read_training_log.
+        const record =
+          reference.type === 'workout_log'
+            ? `workout log ${reference.logId}`
+            : `check-in ${reference.checkInId}`;
+        askAgent(agentPrompt(`${content}\nRead my training log first (${record}).`, plan));
         return null;
       }
       const conversation = result(
