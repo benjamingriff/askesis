@@ -22,6 +22,8 @@ CHAT_EXECUTION_MODE=agent
 AGENT_BOOTSTRAP_TOKEN=<shared API/worker secret, 32–200 characters>
 ```
 
+`IN_APP_COACH=hidden` removes the in-app coach from the product; production for the MCP release sets `hidden`.
+
 `PORT` is provided by Railway; the server listens on `::`. Optional settings include `LOG_LEVEL`, `SENTRY_DSN` and `SENTRY_RELEASE`. Set explicit authorized origins: the API parser accepts an omitted/empty list and does not enforce a production allowlist at startup. `test` execution is forbidden in production; `unavailable` supports history/management without fresh coaching.
 
 The API image contains Atlas/migrations but its startup command does not apply migrations. Configure a pre-deploy job. The recorded Railway command was:

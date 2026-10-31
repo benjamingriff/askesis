@@ -1,8 +1,17 @@
-import { beforeEach, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import type { MiddlewareHandler } from 'hono';
 import type { AppEnvironment } from '../../auth/types.js';
+import { resetApiConfigForTests } from '../../config.js';
 import type * as Service from './chat.service.js';
-const mocks = vi.hoisted(() => ({ send: vi.fn(), create: vi.fn(), detail: vi.fn() }));
+const mocks = vi.hoisted(() => ({
+  send: vi.fn(),
+  create: vi.fn(),
+  detail: vi.fn(),
+  open: vi.fn(),
+  list: vi.fn(),
+  database: vi.fn(),
+}));
+vi.mock('../../database/client.js', () => ({ getDatabase: mocks.database }));
 vi.mock('../../auth/middleware.js', () => ({
   requireAuthentication: (async (c, next) => {
     c.set('athlete', {
@@ -20,11 +29,21 @@ vi.mock('./chat.service.js', async (original) => ({
   sendMessage: mocks.send,
   createConversation: mocks.create,
   getConversation: mocks.detail,
+  openPlanConversation: mocks.open,
+  listConversations: mocks.list,
 }));
 const { app } = await import('../../app.js');
 const { ChatError } = await import('./chat.core.js');
 const id = '00000000-0000-4000-8000-000000000010';
-beforeEach(() => vi.resetAllMocks());
+beforeEach(() => {
+  vi.resetAllMocks();
+  vi.stubEnv('IN_APP_COACH', 'enabled');
+  resetApiConfigForTests();
+});
+afterEach(() => {
+  vi.unstubAllEnvs();
+  resetApiConfigForTests();
+});
 
 it('validates message bounds and idempotency before invoking the service', async () => {
   for (const content of ['', 'x'.repeat(32001)]) {
@@ -75,4 +94,74 @@ it('does not expose browser endpoints for executor transitions', async () => {
     expect(
       (await app.request(`/api/v1/agent-runs/${id}/${action}`, { method: 'POST' })).status,
     ).toBe(404);
+});
+
+const writes = [
+  { path: '/api/v1/conversations', status: 201, body: {}, mock: mocks.create },
+  { path: `/api/v1/plans/${id}/conversations/open`, status: 200, mock: mocks.open },
+  {
+    path: `/api/v1/conversations/${id}/messages`,
+    status: 202,
+    body: { content: 'Hello' },
+    mock: mocks.send,
+  },
+];
+function writeRequest(body?: object) {
+  return {
+    method: 'POST',
+    headers: {
+      'content-type': 'application/json',
+      'idempotency-key': 'visibility-test',
+      'x-request-id': 'visibility-test',
+    },
+    ...(body ? { body: JSON.stringify(body) } : {}),
+  };
+}
+it('keeps each chat write available when enabled', async () => {
+  for (const write of writes) {
+    write.mock.mockResolvedValue({});
+    const response = await app.request(write.path, writeRequest(write.body));
+    expect(response.status).toBe(write.status);
+    expect(write.mock).toHaveBeenCalled();
+  }
+});
+it('rejects all three writes while hidden before any resource or idempotency lookup', async () => {
+  const service = await vi.importActual<typeof Service>('./chat.service.js');
+  mocks.create.mockImplementation(service.createConversation);
+  mocks.open.mockImplementation(service.openPlanConversation);
+  mocks.send.mockImplementation(service.sendMessage);
+  vi.stubEnv('IN_APP_COACH', 'hidden');
+  resetApiConfigForTests();
+  for (const write of writes) {
+    const response = await app.request(write.path, writeRequest(write.body));
+    expect(response.status).toBe(403);
+    expect(await response.json()).toEqual({
+      error: {
+        code: 'COACH_NOT_OFFERED',
+        message: 'The in-app coach is not offered.',
+        requestId: 'visibility-test',
+      },
+    });
+  }
+  expect(mocks.database).not.toHaveBeenCalled();
+});
+it('keeps request validation ahead of the hidden check', async () => {
+  vi.stubEnv('IN_APP_COACH', 'hidden');
+  resetApiConfigForTests();
+  const response = await app.request(
+    `/api/v1/conversations/${id}/messages`,
+    writeRequest({ content: '' }),
+  );
+  expect(response.status).toBe(400);
+  expect(await response.json()).toMatchObject({ error: { code: 'VALIDATION_ERROR' } });
+  expect(mocks.send).not.toHaveBeenCalled();
+});
+it('keeps conversation lists available while hidden', async () => {
+  vi.stubEnv('IN_APP_COACH', 'hidden');
+  resetApiConfigForTests();
+  const result = { conversations: [{ id }], nextCursor: null };
+  mocks.list.mockResolvedValue(result);
+  const response = await app.request('/api/v1/conversations');
+  expect(response.status).toBe(200);
+  expect(await response.json()).toEqual(result);
 });

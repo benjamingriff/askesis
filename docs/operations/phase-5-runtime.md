@@ -11,6 +11,8 @@ Model, reasoning (`AGENT_REASONING`, default medium, mapped to Claude's effort l
 
 ## Local setup
 
+`IN_APP_COACH=hidden` removes the in-app coach from the product; production for the MCP release sets `hidden`.
+
 Set `CHAT_EXECUTION_MODE=agent` and a shared `AGENT_BOOTSTRAP_TOKEN` (at least 32 characters) for the API and worker. Generate the token locally with `openssl rand -hex 32`; do not commit it. Set `AGENT_PROVIDER` and the matching `OPENAI_API_KEY` or `ANTHROPIC_API_KEY` for the worker.
 
 With Compose, put those values in the ignored root `.env`, then run:
