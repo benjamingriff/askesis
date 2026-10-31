@@ -3,6 +3,7 @@ import { formatShort } from '../lib/format';
 import type { Plan, Preview } from '../plan-data';
 import { PlanningReview } from './PlanningReview';
 import { Button, CheckRow, Dialog, Notice, Pill } from './ui';
+import { useCoachWord } from '../coach';
 
 const CHANGE_LABEL: Record<string, string> = {
   added: 'New',
@@ -47,6 +48,7 @@ export function LockReviewDialog({
   onLock: () => void;
   onClose: () => void;
 }) {
+  const coach = useCoachWord();
   if (!open) return null;
   const nextVersion = (plan.locked?.versionNumber ?? 0) + 1;
   if (lockedVersion !== null)
@@ -91,7 +93,7 @@ export function LockReviewDialog({
       busy={busy}
       onClose={onClose}
       title={`Lock plan v${nextVersion}`}
-      description="Locking makes this version immutable. Confirming and locking are human decisions — your coach can’t do them for you."
+      description={`Locking makes this version immutable. Confirming and locking are human decisions — your ${coach} can’t do them for you.`}
       footer={
         <>
           <Button variant="ghost" disabled={busy} onClick={onClose}>
@@ -162,7 +164,7 @@ export function LockReviewDialog({
                     checked={briefConfirmed}
                     onChange={onBriefConfirmed}
                     label="I confirm the planning assumptions and pace guides shown above."
-                    hint="Your coach can update assumptions, but only you can confirm them."
+                    hint={`Your ${coach} can update assumptions, but only you can confirm them.`}
                   />
                 ) : (
                   <p className="confirmed">

@@ -48,6 +48,7 @@ import { PerformanceResult } from './TrainingResult';
 import type { Plan } from '../plan-data';
 import { useActivityLink } from '../activity-data';
 import { StravaActivityPanel, StravaConnectHint, StravaLinkRow } from './Strava';
+import { useCoachWord } from '../coach';
 
 type Subject = {
   workout: WorkoutSummary;
@@ -170,6 +171,7 @@ export function WorkoutLogActions({
   detail?: boolean;
   compact?: boolean;
 }) {
+  const coach = useCoachWord();
   const context = useLogContext(),
     today = useLocalToday(),
     units = useUnits();
@@ -225,7 +227,7 @@ export function WorkoutLogActions({
               <strong>How did it go?</strong>
               <small>
                 {workout.placeholder
-                  ? 'Tell your coach what the session turned out to be.'
+                  ? `Tell your ${coach} what the session turned out to be.`
                   : 'A quick log is enough. Add detail if it’s useful.'}
               </small>
             </>
@@ -488,6 +490,7 @@ const FEEL = [
   { label: 'Drained', Icon: BatteryLow },
 ];
 function FeedbackSheet({ subject, onClose }: { subject: Subject; onClose: () => void }) {
+  const coach = useCoachWord();
   const { workout, log } = subject,
     navigate = useNavigate(),
     today = useLocalToday();
@@ -519,7 +522,7 @@ function FeedbackSheet({ subject, onClose }: { subject: Subject; onClose: () => 
     log?.actualSessionType ?? undefined,
   );
   const save = useSaveLog(workout.planId, workout.lineageId),
-    discuss = useDiscussFeedback(workout.planId),
+    discuss = useDiscussFeedback({ id: workout.planId, name: workout.planTitle }),
     clear = useClearLog(workout.planId, workout.lineageId);
   const [resultBusy, setResultBusy] = useState(false);
   const busy = save.isPending || discuss.isPending || clear.isPending || resultBusy;
@@ -602,7 +605,7 @@ function FeedbackSheet({ subject, onClose }: { subject: Subject; onClose: () => 
           content: `I’d like to talk through my ${LOG_LABELS[current.status].toLowerCase()} workout: ${current.title}, ${current.performedOn}.${current.rpe != null ? ` Effort ${current.rpe}/10.` : ''}${current.note ? ` ${current.note}` : ''}`,
           reference: { type: 'workout_log', logId: current.id },
         });
-        void navigate(`/chat/${id}`);
+        if (id) void navigate(`/chat/${id}`);
       }
       onClose();
     } catch (error) {
@@ -657,7 +660,8 @@ function FeedbackSheet({ subject, onClose }: { subject: Subject; onClose: () => 
             Save
           </Button>
           <p className="fb-footer-note">
-            Saving feedback never changes your plan. Your coach helps only when you choose to talk.
+            Saving feedback never changes your plan. Your {coach} helps only when you choose to
+            talk.
           </p>
         </>
       }
@@ -710,7 +714,7 @@ function FeedbackSheet({ subject, onClose }: { subject: Subject; onClose: () => 
               <h3>What was it?</h3>
               {workout.sessionType ? (
                 <small>
-                  Your coach assumed {KIND_META[workout.sessionType].label.toLowerCase()}
+                  Your {coach} assumed {KIND_META[workout.sessionType].label.toLowerCase()}
                 </small>
               ) : null}
             </div>
@@ -991,13 +995,13 @@ function FeedbackSheet({ subject, onClose }: { subject: Subject; onClose: () => 
         ) : null}
         {safety ? (
           <Notice tone="warning">
-            Rest and seek professional advice for pain that changes how you move. Your coach won’t
+            Rest and seek professional advice for pain that changes how you move. Your {coach} won’t
             prescribe training through it.
           </Notice>
         ) : null}
         <section className="fb-section">
           <label className="field">
-            <span>{placeholder ? 'What did you do?' : 'Anything else for your coach?'}</span>
+            <span>{placeholder ? 'What did you do?' : `Anything else for your ${coach}?`}</span>
             <textarea
               rows={3}
               maxLength={2000}
@@ -1005,7 +1009,7 @@ function FeedbackSheet({ subject, onClose }: { subject: Subject; onClose: () => 
               onChange={(e) => setNote(e.target.value)}
               placeholder={
                 placeholder
-                  ? 'The session, such as 6 × 800 m off 90 s, and anything else for your coach…'
+                  ? `The session, such as 6 × 800 m off 90 s, and anything else for your ${coach}…`
                   : 'How it went, what helped, or anything you want to talk through…'
               }
             />
@@ -1144,20 +1148,22 @@ export function CheckInButton({ plan, workouts }: { plan: Plan; workouts: Workou
         </span>
       </button>
       {open ? (
-        <CheckInSheet planId={plan.id} workouts={workouts} onClose={() => setOpen(false)} />
+        <CheckInSheet plan={plan} workouts={workouts} onClose={() => setOpen(false)} />
       ) : null}
     </>
   );
 }
 function CheckInSheet({
-  planId,
+  plan,
   workouts,
   onClose,
 }: {
-  planId: string;
+  plan: Plan;
   workouts: WorkoutSummary[];
   onClose: () => void;
 }) {
+  const planId = plan.id;
+  const coach = useCoachWord();
   const today = useLocalToday(),
     navigate = useNavigate(),
     client = useQueryClient(),
@@ -1189,7 +1195,7 @@ function CheckInSheet({
     },
     onSuccess: () => void client.invalidateQueries({ queryKey: ['training-log'] }),
   });
-  const discuss = useDiscussFeedback(planId),
+  const discuss = useDiscussFeedback({ id: planId, name: plan.displayName }),
     busy = create.isPending || discuss.isPending;
   const amend = <K extends keyof typeof details>(name: K, value: (typeof details)[K]) => {
     setSaved(null);
@@ -1220,7 +1226,7 @@ function CheckInSheet({
         reference: { type: 'check_in', checkInId: check.id },
       });
       onClose();
-      void navigate(`/chat/${id}`);
+      if (id) void navigate(`/chat/${id}`);
     } catch {
       /* Mutation error is shown below; the saved check-in can be retried. */
     }
@@ -1231,7 +1237,7 @@ function CheckInSheet({
       size="md"
       className="training-feedback"
       title="Not feeling 100%"
-      description="Tell your coach what’s going on. Your plan stays unchanged until you review an amendment."
+      description={`Tell your ${coach} what’s going on. Your plan stays unchanged until you review an amendment.`}
       busy={busy}
       onClose={onClose}
       footer={
@@ -1243,7 +1249,7 @@ function CheckInSheet({
             busy={busy}
             onClick={() => void send()}
           >
-            Ask my coach to adjust
+            Ask my {coach} to adjust
           </Button>
           <Button disabled={busy} onClick={onClose}>
             Cancel
@@ -1363,7 +1369,7 @@ function CheckInSheet({
               ['easy', 'Easy sessions only'],
               ['shorter', 'Shorter sessions'],
               ['rest', 'Rest completely'],
-              ['coach', 'Let my coach decide'],
+              ['coach', `Let my ${coach} decide`],
             ]}
             onChange={(v) => {
               if (v) amend('preference', v);

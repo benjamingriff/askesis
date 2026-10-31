@@ -84,6 +84,7 @@ services:
       dockerfile: apps/api/Dockerfile
     environment:
       PORT: 3000
+      IN_APP_COACH: ${IN_APP_COACH:-enabled}
       CHAT_EXECUTION_MODE: ${CHAT_EXECUTION_MODE:-unavailable}
       EXAMPLE_PLAN_ENABLED: ${EXAMPLE_PLAN_ENABLED:-false}
       EXAMPLE_PLAN_EMAIL: ${EXAMPLE_PLAN_EMAIL:-}

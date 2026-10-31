@@ -40,6 +40,10 @@ export async function chatCapabilities(db?: Tx) {
   const mode = getApiConfig().CHAT_EXECUTION_MODE;
   return { executionAvailable: mode === 'test' || (await workerReady(db)), mode };
 }
+function assertCoachOffered() {
+  if (getApiConfig().IN_APP_COACH === 'hidden')
+    throw new ChatError('COACH_NOT_OFFERED', 'The in-app coach is not offered.', 403);
+}
 async function available(db?: Tx) {
   if (!(await chatCapabilities(db)).executionAvailable)
     throw new ChatError(
@@ -325,6 +329,8 @@ export async function createConversation(
   input: { planId?: string | undefined; initialMessage?: Send | undefined },
   key: string,
 ) {
+  // After route authentication/validation, before resource lookups or cached responses.
+  assertCoachOffered();
   return idempotent(
     owner,
     'chat.create',
@@ -353,6 +359,7 @@ export async function createConversation(
   );
 }
 export async function sendMessage(owner: string, id: string, input: Send, key: string) {
+  assertCoachOffered();
   return idempotent(
     owner,
     'chat.send',
@@ -364,6 +371,7 @@ export async function sendMessage(owner: string, id: string, input: Send, key: s
   );
 }
 export async function openPlanConversation(owner: string, planId: string) {
+  assertCoachOffered();
   return getDatabase()
     .transaction()
     .execute(async (db) => {

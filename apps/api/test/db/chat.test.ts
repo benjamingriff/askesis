@@ -3,6 +3,7 @@ import { afterAll, beforeEach, expect, it } from 'vitest';
 import { sql } from 'kysely';
 import { closeDatabase, getDatabase } from '../../src/database/client.js';
 import { resetApiConfigForTests } from '../../src/config.js';
+import { exportAccount, getAccount } from '../../src/modules/account/account.service.js';
 import { cloneContent } from '../../src/modules/plans/plan.aggregate.js';
 import { getBrief, confirmBrief } from '../../src/modules/plans/brief.service.js';
 import {
@@ -37,10 +38,12 @@ const message = (
 ) => ({ content, target });
 beforeEach(() => {
   process.env.CHAT_EXECUTION_MODE = 'test';
+  process.env.IN_APP_COACH = 'enabled';
   resetApiConfigForTests();
 });
 afterAll(async () => {
   delete process.env.CHAT_EXECUTION_MODE;
+  delete process.env.IN_APP_COACH;
   resetApiConfigForTests();
   await closeDatabase();
 });
@@ -407,4 +410,48 @@ it('paginates messages and events without repeats and keeps history immutable', 
       getDatabase(),
     ),
   ).rejects.toThrow('append-only');
+});
+
+it('hides fresh chat writes and cached replays while retaining history, cancellation and export', async () => {
+  const key = randomUUID();
+  const created = await createConversation(owner, {}, key);
+  const plan = await createPlan(owner, 'Coach visibility', randomUUID());
+  const opened = await openPlanConversation(owner, plan.id);
+  expect(opened.planId).toBe(plan.id);
+  const accepted = await sendMessage(owner, created.conversation.id, message(), randomUUID());
+  expect((await getAccount(owner)).features).toEqual({ inAppCoach: true });
+
+  process.env.IN_APP_COACH = 'hidden';
+  resetApiConfigForTests();
+  expect((await getAccount(owner)).features).toEqual({ inAppCoach: false });
+  const hidden = { status: 403, code: 'COACH_NOT_OFFERED' };
+  await expect(createConversation(owner, {}, key)).rejects.toMatchObject(hidden);
+  await expect(createConversation(owner, {}, randomUUID())).rejects.toMatchObject(hidden);
+  for (const id of [created.conversation.id, randomUUID()]) {
+    await expect(sendMessage(owner, id, message(), randomUUID())).rejects.toMatchObject(hidden);
+  }
+  for (const id of [plan.id, randomUUID()]) {
+    await expect(openPlanConversation(owner, id)).rejects.toMatchObject(hidden);
+  }
+  const agentPlan = await createPlan(owner, 'Agent plan', randomUUID(), {
+    createConversation: true,
+  });
+  expect(agentPlan.conversationId).toBeUndefined();
+  const listed = await listConversations(owner, { collection: 'open', limit: 100 });
+  expect(listed.conversations.some((row) => row.id === created.conversation.id)).toBe(true);
+  expect((await listMessages(owner, created.conversation.id, undefined, 50)).messages).toHaveLength(
+    1,
+  );
+  expect((await getRun(owner, accepted.run.id)).status).toBe('queued');
+  expect((await tickTestRun(owner, accepted.run.id)).status).toBe('running');
+  expect((await cancelRun(owner, accepted.run.id)).status).toBe('cancelling');
+  expect((await tickTestRun(owner, accepted.run.id)).status).toBe('cancelled');
+  expect((await listEvents(owner, accepted.run.id, 0, 50)).events.at(-1)?.type).toBe('cancelled');
+  const conversation = await getConversation(owner, created.conversation.id);
+  const renamed = await changeConversation(owner, conversation.id, conversation.stateVersion, {
+    title: 'Saved history',
+  });
+  await changeConversation(owner, renamed.id, renamed.stateVersion, { archived: true });
+  const exported = await exportAccount(owner);
+  expect(exported.conversations.some((row) => row.id === created.conversation.id)).toBe(true);
 });

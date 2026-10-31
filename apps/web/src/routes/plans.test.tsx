@@ -2,13 +2,21 @@ import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testi
 import { createMemoryRouter, RouterProvider } from 'react-router';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { focusManager } from '@tanstack/react-query';
+import { AskAgentProvider } from '../components/AskAgent';
 import { AccountQueryProvider } from '../query-provider';
 import { api } from '../api';
 import type { Plan } from '../plan-data';
 import { PlanPage, PlansPage } from './plans';
 import { ActivePlansPage } from './active-plans';
+import type * as Coach from '../coach';
 
 vi.mock('../api', () => ({ api: { GET: vi.fn(), POST: vi.fn(), PATCH: vi.fn() } }));
+const coach = vi.hoisted(() => ({ enabled: true }));
+vi.mock('../coach', async (original) => ({
+  ...(await original<typeof Coach>()),
+  useInAppCoach: () => coach.enabled,
+  useCoachWord: () => (coach.enabled ? 'coach' : 'agent'),
+}));
 const draft = {
   id: 'draft-1',
   state: 'draft' as const,
@@ -95,13 +103,16 @@ function mount(path = '/plans/plan-1') {
   );
   render(
     <AccountQueryProvider>
-      <RouterProvider router={router} />
+      <AskAgentProvider>
+        <RouterProvider router={router} />
+      </AskAgentProvider>
     </AccountQueryProvider>,
   );
   return router;
 }
 beforeEach(() => {
   vi.resetAllMocks();
+  coach.enabled = true;
   localStorage.clear();
   current = structuredClone(plan) as Plan;
   vi.mocked(api.GET).mockImplementation((async (
@@ -592,6 +603,32 @@ it('reuses a create request key when retrying after a connection failure', async
   fireEvent.click(screen.getByRole('button', { name: 'Create plan' }));
   await waitFor(() => expect(api.POST).toHaveBeenCalledTimes(2));
   expect(vi.mocked(api.POST).mock.calls[0]).toEqual(vi.mocked(api.POST).mock.calls[1]);
+});
+
+it('creates a plan without a conversation and asks the athlete’s agent when the coach is hidden', async () => {
+  coach.enabled = false;
+  vi.stubGlobal('navigator', { ...navigator, clipboard: { writeText: vi.fn() } });
+  vi.mocked(api.POST).mockResolvedValue({
+    data: { ...plan, id: 'plan-9', displayName: 'A new plan' },
+  } as never);
+  const router = mount('/plans');
+  fireEvent.click(await screen.findByRole('button', { name: 'New plan' }));
+  expect(screen.getByRole('dialog', { name: 'New plan' })).toHaveTextContent(
+    'Your agent will talk it through',
+  );
+  fireEvent.change(screen.getByLabelText('Plan name'), { target: { value: 'A new plan' } });
+  fireEvent.change(screen.getByLabelText('Start date'), { target: { value: '2026-09-10' } });
+  fireEvent.change(screen.getByLabelText('End date'), { target: { value: '2026-12-10' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Create plan' }));
+  const ask = await screen.findByRole('dialog', { name: 'Ask your agent' });
+  expect(vi.mocked(api.POST).mock.calls[0]?.[1]).toMatchObject({
+    body: { createConversation: false },
+  });
+  expect(router.state.location.pathname).toBe('/plans/plan-9');
+  expect(
+    (within(ask).getByLabelText('Prompt for your agent') as HTMLTextAreaElement).value,
+  ).toContain('for my plan “A new plan” (planId plan-9)');
+  vi.unstubAllGlobals();
 });
 
 it('requires review of assumptions and sends combined confirmation and lock as one command', async () => {
