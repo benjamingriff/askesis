@@ -1,6 +1,6 @@
 # In-app coach flag and "Ask your agent"
 
-**Status:** accepted, 2026-10-31; being implemented. It covers the "chat hidden behind a flag" item in Phase 4 of the MCP server plan (`docs/product/mcp-server-plan.md`, added in PR #95). Owner decisions are recorded at the end.
+**Status:** accepted and implemented, 2026-10-31. It covers the "chat hidden behind a flag" item in Phase 4 of the MCP server plan (`docs/product/mcp-server-plan.md`, added in PR #95). Owner decisions are recorded at the end.
 
 ## Why
 
@@ -53,7 +53,7 @@ When `IN_APP_COACH=hidden`, these routes return `403 COACH_NOT_OFFERED`:
 - `POST /api/v1/plans/{planId}/conversations/open`
 - `POST /api/v1/conversations/{conversationId}/messages`
 
-Reads, archive, export and deletion keep working. Conversations created while the coach was visible stay in the data export and in deletion counts. Worker-facing agent routes are unaffected. This keeps the server authoritative: an old client, or a stale tab after the setting changes, cannot start runs.
+`POST /api/v1/plans` still creates the plan, but ignores `createConversation` while hidden. Reads, archive, export and deletion keep working. Conversations created while the coach was visible stay in the data export and in deletion counts. Worker-facing agent routes are unaffected. This keeps the server authoritative: an old client, or a stale tab after the setting changes, cannot start runs.
 
 ### 4. The web app reads one hook
 
@@ -64,6 +64,7 @@ export function useInAppCoach(): boolean; // account.data.features.inAppCoach
 When it returns false:
 
 - **Shell:** hide the Coach tab, New chat and recent chats. An **Agent** link to the Settings connection page arrives with that page in MCP Phase 4.
+- **Settings:** hide **Show coach activity**. Performance history keeps "Recorded by your coach" for results the in-app coach recorded, without the link to the conversation.
 - **Routes:** `/chat/*` redirects to `/today`.
 - **Copy:** a small `useCoachTerms()` helper returns "your coach" or "your agent". It replaces the hard-coded strings, so drafts say, for example, "Your agent can edit this", and locking says "Only you can confirm and lock".
 - **Entry points:** each one becomes an **Ask your agent** action (next section).
@@ -76,19 +77,22 @@ Askesis cannot send a message into the athlete's Claude session. The action inst
 
 1. Save first, as today: the log, check-in or nothing extra.
 2. Build a short prompt. It names the plan, its `planId` and the record the athlete just saved, so the agent can read it with the tools.
-3. Copy the prompt to the clipboard and show a toast: "Prompt copied. Paste it into your agent." If the clipboard is unavailable, open a dialog with the text selected.
+3. Open the **Ask your agent** dialog. It tries to copy the prompt straight away and shows the text, so the athlete can check it or copy it by hand. The clipboard can refuse a write that follows a slow save, so a toast alone would not be enough. **Copy prompt** retries the copy.
 
-Example prompts:
+Every prompt starts with `Using Askesis, for my plan “{name}” (planId {id}):` on its own line, followed by the request the in-app coach would have received:
 
-| Entry point      | Prompt                                                                                                                                                         |
-| ---------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| No plan          | "Using Askesis, help me build a training plan. Start by listing my plans and asking about my goal."                                                            |
-| Plan draft       | "Using Askesis, help me edit my plan "{name}" (planId {id}). Read the plan context first."                                                                     |
-| Workout dialog   | "Using Askesis, about my workout "{title}" on {date} in plan "{name}" (planId {id}): "                                                                         |
-| Workout feedback | "Using Askesis, I logged "{title}" on {date} as {status}{, effort n/10}{: note}. Read my training log for plan {id} and talk it through with me."              |
-| Not feeling 100% | "Using Askesis, I've just checked in: {kind}{: note}. Read my training log for plan {id} and suggest how to adjust my upcoming training. Don't lock anything." |
+| Entry point                                     | Request                                                                                                                             |
+| ----------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| No plan (Today, Plan)                           | Help me build a training plan. List my plans first, then ask me about my goal, my dates and the training I do now. (no plan prefix) |
+| New plan                                        | I’ve just created this plan. Talk it through with me before writing any workouts…                                                   |
+| Plan toolbar (**Agent**)                        | Help me review and edit this plan. Read the plan context first.                                                                     |
+| Unplanned weeks                                 | Plan the remaining weeks                                                                                                            |
+| Workout dialog                                  | About “{title}” on {date}:                                                                                                          |
+| Workout feedback (**Save and talk it through**) | The existing feedback message, then `Read my training log first.`                                                                   |
+| Not feeling 100% (**Ask my agent to adjust**)   | The existing check-in message, then `Read my training log first.`                                                                   |
+| Performance (**Update with my agent**)          | Help me update my {pace guides or zones}. Read my performance first, then ask me about recent results. (no plan prefix)             |
 
-These reuse the text that `useDiscussFeedback` and `onAskCoach` build today. The difference is that the text goes to the clipboard instead of `/conversations/{id}/messages`. A shared `askAgent(prompt)` helper does the copying and shows the toast. Each entry point keeps its one action: "Save and ask your agent" replaces "Save and talk to your coach".
+Two hooks are the switch points, so every caller changes at once: `useOpenPlanChat` and `useDiscussFeedback`. While hidden, they call `useAskAgent()` instead of the conversation routes, and resolve to `null` instead of a conversation. Only a real conversation navigates to `/chat`. The provider sits in the app shell. A dialog that closes beneath it (the check-in sheet) no longer takes focus back from it.
 
 When the agent saves a change, the database triggers already send live events, so the open page refreshes. The athlete sees the change appear and then reviews and locks it in Askesis, as with the in-app coach.
 
@@ -104,7 +108,7 @@ One PR on top of the MCP work, or right after it:
 
 1. API: `IN_APP_COACH` setting, `features` on the account response, `COACH_NOT_OFFERED` checks and regenerated client types.
 2. Web: `useInAppCoach`, shell and route changes, `useCoachTerms`.
-3. Web: the `askAgent` helper and the six entry points.
+3. Web: the `useAskAgent` dialog and the entry points above.
 4. Docs: update this proposal into a behavior contract, the [operations runtime notes](../operations/phase-6-runtime.md) and local development (how to run with the coach hidden).
 
 The Settings connection page (connector URL, connected clients) and the shell link to it belong to MCP Phase 4.
@@ -112,7 +116,7 @@ The Settings connection page (connector URL, connected clients) and the shell li
 ## Tests
 
 - API: the account response reflects the setting; each chat write returns `COACH_NOT_OFFERED` when hidden; reads and export still work.
-- Web: shell, Today and Plan empty states, workout dialog, feedback and check-in render correctly in both modes; `/chat` redirects when hidden; `askAgent` copies the expected prompt and saves first.
+- Web: shell, Today and Plan empty states, workout dialog, feedback and check-in render correctly in both modes; `/chat` redirects when hidden; the dialog copies the expected prompt, falls back to manual copying, and saving happens first.
 - Browser check in both modes: hide the coach, log feedback, copy the prompt and make an edit through the dev MCP endpoint. Confirm that the plan updates live.
 
 ## Owner decisions

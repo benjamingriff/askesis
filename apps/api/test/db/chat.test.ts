@@ -433,6 +433,10 @@ it('hides fresh chat writes and cached replays while retaining history, cancella
   for (const id of [plan.id, randomUUID()]) {
     await expect(openPlanConversation(owner, id)).rejects.toMatchObject(hidden);
   }
+  const agentPlan = await createPlan(owner, 'Agent plan', randomUUID(), {
+    createConversation: true,
+  });
+  expect(agentPlan.conversationId).toBeUndefined();
   const listed = await listConversations(owner, { collection: 'open', limit: 100 });
   expect(listed.conversations.some((row) => row.id === created.conversation.id)).toBe(true);
   expect((await listMessages(owner, created.conversation.id, undefined, 50)).messages).toHaveLength(
