@@ -1,7 +1,8 @@
-import { cleanup, render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { cleanup, render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { createMemoryRouter, RouterProvider } from 'react-router';
 import { AccountQueryProvider } from '../query-provider';
+import { AskAgentProvider } from './AskAgent';
 import { TrainingLogProvider, WorkoutLogActions, TrainingHistory } from './TrainingLog';
 import type { WorkoutLog } from '../training-log';
 import type { WorkoutSummary } from '@askesis/api-client';
@@ -24,6 +25,12 @@ vi.mock('../live', async (original) => ({
   useLiveState: () => 'live',
 }));
 vi.mock('../lib/use-local-today', () => ({ useLocalToday: () => '2026-10-14' }));
+const coach = vi.hoisted(() => ({ enabled: true }));
+vi.mock('../coach', async (original) => ({
+  ...(await original<typeof import('../coach')>()),
+  useInAppCoach: () => coach.enabled,
+  useCoachWord: () => (coach.enabled ? 'coach' : 'agent'),
+}));
 const workout: WorkoutSummary = {
   id: 'workout',
   lineageId: 'lineage',
@@ -58,6 +65,7 @@ let logs: WorkoutLog[] = [],
   activeWorkout = workout;
 beforeEach(() => {
   vi.resetAllMocks();
+  coach.enabled = true;
   logs = [];
   mocks.get.mockImplementation(async () => ({
     data: { today: '2026-10-14', logs, checkIns: [], summary: { done: logs.length } },
@@ -117,10 +125,12 @@ function mount(w = workout, p = plan) {
       path: '/',
       element: (
         <AccountQueryProvider accountId="test">
-          <TrainingLogProvider plan={p}>
-            <WorkoutLogActions workout={w} />
-            <TrainingHistory planId="plan" workouts={[w]} />
-          </TrainingLogProvider>
+          <AskAgentProvider>
+            <TrainingLogProvider plan={p}>
+              <WorkoutLogActions workout={w} />
+              <TrainingHistory planId="plan" workouts={[w]} />
+            </TrainingLogProvider>
+          </AskAgentProvider>
         </AccountQueryProvider>
       ),
     },
@@ -178,6 +188,30 @@ it('saves feedback before sending a typed reference and keeps the saved log when
   expect(mocks.post.mock.calls[1]?.[1].body.references).toEqual([
     { type: 'workout_log', logId: 'log' },
   ]);
+});
+
+it('saves feedback, then hands it to the athlete’s agent when the in-app coach is hidden', async () => {
+  coach.enabled = false;
+  const writeText = vi.fn().mockResolvedValue(undefined);
+  vi.stubGlobal('navigator', { ...navigator, clipboard: { writeText } });
+  render(<RouterProvider router={mount({ ...workout, priority: 'high' })} />);
+  fireEvent.click(await screen.findByRole('button', { name: 'Done' }));
+  await screen.findByRole('dialog');
+  fireEvent.change(screen.getByLabelText('Anything else for your agent?'), {
+    target: { value: 'Heavy legs' },
+  });
+  fireEvent.click(screen.getByRole('button', { name: 'Save and talk it through' }));
+  const ask = await screen.findByRole('dialog', { name: 'Ask your agent' });
+  const prompt = (within(ask).getByLabelText('Prompt for your agent') as HTMLTextAreaElement).value;
+  expect(prompt).toContain('(planId plan)');
+  expect(prompt).toContain('Easy ride, 2026-10-14. Heavy legs\nRead my training log first.');
+  await waitFor(() => expect(writeText).toHaveBeenCalledWith(prompt));
+  expect(await within(ask).findByRole('status')).toHaveTextContent('Copied to your clipboard.');
+  expect(logs[0]?.note).toBe('Heavy legs');
+  // No conversation is opened and no coaching message is sent.
+  expect(mocks.post).not.toHaveBeenCalled();
+  expect(screen.queryByRole('heading', { name: 'Coach' })).not.toBeInTheDocument();
+  vi.unstubAllGlobals();
 });
 
 it('preserves explicitly unknown actuals when reopening and saving another correction', async () => {

@@ -1,9 +1,11 @@
 import { cleanup, render, screen } from '@testing-library/react';
-import { afterEach, expect, it } from 'vitest';
+import { afterEach, expect, it, vi } from 'vitest';
 import type { BriefState, Plan } from '../plan-data';
 import { knownCoverage } from '../plan-data';
 import { labelBlocks } from '../lib/blocks';
 import { BlockTimeline, CoverageNote, PlanStatus } from './PlanWidgets';
+
+vi.mock('../coach', () => ({ useCoachWord: () => 'coach' }));
 
 const state = {
   startDate: '2027-01-01',

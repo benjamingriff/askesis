@@ -28,6 +28,7 @@ import { WorkoutChangeBadge } from './PlanChanges';
 import { IntensityChart } from './IntensityChart';
 import { Stat } from './PlanWidgets';
 import { Button, Dialog, ErrorState, KindIcon, LoadingState, cx } from './ui';
+import { useCoachWord } from '../coach';
 
 export function workoutMeta(workout: WorkoutSummary, units: Units, pool: PoolUnits = 'm'): string {
   const parts = [];
@@ -144,6 +145,7 @@ export function WorkoutCard({
   units: Units;
   onOpen: (workout: WorkoutSummary) => void;
 }) {
+  const coach = useCoachWord();
   const look = workoutLook(workout);
   const { pool } = useSportUnits();
   const logContext = useLogContext(),
@@ -170,7 +172,7 @@ export function WorkoutCard({
               <em>Key session</em>
             ) : null}
             {workout.placeholder ? (
-              <em className="placeholder-badge" title={PLACEHOLDER_HINT}>
+              <em className="placeholder-badge" title={placeholderHint(coach)}>
                 Placeholder
               </em>
             ) : null}
@@ -201,8 +203,8 @@ export function WorkoutCard({
   );
 }
 
-const PLACEHOLDER_HINT =
-  'Booked, not prescribed: your coach plans around it, and you log what it turned out to be.';
+const placeholderHint = (coach: string) =>
+  `Booked, not prescribed: your ${coach} plans around it, and you log what it turned out to be.`;
 
 /** Where a placeholder's expected effort sits on the 1–10 RPE scale. */
 export function PlaceholderBand({ workout }: { workout: WorkoutSummary }) {
@@ -226,13 +228,14 @@ export function PlaceholderBand({ workout }: { workout: WorkoutSummary }) {
 
 /** What a placeholder is, and what the coach assumed when planning around it. */
 function PlaceholderSummary({ workout }: { workout: WorkoutSummary }) {
+  const coach = useCoachWord();
   const assumed = workout.sessionType ? KIND_META[workout.sessionType].label.toLowerCase() : null;
   return (
     <div className="placeholder-summary">
       <span className="label">Placeholder session</span>
       <PlaceholderBand workout={workout} />
       <p>
-        There’s no prescription for this one. Your coach has planned the rest of your training
+        There’s no prescription for this one. Your {coach} has planned the rest of your training
         around it{assumed ? `, assuming ${assumed}` : ''}
         {workout.expectedRpe ? ` at ${expectedEffort(workout)}` : ''}. Do the session as it comes,
         then log what it turned out to be.
@@ -420,6 +423,7 @@ export function WorkoutDialog({
   onClose: () => void;
   onAskCoach?: ((workout: WorkoutSummary) => void) | undefined;
 }) {
+  const coach = useCoachWord();
   const detail = useWorkoutDetail(workout?.id, version);
   const { pool } = useSportUnits();
   if (!workout) return null;
@@ -445,7 +449,7 @@ export function WorkoutDialog({
       footer={
         onAskCoach ? (
           <Button icon={MessageSquare} onClick={() => onAskCoach(workout)}>
-            Ask your coach about this
+            Ask your {coach} about this
           </Button>
         ) : undefined
       }

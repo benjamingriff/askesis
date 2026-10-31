@@ -38,6 +38,7 @@ import { SPORT_META } from '../lib/sports';
 import { useLocalToday } from '../lib/use-local-today';
 import { useSportUnits, useUnits, type Units } from '../settings';
 import { Button, cx, Dialog, ErrorState, IconButton, LoadingState, Notice } from './ui';
+import { useCoachWord } from '../coach';
 
 /** Shown wherever Strava data is: it is displayed for reference, never saved. */
 export const STRAVA_NOTICE =
@@ -499,6 +500,7 @@ export function StravaActivityPanel({
 // ---- Settings ----------------------------------------------------------------------------------
 
 export function StravaConnection() {
+  const coach = useCoachWord();
   const integrations = useIntegrations();
   const connect = useConnectStrava();
   const disconnect = useDisconnectStrava();
@@ -566,7 +568,7 @@ export function StravaConnection() {
       <p className="muted small">
         You choose which Strava activity belongs to each workout. Askesis keeps only that link;
         activity details are fetched from Strava when you open them, shown only to you, and never
-        shared with your coach.
+        shared with your {coach}.
       </p>
       <Dialog
         open={confirming}

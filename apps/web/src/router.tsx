@@ -14,6 +14,7 @@ import { AccountDeletionPending } from './components/AccountDeletionPending';
 import { AppShell } from './components/AppShell';
 import { SignInPage, SignUpPage } from './routes/auth';
 import { ChatPage } from './routes/chat';
+import { RequireInAppCoach } from './coach';
 import { SettingsPage } from './routes/settings';
 import { PlanPage, PlansPage } from './routes/plans';
 import { ActivePlansPage } from './routes/active-plans';
@@ -94,11 +95,16 @@ export const router = createBrowserRouter([
           { path: '/plans/:planId/brief', element: <PlanBriefPage /> },
           { path: '/plans/:planId/versions/:revisionId/brief', element: <PlanBriefPage /> },
           { path: '/plans/:planId/versions/:revisionId', element: <PlanRevisionPage /> },
-          { path: '/chat', element: <ChatPage /> },
-          { path: '/chat/new', element: <ChatPage composing /> },
-          { path: '/chat/archive', element: <ChatPage archived /> },
-          { path: '/chat/archive/:conversationId', element: <ChatPage archived /> },
-          { path: '/chat/:conversationId', element: <ChatPage /> },
+          {
+            element: <RequireInAppCoach />,
+            children: [
+              { path: '/chat', element: <ChatPage /> },
+              { path: '/chat/new', element: <ChatPage composing /> },
+              { path: '/chat/archive', element: <ChatPage archived /> },
+              { path: '/chat/archive/:conversationId', element: <ChatPage archived /> },
+              { path: '/chat/:conversationId', element: <ChatPage /> },
+            ],
+          },
           { path: '/settings', element: <SettingsPage /> },
           { path: '/performance', element: <PerformancePage /> },
           { path: '/connections/strava/callback', element: <StravaCallbackPage /> },

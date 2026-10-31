@@ -3,6 +3,8 @@ import { ArchiveRestore, ArrowLeft, CalendarDays, ChevronRight, Plus, Trash } fr
 import { useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router';
 import { api } from '../api';
+import { agentPrompt, useCoachWord, useInAppCoach } from '../coach';
+import { useAskAgent } from '../components/AskAgent';
 import { PlanStatus } from '../components/PlanWidgets';
 import { useRequestKey } from '../lib/use-request-key';
 import { PlanView } from '../components/PlanView';
@@ -29,7 +31,7 @@ const COLLECTION_PATHS: Record<Collection, string> = {
 const EMPTY: Record<Collection, { title: string; body: string }> = {
   library: {
     title: 'No plans yet',
-    body: 'Create a plan and your coach will help you shape it.',
+    body: 'Create a plan and your {coach} will help you shape it.',
   },
   archive: { title: 'Nothing archived', body: 'Archived plans are kept here and can be restored.' },
   deleted: {
@@ -39,6 +41,7 @@ const EMPTY: Record<Collection, { title: string; body: string }> = {
 };
 
 export function PlansPage({ collection = 'library' }: { collection?: Collection }) {
+  const coach = useCoachWord();
   const navigate = useNavigate();
   const [creating, setCreating] = useState(false);
   const archived = collection !== 'library';
@@ -54,7 +57,7 @@ export function PlansPage({ collection = 'library' }: { collection?: Collection 
           <span className="label">Your training</span>
           <h1>Plans</h1>
           <p className="muted">
-            Plan with your coach, then review and lock a version. Plans stay private to your
+            Plan with your {coach}, then review and lock a version. Plans stay private to your
             account.
           </p>
         </div>
@@ -91,7 +94,7 @@ export function PlansPage({ collection = 'library' }: { collection?: Collection 
             )
           }
         >
-          {EMPTY[collection].body}
+          {EMPTY[collection].body.replace('{coach}', coach)}
         </EmptyState>
       ) : null}
       <ul className="plan-cards">
@@ -176,6 +179,9 @@ function DeletedPlanCard({ plan }: { plan: Plan }) {
 }
 
 function NewPlanDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const inAppCoach = useInAppCoach();
+  const coach = useCoachWord();
+  const askAgent = useAskAgent();
   const navigate = useNavigate();
   const client = useQueryClient();
   const requestKey = useRequestKey();
@@ -187,12 +193,19 @@ function NewPlanDialog({ open, onClose }: { open: boolean; onClose: () => void }
       result(
         await api.POST('/api/v1/plans', {
           params: { header: { 'idempotency-key': requestKey([name.trim(), startDate, endDate]) } },
-          body: { displayName: name.trim(), startDate, endDate, createConversation: true },
+          body: { displayName: name.trim(), startDate, endDate, createConversation: inAppCoach },
         }),
       ),
     onSuccess: async (plan) => {
       await client.invalidateQueries({ queryKey: ['plans'] });
       void navigate(plan.conversationId ? `/chat/${plan.conversationId}` : `/plans/${plan.id}`);
+      if (!inAppCoach)
+        askAgent(
+          agentPrompt(
+            'I’ve just created this plan. Talk it through with me before writing any workouts: ask about my goal, my current training and when I can train, then save the brief.',
+            { id: plan.id, name: plan.displayName },
+          ),
+        );
     },
   });
   return (
@@ -201,7 +214,7 @@ function NewPlanDialog({ open, onClose }: { open: boolean; onClose: () => void }
       onClose={onClose}
       busy={create.isPending}
       title="New plan"
-      description="Name it and set the dates. Your coach will talk it through with you before writing any workouts."
+      description={`Name it and set the dates. Your ${coach} will talk it through with you before writing any workouts.`}
       footer={
         <>
           <Button variant="ghost" disabled={create.isPending} onClick={onClose}>

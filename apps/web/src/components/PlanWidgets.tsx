@@ -41,11 +41,13 @@ import {
 import { useSportUnits, type Units } from '../settings';
 import { EFFORT_META, EFFORTS, effortColor, zoneEffort } from '../theme/palette';
 import { Pill, cx } from './ui';
+import { useCoachWord } from '../coach';
 
 // ---- Plan state --------------------------------------------------------------------------------
 
 /** State is shown as a pill; actions live in the toolbar so an icon never means two things. */
 export function StatusPill({ plan }: { plan: Plan }) {
+  const coach = useCoachWord();
   if (plan.archived)
     return (
       <Pill icon={Archive} tone="neutral">
@@ -64,7 +66,7 @@ export function StatusPill({ plan }: { plan: Plan }) {
     );
   if (plan.draft)
     return (
-      <Pill icon={PencilLine} tone="accent" title="Editable draft. Your coach can change it.">
+      <Pill icon={PencilLine} tone="accent" title={`Editable draft. Your ${coach} can change it.`}>
         Draft
       </Pill>
     );
@@ -533,6 +535,7 @@ export function PlanZones({
   compact?: boolean | undefined;
   showSource?: boolean | undefined;
 }) {
+  const coach = useCoachWord();
   const performance = usePerformance();
   const systems = systemsForSports(sports.length ? sports : ['run']);
   return (
@@ -551,11 +554,11 @@ export function PlanZones({
             ) : performance.isPending ? null : (
               <p className="muted">
                 {system === 'cycle_power' ? (
-                  'Rides prescribed by perceived effort (RPE) do not need power zones. For power-based rides, add a result or a supported estimate on the Performance page, or discuss one with your coach.'
+                  `Rides prescribed by perceived effort (RPE) do not need power zones. For power-based rides, add a result or a supported estimate on the Performance page, or discuss one with your ${coach}.`
                 ) : (
                   <>
                     No {meta.noun} yet. Add a result or an estimate on the Performance page, or
-                    share one with your coach.
+                    share one with your {coach}.
                   </>
                 )}
               </p>
