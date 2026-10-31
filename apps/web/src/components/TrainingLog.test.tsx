@@ -8,6 +8,7 @@ import type { WorkoutLog } from '../training-log';
 import type { WorkoutSummary } from '@askesis/api-client';
 import type { Plan } from '../plan-data';
 import type * as Live from '../live';
+import type * as Coach from '../coach';
 const mocks = vi.hoisted(() => ({ get: vi.fn(), put: vi.fn(), post: vi.fn(), remove: vi.fn() }));
 vi.mock('../api', async () => {
   const { withoutIntegrations } = await import('../../test/activity-mocks');
@@ -27,7 +28,7 @@ vi.mock('../live', async (original) => ({
 vi.mock('../lib/use-local-today', () => ({ useLocalToday: () => '2026-10-14' }));
 const coach = vi.hoisted(() => ({ enabled: true }));
 vi.mock('../coach', async (original) => ({
-  ...(await original<typeof import('../coach')>()),
+  ...(await original<typeof Coach>()),
   useInAppCoach: () => coach.enabled,
   useCoachWord: () => (coach.enabled ? 'coach' : 'agent'),
 }));

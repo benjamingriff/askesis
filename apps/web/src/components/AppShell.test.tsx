@@ -3,6 +3,7 @@ import { createMemoryRouter } from 'react-router';
 import { RouterProvider } from 'react-router/dom';
 import { afterEach, expect, it, vi } from 'vitest';
 import { AppShell } from './AppShell';
+import type * as Coach from '../coach';
 
 vi.mock('@clerk/react', () => ({ useUser: () => ({ user: null }) }));
 vi.mock('../chat', () => ({
@@ -10,7 +11,7 @@ vi.mock('../chat', () => ({
 }));
 const coach = vi.hoisted(() => ({ enabled: true }));
 vi.mock('../coach', async (original) => ({
-  ...(await original<typeof import('../coach')>()),
+  ...(await original<typeof Coach>()),
   useInAppCoach: () => coach.enabled,
 }));
 afterEach(() => {

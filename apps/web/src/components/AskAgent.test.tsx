@@ -2,10 +2,11 @@ import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-li
 import { createMemoryRouter, RouterProvider } from 'react-router';
 import { afterEach, expect, it, vi } from 'vitest';
 import { AskAgentProvider, StartPlanButton } from './AskAgent';
+import type * as Coach from '../coach';
 
 const coach = vi.hoisted(() => ({ enabled: true }));
 vi.mock('../coach', async (original) => ({
-  ...(await original<typeof import('../coach')>()),
+  ...(await original<typeof Coach>()),
   useInAppCoach: () => coach.enabled,
 }));
 afterEach(() => {

@@ -8,11 +8,12 @@ import { api } from '../api';
 import type { Plan } from '../plan-data';
 import { PlanPage, PlansPage } from './plans';
 import { ActivePlansPage } from './active-plans';
+import type * as Coach from '../coach';
 
 vi.mock('../api', () => ({ api: { GET: vi.fn(), POST: vi.fn(), PATCH: vi.fn() } }));
 const coach = vi.hoisted(() => ({ enabled: true }));
 vi.mock('../coach', async (original) => ({
-  ...(await original<typeof import('../coach')>()),
+  ...(await original<typeof Coach>()),
   useInAppCoach: () => coach.enabled,
   useCoachWord: () => (coach.enabled ? 'coach' : 'agent'),
 }));
