@@ -22,6 +22,7 @@ These guides describe implemented behavior and were reconciled against code on 2
 ## Proposals
 
 - [Workout logging and feedback](./workout-log-and-feedback-proposal.md): Done/Changed/Skipped logging, key-session feedback, coaching responses and the path to Strava. Proposed for owner review, with [design mockups](./workout-feedback-mockups/).
+- [In-app coach flag and "Ask your agent"](./in-app-coach-flag-proposal.md): hiding the in-app coach for the MCP release and replacing chat entry points with agent prompts. Accepted; in delivery.
 
 ## Interface and pace policy
 

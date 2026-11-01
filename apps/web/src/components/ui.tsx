@@ -511,12 +511,14 @@ export function Dialog({
     document.body.style.overflow = 'hidden';
     return () => {
       document.removeEventListener('keydown', onKey);
+      // A dialog closing beneath another (which opened as this one finished) keeps focus there.
+      const top = !node || activeDialogs.at(-1) === node;
       if (node) {
         const index = activeDialogs.indexOf(node);
         if (index >= 0) activeDialogs.splice(index, 1);
       }
       document.body.style.overflow = activeDialogs.length ? 'hidden' : dialogOverflow;
-      if (previous?.isConnected) previous.focus();
+      if (top && previous?.isConnected) previous.focus();
     };
   }, [open, busy]);
 

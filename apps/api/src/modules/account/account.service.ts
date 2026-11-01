@@ -1,4 +1,5 @@
 import { sql, type Transaction } from 'kysely';
+import { getApiConfig } from '../../config.js';
 import { getDatabase } from '../../database/client.js';
 import type { DB } from '../../database/generated.js';
 import { logger } from '../../logger.js';
@@ -34,6 +35,7 @@ export async function getAccount(athleteId: string) {
     .where('id', '=', athleteId)
     .executeTakeFirstOrThrow();
   return {
+    features: { inAppCoach: getApiConfig().IN_APP_COACH === 'enabled' },
     deletion: athlete.deletion_requested_at
       ? { requestedAt: iso(athlete.deletion_requested_at)!, purgeAfter: iso(athlete.purge_after)! }
       : null,

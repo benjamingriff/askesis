@@ -1,8 +1,10 @@
 import { useQuery } from '@tanstack/react-query';
-import { CalendarDays, Library, MessageSquare } from 'lucide-react';
+import { CalendarDays, Library } from 'lucide-react';
 import { useState } from 'react';
 import { api } from '../api';
+import { StartPlanButton } from '../components/AskAgent';
 import { PlanView } from '../components/PlanView';
+import { useCoachWord } from '../coach';
 import { ButtonLink, EmptyState, ErrorState, LoadingState } from '../components/ui';
 import { result } from '../lib/result';
 import { usePlanPreferences, type PlanSelection } from '../plan-selection';
@@ -20,6 +22,7 @@ export function ActivePlansPage() {
   const preferences = usePlanPreferences();
   const [selection, setSelection] = useState<PlanSelection | null>(() => preferences.read());
   const plans = useActivePlans();
+  const coach = useCoachWord();
   const activePlans = plans.data ?? [];
   const plan = activePlans.find((item) => item.id === selection?.planId) ?? activePlans[0];
   const view =
@@ -57,9 +60,7 @@ export function ActivePlansPage() {
             title="No active plans"
             action={
               <div className="button-row">
-                <ButtonLink to="/chat" variant="primary" icon={MessageSquare}>
-                  Plan with your coach
-                </ButtonLink>
+                <StartPlanButton coachLabel="Plan with your coach" />
                 <ButtonLink to="/plans" icon={Library}>
                   All plans
                 </ButtonLink>
@@ -67,7 +68,7 @@ export function ActivePlansPage() {
             }
           >
             Lock and activate a plan from your library to see its schedule here, or start one with
-            your coach.
+            your {coach}.
           </EmptyState>
         ) : null}
       </div>

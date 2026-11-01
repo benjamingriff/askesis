@@ -79,6 +79,8 @@ Here `.../activate`, for example, expands to `/api/v1/plans/:planId/activate`. B
 | `GET /api/v1/plans/:planId/draft/changes`                                                                                                                                                | Draft/locked aggregates and saved run changes             | Current draft differences and coaching attribution.                              |
 | `GET /api/v1/live/bootstrap`; `GET /api/v1/live/events`                                                                                                                                  | `live_event_heads`, `live_events`                         | Cursor bootstrap and owner-scoped SSE change notifications.                      |
 
+`IN_APP_COACH=hidden` removes the in-app coach from the product; production for the MCP release sets `hidden`. The account response exposes `features.inAppCoach`. When hidden, conversation creation, plan conversation opening and message submission return `403 COACH_NOT_OFFERED` after authentication and validation, before resource lookup. Conversation reads/management, run reads/cancellation/events, chat capabilities, account export/deletion and worker routes remain available.
+
 Live events carry resource identifiers, not authoritative workout content. The browser follows a notification with ordinary owner-authorized reads. That same durable data supports reload; SSE is not a second workout store.
 
 ## Private worker lifecycle

@@ -18,10 +18,12 @@ import {
 import { useState } from 'react';
 import { useNavigate } from 'react-router';
 import { api } from '../api';
+import { agentPrompt, useCoachWord, useInAppCoach } from '../coach';
 import { result } from '../lib/result';
 import { useRequestKey } from '../lib/use-request-key';
 import { usePlanPreferences } from '../plan-selection';
 import type { Plan, Preview } from '../plan-data';
+import { useAskAgent } from './AskAgent';
 import { Button, Dialog, Menu, Notice } from './ui';
 import { EditDetailsDialog } from './EditDetailsDialog';
 import { LockReviewDialog } from './LockReviewDialog';
@@ -30,20 +32,40 @@ type Action = 'unlock' | 'discard' | 'archive' | 'unarchive' | 'activate' | 'dea
 type Confirm =
   'unlock' | 'discard' | 'archive' | 'unarchive' | 'review' | 'details' | 'delete' | null;
 
-/** Opens (or reuses) the plan's coaching conversation. */
-export function useOpenPlanChat(planId: string) {
+/**
+ * Opens (or reuses) the plan's coaching conversation. Without the in-app coach, it hands the same
+ * request to the athlete's own agent instead.
+ */
+export function useOpenPlanChat(plan: { id: string; displayName: string }) {
   const navigate = useNavigate();
+  const coach = useInAppCoach();
+  const askAgent = useAskAgent();
   return useMutation({
-    mutationFn: async (prefill?: string) => ({
-      conversation: result(
-        await api.POST('/api/v1/plans/{planId}/conversations/open', {
-          params: { path: { planId } },
-        }),
-      ),
-      prefill,
-    }),
-    onSuccess: ({ conversation, prefill }) =>
-      void navigate(`/chat/${conversation.id}`, { state: prefill ? { prefill } : undefined }),
+    mutationFn: async (prefill?: string) => {
+      if (!coach) {
+        askAgent(
+          agentPrompt(
+            prefill ?? 'Help me review and edit this plan. Read the plan context first.',
+            { id: plan.id, name: plan.displayName },
+          ),
+        );
+        return null;
+      }
+      return {
+        conversation: result(
+          await api.POST('/api/v1/plans/{planId}/conversations/open', {
+            params: { path: { planId: plan.id } },
+          }),
+        ),
+        prefill,
+      };
+    },
+    onSuccess: (opened) => {
+      if (opened)
+        void navigate(`/chat/${opened.conversation.id}`, {
+          state: opened.prefill ? { prefill: opened.prefill } : undefined,
+        });
+    },
   });
 }
 
@@ -90,7 +112,8 @@ export function PlanToolbar({
   const navigate = useNavigate();
   const preferences = usePlanPreferences();
   const requestKey = useRequestKey();
-  const chat = useOpenPlanChat(plan.id);
+  const chat = useOpenPlanChat(plan);
+  const coachWord = useCoachWord();
   const [confirm, setConfirm] = useState<Confirm>(null);
   const [reviewedPlan, setReviewedPlan] = useState<Plan | null>(null);
   const [preview, setPreview] = useState<Preview | null>(null);
@@ -231,13 +254,17 @@ export function PlanToolbar({
           <Button
             className="collapsible"
             icon={MessageSquare}
-            aria-label="Chat about this plan"
-            title="Chat about this plan"
+            aria-label={
+              coachWord === 'coach' ? 'Chat about this plan' : 'Ask your agent about this plan'
+            }
+            title={
+              coachWord === 'coach' ? 'Chat about this plan' : 'Ask your agent about this plan'
+            }
             disabled={archived || chat.isPending}
             busy={chat.isPending}
             onClick={() => chat.mutate(undefined)}
           >
-            <span className="btn-text">Coach</span>
+            <span className="btn-text">{coachWord === 'coach' ? 'Coach' : 'Agent'}</span>
           </Button>
         ) : null}
         {archived ? (
@@ -506,7 +533,7 @@ const COPY = {
   },
   unlock: {
     title: 'Unlock to edit?',
-    body: 'Locking freezes your brief, pace guides and workouts together. Unlocking copies the current version into an editable draft. Your coach can then make changes, and you review and lock again when you are happy. The locked version stays unchanged.',
+    body: 'Locking freezes your brief, pace guides and workouts together. Unlocking copies the current version into an editable draft. Your {coach} can then make changes, and you review and lock again when you are happy. The locked version stays unchanged.',
     action: 'Unlock and edit',
     icon: LockOpen,
   },
@@ -535,6 +562,7 @@ function ConfirmDialog({
   onClose: () => void;
   onConfirm: (action: 'archive' | 'unarchive' | 'unlock' | 'discard') => void;
 }) {
+  const coach = useCoachWord();
   if (
     confirm !== 'archive' &&
     confirm !== 'unarchive' &&
@@ -571,7 +599,7 @@ function ConfirmDialog({
       <p>
         {confirm === 'discard'
           ? `All draft changes will be permanently removed. Locked version ${plan.locked?.versionNumber} stays unchanged.`
-          : copy.body}
+          : copy.body.replace('{coach}', coach)}
       </p>
       {changed ? (
         <Notice tone="warning">

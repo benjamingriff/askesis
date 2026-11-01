@@ -1,6 +1,7 @@
 import { OpenAPIHono } from '@hono/zod-openapi';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ClerkAPIResponseError } from '@clerk/backend/errors';
+import { resetApiConfigForTests } from '../config.js';
 import type { AppEnvironment } from './types.js';
 
 const authenticateRequest = vi.fn();
@@ -31,6 +32,26 @@ function testApp() {
 }
 
 describe('requireAuthentication', () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    resetApiConfigForTests();
+  });
+  it('still requires authentication for hidden chat writes before validating requests', async () => {
+    const { app } = await import('../app.js');
+    vi.stubEnv('IN_APP_COACH', 'hidden');
+    resetApiConfigForTests();
+    authenticateRequest.mockResolvedValue({ isAuthenticated: false });
+    for (const path of [
+      '/api/v1/conversations',
+      '/api/v1/plans/invalid/conversations/open',
+      '/api/v1/conversations/invalid/messages',
+    ]) {
+      const response = await app.request(path, { method: 'POST' });
+      expect(response.status).toBe(401);
+      expect(await response.json()).toMatchObject({ error: { code: 'AUTHENTICATION_REQUIRED' } });
+    }
+    expect(ensureAthlete).not.toHaveBeenCalled();
+  });
   beforeEach(() => {
     authenticateRequest.mockReset();
     ensureAthlete.mockReset();

@@ -41,6 +41,7 @@ import { WorkoutChangesContext } from './PlanChanges';
 import { EffortLegend, Stat, WeekChart } from './PlanWidgets';
 import { DayRow, WorkoutCard, WorkoutDialog } from './Workout';
 import { Button, Card, EmptyState, IconButton, Pill, Segmented, Notice, cx } from './ui';
+import { useCoachWord } from '../coach';
 
 type Mode = 'weeks' | 'calendar';
 export type SchedulePresentation = 'interactive' | 'week-list';
@@ -81,6 +82,7 @@ export function Schedule({
   /** The version's stored weeks, carrying the coach's cutback flags. */
   storedWeeks?: TrainingWeek[] | undefined;
 }) {
+  const coach = useCoachWord();
   const weeks = useMemo(
     () => summarizeWeeks(workouts, startDate, endDate, coverage),
     [workouts, startDate, endDate, coverage],
@@ -111,7 +113,7 @@ export function Schedule({
   if (!weeks.length || !week)
     return (
       <EmptyState icon={CalendarDays} title="No workouts scheduled yet" dashed>
-        Your coach adds workouts as you plan together.
+        Your {coach} adds workouts as you plan together.
       </EmptyState>
     );
 
@@ -230,7 +232,7 @@ export function Schedule({
               action={
                 onPlanRest ? (
                   <Button variant="primary" icon={MessageSquare} onClick={onPlanRest}>
-                    Plan it with your coach
+                    Plan it with your {coach}
                   </Button>
                 ) : undefined
               }

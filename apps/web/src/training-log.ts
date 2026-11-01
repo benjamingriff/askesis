@@ -1,6 +1,8 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import type { paths } from '@askesis/api-client';
 import { api } from './api';
+import { agentPrompt, useInAppCoach } from './coach';
+import { useAskAgent } from './components/AskAgent';
 import { result } from './lib/result';
 import { useRequestKey } from './lib/use-request-key';
 import { useLiveState, FALLBACK_REFRESH_MS } from './live';
@@ -62,9 +64,15 @@ export function useClearLog(planId: string, lineageId: string) {
     onSuccess: () => void client.invalidateQueries({ queryKey: ['training-log'] }),
   });
 }
-/** Only this explicit action sends a coaching message; a log save never invokes the model. */
-export function useDiscussFeedback(planId: string) {
+/**
+ * Only this explicit action sends a coaching message; a log save never invokes the model. Without the
+ * in-app coach, it hands the request to the athlete's own agent and resolves to null.
+ */
+export function useDiscussFeedback(plan: { id: string; name: string }) {
+  const planId = plan.id;
   const key = useRequestKey();
+  const coach = useInAppCoach();
+  const askAgent = useAskAgent();
   return useMutation({
     mutationFn: async ({
       content,
@@ -72,7 +80,16 @@ export function useDiscussFeedback(planId: string) {
     }: {
       content: string;
       reference: FeedbackReferenceInput;
-    }) => {
+    }): Promise<string | null> => {
+      if (!coach) {
+        // The agent finds the saved log or check-in by its id through read_training_log.
+        const record =
+          reference.type === 'workout_log'
+            ? `workout log ${reference.logId}`
+            : `check-in ${reference.checkInId}`;
+        askAgent(agentPrompt(`${content}\nRead my training log first (${record}).`, plan));
+        return null;
+      }
       const conversation = result(
         await api.POST('/api/v1/plans/{planId}/conversations/open', {
           params: { path: { planId } },

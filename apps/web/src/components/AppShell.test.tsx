@@ -3,14 +3,21 @@ import { createMemoryRouter } from 'react-router';
 import { RouterProvider } from 'react-router/dom';
 import { afterEach, expect, it, vi } from 'vitest';
 import { AppShell } from './AppShell';
+import type * as Coach from '../coach';
 
 vi.mock('@clerk/react', () => ({ useUser: () => ({ user: null }) }));
 vi.mock('../chat', () => ({
   useConversations: () => ({ data: { pages: [{ conversations: [] }] } }),
 }));
+const coach = vi.hoisted(() => ({ enabled: true }));
+vi.mock('../coach', async (original) => ({
+  ...(await original<typeof Coach>()),
+  useInAppCoach: () => coach.enabled,
+}));
 afterEach(() => {
   cleanup();
   vi.restoreAllMocks();
+  coach.enabled = true;
 });
 
 it.each(['access', 'write'])(
@@ -135,4 +142,21 @@ it('opens the next tab at the top when motion is reduced', async () => {
   } finally {
     vi.unstubAllGlobals();
   }
+});
+
+it('leaves out the coach, new chat and recent chats when the in-app coach is hidden', () => {
+  coach.enabled = false;
+  renderShell('/plan');
+  const sidebar = screen.getByRole('complementary', { name: 'Sidebar' });
+  expect(within(sidebar).queryByRole('link', { name: 'Coach' })).not.toBeInTheDocument();
+  expect(within(sidebar).queryByRole('link', { name: 'New chat' })).not.toBeInTheDocument();
+  expect(within(sidebar).queryByText('Recent chats')).not.toBeInTheDocument();
+  const tabs = within(screen.getByRole('banner')).getByRole('navigation');
+  expect(
+    within(tabs)
+      .getAllByRole('link')
+      .map((link) => link.textContent),
+  ).toEqual(['Today', 'Plan']);
+  expect(tabs.style.getPropertyValue('--tab-count')).toBe('2');
+  expect(within(tabs).getByRole('link', { name: 'Plan' })).toHaveAttribute('aria-current', 'page');
 });

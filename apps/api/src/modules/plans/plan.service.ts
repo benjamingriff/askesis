@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { assertPlanIdle, createConversationRow } from '../chat/chat.core.js';
 import { sql, type Transaction } from 'kysely';
 import type { z } from '@hono/zod-openapi';
+import { getApiConfig } from '../../config.js';
 import { getDatabase } from '../../database/client.js';
 import type { DB, Json } from '../../database/generated.js';
 import {
@@ -420,9 +421,11 @@ export async function createPlan(
 ) {
   return idempotent(athleteId, 'plan.create', key, { displayName, ...dates }, async (db) => {
     const { planId } = await createPlanRows(db, athleteId, displayName, dates);
-    const conversationId = dates.createConversation
-      ? await createConversationRow(db, athleteId, planId)
-      : undefined;
+    // A hidden in-app coach offers no conversation; the plan itself is still created.
+    const conversationId =
+      dates.createConversation && getApiConfig().IN_APP_COACH === 'enabled'
+        ? await createConversationRow(db, athleteId, planId)
+        : undefined;
     return {
       ...(await detail(db, athleteId, planId)),
       ...(conversationId ? { conversationId } : {}),

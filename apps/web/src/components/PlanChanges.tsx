@@ -2,6 +2,7 @@ import { createContext, useContext } from 'react';
 import type { paths } from '@askesis/api-client';
 import { formatShort } from '../lib/format';
 import { Card } from './ui';
+import { useCoachWord } from '../coach';
 
 export type ChangeSummary = NonNullable<
   paths['/api/v1/agent-runs/{runId}/turn']['get']['responses'][200]['content']['application/json']['changes']
@@ -67,6 +68,7 @@ export function PlanChanges({
   firstDraft: boolean;
   onOpen?: ((workoutId: string) => void) | undefined;
 }) {
+  const coach = useCoachWord();
   const changed = hasChanges(summary);
   const listed = summary.workouts.filter((w) => w.change !== 'removed');
   const removed = summary.workouts.filter((w) => w.change === 'removed');
@@ -84,7 +86,7 @@ export function PlanChanges({
         {changed
           ? describeChanges(summary)
           : firstDraft
-            ? 'Nothing saved yet. Ask your coach to plan your first weeks.'
+            ? `Nothing saved yet. Ask your ${coach} to plan your first weeks.`
             : 'No pending changes from your locked plan.'}
       </p>
       {summary.omittedWorkouts ? (

@@ -32,6 +32,7 @@ import {
   SectionHeader,
   Segmented,
 } from './ui';
+import { useCoachWord } from '../coach';
 
 /** Progress in Monday-start calendar weeks, matching the schedule's week numbers. */
 export function planProgress(start: string | null, end: string | null, today: string) {
@@ -76,6 +77,7 @@ export function PlanView({
   onAskCoach?: ((prompt: string) => void) | undefined;
   schedulePresentation: SchedulePresentation;
 }) {
+  const coach = useCoachWord();
   const today = useLocalToday();
   const view: View =
     requestedView === 'draft' && plan.draft ? 'draft' : plan.locked ? 'locked' : 'draft';
@@ -88,7 +90,7 @@ export function PlanView({
   const changes = useDraftChanges(plan.id, view === 'draft' ? plan.draft : null);
   const selection = useWorkoutSelection(workouts.data ?? [], version?.id);
   const units = useUnits(brief.data?.brief.unit);
-  const chat = useOpenPlanChat(plan.id);
+  const chat = useOpenPlanChat(plan);
   const askCoach = onAskCoach ?? ((prompt: string) => chat.mutate(prompt));
   const [historyOpen, setHistoryOpen] = useState(false);
   const progress = planProgress(version?.startDate ?? null, version?.endDate ?? null, today);
@@ -213,7 +215,7 @@ export function PlanView({
             {view === 'draft' && embedded ? null : view === 'draft' ? (
               <Notice tone="accent" icon={Sparkles} className="draft-banner">
                 <strong>
-                  {plan.locked ? 'Unpublished draft' : 'Initial draft'} · your coach can edit this
+                  {plan.locked ? 'Unpublished draft' : 'Initial draft'} · your {coach} can edit this
                 </strong>
                 <span>
                   {plan.locked

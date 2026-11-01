@@ -160,6 +160,8 @@ Use the printed worktree URL (`MARKETING_PORT` overrides it). Ctrl+C or `pnpm de
 
 ## Local simulated chat
 
+`IN_APP_COACH=hidden` removes the in-app coach from the product; production for the MCP release sets `hidden`.
+
 For a provider-free development executor, set `CHAT_EXECUTION_MODE=test` on the local API (not its production Docker runtime). Normal test replies are labelled; `/test slow`, `/test fail` and `/test timeout` exercise Stop, failure and timeout. This executor never writes plan content or calls a provider. It remains a testing mode alongside the real worker, not the current coaching implementation.
 
 ## Validation commands

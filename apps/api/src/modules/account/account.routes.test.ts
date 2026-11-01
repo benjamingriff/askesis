@@ -5,7 +5,14 @@ import type { AppEnvironment } from '../../auth/types.js';
 import { resetApiConfigForTests } from '../../config.js';
 import type * as AccountService from './account.service.js';
 
-const mocks = vi.hoisted(() => ({ schedule: vi.fn(), request: vi.fn() }));
+const mocks = vi.hoisted(() => ({ schedule: vi.fn(), request: vi.fn(), account: vi.fn() }));
+vi.mock('../../database/client.js', () => ({
+  getDatabase: () => ({
+    selectFrom: () => ({
+      select: () => ({ where: () => ({ executeTakeFirstOrThrow: mocks.account }) }),
+    }),
+  }),
+}));
 vi.mock('../../auth/middleware.js', () => ({
   requireAuthentication: (async (c, next) => {
     c.set('athlete', {
@@ -54,6 +61,7 @@ beforeEach(() => {
 });
 afterEach(() => {
   delete process.env.CLERK_WEBHOOK_SIGNING_SECRET;
+  vi.unstubAllEnvs();
   resetApiConfigForTests();
 });
 
@@ -90,3 +98,26 @@ it('requests deletion for the signed-in athlete', async () => {
   expect(response.status).toBe(200);
   expect(mocks.request).toHaveBeenCalledWith('00000000-0000-4000-8000-000000000001');
 });
+
+it.each(['enabled', 'hidden'] as const)(
+  'reports account features with the coach %s without changing deletion state',
+  async (mode) => {
+    vi.stubEnv('IN_APP_COACH', mode);
+    resetApiConfigForTests();
+    for (const deletion of [
+      null,
+      { requestedAt: '2026-10-19T00:00:00.000Z', purgeAfter: '2026-10-26T00:00:00.000Z' },
+    ]) {
+      mocks.account.mockResolvedValue({
+        deletion_requested_at: deletion?.requestedAt ?? null,
+        purge_after: deletion?.purgeAfter ?? null,
+      });
+      const response = await app.request('/api/v1/account');
+      expect(response.status).toBe(200);
+      expect(await response.json()).toEqual({
+        features: { inAppCoach: mode === 'enabled' },
+        deletion,
+      });
+    }
+  },
+);

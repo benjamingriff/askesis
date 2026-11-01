@@ -11,6 +11,7 @@ import { ArrowRight, CalendarDays, Library, MessageSquare, Moon, Sparkles } from
 import { useMemo, type CSSProperties, type ReactNode } from 'react';
 import { Link, useNavigate } from 'react-router';
 import { IntensityChart } from '../components/IntensityChart';
+import { StartPlanButton } from '../components/AskAgent';
 import { useOpenPlanChat, PlanChatError } from '../components/PlanLifecycle';
 import { planProgress } from '../components/PlanView';
 import { PlanZones, Stat, zonesTitle } from '../components/PlanWidgets';
@@ -55,6 +56,7 @@ import { useActivePlans } from './active-plans';
 import { useFollowingState } from '../lib/use-following-state';
 import { useLocalToday } from '../lib/use-local-today';
 import { useWorkoutSelection } from '../lib/use-workout-selection';
+import { useCoachWord } from '../coach';
 
 export function TodayPage() {
   const preferences = usePlanPreferences();
@@ -80,9 +82,7 @@ export function TodayPage() {
           title="Let’s build your plan"
           action={
             <div className="button-row">
-              <ButtonLink to="/chat" variant="primary" icon={MessageSquare}>
-                Talk to your coach
-              </ButtonLink>
+              <StartPlanButton coachLabel="Talk to your coach" />
               <ButtonLink to="/plans" icon={Library}>
                 All plans
               </ButtonLink>
@@ -103,13 +103,14 @@ export function TodayPage() {
 
 /** Today always shows the locked schedule; unpublished drafts are only signposted. */
 function TodayForPlan({ plan, today }: { plan: Plan; today: string }) {
+  const coach = useCoachWord();
   const navigate = useNavigate();
   const prefs = usePlanPreferences();
   const version = planVersion(plan, 'locked');
   const workouts = useWorkouts(version);
   const brief = useBriefState(plan.id, version);
   const units = useUnits(brief.data?.brief.unit);
-  const chat = useOpenPlanChat(plan.id);
+  const chat = useOpenPlanChat(plan);
   const [selected, setSelected] = useFollowingState(today);
   const days = useMemo(
     () => Array.from({ length: 7 }, (_, i) => addDays(startOfWeek(today), i)),
@@ -234,7 +235,7 @@ function TodayForPlan({ plan, today }: { plan: Plan; today: string }) {
                     busy={chat.isPending}
                     onClick={() => chat.mutate('Plan the remaining weeks')}
                   >
-                    Plan it with your coach
+                    Plan it with your {coach}
                   </Button>
                 ) : undefined
               }
