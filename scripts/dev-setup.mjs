@@ -39,9 +39,14 @@ try {
     const webPort = Number(defaults.WEB_PORT);
     const databasePort = Number(defaults.POSTGRES_PORT);
     await Promise.all(
-      [apiPort, webPort, databasePort, defaults.MARKETING_PORT, defaults.EVALS_PORT].map(
-        assertPortAvailable,
-      ),
+      [
+        apiPort,
+        webPort,
+        databasePort,
+        defaults.MARKETING_PORT,
+        defaults.EVALS_PORT,
+        defaults.USAGE_PORT,
+      ].map(assertPortAvailable),
     );
     const environment = {
       ...parseEnv(readFileSync(resolve(root, '.env.example'), 'utf8')),

@@ -123,19 +123,20 @@ For real coaching, configure agent mode/token/provider key and use the `agent` p
 
 Use root commands from any worktree. `pnpm dev` is the normal main-app entry point; each app can also be explored separately:
 
-| Command                                   | Starts/requires                                         | Configuration                                                                              |
-| ----------------------------------------- | ------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
-| `pnpm dev` / `pnpm dev:local`             | API + web + owned temporary PostgreSQL                  | Root `.env`; readiness checked                                                             |
-| `pnpm dev:api`                            | API + owned temporary PostgreSQL                        | Root `.env`; migrations/readiness checked                                                  |
-| `pnpm dev:web`                            | Web only; requires a running API for data               | Root `.env`; `WEB_PORT`, `VITE_API_PROXY_TARGET`                                           |
-| `pnpm dev:marketing`                      | Static Astro site; no Docker/auth                       | Root `MARKETING_PORT`, `SITE_URL`, `APP_URL`, or shell overrides                           |
-| `pnpm dev:evals`                          | Local benchmark-artifact viewer; no Docker/auth         | Root `EVALS_PORT`, `EVALS_RESULTS_DIR`, or shell overrides                                 |
-| `pnpm dev:agent`                          | Worker; requires a running API and provider credentials | Separate `apps/agent/.env`; API URL derived from the worktree unless explicitly overridden |
-| `pnpm dev:mobile` / `pnpm dev:mobile:web` | Separate Expo prototype; no backend                     | Delegates to npm; first run `npm ci --prefix apps/mobile`                                  |
+| Command                                   | Starts/requires                                             | Configuration                                                                              |
+| ----------------------------------------- | ----------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| `pnpm dev` / `pnpm dev:local`             | API + web + owned temporary PostgreSQL                      | Root `.env`; readiness checked                                                             |
+| `pnpm dev:api`                            | API + owned temporary PostgreSQL                            | Root `.env`; migrations/readiness checked                                                  |
+| `pnpm dev:web`                            | Web only; requires a running API for data                   | Root `.env`; `WEB_PORT`, `VITE_API_PROXY_TARGET`                                           |
+| `pnpm dev:marketing`                      | Static Astro site; no Docker/auth                           | Root `MARKETING_PORT`, `SITE_URL`, `APP_URL`, or shell overrides                           |
+| `pnpm dev:evals`                          | Local benchmark-artifact viewer; no Docker/auth             | Root `EVALS_PORT`, `EVALS_RESULTS_DIR`, or shell overrides                                 |
+| `pnpm dev:usage`                          | Usage dashboard prototype on synthetic data; no Docker/auth | Root `USAGE_PORT` or shell override                                                        |
+| `pnpm dev:agent`                          | Worker; requires a running API and provider credentials     | Separate `apps/agent/.env`; API URL derived from the worktree unless explicitly overridden |
+| `pnpm dev:mobile` / `pnpm dev:mobile:web` | Separate Expo prototype; no backend                         | Delegates to npm; first run `npm ci --prefix apps/mobile`                                  |
 
 Marketing explicitly disables Astro’s agent-triggered backgrounding with `--ignore-lock`; the root supervisor handles its session lock. All these commands stay in the foreground and stop their owned process groups on Ctrl+C or `pnpm dev:stop [app]`. App-level `pnpm --filter @askesis/<app> dev` commands remain available when manually coordinating processes. Mobile remains outside the pnpm workspace with its own npm lockfile.
 
-Worktree defaults provide separate API/web/database/marketing/evals ports. Generated `.env` stores them; existing configuration is retained. Overrides in the shell take precedence. Browser servers refuse occupied configured ports instead of silently switching to a different URL. Marketing/evals can start in a fresh worktree without `dev:setup`; they receive only their relevant root variables. Worker startup does not copy root Clerk/database/provider credentials into its separate environment.
+Worktree defaults provide separate API/web/database/marketing/evals/usage ports. Generated `.env` stores them; existing configuration is retained. Overrides in the shell take precedence. Browser servers refuse occupied configured ports instead of silently switching to a different URL. Marketing/evals/usage can start in a fresh worktree without `dev:setup`; they receive only their relevant root variables. Worker startup does not copy root Clerk/database/provider credentials into its separate environment.
 
 API and web dev scripts, and the web build, read root `.env`; Vite also loads normal app environment files. Root/shell values take precedence. Only `VITE_*` variables are exposed to client code. The API uses `PORT`; Docker publishes its API on `API_PORT`. Keep `WEB_PORT`, `LOCAL_WEB_URL`, `CLERK_AUTHORIZED_PARTIES`, `PORT` and `VITE_API_PROXY_TARGET` consistent when overriding generated settings.
 

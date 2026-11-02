@@ -59,6 +59,7 @@ async function main() {
         web: environment.WEB_PORT,
         marketing: environment.MARKETING_PORT,
         evals: environment.EVALS_PORT,
+        usage: environment.USAGE_PORT,
       }[name];
       if (port) {
         await assertPortAvailable(port);
@@ -66,14 +67,16 @@ async function main() {
         session.save();
       }
       let childEnvironment = environment;
-      if (['marketing', 'evals', 'mobile', 'agent'].includes(name)) {
+      if (['marketing', 'evals', 'usage', 'mobile', 'agent'].includes(name)) {
         childEnvironment = { ...process.env };
         const keys =
           name === 'marketing'
             ? ['MARKETING_PORT', 'SITE_URL', 'APP_URL']
             : name === 'evals'
               ? ['EVALS_PORT', 'EVALS_RESULTS_DIR']
-              : [];
+              : name === 'usage'
+                ? ['USAGE_PORT']
+                : [];
         for (const key of keys)
           if (environment[key] !== undefined) childEnvironment[key] = environment[key];
         if (name === 'agent')

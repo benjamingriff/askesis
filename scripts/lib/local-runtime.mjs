@@ -23,6 +23,7 @@ export const applications = [
   'agent',
   'marketing',
   'evals',
+  'usage',
   'mobile',
   'setup',
   'exec',
@@ -44,6 +45,7 @@ export function worktreeDefaults(path = root) {
     // Stay below the browser-blocked SIP ports 5060/5061.
     MARKETING_PORT: String(4300 + (offset % 500)),
     EVALS_PORT: String(8100 + offset),
+    USAGE_PORT: String(8900 + offset),
   };
 }
 
@@ -79,6 +81,7 @@ export function localEnvironment() {
     'POSTGRES_PORT',
     'MARKETING_PORT',
     'EVALS_PORT',
+    'USAGE_PORT',
   ]) {
     if (!/^\d+$/.test(environment[key]) || +environment[key] < 1024 || +environment[key] > 65535)
       throw new Error(`Invalid local port: ${key}.`);
