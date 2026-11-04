@@ -1,6 +1,7 @@
 import { useQueryClient, type QueryClient } from '@tanstack/react-query';
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
 import { AppState } from 'react-native';
+import { useAccount } from '../data/account';
 import { authenticatedFetch } from '../lib/api';
 
 type LiveState = 'connecting' | 'live' | 'reconnecting';
@@ -147,8 +148,17 @@ function wait(ms: number, signal: AbortSignal) {
  * the API's live event stream, the same contract the web app uses. Reconnects replay from the
  * last cursor; while disconnected, active reads poll instead.
  */
-export function LiveProvider({ enabled, children }: { enabled: boolean; children: ReactNode }) {
+export function LiveProvider({
+  enabled: signedIn,
+  children,
+}: {
+  enabled: boolean;
+  children: ReactNode;
+}) {
   const client = useQueryClient();
+  // Only reads the account AccountGate loads; the stream is refused while deletion is pending.
+  const account = useAccount(false);
+  const enabled = signedIn && !!account.data && !account.data.deletion;
   const [state, setState] = useState<LiveState>('connecting');
   useEffect(() => {
     if (!enabled) return;

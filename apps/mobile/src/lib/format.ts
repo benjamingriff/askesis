@@ -179,3 +179,11 @@ export function formatSpeed(metresPerSecond: number, units: Units): string {
 export function briefUnits(unit: 'kilometres' | 'miles' | undefined | null): Units {
   return unit === 'miles' ? 'mi' : 'km';
 }
+
+/** The device-local calendar day of an instant, such as a deletion deadline. */
+export const formatInstantLong = (instant: string) =>
+  new Intl.DateTimeFormat('en-GB', { weekday: 'long', day: 'numeric', month: 'long' }).format(
+    new Date(instant),
+  );
+export const formatInstantShort = (instant: string) =>
+  new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short' }).format(new Date(instant));
