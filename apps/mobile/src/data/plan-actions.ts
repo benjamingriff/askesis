@@ -118,17 +118,17 @@ export function useDeletionImpact(planId: string, enabled: boolean) {
 
 /**
  * Deletes a plan with its conversations, training log and check-ins. It stays restorable from
- * Recently deleted for 30 days, then it is purged. Sends the state the athlete reviewed, so a
- * change made elsewhere in the meantime is refused.
+ * Recently deleted for 30 days, then it is purged. Takes the state version the athlete reviewed,
+ * so a change made elsewhere in the meantime is refused.
  */
-export function useDeletePlan(plan: Plan) {
+export function useDeletePlan(plan: Pick<Plan, 'id'>) {
   const client = useQueryClient();
   return useMutation({
-    mutationFn: async () =>
+    mutationFn: async (reviewedStateVersion: number) =>
       result(
         await api.POST('/api/v1/plans/{planId}/delete', {
           params: { path: { planId: plan.id } },
-          body: { expectedStateVersion: plan.stateVersion },
+          body: { expectedStateVersion: reviewedStateVersion },
         }),
       ),
     onSuccess: () => {

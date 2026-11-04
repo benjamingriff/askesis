@@ -786,6 +786,8 @@ function DeletePlanConfirm({
   onClose: () => void;
   onDeleted: () => void;
 }) {
+  // Live updates refresh `plan` while this is open; delete only the state that was reviewed.
+  const [reviewedStateVersion] = useState(plan.stateVersion);
   const impact = useDeletionImpact(plan.id, true);
   const data = impact.data;
   const removed = data
@@ -830,7 +832,7 @@ function DeletePlanConfirm({
           variant="danger"
           busy={remove.isPending}
           disabled={remove.isPending || !data}
-          onPress={() => remove.mutate(undefined, { onSuccess: onDeleted })}
+          onPress={() => remove.mutate(reviewedStateVersion, { onSuccess: onDeleted })}
         />
         <Button label="Cancel" variant="ghost" disabled={remove.isPending} onPress={onClose} />
       </View>
