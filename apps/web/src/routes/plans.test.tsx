@@ -2,13 +2,21 @@ import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testi
 import { createMemoryRouter, RouterProvider } from 'react-router';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { focusManager } from '@tanstack/react-query';
+import { AskAgentProvider } from '../components/AskAgent';
 import { AccountQueryProvider } from '../query-provider';
 import { api } from '../api';
 import type { Plan } from '../plan-data';
 import { PlanPage, PlansPage } from './plans';
 import { ActivePlansPage } from './active-plans';
+import type * as Coach from '../coach';
 
 vi.mock('../api', () => ({ api: { GET: vi.fn(), POST: vi.fn(), PATCH: vi.fn() } }));
+const coach = vi.hoisted(() => ({ enabled: true }));
+vi.mock('../coach', async (original) => ({
+  ...(await original<typeof Coach>()),
+  useInAppCoach: () => coach.enabled,
+  useCoachWord: () => (coach.enabled ? 'coach' : 'agent'),
+}));
 const draft = {
   id: 'draft-1',
   state: 'draft' as const,
@@ -85,6 +93,8 @@ function mount(path = '/plans/plan-1') {
   const router = createMemoryRouter(
     [
       { path: '/plans', element: <PlansPage /> },
+      { path: '/plans/archive', element: <PlansPage collection="archive" /> },
+      { path: '/plans/deleted', element: <PlansPage collection="deleted" /> },
       { path: '/plan', element: <ActivePlansPage /> },
       { path: '/plans/:planId', element: <PlanPage /> },
       { path: '/chat/:conversationId', element: <h1>Plan chat</h1> },
@@ -93,13 +103,16 @@ function mount(path = '/plans/plan-1') {
   );
   render(
     <AccountQueryProvider>
-      <RouterProvider router={router} />
+      <AskAgentProvider>
+        <RouterProvider router={router} />
+      </AskAgentProvider>
     </AccountQueryProvider>,
   );
   return router;
 }
 beforeEach(() => {
   vi.resetAllMocks();
+  coach.enabled = true;
   localStorage.clear();
   current = structuredClone(plan) as Plan;
   vi.mocked(api.GET).mockImplementation((async (
@@ -592,6 +605,32 @@ it('reuses a create request key when retrying after a connection failure', async
   expect(vi.mocked(api.POST).mock.calls[0]).toEqual(vi.mocked(api.POST).mock.calls[1]);
 });
 
+it('creates a plan without a conversation and asks the athlete’s agent when the coach is hidden', async () => {
+  coach.enabled = false;
+  vi.stubGlobal('navigator', { ...navigator, clipboard: { writeText: vi.fn() } });
+  vi.mocked(api.POST).mockResolvedValue({
+    data: { ...plan, id: 'plan-9', displayName: 'A new plan' },
+  } as never);
+  const router = mount('/plans');
+  fireEvent.click(await screen.findByRole('button', { name: 'New plan' }));
+  expect(screen.getByRole('dialog', { name: 'New plan' })).toHaveTextContent(
+    'Your agent will talk it through',
+  );
+  fireEvent.change(screen.getByLabelText('Plan name'), { target: { value: 'A new plan' } });
+  fireEvent.change(screen.getByLabelText('Start date'), { target: { value: '2026-09-10' } });
+  fireEvent.change(screen.getByLabelText('End date'), { target: { value: '2026-12-10' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Create plan' }));
+  const ask = await screen.findByRole('dialog', { name: 'Ask your agent' });
+  expect(vi.mocked(api.POST).mock.calls[0]?.[1]).toMatchObject({
+    body: { createConversation: false },
+  });
+  expect(router.state.location.pathname).toBe('/plans/plan-9');
+  expect(
+    (within(ask).getByLabelText('Prompt for your agent') as HTMLTextAreaElement).value,
+  ).toContain('for my plan “A new plan” (planId plan-9)');
+  vi.unstubAllGlobals();
+});
+
 it('requires review of assumptions and sends combined confirmation and lock as one command', async () => {
   const reviewed = {
     ...preview,
@@ -752,4 +791,72 @@ it('guards unsaved plan details against navigation', async () => {
   fireEvent.click(screen.getByRole('button', { name: 'Keep editing' }));
   expect(screen.getByLabelText('Description')).toHaveValue('Unsaved');
   expect(screen.queryByText('Leave without saving?')).not.toBeInTheDocument();
+});
+
+it('deletes a plan after showing what goes with it', async () => {
+  const original = vi.mocked(api.GET).getMockImplementation()!;
+  vi.mocked(api.GET).mockImplementation((async (path: string, ...args: unknown[]) =>
+    path.endsWith('/deletion-impact')
+      ? {
+          data: {
+            versions: 2,
+            conversations: 1,
+            messages: 4,
+            workoutLogs: 3,
+            checkIns: 0,
+            restoreDays: 30,
+          },
+          response: new Response(),
+        }
+      : Reflect.apply(original, api, [path, ...args])) as typeof api.GET);
+  vi.mocked(api.POST).mockResolvedValue({
+    data: { ...current, archived: true, deletedAt: '2026-10-19T09:00:00.000Z' },
+    response: new Response(),
+  } as never);
+  const router = mount();
+  await openMenuItem('Delete plan…');
+  const dialog = await screen.findByRole('dialog', { name: 'Delete “Autumn running”?' });
+  await within(dialog).findByText(
+    /2 locked versions, 1 coach conversation \(4 messages\), 3 logged sessions\./,
+  );
+  within(dialog).getByText(/restore it from Recently deleted for 30 days/);
+  await act(async () =>
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Delete plan' })),
+  );
+  expect(api.POST).toHaveBeenCalledWith('/api/v1/plans/{planId}/delete', {
+    params: { path: { planId: 'plan-1' } },
+    body: { expectedStateVersion: 1 },
+  });
+  await waitFor(() => expect(router.state.location.pathname).toBe('/plans'));
+});
+
+it('lists recently deleted plans with their purge date and restores them to the archive', async () => {
+  const deleted = {
+    ...current,
+    archived: true,
+    deletedAt: '2026-10-19T09:00:00.000Z',
+    purgeAfter: '2026-11-18T09:00:00.000Z',
+  };
+  const original = vi.mocked(api.GET).getMockImplementation()!;
+  vi.mocked(api.GET).mockImplementation((async (
+    path: string,
+    options?: { params?: { query?: { collection?: string } } },
+  ) =>
+    path === '/api/v1/plans' && options?.params?.query?.collection === 'deleted'
+      ? { data: { plans: [deleted] }, response: new Response() }
+      : Reflect.apply(original, api, [path, options])) as typeof api.GET);
+  vi.mocked(api.POST).mockResolvedValue({
+    data: { ...deleted, deletedAt: null, purgeAfter: null },
+    response: new Response(),
+  } as never);
+  const router = mount('/plans/deleted');
+  await screen.findByText('Deleted for good on 18 Nov');
+  expect(screen.queryByRole('link', { name: /Autumn running/ })).not.toBeInTheDocument();
+  await act(async () =>
+    fireEvent.click(screen.getByRole('button', { name: 'Restore to archive' })),
+  );
+  expect(api.POST).toHaveBeenCalledWith('/api/v1/plans/{planId}/undelete', {
+    params: { path: { planId: 'plan-1' } },
+  });
+  await waitFor(() => expect(router.state.location.pathname).toBe('/plans/archive'));
 });

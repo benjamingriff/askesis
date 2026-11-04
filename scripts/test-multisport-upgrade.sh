@@ -2,18 +2,16 @@
 set -eu
 # Rehearse the multi-sport migration on a populated, disposable database: running briefs in
 # draft and locked versions become run baselines without touching locked content otherwise.
-export TEST_DATABASE_PORT="${TEST_DATABASE_PORT:-55432}"
-docker compose --profile test up -d --wait postgres-test
-docker compose exec -T postgres-test createdb -U askesis_test askesis_multisport_upgrade
-cleanup() { docker compose exec -T postgres-test dropdb -U askesis_test askesis_multisport_upgrade; }
-trap cleanup EXIT INT TERM
+. ./scripts/lib/disposable-compose.sh
+test_compose --profile test up -d --wait postgres-test
+test_compose exec -T postgres-test createdb -U askesis_test askesis_multisport_upgrade
 # The helper reads the database through the API's own configuration, as test-db.sh does.
 check() {
   NODE_ENV=test CLERK_SECRET_KEY=sk_test_fixture CLERK_PUBLISHABLE_KEY=pk_test_fixture \
     DATABASE_URL="postgres://askesis_test:askesis_test@127.0.0.1:${TEST_DATABASE_PORT}/askesis_multisport_upgrade" \
     pnpm --silent --filter @askesis/api exec tsx scripts/multisport-upgrade-check.ts "$1"
 }
-run_sql() { docker compose exec -T postgres-test psql -U askesis_test -d askesis_multisport_upgrade --set ON_ERROR_STOP=1 --quiet; }
+run_sql() { test_compose exec -T postgres-test psql -U askesis_test -d askesis_multisport_upgrade --set ON_ERROR_STOP=1 --quiet; }
 for migration in database/migrations/*.sql; do
   case "$migration" in *20261008120000_multisport.sql) break;; esac
   run_sql < "$migration"

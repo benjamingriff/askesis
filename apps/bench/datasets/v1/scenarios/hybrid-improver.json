@@ -1,0 +1,57 @@
+{
+  "schemaVersion": 1,
+  "id": "hybrid-improver",
+  "version": 1,
+  "persona": {
+    "id": "hybrid-improver",
+    "version": 1
+  },
+  "mode": "conversation_to_plan",
+  "split": "development",
+  "reviewStatus": "exploratory",
+  "goal": "I want sustainable general fitness, strength and enjoyable variety through running and lifting. I am not preparing for any race.",
+  "openingMessage": "I'd like a {{planSpanWeeks}}-week general fitness plan combining running and strength. Fully prescribe just the first {{prescriptionWeeks}} weeks now.",
+  "openingFactIds": ["goal", "horizon"],
+  "planSpanWeeks": 12,
+  "prescriptionWeeks": 4,
+  "startPolicy": "next_monday",
+  "events": [],
+  "expectations": {
+    "outcome": "saved_draft",
+    "frequencyPolicy": "workouts_per_sport",
+    "requiredDiscovery": [
+      "goal",
+      "dates",
+      "horizon",
+      "training",
+      "frequency",
+      "availability",
+      "equipment",
+      "fitness"
+    ],
+    "checks": [
+      "saved_plan",
+      "plan_dates",
+      "coverage",
+      "sports",
+      "baseline",
+      "availability",
+      "time_budgets",
+      "daily_limit",
+      "prescriptions",
+      "performance_provenance"
+    ],
+    "reviewAnchors": {
+      "goal_fit": "General fitness and variety, with no invented Hyrox or race target.",
+      "progression": "Use the current 12 km/week, 7 km longest run and two strength sessions.",
+      "recovery": "Balance running/lifting fatigue; combined daily time must fit even on double-session days.",
+      "prescriptions": "Actionable running zones plus named strength/circuit steps with reps, rest and RIR/RPE as appropriate.",
+      "personalization": "Respect three available days, desired per-sport frequency and available gym equipment.",
+      "conversation": "Discover relevant facts without unrelated sport questions; distinguish unknowns from unanswered facts, explain assumptions, and accurately describe what is saved and what remains unprescribed. Use measured running evidence; guessed lifting loads are not athlete-supplied measurements."
+    }
+  },
+  "limits": {
+    "maxAthleteMessages": 18,
+    "maxElapsedMinutes": 30
+  }
+}

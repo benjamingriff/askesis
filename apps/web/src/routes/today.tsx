@@ -1,12 +1,21 @@
+import {
+  TrainingLogProvider,
+  WorkoutLogActions,
+  LogMark,
+  CheckInButton,
+  useLogContext,
+} from '../components/TrainingLog';
+import { useTrainingLog } from '../training-log';
 import type { WorkoutSummary } from '@askesis/api-client';
 import { ArrowRight, CalendarDays, Library, MessageSquare, Moon, Sparkles } from 'lucide-react';
-import { useMemo, type CSSProperties } from 'react';
+import { useMemo, type CSSProperties, type ReactNode } from 'react';
 import { Link, useNavigate } from 'react-router';
 import { IntensityChart } from '../components/IntensityChart';
+import { StartPlanButton } from '../components/AskAgent';
 import { useOpenPlanChat, PlanChatError } from '../components/PlanLifecycle';
 import { planProgress } from '../components/PlanView';
 import { PlanZones, Stat, zonesTitle } from '../components/PlanWidgets';
-import { WorkoutDialog, workoutStats } from '../components/Workout';
+import { PlaceholderBand, WorkoutDialog, workoutStats } from '../components/Workout';
 import {
   Button,
   ButtonLink,
@@ -47,6 +56,7 @@ import { useActivePlans } from './active-plans';
 import { useFollowingState } from '../lib/use-following-state';
 import { useLocalToday } from '../lib/use-local-today';
 import { useWorkoutSelection } from '../lib/use-workout-selection';
+import { useCoachWord } from '../coach';
 
 export function TodayPage() {
   const preferences = usePlanPreferences();
@@ -72,9 +82,7 @@ export function TodayPage() {
           title="Let’s build your plan"
           action={
             <div className="button-row">
-              <ButtonLink to="/chat" variant="primary" icon={MessageSquare}>
-                Talk to your coach
-              </ButtonLink>
+              <StartPlanButton coachLabel="Talk to your coach" />
               <ButtonLink to="/plans" icon={Library}>
                 All plans
               </ButtonLink>
@@ -84,26 +92,40 @@ export function TodayPage() {
           Once a plan is locked and active, today’s session and your week appear here.
         </EmptyState>
       ) : null}
-      {plan ? <TodayForPlan key={plan.id} plan={plan} today={today} /> : null}
+      {plan ? (
+        <TrainingLogProvider key={plan.id} plan={plan}>
+          <TodayForPlan plan={plan} today={today} />
+        </TrainingLogProvider>
+      ) : null}
     </div>
   );
 }
 
 /** Today always shows the locked schedule; unpublished drafts are only signposted. */
 function TodayForPlan({ plan, today }: { plan: Plan; today: string }) {
+  const coach = useCoachWord();
   const navigate = useNavigate();
   const prefs = usePlanPreferences();
   const version = planVersion(plan, 'locked');
   const workouts = useWorkouts(version);
   const brief = useBriefState(plan.id, version);
   const units = useUnits(brief.data?.brief.unit);
-  const chat = useOpenPlanChat(plan.id);
+  const chat = useOpenPlanChat(plan);
   const [selected, setSelected] = useFollowingState(today);
   const days = useMemo(
     () => Array.from({ length: 7 }, (_, i) => addDays(startOfWeek(today), i)),
     [today],
   );
   const all = workouts.data ?? [];
+  const logContext = useLogContext();
+  const logs = logContext?.logs ?? [];
+  const recent = all.filter(
+    (w) =>
+      w.scheduledDate < today &&
+      w.scheduledDate >= addDays(today, -3) &&
+      !logs.some((l) => l.lineageId === w.lineageId),
+  );
+  const weekLog = useTrainingLog(plan.id, days[0], days[6]);
   const dialog = useWorkoutSelection(all, version?.id);
   const week = all.filter((w) => w.scheduledDate >= days[0]! && w.scheduledDate <= days[6]!);
   // Distance for running-only plans; time once other sports join, as their distances don't add.
@@ -113,9 +135,10 @@ function TodayForPlan({ plan, today }: { plan: Plan; today: string }) {
   const formatAmount = (value: number, withUnit = true) =>
     measure === 'time' ? formatDuration(value) : formatDistance(value, units, withUnit);
   const weekAmount = week.reduce((sum, w) => sum + amount(w), 0);
-  const plannedSoFar = week
-    .filter((w) => w.scheduledDate < today)
-    .reduce((sum, w) => sum + amount(w), 0);
+  const completedAmount = (weekLog.data?.summary.bySport ?? []).reduce(
+    (sum, sport) => sum + (measure === 'time' ? sport.actualSeconds : sport.actualMetres),
+    0,
+  );
   const maxDay = Math.max(
     ...days.map((d) => workoutsOn(week, d).reduce((sum, w) => sum + amount(w), 0)),
     1,
@@ -166,7 +189,15 @@ function TodayForPlan({ plan, today }: { plan: Plan; today: string }) {
             >
               <span className="label">{WEEKDAYS_SHORT[index]!.slice(0, 1)}</span>
               <strong>{dayNumber(date)}</strong>
-              <i style={{ '--kind': kind?.color ?? 'var(--border)' } as CSSProperties} />
+              {items.length && date <= today && logContext?.ready ? (
+                <LogMark
+                  logs={logs.filter((l) => items.some((w) => w.lineageId === l.lineageId))}
+                  date={date}
+                  today={today}
+                />
+              ) : (
+                <i style={{ '--kind': kind?.color ?? 'var(--border)' } as CSSProperties} />
+              )}
             </button>
           );
         })}
@@ -204,7 +235,7 @@ function TodayForPlan({ plan, today }: { plan: Plan; today: string }) {
                     busy={chat.isPending}
                     onClick={() => chat.mutate('Plan the remaining weeks')}
                   >
-                    Plan it with your coach
+                    Plan it with your {coach}
                   </Button>
                 ) : undefined
               }
@@ -229,6 +260,18 @@ function TodayForPlan({ plan, today }: { plan: Plan; today: string }) {
               </p>
             </Card>
           ) : null}
+          {recent.length && logContext?.ready ? (
+            <div className="training-unlogged">
+              {recent.map((workout) => (
+                <article key={workout.id}>
+                  <span className="muted">
+                    {formatLong(workout.scheduledDate)} · {workout.title}
+                  </span>
+                  <WorkoutLogActions workout={workout} compact />
+                </article>
+              ))}
+            </div>
+          ) : null}
           {selectedWorkouts.map((workout) => (
             <HeroWorkout
               key={workout.id}
@@ -236,9 +279,12 @@ function TodayForPlan({ plan, today }: { plan: Plan; today: string }) {
               version={version}
               units={units}
               onOpen={dialog.open}
-            />
+            >
+              <WorkoutLogActions workout={workout} />
+            </HeroWorkout>
           ))}
 
+          <CheckInButton plan={plan} workouts={all} />
           {plan.draft ? (
             <button
               type="button"
@@ -272,13 +318,18 @@ function TodayForPlan({ plan, today }: { plan: Plan; today: string }) {
             />
             <div className="week-summary">
               <Stat
-                label={measure === 'time' ? 'Planned time' : 'Planned distance'}
-                value={formatAmount(weekAmount, false)}
+                label={measure === 'time' ? 'Done time' : 'Done distance'}
+                value={formatAmount(completedAmount, false)}
                 unit={measure === 'time' ? undefined : units}
-                sub={`${formatAmount(weekAmount - plannedSoFar)} to go from today`}
+                sub={`of ${formatAmount(weekAmount)} planned`}
                 large
               />
-              <Stat label="Sessions" value={String(week.length)} large />
+              <Stat
+                label="Sessions"
+                value={`${(weekLog.data?.summary.done ?? 0) + (weekLog.data?.summary.changed ?? 0)} / ${week.length}`}
+                sub={`${weekLog.data?.summary.unlogged ?? 0} to log`}
+                large
+              />
             </div>
             <div className="day-bars" aria-hidden="true">
               {days.map((date, index) => {
@@ -291,6 +342,13 @@ function TodayForPlan({ plan, today }: { plan: Plan; today: string }) {
                     className={date < today ? 'past' : date === today ? 'today' : ''}
                   >
                     <i
+                      className={
+                        items.some((w) =>
+                          logs.some((l) => l.lineageId === w.lineageId && l.status !== 'skipped'),
+                        )
+                          ? 'logged'
+                          : ''
+                      }
                       style={
                         {
                           height: metres ? `${Math.max(14, (metres / maxDay) * 100)}%` : '6%',
@@ -338,37 +396,43 @@ function HeroWorkout({
   version,
   units,
   onOpen,
+  children,
 }: {
   workout: WorkoutSummary;
   version: PlanVersion | null;
   units: Units;
   onOpen: (workout: WorkoutSummary) => void;
+  children?: ReactNode;
 }) {
   const kind = workoutLook(workout);
   const detail = useWorkoutDetail(workout.id, version);
   const { pool } = useSportUnits();
   return (
-    <button
-      type="button"
-      className="hero-workout"
-      style={{ '--kind': kind.color } as CSSProperties}
-      onClick={() => onOpen(workout)}
-    >
-      <span className="hero-kind">
-        <kind.icon size={16} aria-hidden="true" /> {kind.label}
-      </span>
-      <strong className="hero-title">{workout.title}</strong>
-      {workout.purpose ? <span className="hero-purpose">{workout.purpose}</span> : null}
-      <span className="hero-stats">
-        {workoutStats(workout, units, pool).map((stat) => (
-          <Stat key={stat.label} label={stat.label} value={stat.value} unit={stat.unit} large />
-        ))}
-      </span>
-      {detail.data ? <IntensityChart prescription={detail.data.prescription} height={56} /> : null}
-      <span className="hero-cta">
-        View workout <ArrowRight size={16} aria-hidden="true" />
-      </span>
-    </button>
+    <div className="hero-card" style={{ '--kind': kind.color } as CSSProperties}>
+      <button type="button" className="hero-workout" onClick={() => onOpen(workout)}>
+        <span className="hero-cover">
+          <span className="hero-kind">
+            <kind.icon size={15} aria-hidden="true" /> {kind.label}
+            {workout.placeholder ? ' · Placeholder' : ''}
+          </span>
+          {workout.placeholder ? (
+            <PlaceholderBand workout={workout} />
+          ) : detail.data ? (
+            <IntensityChart prescription={detail.data.prescription} height={64} />
+          ) : null}
+        </span>
+        <span className="hero-body">
+          <strong className="hero-title">{workout.title}</strong>
+          {workout.purpose ? <span className="hero-purpose">{workout.purpose}</span> : null}
+          <span className="hero-stats">
+            {workoutStats(workout, units, pool).map((stat) => (
+              <Stat key={stat.label} label={stat.label} value={stat.value} unit={stat.unit} large />
+            ))}
+          </span>
+        </span>
+      </button>
+      {children}
+    </div>
   );
 }
 

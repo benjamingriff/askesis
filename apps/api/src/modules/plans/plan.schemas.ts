@@ -6,7 +6,7 @@ import { Id, FindingSchema } from './plan.common.js';
 import { BriefStateSchema } from './brief.schemas.js';
 export const PlanParams = z.object({ planId: Id });
 export const PlanListQuery = z.object({
-  collection: z.enum(['library', 'active', 'archive']).default('library'),
+  collection: z.enum(['library', 'active', 'archive', 'deleted']).default('library'),
 });
 export const StateCommandSchema = z
   .object({ expectedStateVersion: z.number().int().positive() })
@@ -30,6 +30,9 @@ export const PlanSchema = z.object({
   stateVersion: z.number().int(),
   active: z.boolean(),
   archived: z.boolean(),
+  /** Set while a deleted plan can still be restored; it is purged after purgeAfter. */
+  deletedAt: z.string().nullable().optional(),
+  purgeAfter: z.string().nullable().optional(),
   draft: VersionSchema.nullable(),
   locked: VersionSchema.nullable(),
 });
@@ -142,6 +145,14 @@ export const RestorePreviewSchema = z.object({
   stateVersion: z.number().int(),
   sourceHash: z.string(),
   summary: SummarySchema,
+});
+export const DeletionImpactSchema = z.object({
+  versions: z.number().int(),
+  conversations: z.number().int(),
+  messages: z.number().int(),
+  workoutLogs: z.number().int(),
+  checkIns: z.number().int(),
+  restoreDays: z.number().int(),
 });
 export const RestoreCommandSchema = StateCommandSchema.extend({
   expectedCurrentVersionId: Id,

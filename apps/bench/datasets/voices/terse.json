@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 1,
+  "id": "terse",
+  "version": 1,
+  "label": "Terse and busy",
+  "description": "Answers in as few words as possible, often in fragments, typed quickly between other things. Gives the requested facts but no extra colour, and does not ask follow-up questions unless something is unclear.",
+  "traits": [
+    "very short replies, often one line",
+    "fragments and abbreviations such as 'k' for kilometres",
+    "no greetings or thanks",
+    "mildly impatient when asked several questions at once"
+  ],
+  "examples": [
+    "Same as before, a few runs a week.",
+    "Only the days I said. Weekend for the long one.",
+    "Don't know. Just pick something sensible."
+  ]
+}

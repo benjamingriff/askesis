@@ -1,0 +1,58 @@
+{
+  "schemaVersion": 1,
+  "id": "swim-beginner",
+  "version": 1,
+  "persona": {
+    "id": "swim-beginner",
+    "version": 1
+  },
+  "mode": "conversation_to_plan",
+  "split": "development",
+  "reviewStatus": "exploratory",
+  "goal": "I want to develop a regular pool fitness habit and become comfortable with manageable structured sessions. I have no event.",
+  "openingMessage": "I'd like a {{planSpanWeeks}}-week pool-fitness plan, with the first {{prescriptionWeeks}} weeks prescribed now. I am new to training sets.",
+  "openingFactIds": ["goal", "horizon"],
+  "planSpanWeeks": 12,
+  "prescriptionWeeks": 4,
+  "startPolicy": "next_monday",
+  "events": [],
+  "expectations": {
+    "outcome": "saved_draft",
+    "frequencyPolicy": "workouts_per_sport",
+    "requiredDiscovery": [
+      "goal",
+      "dates",
+      "horizon",
+      "training",
+      "frequency",
+      "availability",
+      "equipment",
+      "fitness",
+      "access"
+    ],
+    "checks": [
+      "saved_plan",
+      "plan_dates",
+      "coverage",
+      "sports",
+      "baseline",
+      "availability",
+      "time_budgets",
+      "daily_limit",
+      "prescriptions",
+      "performance_provenance"
+    ],
+    "reviewAnchors": {
+      "goal_fit": "Build an understandable pool fitness habit, not a racing or open-water programme.",
+      "progression": "Start from 300 metres/week and a comfortable 100-metre continuous swim; make assumptions explicit.",
+      "recovery": "Manageable sets with adequate explicit rests rather than assuming continuous long-distance ability.",
+      "prescriptions": "Clear pool-compatible distances, recovery steps, instructions and swim zones; do not treat estimated CSS as measured.",
+      "personalization": "Respect Tuesday/Saturday pool access and 45-minute limits, explain set terminology.",
+      "conversation": "Discover relevant facts without unrelated sport questions; distinguish unknowns from unanswered facts, explain assumptions, and accurately describe what is saved and what remains unprescribed. Any proposed performance test must acknowledge current continuous-swim ability."
+    }
+  },
+  "limits": {
+    "maxAthleteMessages": 18,
+    "maxElapsedMinutes": 30
+  }
+}

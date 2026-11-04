@@ -10,6 +10,7 @@ export default tseslint.config(
     ignores: [
       '**/dist/**',
       '**/coverage/**',
+      'apps/marketing/.astro/**',
       'apps/mobile/**',
       'apps/mobile-prototype/**',
       'apps/api/src/database/generated.ts',
@@ -19,19 +20,32 @@ export default tseslint.config(
   js.configs.recommended,
   ...tseslint.configs.recommended,
   {
+    files: ['apps/marketing/src/**/*.ts'],
+    languageOptions: {
+      globals: globals.browser,
+    },
+  },
+  {
     files: [
+      'apps/marketing/*.{mjs,ts}',
       'apps/api/**/*.ts',
       'apps/agent/**/*.ts',
+      'apps/bench/**/*.ts',
       'packages/**/*.ts',
+      'apps/evals/server/**/*.ts',
+      'apps/evals/*.ts',
       '*.js',
       'scripts/dev-*.mjs',
+      'scripts/lib/*.mjs',
+      'scripts/*.test.mjs',
+      'scripts/bench.mjs',
     ],
     languageOptions: {
       globals: globals.node,
     },
   },
   {
-    files: ['apps/web/**/*.{ts,tsx}'],
+    files: ['apps/web/**/*.{ts,tsx}', 'apps/evals/src/**/*.{ts,tsx}'],
     ...react.configs.flat.recommended,
     languageOptions: {
       ...react.configs.flat.recommended.languageOptions,

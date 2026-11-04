@@ -1,0 +1,25 @@
+{
+  "name": "@askesis/bench",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "datasets:validate": "node src/datasets.ts validate",
+    "datasets:list": "node src/datasets.ts list",
+    "datasets:coverage": "node src/datasets.ts coverage",
+    "datasets:coverage:update": "node src/datasets.ts coverage:update",
+    "typecheck": "pnpm --filter @askesis/api --filter @askesis/agent build && tsc -p tsconfig.json --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@askesis/api": "workspace:*",
+    "@askesis/agent": "workspace:*",
+    "@openai/agents": "0.18.0",
+    "openai": "7.25.0",
+    "zod": "4.4.3"
+  },
+  "devDependencies": {
+    "@types/node": "^24.10.13"
+  }
+}

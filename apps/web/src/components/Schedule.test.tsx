@@ -8,6 +8,9 @@ import { Schedule } from './Schedule';
 const workout: WorkoutSummary = {
   id: 'w1',
   planId: 'p',
+  lineageId: 'test-lineage',
+  sessionType: null,
+  plannedRpe: null,
   planVersionId: 'v',
   planTitle: 'Plan',
   weekNumber: 1,
@@ -20,6 +23,8 @@ const workout: WorkoutSummary = {
   racePriority: null,
   estimatedDurationSeconds: 2400,
   estimatedDistanceMetres: 6000,
+  placeholder: false,
+  expectedRpe: null,
 };
 beforeEach(() => localStorage.clear());
 afterEach(() => {

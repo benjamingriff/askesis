@@ -1,5 +1,6 @@
 /* Plan header and toolbar */
 .plan-header {
+  flex-direction: column;
   align-items: flex-start;
 }
 .plan-goal {
@@ -30,7 +31,7 @@
   align-items: center;
   flex-wrap: wrap;
   gap: 10px;
-  justify-content: flex-end;
+  justify-content: flex-start;
 }
 .plan-toolbar {
   display: flex;
@@ -577,6 +578,67 @@
 .workout-card-kind em.race-badge {
   background: var(--accent-fill);
   color: var(--on-accent);
+}
+/* Placeholders are booked rather than prescribed: a dashed outline and an expected RPE band. */
+.workout-card.is-placeholder {
+  border-style: dashed;
+  border-color: color-mix(in srgb, var(--kind) 40%, var(--border));
+}
+.workout-card-kind em.placeholder-badge {
+  padding: 0 6px;
+  border: 1px dashed currentColor;
+  background: transparent;
+  color: var(--text-dim);
+}
+.placeholder-band {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+}
+.placeholder-band-track {
+  position: relative;
+  height: 12px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--text-muted) 22%, transparent);
+}
+.placeholder-band-track i {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  border-radius: 999px;
+  background: repeating-linear-gradient(
+    135deg,
+    var(--kind) 0 6px,
+    color-mix(in srgb, var(--kind) 65%, transparent) 6px 12px
+  );
+}
+.placeholder-band-scale {
+  display: flex;
+  justify-content: space-between;
+  color: var(--text-dim);
+  font-size: 11px;
+  font-weight: 600;
+}
+.placeholder-band-scale span:nth-child(2) {
+  color: var(--kind);
+  font-variant-numeric: tabular-nums;
+}
+.hero-cover .placeholder-band {
+  position: relative;
+  padding-bottom: 18px;
+}
+.placeholder-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px 16px;
+  border: 1px dashed color-mix(in srgb, var(--kind) 45%, var(--border));
+  border-radius: 16px;
+}
+.placeholder-summary p {
+  margin: 0;
+  color: var(--text-dim);
 }
 .workout-card-copy strong {
   font-size: 16px;
@@ -1297,59 +1359,103 @@
   gap: 14px;
   min-width: 0;
 }
+/* Today's session: a cover band in the session's colour with its effort profile rising from the
+   lower edge, then plain copy on the card surface. The kind colour stays in the cover. The card
+   also holds the session's log, so hover, press and focus on the workout outline the whole card. */
+.hero-card {
+  --edge: var(--border);
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--edge);
+  border-radius: var(--radius-xl);
+  background: var(--surface);
+  overflow: hidden;
+  transition:
+    transform 0.12s ease,
+    border-color 0.15s ease;
+}
+.hero-card:has(> .hero-workout:hover) {
+  --edge: color-mix(in srgb, var(--kind) 40%, var(--border));
+}
+.hero-card:has(> .hero-workout:active) {
+  transform: scale(0.99);
+}
+.hero-card:has(> .hero-workout:focus-visible) {
+  outline: 2px solid var(--accent-text);
+  outline-offset: 2px;
+}
+.hero-card > * + * {
+  border-top: 1px solid var(--edge);
+  transition: border-color 0.15s ease;
+}
 .hero-workout {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--text);
+  text-align: left;
+}
+.hero-workout:focus-visible {
+  outline: none;
+}
+.hero-cover {
   position: relative;
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  width: 100%;
-  padding: 22px;
-  border-radius: var(--radius-xl);
-  border: 1px solid color-mix(in srgb, var(--kind) 35%, transparent);
-  background:
-    linear-gradient(150deg, color-mix(in srgb, var(--kind) 30%, transparent), transparent 70%),
-    var(--surface);
-  color: var(--text);
-  text-align: left;
-  overflow: hidden;
-  transition: transform 0.12s ease;
-}
-.hero-workout:active {
-  transform: scale(0.99);
+  justify-content: space-between;
+  gap: 20px;
+  min-height: 150px;
+  padding: 18px 22px 0;
+  background: color-mix(in srgb, var(--kind) 15%, var(--surface));
+  color: var(--kind);
 }
 .hero-kind {
+  position: relative;
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  align-self: flex-start;
+  gap: 7px;
+  padding: 6px 12px 6px 10px;
+  border-radius: 999px;
+  background: var(--surface);
   color: var(--kind);
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+}
+.hero-cover .intensity-chart {
+  position: relative;
+  width: calc(100% + 44px);
+  margin: 0 -22px;
+}
+/* The effort profile stands on the cover's lower edge, so its bars meet the body squarely. */
+.hero-cover .intensity-chart span {
+  border-radius: 3px 3px 0 0;
+}
+.hero-body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 20px 22px 22px;
 }
 .hero-title {
   font-size: 30px;
-  line-height: 1.2;
+  line-height: 1.15;
   font-weight: 800;
   letter-spacing: -0.03em;
+  text-wrap: balance;
 }
 .hero-purpose {
+  max-width: 62ch;
   color: var(--text-dim);
 }
 .hero-stats {
   display: flex;
   flex-wrap: wrap;
-  gap: 28px;
-  margin: 10px 0 6px;
-}
-.hero-cta {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  margin-top: 8px;
-  color: var(--accent-text);
-  font-size: 16px;
-  font-weight: 800;
+  gap: 16px 28px;
+  margin-top: 10px;
 }
 .rest-hero {
   display: flex;
@@ -1496,4 +1602,20 @@
   align-items: center;
   gap: 4px;
   color: var(--text-dim);
+}
+
+/* Recently deleted: restored in place, never opened. */
+.plan-card-deleted {
+  padding-right: 18px;
+}
+.plan-card-deleted:active {
+  transform: none;
+}
+.plan-card-deleted .pill {
+  max-width: 100%;
+  white-space: normal;
+}
+.plan-card-actions {
+  display: flex;
+  margin-top: 8px;
 }

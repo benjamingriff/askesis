@@ -2,6 +2,10 @@
 
 Start with the [current handoff](./current-handoff.md) for priorities and verified delivery status. The current direction is continued responsive web development, with the Expo app (`apps/mobile`) now connected to the same API; `apps/mobile-prototype` is the design reference.
 
+New to the codebase? Follow [Understand Askesis in one day](./learning/README.md), an eight-hour checklist with source traces, TypeScript explanations, SQL exercises, coaching internals and deployment inspection. Keep its navigation map for finding code after the walkthrough.
+
+To trace the database and coaching writes visually, start with [Database and coaching flow](./architecture/visual-guide.md): focused ER diagrams, an endpoint-to-table map, and the workout generation/batching walkthrough.
+
 | Area         | What belongs here                                                        | Start here                                     |
 | ------------ | ------------------------------------------------------------------------ | ---------------------------------------------- |
 | Product      | Roadmap, behavior contracts, pace policy and interface guidance          | [Product index](./product/README.md)           |

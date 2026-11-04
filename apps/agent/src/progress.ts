@@ -96,6 +96,9 @@ export class ProgressReporter {
     this.dirty.add(id);
     if (performance.now() - this.lastFlush >= 350 || added.length >= 4096) await this.flush();
   }
+  recordModel(duration: number) {
+    (this.timings.modelMs as number[]).push(duration);
+  }
   recordTool(duration: number) {
     const values = this.timings.toolMs as number[];
     if (values.length < 200) values.push(duration);

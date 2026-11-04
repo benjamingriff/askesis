@@ -2,7 +2,7 @@ import * as Sentry from '@sentry/react';
 import { ClerkProvider, useAuth } from '@clerk/react';
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
-import { RouterProvider } from 'react-router';
+import { RouterProvider } from 'react-router/dom';
 import { configureAuthTokenProvider } from './api';
 import { router } from './router';
 import { AccountQueryProvider } from './query-provider';

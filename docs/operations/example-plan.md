@@ -1,22 +1,34 @@
-# Complete multisport example
+# Three-month example training plans
 
-The API can publish an eight-week **Multisport example** for one existing, verified
-Clerk account. It contains 64 scheduled sessions: running, cycling, swimming,
-triathlon bricks and transitions, strength, Hyrox stations and gym conditioning.
-Every week is populated, Friday is explicitly covered as a rest day, and double
-sessions have consecutive positions. Briefs, all four sport baselines, phased blocks
-(base with a cutback third week, two builds, recovery, peak and taper), an A, B and C
-race (a B tune-up closes Build 1, a C race sits in Build 2 and the A race is the last
-day), weekly targets, tags, nested prescriptions, calibration and two genuine locked
-revisions are included.
+The API publishes three **12-week** plans for the configured, verified Clerk
+account through the existing deployment seed hook:
 
-The committed blueprint and coverage manifest live in
-[`apps/api/src/examples`](../../apps/api/src/examples). Storage examples also cover
-energy, lap and conditional completions; speed, raw heart rate, cadence, percentage
-of 1RM, tempo and ranges; and immutable movement references. These additional fields
-are readable by the API but are not all available to the coaching writer. EMOM,
-AMRAP and rounds for time use existing containers and instructions: the example
-does not add a scoring or time-cap engine, heart-rate zones or strength calibration.
+| Plan                         | Weekly structure                                                                                                                           | Sessions |
+| ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ | -------- |
+| Cycling endurance & strength | Four rides, two supporting strength sessions in weeks 1–8 and one in weeks 9–12                                                            | 68       |
+| Triathlon foundation to race | Two swims, a bike session, two runs, a bike/run brick and supporting strength; the final week replaces the weekend with a sprint triathlon | 83       |
+| Strength & HIIT athlete      | Lower, upper and full-body lifting, one HIIT workout and one aerobic gym circuit                                                           | 60       |
+
+Each plan covers three months as twelve complete Monday–Sunday training weeks.
+Foundation and build blocks each last four weeks, with progressive work followed
+by a cutback in weeks 4 and 8. Three specific preparation weeks lead into a final
+taper for endurance plans or a deload for the gym plan. Cycling and triathlon rest
+on Friday; the gym plan rests on Thursday and Sunday. The triathlon goal event
+prescribes a 750 m swim, 20 km bike and 5 km run on the final Sunday.
+
+The plans have separate sport briefs, blocks, weekly targets, tags, complete
+prescriptions, movement references and two genuine locked revisions. Weekly
+duration, swimming distance and strength-frequency targets are derived from their
+scheduled sessions. Gym workouts cover squat, hinge, push, pull, carries, core,
+rowing and SkiErg alongside EMOM, AMRAP and rounds for time. Time caps and format
+rules use existing instructions; scoring and automatic format execution are not
+added. These are synthetic examples; loads are selected using RIR/RPE.
+
+The committed blueprints live in
+[`apps/api/src/examples`](../../apps/api/src/examples). The former eight-week
+multisport showcase is no longer published. Its untouched managed editions are
+archived when the new plans are seeded, retaining immutable history. Edited
+examples and personal plans retain the preservation rules below.
 
 ## Hosted deployment
 
@@ -37,22 +49,21 @@ provisioning; it never reassigns an existing identity or creates a Clerk user.
 
 ### Release order
 
-1. Before merging, set both variables together in the intended Railway API
-   service/environment. Use the verified email of the account that should own the
-   example. Keep these variables out of the web service, worker and preview
-   environments unless those APIs should independently seed an example. The
-   currently deployed API predates this startup hook and ignores these variables.
+1. Retain `EXAMPLE_PLAN_ENABLED=true` and the verified owner's
+   `EXAMPLE_PLAN_EMAIL` in the intended Railway API service/environment. If the
+   existing example is already enabled, no configuration change is needed. Keep
+   these variables out of the web service, worker and preview environments unless
+   those APIs should independently seed examples.
 2. Keep the API's existing Atlas migration pre-deploy command and leave its
-   start-command override empty. The API image includes the new registry migration;
-   normal image startup invokes the example publisher. The service was inspected
-   on 8 October 2026 with these settings already in place. Reconfirm them before
-   release; see [Railway operations](./railway-deployment-plan.md#api-service).
+   start-command override empty. This replacement reuses the existing registry
+   and startup publisher; it needs no new migration. See
+   [Railway operations](./railway-deployment-plan.md#api-service).
 3. Merge the PR and deploy the API from that merged commit. Railway runs Atlas
    first, then the publisher, then opens the API listener. No manual migration or
    seed command is required. If automatic deployments are enabled, merging triggers
    this sequence; avoid deploying this branch before merging.
 4. Wait for API readiness and an `Example publication` log (`created`, `unchanged`
-   or `preserved`), then inspect the plan while signed in as the configured owner.
+   or `preserved`), then inspect all three plans while signed in as the configured owner.
    `calibration-required` means withdrawn fitness needs a replacement before a new
    edition can be published. This change requires no worker/web configuration;
    existing automatic worker/web rebuilds can proceed normally.
@@ -79,42 +90,49 @@ running. The compiled image equivalent is:
 node apps/api/dist/examples/cli.js --email '<verified email>'
 ```
 
-The command prints only status, plan ID, anchor date and systems for which it added
-estimates. It does not print sessions, Clerk handshake URLs or credentials.
+The command prints overall status, per-plan kind/status/ID, anchor date and systems
+for which it added estimates. The top-level `planId` remains the cycling plan ID
+for compatibility. It does not print sessions, login URLs or credentials.
 
 ## Reruns, dates and preservation
 
 Dates begin on the previous Monday in the athlete's timezone: one past week and
-seven current/future weeks. The anchor stays stable within the calendar week.
-The registry key is athlete + blueprint revision + anchor; redeploys/restarts in
-that week do not duplicate content. Dates move only when the command runs, including
-after a deploy in a new week. `BLUEPRINT_REVISION` ends with a fingerprint of the
-blueprint's content, so editing example data (sessions, blocks, phases, the brief)
-publishes a new edition on the next deploy or command run and archives the untouched
-previous one. Changes outside the blueprint, such as the writer or the publication
-steps, still need the revision's version prefix bumped deliberately.
+eleven current/future weeks. The anchor stays stable within the calendar week.
+Each plan has an independent revision. The registry key is athlete + blueprint
+revision + anchor; redeploys/restarts in that week do not duplicate content. Dates
+move only when the command runs, including after a deploy in a new week.
+
+Each entry in `BLUEPRINT_REVISIONS` ends with a fingerprint of its blueprint's
+content. Editing one plan's sessions, blocks, phases or brief publishes a new
+edition of that plan on the next deploy or command run and archives its untouched
+predecessor. The other two plans keep their IDs in the same week. Changes outside
+the blueprints, such as the writer or publication steps, require a deliberate bump
+to the revision prefix.
 
 Publication uses one PostgreSQL transaction and an owner advisory lock. Draft
 creation, prescriptions, brief confirmation, real validation/hashes, two locks,
 activation, registry insertion and archival of untouched older managed examples
-commit together. Failure rolls everything back, including new estimates. Retry
-normally. Concurrent startup jobs serialize rather than creating duplicates.
+commit together for all new editions. All three current plans are active. Failure
+rolls everything back, including new estimates; retry normally. Concurrent startup
+jobs serialize rather than creating duplicates.
 
 An edited, unlocked, renamed, archived or deactivated example is preserved; the
 same edition is not recreated to undo that decision. A later week/revision may
 produce a fresh example. Previous examples with an active coaching turn remain
 untouched. Ordinary plans, historical test fixtures and other owners are never
-cleanup targets. Older untouched managed editions are archived, retaining immutable
-history rather than deleting it.
+cleanup targets. Older untouched managed editions, including the former multisport
+showcase, are archived, retaining immutable history rather than deleting it.
 
-Existing nonretracted calibration for a sport is reused unchanged. Only a sport
-with **no calibration history** receives a clearly labelled synthetic estimate
-(run threshold pace, cycling FTP or swimming CSS). These estimates are
-athlete-owned and therefore apply to that athlete's other plans too; replace them
-with personal fitness inputs when available. Withdrawn fitness is not resurrected:
-if an entire system was withdrawn, a new edition reports `calibration-required`
-until the athlete records a replacement. An unchanged existing edition remains
-untouched by reruns.
+Existing nonretracted calibration is reused unchanged. A new endurance edition
+adds a clearly labelled synthetic estimate only for a required sport with **no
+calibration history** (run threshold pace, cycling FTP or swimming CSS). These
+estimates are athlete-owned and therefore apply to the athlete's other plans too;
+replace them with personal fitness inputs when available.
+
+Withdrawn fitness is not resurrected. If a required system was withdrawn, new
+publication reports `calibration-required` until the athlete records a replacement.
+Unchanged existing editions remain untouched. A gym-only blueprint update does not
+require endurance fitness and can publish despite withdrawn endurance calibration.
 
 ## Historical test fixtures
 

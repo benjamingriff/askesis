@@ -9,9 +9,13 @@ import {
   useLocation,
   useRouteError,
 } from 'react-router';
+import { useAccount } from './account';
+import { AccountDeletionPending } from './components/AccountDeletionPending';
 import { AppShell } from './components/AppShell';
+import { Button } from './components/ui';
 import { SignInPage, SignUpPage } from './routes/auth';
 import { ChatPage } from './routes/chat';
+import { RequireInAppCoach } from './coach';
 import { SettingsPage } from './routes/settings';
 import { PlanPage, PlansPage } from './routes/plans';
 import { ActivePlansPage } from './routes/active-plans';
@@ -20,14 +24,37 @@ import { PlanDraftPage } from './routes/plan-draft';
 import { PlanBriefPage } from './routes/plan-brief';
 import { TodayPage } from './routes/today';
 import { PerformancePage } from './routes/performance';
+import { StravaCallbackPage } from './routes/strava-callback';
 
-function RequireAuthentication() {
+export function RequireAuthentication() {
   const { isSignedIn } = useAuth();
   const location = useLocation();
+  const account = useAccount(!!isSignedIn);
 
   if (!isSignedIn) {
     return <Navigate to="/sign-in" replace state={{ from: location.pathname }} />;
   }
+  // A pending deletion replaces the app; everything else is unavailable until it is cancelled.
+  if (account.isPending)
+    return (
+      <div className="auth-loading">
+        <span className="brand-mark">A</span>
+        <p>Loading Askesis…</p>
+      </div>
+    );
+  // Features such as the in-app coach come with the account, so pages wait for it.
+  if (!account.data)
+    return (
+      <div className="auth-loading" role="alert">
+        <span className="brand-mark">A</span>
+        <p>Couldn’t load your account.</p>
+        <Button size="sm" onClick={() => void account.refetch()}>
+          Retry
+        </Button>
+      </div>
+    );
+  if (account.data.deletion)
+    return <AccountDeletionPending purgeAfter={account.data.deletion.purgeAfter} />;
 
   return <Outlet />;
 }
@@ -72,20 +99,27 @@ export const router = createBrowserRouter([
           { index: true, element: <Navigate to="/today" replace /> },
           { path: '/today', element: <TodayPage /> },
           { path: '/plan', element: <ActivePlansPage /> },
-          { path: '/plans/archive', element: <PlansPage archived /> },
+          { path: '/plans/archive', element: <PlansPage collection="archive" /> },
+          { path: '/plans/deleted', element: <PlansPage collection="deleted" /> },
           { path: '/plans', element: <PlansPage /> },
           { path: '/plans/:planId', element: <PlanPage /> },
           { path: '/plans/:planId/draft', element: <PlanDraftPage /> },
           { path: '/plans/:planId/brief', element: <PlanBriefPage /> },
           { path: '/plans/:planId/versions/:revisionId/brief', element: <PlanBriefPage /> },
           { path: '/plans/:planId/versions/:revisionId', element: <PlanRevisionPage /> },
-          { path: '/chat', element: <ChatPage /> },
-          { path: '/chat/new', element: <ChatPage composing /> },
-          { path: '/chat/archive', element: <ChatPage archived /> },
-          { path: '/chat/archive/:conversationId', element: <ChatPage archived /> },
-          { path: '/chat/:conversationId', element: <ChatPage /> },
+          {
+            element: <RequireInAppCoach />,
+            children: [
+              { path: '/chat', element: <ChatPage /> },
+              { path: '/chat/new', element: <ChatPage composing /> },
+              { path: '/chat/archive', element: <ChatPage archived /> },
+              { path: '/chat/archive/:conversationId', element: <ChatPage archived /> },
+              { path: '/chat/:conversationId', element: <ChatPage /> },
+            ],
+          },
           { path: '/settings', element: <SettingsPage /> },
           { path: '/performance', element: <PerformancePage /> },
+          { path: '/connections/strava/callback', element: <StravaCallbackPage /> },
         ],
       },
     ],

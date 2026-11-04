@@ -231,7 +231,8 @@ async function ownedVersion(
     .selectFrom('plans')
     .selectAll()
     .where('id', '=', planId)
-    .where('owner_id', '=', athleteId);
+    .where('owner_id', '=', athleteId)
+    .where('deleted_at', 'is', null);
   if (lock) query = query.forUpdate();
   const plan = await query.executeTakeFirst();
   if (!plan) throw new PlanError('PLAN_NOT_FOUND', 'Plan not found.', 404);
@@ -284,6 +285,15 @@ async function mutate(
               'IDEMPOTENCY_CONFLICT',
               'This request key was used for different input.',
             );
+          // A replay only needs the plan to still be visible, not still editable.
+          const visible = await db
+            .selectFrom('plans')
+            .select('id')
+            .where('id', '=', planId)
+            .where('owner_id', '=', athleteId)
+            .where('deleted_at', 'is', null)
+            .executeTakeFirst();
+          if (!visible) throw new PlanError('PLAN_NOT_FOUND', 'Plan not found.', 404);
           return BriefStateSchema.parse(cached.response_body);
         }
       }
@@ -308,6 +318,7 @@ async function mutate(
             request_hash: requestHash,
             response_status: 200,
             response_body: JSON.parse(JSON.stringify(result)) as Json,
+            plan_id: planId,
           })
           .execute();
       return result;

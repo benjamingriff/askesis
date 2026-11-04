@@ -67,3 +67,5 @@ jobs:
         run: pnpm test:multisport:upgrade
       - name: Disposable streaming worker and public proxy smoke
         run: pnpm smoke
+      - name: Disposable streaming worker smoke on the Claude runtime
+        run: SMOKE_AGENT_PROVIDER=anthropic pnpm smoke

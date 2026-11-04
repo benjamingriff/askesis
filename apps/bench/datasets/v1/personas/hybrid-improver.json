@@ -1,0 +1,87 @@
+{
+  "schemaVersion": 1,
+  "id": "hybrid-improver",
+  "version": 1,
+  "category": "hybrid",
+  "experience": "improver",
+  "label": "Regular runner and lifter seeking sustainable variety",
+  "reviewStatus": "exploratory",
+  "age": 38,
+  "timezone": "Europe/London",
+  "communication": {
+    "style": "plain but comfortable describing existing training",
+    "disclosurePolicy": "answer_requested_facts",
+    "unknownResponse": "I don't know anything else about that. Please explain any material assumptions."
+  },
+  "sports": [
+    {
+      "sport": "run",
+      "experience": "improver",
+      "historyYears": 1,
+      "recentBaselineWeeks": 6,
+      "currentSessions": 2,
+      "desiredSessions": 2,
+      "weeklyDistanceMetres": 12000,
+      "longestDistanceMetres": 7000
+    },
+    {
+      "sport": "strength",
+      "experience": "improver",
+      "historyYears": 1,
+      "recentBaselineWeeks": 6,
+      "currentSessions": 2,
+      "desiredSessions": 2
+    }
+  ],
+  "availability": [
+    {
+      "weekday": 1,
+      "maxMinutes": 75,
+      "preferred": false
+    },
+    {
+      "weekday": 3,
+      "maxMinutes": 60,
+      "preferred": false
+    },
+    {
+      "weekday": 6,
+      "maxMinutes": 90,
+      "preferred": true
+    }
+  ],
+  "equipment": ["flat roads for running", "commercial gym with dumbbells, machines and benches"],
+  "constraints": [
+    "No current injuries or health restrictions",
+    "A double-session day must fit its combined time budget",
+    "No recorded working-weight measurements"
+  ],
+  "preferences": [
+    "General fitness and enjoyable variety",
+    "Two runs and two strength sessions weekly; circuits can be within a strength session",
+    "Not training for Hyrox or any other race",
+    "Avoid unfamiliar specialist equipment"
+  ],
+  "performanceEvidence": [
+    {
+      "system": "run_pace",
+      "input": {
+        "method": "race_result",
+        "distanceMetres": 5000,
+        "durationSeconds": 1800
+      },
+      "observedDaysAgo": 21,
+      "provenance": "user_supplied"
+    }
+  ],
+  "factTemplates": {
+    "availability": "I can train only on these days: {{availability}}",
+    "equipment": "I have access to: {{equipment}}.",
+    "constraints": "I'm {{age}}. {{constraints}}.",
+    "preferences": "{{preferences}}.",
+    "training": "For the last {{runBaselineWeeks}} weeks I have done {{runCurrentSessions}} runs, about {{runWeeklyKm}} km total per week, longest {{runLongestKm}} km. For the last {{strengthBaselineWeeks}} weeks I have done {{strengthCurrentSessions}} strength sessions per week. Some strength sessions include simple circuits. I have no written lifting loads.",
+    "frequency": "I want {{runDesiredSessions}} runs and {{strengthDesiredSessions}} strength sessions per week. A circuit belongs inside a strength session; do not add another separate workout just to include variety.",
+    "fitness": "I ran an all-out flat {{runEvidenceKm}} km in {{runEvidenceMinutes}} minutes on {{runObservedOn}} in fair conditions; that reflects current fitness. I have no measured working weights for lifting."
+  },
+  "accessRestrictions": []
+}

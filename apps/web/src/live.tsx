@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
-import { useQueryClient, type QueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query';
+import { ACCOUNT_KEY, fetchAccount } from './account';
 import { authenticatedFetch } from './api';
 
 type LiveState = 'connecting' | 'live' | 'reconnecting';
@@ -103,6 +104,9 @@ export function invalidateNotification(client: QueryClient, event: string, raw: 
       if (conversationId) invalidate('chat', 'detail', conversationId);
       invalidate('chat', 'list');
       return;
+    case 'training_log.changed':
+      invalidate('training-log');
+      return;
     case 'performance.changed':
       // Fitness belongs to the athlete: every plan's resolved paces and lock checks follow it.
       invalidate('performance');
@@ -121,8 +125,17 @@ export function invalidateNotification(client: QueryClient, event: string, raw: 
 }
 /** While the stream is down, active chat and plan reads refresh on this interval instead. */
 export const FALLBACK_REFRESH_MS = 3000;
-export function LiveProvider({ enabled, children }: { enabled: boolean; children: ReactNode }) {
+export function LiveProvider({
+  enabled: signedIn,
+  children,
+}: {
+  enabled: boolean;
+  children: ReactNode;
+}) {
   const client = useQueryClient();
+  // Only reads the account the router loads; the stream is refused while deletion is pending.
+  const account = useQuery({ queryKey: ACCOUNT_KEY, queryFn: fetchAccount, enabled: false });
+  const enabled = signedIn && !account.data?.deletion;
   const [state, setState] = useState<LiveState>('connecting');
   useEffect(() => {
     if (!enabled) return;

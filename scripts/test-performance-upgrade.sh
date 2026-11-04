@@ -1,12 +1,10 @@
 #!/usr/bin/env sh
 set -eu
 # Rehearse the athlete-performance cutover on a populated, disposable Phase 6 database.
-export TEST_DATABASE_PORT="${TEST_DATABASE_PORT:-55432}"
-docker compose --profile test up -d --wait postgres-test
-docker compose exec -T postgres-test createdb -U askesis_test askesis_performance_upgrade
-cleanup() { docker compose exec -T postgres-test dropdb -U askesis_test askesis_performance_upgrade; }
-trap cleanup EXIT INT TERM
-run_sql() { docker compose exec -T postgres-test psql -U askesis_test -d askesis_performance_upgrade --set ON_ERROR_STOP=1 --quiet; }
+. ./scripts/lib/disposable-compose.sh
+test_compose --profile test up -d --wait postgres-test
+test_compose exec -T postgres-test createdb -U askesis_test askesis_performance_upgrade
+run_sql() { test_compose exec -T postgres-test psql -U askesis_test -d askesis_performance_upgrade --set ON_ERROR_STOP=1 --quiet; }
 for migration in database/migrations/*.sql; do
   case "$migration" in *20261007120000_athlete_performance.sql) break;; esac
   run_sql < "$migration"

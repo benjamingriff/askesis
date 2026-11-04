@@ -87,15 +87,16 @@ dropdb askesis_restore_check
 3. Provision a new empty PostgreSQL database.
 4. Restore the most recent verified backup.
 5. Apply any later append-only Atlas migrations.
-6. Point a private API instance at the restored database.
-7. Verify readiness, identity mappings, version pointers/hashes, briefs/coverage, athlete calibration timelines, conversations and representative owner-authorized reads. Restored queued/leased runs need deliberate review: startup sweep can expire old work; do not replay model sessions automatically.
-8. Switch application traffic only after verification.
-9. Record the incident, backup timestamp, data-loss window, and corrective action.
+6. Re-apply deletions made after the backup: export the API logs from the backup's timestamp onwards and run `retention:replay` ([data deletion](./data-deletion.md#backups-and-replay)). Pass `--through` with the damaged database's `deletion_journal_head` when it can still be read; the replay refuses if journal entries are missing. Do this before any traffic, so purged plans and accounts are not served again.
+7. Point a private API instance at the restored database.
+8. Verify readiness, identity mappings, version pointers/hashes, briefs/coverage, athlete calibration timelines, conversations and representative owner-authorized reads. Restored queued/leased runs need deliberate review: startup sweep can expire old work; do not replay model sessions automatically.
+9. Switch application traffic only after verification.
+10. Record the incident, backup timestamp, data-loss window, and corrective action.
 
 ## Before the private alpha
 
 - Enable and verify the backup capability available on the selected Railway plan.
-- Record backup frequency and retention.
+- Record backup frequency and retention, and keep API logs for longer than the oldest restorable backup (deletion replay depends on them).
 - Perform at least one full restore rehearsal.
 - Decide who can access backups.
 - Encrypt any backup stored outside Railway.

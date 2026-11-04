@@ -1,3 +1,6 @@
+import { inferSessionType } from './session-types.js';
+import type { Database } from '../plans/plan.aggregate.js';
+import { loadPlannedRpe, prescriptionRpe } from '../training-log/planned-rpe.js';
 import type { Selectable } from 'kysely';
 import { getDatabase } from '../../database/client.js';
 import type { Workouts } from '../../database/generated.js';
@@ -29,6 +32,8 @@ type TreeNode = Omit<WorkoutStep, 'steps'> & {
 type WorkoutRow = Pick<
   Selectable<Workouts>,
   | 'id'
+  | 'lineage_id'
+  | 'session_type'
   | 'plan_version_id'
   | 'scheduled_date'
   | 'title'
@@ -39,15 +44,31 @@ type WorkoutRow = Pick<
   | 'race_priority'
   | 'estimated_duration_seconds'
   | 'estimated_distance_metres'
+  | 'placeholder'
 > & {
   plan_id: string;
   plan_title: string;
   week_number: number;
 };
 
-function toWorkoutSummary(row: WorkoutRow): WorkoutSummary {
+type RpeRange = WorkoutSummary['expectedRpe'];
+
+function toWorkoutSummary(
+  row: WorkoutRow,
+  plannedRpe: number | null = null,
+  expectedRpe: RpeRange = null,
+): WorkoutSummary {
   return {
     id: row.id,
+    lineageId: row.lineage_id,
+    sessionType:
+      (row.session_type as WorkoutSummary['sessionType']) ??
+      inferSessionType({
+        title: row.title,
+        discipline: row.primary_discipline,
+        racePriority: row.race_priority,
+      }),
+    plannedRpe,
     planId: row.plan_id,
     planVersionId: row.plan_version_id,
     planTitle: row.plan_title,
@@ -62,14 +83,45 @@ function toWorkoutSummary(row: WorkoutRow): WorkoutSummary {
     estimatedDurationSeconds: row.estimated_duration_seconds,
     estimatedDistanceMetres:
       row.estimated_distance_metres === null ? null : Number(row.estimated_distance_metres),
+    placeholder: row.placeholder,
+    expectedRpe: row.placeholder ? expectedRpe : null,
   };
+}
+
+/** A placeholder's effort range is the RPE band on its single open effort. */
+async function loadExpectedRpe(database: Database, workoutIds: string[]) {
+  if (!workoutIds.length) return new Map<string, NonNullable<RpeRange>>();
+  const rows = await database
+    .selectFrom('step_targets')
+    .innerJoin('workout_steps', 'workout_steps.id', 'step_targets.step_id')
+    .select([
+      'workout_steps.workout_id',
+      'step_targets.minimum_value',
+      'step_targets.maximum_value',
+    ])
+    .where('workout_steps.workout_id', 'in', workoutIds)
+    .where('workout_steps.parent_step_id', 'is', null)
+    .where('step_targets.target_type', '=', 'rpe')
+    .execute();
+  return new Map(
+    rows.flatMap((row) =>
+      row.minimum_value === null || row.maximum_value === null
+        ? []
+        : [
+            [
+              row.workout_id,
+              { minimum: Number(row.minimum_value), maximum: Number(row.maximum_value) },
+            ] as const,
+          ],
+    ),
+  );
 }
 
 export async function listWorkouts(
   athleteId: string,
   planVersionId: string,
+  database: Database = getDatabase(),
 ): Promise<WorkoutSummary[]> {
-  const database = getDatabase();
   const query = database
     .selectFrom('workouts')
     .innerJoin('plan_versions', 'plan_versions.id', 'workouts.plan_version_id')
@@ -77,6 +129,8 @@ export async function listWorkouts(
     .innerJoin('training_weeks', 'training_weeks.id', 'workouts.week_id')
     .select([
       'workouts.id',
+      'workouts.lineage_id',
+      'workouts.session_type',
       'plan_versions.plan_id',
       'workouts.plan_version_id',
       'workouts.scheduled_date',
@@ -88,10 +142,12 @@ export async function listWorkouts(
       'workouts.race_priority',
       'workouts.estimated_duration_seconds',
       'workouts.estimated_distance_metres',
+      'workouts.placeholder',
       'plans.display_name as plan_title',
       'training_weeks.week_number',
     ])
-    .where('plans.owner_id', '=', athleteId);
+    .where('plans.owner_id', '=', athleteId)
+    .where('plans.deleted_at', 'is', null);
 
   const rows = await query
     .where('workouts.plan_version_id', '=', planVersionId)
@@ -99,7 +155,24 @@ export async function listWorkouts(
     .orderBy('workouts.position', 'asc')
     .execute();
 
-  return rows.map(toWorkoutSummary);
+  const [efforts, ranges] = await Promise.all([
+    loadPlannedRpe(
+      database,
+      athleteId,
+      rows.map((row) => ({
+        id: row.id,
+        date: formatDate(row.scheduled_date),
+        discipline: row.primary_discipline,
+      })),
+    ),
+    loadExpectedRpe(
+      database,
+      rows.filter((row) => row.placeholder).map((row) => row.id),
+    ),
+  ]);
+  return rows.map((row) =>
+    toWorkoutSummary(row, efforts.get(row.id) ?? null, ranges.get(row.id) ?? null),
+  );
 }
 
 export async function listBlocks(
@@ -120,6 +193,7 @@ export async function listBlocks(
       'training_blocks.end_date',
     ])
     .where('plans.owner_id', '=', athleteId)
+    .where('plans.deleted_at', 'is', null)
     .where('training_blocks.plan_version_id', '=', planVersionId)
     .orderBy('training_blocks.start_date', 'asc')
     .orderBy('training_blocks.position', 'asc')
@@ -158,8 +232,8 @@ function optionalNumber(value: string | null): number | null {
 export async function getWorkoutDetail(
   athleteId: string,
   workoutId: string,
+  database: Database = getDatabase(),
 ): Promise<WorkoutDetail | null> {
-  const database = getDatabase();
   const workoutRow = await database
     .selectFrom('workouts')
     .innerJoin('plan_versions', 'plan_versions.id', 'workouts.plan_version_id')
@@ -167,6 +241,8 @@ export async function getWorkoutDetail(
     .innerJoin('training_weeks', 'training_weeks.id', 'workouts.week_id')
     .select([
       'workouts.id',
+      'workouts.lineage_id',
+      'workouts.session_type',
       'plan_versions.plan_id',
       'workouts.plan_version_id',
       'workouts.scheduled_date',
@@ -178,11 +254,13 @@ export async function getWorkoutDetail(
       'workouts.race_priority',
       'workouts.estimated_duration_seconds',
       'workouts.estimated_distance_metres',
+      'workouts.placeholder',
       'plans.display_name as plan_title',
       'training_weeks.week_number',
     ])
     .where('workouts.id', '=', workoutId)
     .where('plans.owner_id', '=', athleteId)
+    .where('plans.deleted_at', 'is', null)
     .executeTakeFirst();
 
   if (workoutRow === undefined) return null;
@@ -360,9 +438,17 @@ export async function getWorkoutDetail(
     steps: node.steps.map(toPublicStep),
   });
 
+  const prescription = toPublicStep(root);
+  const band = prescription.targets.find((target) => target.type === 'rpe');
   return {
-    workout: toWorkoutSummary(workoutRow),
+    workout: toWorkoutSummary(
+      workoutRow,
+      prescriptionRpe(prescription, workoutRow.primary_discipline),
+      band?.minimumValue != null && band.maximumValue != null
+        ? { minimum: band.minimumValue, maximum: band.maximumValue }
+        : null,
+    ),
     tags: tagRows.map(({ tag }) => tag),
-    prescription: toPublicStep(root),
+    prescription,
   };
 }

@@ -57,6 +57,14 @@ export const formatShortYear = (date: string) => shortYearFormat.format(utc(date
 export const formatLong = (date: string) => longFormat.format(utc(date));
 export const formatMonth = (date: string) => monthFormat.format(utc(date));
 
+/** The device-local calendar day of an instant, such as a deletion deadline. */
+export const formatInstantLong = (instant: string) =>
+  new Intl.DateTimeFormat('en-GB', { weekday: 'long', day: 'numeric', month: 'long' }).format(
+    new Date(instant),
+  );
+export const formatInstantShort = (instant: string) =>
+  new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short' }).format(new Date(instant));
+
 export function formatRange(start: string | null, end: string | null): string {
   if (!start && !end) return 'No dates set';
   if (!start || !end)

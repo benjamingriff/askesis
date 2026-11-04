@@ -434,6 +434,9 @@ export function CheckRow({
 
 // ---- Overlays ----------------------------------------------------------------------------------
 
+const activeDialogs: HTMLElement[] = [];
+let dialogOverflow = '';
+
 const FOCUSABLE =
   'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
@@ -452,9 +455,12 @@ export function Dialog({
   size = 'md',
   className,
   style,
+  aside,
 }: {
   className?: string | undefined;
   style?: CSSProperties | undefined;
+  /** A reference panel beside the dialog (above it on narrow screens). */
+  aside?: ReactNode | undefined;
   open: boolean;
   onClose: () => void;
   title: ReactNode;
@@ -475,9 +481,14 @@ export function Dialog({
     if (!open) return;
     const previous = document.activeElement as HTMLElement | null;
     const node = panel.current;
+    if (node) {
+      if (!activeDialogs.length) dialogOverflow = document.body.style.overflow;
+      activeDialogs.push(node);
+    }
     const first = node?.querySelector<HTMLElement>('[autofocus], ' + FOCUSABLE);
     (first ?? node)?.focus();
     const onKey = (event: KeyboardEvent) => {
+      if (activeDialogs.at(-1) !== node) return;
       if (event.key === 'Escape' && !busy) {
         event.stopPropagation();
         close.current();
@@ -497,37 +508,49 @@ export function Dialog({
       }
     };
     document.addEventListener('keydown', onKey);
-    const overflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
     return () => {
       document.removeEventListener('keydown', onKey);
-      document.body.style.overflow = overflow;
-      previous?.focus?.();
+      // A dialog closing beneath another (which opened as this one finished) keeps focus there.
+      const top = !node || activeDialogs.at(-1) === node;
+      if (node) {
+        const index = activeDialogs.indexOf(node);
+        if (index >= 0) activeDialogs.splice(index, 1);
+      }
+      document.body.style.overflow = activeDialogs.length ? 'hidden' : dialogOverflow;
+      if (top && previous?.isConnected) previous.focus();
     };
   }, [open, busy]);
 
   if (!open) return null;
+  const main = (
+    <>
+      <header className="dialog-header">
+        <div>
+          <h2 id={titleId}>{title}</h2>
+          {description ? <p>{description}</p> : null}
+        </div>
+        <IconButton icon={X} label="Close" tone="filled" disabled={busy} onClick={onClose} />
+      </header>
+      {children ? <div className="dialog-body">{children}</div> : null}
+      {footer ? <footer className="dialog-footer">{footer}</footer> : null}
+    </>
+  );
   return createPortal(
     <div className="dialog-root">
       <div className="dialog-backdrop" onClick={() => !busy && onClose()} aria-hidden="true" />
       <div
         ref={panel}
-        className={cx('dialog', `dialog-${size}`, className)}
+        className={cx('dialog', `dialog-${size}`, aside ? 'dialog-with-aside' : null, className)}
         style={style}
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
         tabIndex={-1}
       >
-        <header className="dialog-header">
-          <div>
-            <h2 id={titleId}>{title}</h2>
-            {description ? <p>{description}</p> : null}
-          </div>
-          <IconButton icon={X} label="Close" tone="filled" disabled={busy} onClick={onClose} />
-        </header>
-        {children ? <div className="dialog-body">{children}</div> : null}
-        {footer ? <footer className="dialog-footer">{footer}</footer> : null}
+        {/* Always wrapped, so opening or closing the aside never remounts the dialog's content. */}
+        <div className="dialog-main">{main}</div>
+        {aside ? <aside className="dialog-aside">{aside}</aside> : null}
       </div>
     </div>,
     document.body,

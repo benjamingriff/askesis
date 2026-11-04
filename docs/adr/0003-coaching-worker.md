@@ -1,6 +1,6 @@
 # ADR 0003: Private coaching worker with API-authorized domain tools
 
-- **Status:** Accepted; supersedes the Pi worker choice in [ADR 0001](./0001-application-stack.md).
+- **Status:** Accepted; supersedes the Pi worker choice in [ADR 0001](./0001-application-stack.md). Provider choice extended by [ADR 0007](./0007-claude-coaching-runtime.md), which adds a configurable Claude runtime.
 - **Decision checkpoint:** Phase 5 refinement, 2026-10-01.
 - **Recorded:** 2026-10-06, retrospectively from the accepted design and implementation.
 

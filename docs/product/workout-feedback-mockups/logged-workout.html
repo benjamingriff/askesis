@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Mockup · Logged workout detail</title>
+    <link rel="stylesheet" href="mockups.css" />
+    <script src="icons.js"></script>
+    <script src="shell.js"></script>
+  </head>
+  <body class="mock-static">
+    <div class="dialog-root">
+      <div class="dialog-backdrop"></div>
+      <div
+        class="dialog dialog-lg workout-dialog"
+        role="dialog"
+        style="--kind: var(--effort-threshold)"
+      >
+        <header class="dialog-header">
+          <div>
+            <h2>
+              <span class="workout-title"
+                ><span class="workout-kind-label"
+                  ><i data-icon="footprints" data-size="15"></i> Threshold run · Key session</span
+                >Threshold intervals 5 × 6 min</span
+              >
+            </h2>
+            <p>Tuesday 13 October</p>
+          </div>
+          <button class="icon-btn icon-btn-filled"><i data-icon="x" data-size="18"></i></button>
+        </header>
+        <div class="dialog-body">
+          <section class="your-log">
+            <div class="your-log-head">
+              <h3>
+                <i data-icon="circle-check" data-size="18" style="color: var(--locked)"></i>Your log
+              </h3>
+              <button class="btn btn-sm btn-ghost">
+                <i data-icon="pencil" data-size="14"></i>Edit
+              </button>
+            </div>
+            <div class="pva">
+              <div>
+                <span class="label">Time</span><strong>56:10</strong><small>Planned 55 min</small>
+              </div>
+              <div>
+                <span class="label">Distance</span><strong>10.6 km</strong
+                ><small>Planned 10.5 km</small>
+              </div>
+              <div>
+                <span class="label">Effort</span><strong class="over">RPE 8</strong
+                ><small>Planned ~7 (threshold)</small>
+              </div>
+            </div>
+            <div class="feedback-facts">
+              <span class="fact">Faded on the last reps</span>
+              <span class="fact">Felt tired</span>
+              <span class="fact">Poor sleep</span>
+              <span class="fact">Heavy legs</span>
+            </div>
+            <p class="log-quote">
+              “Reps 4 and 5 were 4:21 and 4:24/km. Legs still heavy from Sunday’s long ride.”
+            </p>
+            <a class="coach-thread-link" href="#">
+              <span class="coach-avatar"><i data-icon="sparkles" data-size="12"></i></span>
+              <span
+                ><strong>Coach reviewed</strong> · Kept the plan; checking again after the
+                weekend</span
+              >
+              <i data-icon="chevron-right" data-size="16"></i>
+            </a>
+          </section>
+          <div class="workout-stats">
+            <span class="stat stat-large"
+              ><span class="label">Distance</span
+              ><span class="stat-value"><strong>10.5</strong><small>km</small></span></span
+            >
+            <span class="stat stat-large"
+              ><span class="label">Time</span
+              ><span class="stat-value"><strong>55 min</strong></span></span
+            >
+            <span class="stat stat-large"
+              ><span class="label">Avg pace</span
+              ><span class="stat-value"><strong>5:14</strong><small>/km</small></span></span
+            >
+          </div>
+          <p class="workout-purpose">
+            Raise sustainable speed with controlled efforts just below threshold.
+          </p>
+          <div class="effort-profile">
+            <span class="label">Effort profile</span>
+            <div class="intensity-chart" style="height: 64px">
+              <span style="flex-grow: 900; height: 40%; background: var(--effort-easy)"></span>
+              <span style="flex-grow: 360; height: 78%; background: var(--effort-threshold)"></span>
+              <span style="flex-grow: 90; height: 34%; background: var(--effort-recovery)"></span>
+              <span style="flex-grow: 360; height: 78%; background: var(--effort-threshold)"></span>
+              <span style="flex-grow: 90; height: 34%; background: var(--effort-recovery)"></span>
+              <span style="flex-grow: 360; height: 78%; background: var(--effort-threshold)"></span>
+              <span style="flex-grow: 90; height: 34%; background: var(--effort-recovery)"></span>
+              <span style="flex-grow: 360; height: 78%; background: var(--effort-threshold)"></span>
+              <span style="flex-grow: 90; height: 34%; background: var(--effort-recovery)"></span>
+              <span style="flex-grow: 360; height: 78%; background: var(--effort-threshold)"></span>
+              <span style="flex-grow: 600; height: 40%; background: var(--effort-easy)"></span>
+            </div>
+          </div>
+          <h3 class="steps-heading">Prescription</h3>
+          <p class="muted">… the existing step list continues here …</p>
+        </div>
+        <footer class="dialog-footer">
+          <button class="btn btn-md btn-secondary">
+            <i data-icon="message-square" data-size="16"></i>Ask your coach about this
+          </button>
+        </footer>
+      </div>
+    </div>
+    <span class="mock-caption">Mockup · Logged workout</span>
+  </body>
+</html>

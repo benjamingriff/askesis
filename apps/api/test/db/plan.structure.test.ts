@@ -98,3 +98,60 @@ it('enforces complete local trees at commit and exposes archived draft content',
   expect(draft.content).toEqual(after.semantic);
   await expect(getDraft(randomUUID(), plan.id)).rejects.toMatchObject({ status: 404 });
 });
+
+it('keeps deferred structure checks for disconnected cycles and transactional repairs', async () => {
+  const db = getDatabase();
+  const plan = await createPlan(owner, 'Deferred structure regression', randomUUID());
+  const versionId = plan.draft!.id;
+  await db.transaction().execute((tx) => cloneContent(tx, fixture, versionId));
+  const efforts = await db
+    .selectFrom('workout_steps')
+    .selectAll()
+    .where('plan_version_id', '=', versionId)
+    .where('kind', '=', 'effort')
+    .orderBy('workout_id')
+    .execute();
+  const first = efforts.find(
+    (step) => efforts.filter((other) => other.workout_id === step.workout_id).length >= 2,
+  )!;
+  const second = efforts.find(
+    (step) => step.workout_id === first.workout_id && step.id !== first.id,
+  )!;
+  await expect(
+    db.transaction().execute(async (tx) => {
+      await tx
+        .updateTable('workout_steps')
+        .set({ parent_step_id: second.id, position: 9001 })
+        .where('id', '=', first.id)
+        .execute();
+      await tx
+        .updateTable('workout_steps')
+        .set({ parent_step_id: first.id, position: 9002 })
+        .where('id', '=', second.id)
+        .execute();
+    }),
+  ).rejects.toMatchObject({ code: '23514', message: 'Workout has disconnected or cyclic steps' });
+  const completion = await db
+    .selectFrom('step_completions')
+    .selectAll()
+    .where('step_id', '=', first.id)
+    .executeTakeFirstOrThrow();
+  await db.transaction().execute(async (tx) => {
+    await tx.deleteFrom('step_completions').where('step_id', '=', first.id).execute();
+    await tx.insertInto('step_completions').values(completion).execute();
+  });
+  expect(
+    await db
+      .selectFrom('step_completions')
+      .selectAll()
+      .where('step_id', '=', first.id)
+      .executeTakeFirstOrThrow(),
+  ).toEqual(completion);
+  await expect(
+    db
+      .updateTable('workout_steps')
+      .set({ kind: 'sequence', discipline: null })
+      .where('id', '=', first.id)
+      .execute(),
+  ).rejects.toMatchObject({ code: '23514', message: 'Invalid effort or container prescription' });
+});

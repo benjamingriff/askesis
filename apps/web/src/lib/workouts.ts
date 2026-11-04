@@ -1,5 +1,5 @@
 import type { RacePriority, WorkoutStep, WorkoutSummary } from '@askesis/api-client';
-import { Moon, PersonStanding, Trophy, type LucideIcon } from 'lucide-react';
+import { Activity, Moon, PersonStanding, Trophy, type LucideIcon } from 'lucide-react';
 import { effortColor, zoneEffort, type Effort } from '../theme/palette';
 import { METRES_PER_MILE, addDays, daysBetween, startOfWeek } from './format';
 import { SPORT_META, type Sport } from './sports';
@@ -76,11 +76,13 @@ const NAMES: Partial<Record<Sport, Partial<Record<WorkoutKind, string>>>> = {
  * and colour; it never changes the prescription.
  */
 export function inferKind(
-  workout: Pick<WorkoutSummary, 'title' | 'purpose' | 'discipline' | 'racePriority'>,
+  workout: Pick<WorkoutSummary, 'title' | 'purpose' | 'discipline' | 'racePriority'> &
+    Partial<Pick<WorkoutSummary, 'sessionType'>>,
 ): WorkoutKind {
   const title = workout.title.toLowerCase();
   const sport = workout.discipline;
   if (workout.racePriority) return 'race';
+  if (workout.sessionType) return workout.sessionType;
   if (/time trial|\btest\b|benchmark/.test(title)) return 'test';
   if (/^rest\b|rest day/.test(title)) return 'rest';
   if (/mobility|yoga|stretch|flexibility/.test(title)) return 'mobility';
@@ -93,6 +95,7 @@ export function inferKind(
   if (/sprint|repetition|anaerobic|neuromuscular|\bspeed\b|all[- ]out/.test(title)) return 'speed';
   if (/threshold|cruise|sweet ?spot|\bcss\b|lactate/.test(title)) return 'tempo';
   // A running tempo is threshold work; on the bike or in the pool tempo sits just below it.
+  if (/tempo/.test(title) && /interval|repeats?/.test(title)) return 'intervals';
   if (/tempo/.test(title)) return sport === 'run' ? 'tempo' : 'steady';
   if (/interval|vo2|track|hill|fartlek|repeats?\b|\d+\s?[x×]\s?\d/.test(title)) return 'intervals';
   if (/steady|marathon pace|progression|moderate|race pace/.test(title)) return 'steady';
@@ -114,7 +117,10 @@ export type WorkoutLook = {
 /** Sessions that read the same in any sport keep their own name. */
 const SPORTLESS: WorkoutKind[] = ['strength', 'mobility', 'brick', 'race', 'rest'];
 
-function lookLabel(kind: WorkoutKind, sport: Sport): string {
+function lookLabel(kind: WorkoutKind, sport: Sport, placeholder: boolean): string {
+  // The coach only assumed a placeholder's session type, and an other activity's title says what it is.
+  if (sport === 'other') return 'Other activity';
+  if (placeholder) return SPORT_META[sport].label;
   const named = NAMES[sport]?.[kind];
   if (named) return named;
   if (SPORTLESS.includes(kind)) return KIND_META[kind].label;
@@ -129,13 +135,14 @@ function strengthEffort(title: string): Effort {
 
 /** How a workout presents: the icon names the sport and the colour says how hard it is. */
 export function workoutLook(
-  workout: Pick<WorkoutSummary, 'title' | 'purpose' | 'discipline' | 'racePriority'>,
+  workout: Pick<WorkoutSummary, 'title' | 'purpose' | 'discipline' | 'racePriority'> &
+    Partial<Pick<WorkoutSummary, 'sessionType' | 'placeholder'>>,
 ): WorkoutLook {
   const kind = inferKind(workout);
   const sport = (workout.discipline in SPORT_META ? workout.discipline : 'other') as Sport;
   const effort =
     kind === 'strength' ? strengthEffort(workout.title.toLowerCase()) : KIND_META[kind].effort;
-  const label = lookLabel(kind, sport);
+  const label = lookLabel(kind, sport, !!workout.placeholder);
   const icon =
     kind === 'race'
       ? Trophy
@@ -143,7 +150,9 @@ export function workoutLook(
         ? Moon
         : kind === 'mobility'
           ? PersonStanding
-          : SPORT_META[sport].icon;
+          : sport === 'other'
+            ? Activity
+            : SPORT_META[sport].icon;
   return {
     kind,
     sport,
@@ -152,6 +161,15 @@ export function workoutLook(
     effort,
     color: effort ? effortColor(effort) : 'var(--text-muted)',
   };
+}
+
+/** A placeholder's expected effort, such as "RPE 5–8". */
+export function expectedEffort(workout: Pick<WorkoutSummary, 'expectedRpe'>): string | null {
+  const range = workout.expectedRpe;
+  if (!range) return null;
+  return range.minimum === range.maximum
+    ? `RPE ${range.minimum}`
+    : `RPE ${range.minimum}–${range.maximum}`;
 }
 
 // ---- Races -------------------------------------------------------------------------------------
@@ -366,10 +384,17 @@ export function summarizeWeeks(
 
 /**
  * Weekly volume is distance for running-only schedules and time once other sports appear, since
- * swim, ride and run distances do not add up meaningfully.
+ * swim, ride and run distances do not add up meaningfully. A run without a distance estimate,
+ * such as a club-session placeholder booked by duration, also switches to time so it still counts.
  */
-export function volumeMeasure(workouts: Pick<WorkoutSummary, 'discipline'>[]): 'distance' | 'time' {
-  return workouts.every((workout) => workout.discipline === 'run') ? 'distance' : 'time';
+export function volumeMeasure(
+  workouts: Pick<WorkoutSummary, 'discipline' | 'estimatedDistanceMetres'>[],
+): 'distance' | 'time' {
+  return workouts.every(
+    (workout) => workout.discipline === 'run' && workout.estimatedDistanceMetres !== null,
+  )
+    ? 'distance'
+    : 'time';
 }
 
 export function workoutsOn(workouts: WorkoutSummary[], date: string) {

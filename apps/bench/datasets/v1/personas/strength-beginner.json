@@ -1,0 +1,60 @@
+{
+  "schemaVersion": 1,
+  "id": "strength-beginner",
+  "version": 1,
+  "category": "strength",
+  "experience": "beginner",
+  "label": "New lifter establishing a simple strength habit",
+  "reviewStatus": "exploratory",
+  "age": 27,
+  "timezone": "Europe/London",
+  "communication": {
+    "style": "plain language; asks what sets and effort targets mean",
+    "disclosurePolicy": "answer_requested_facts",
+    "unknownResponse": "I don't know anything else about that. Please explain any material assumptions."
+  },
+  "sports": [
+    {
+      "sport": "strength",
+      "experience": "beginner",
+      "historyYears": 0,
+      "recentBaselineWeeks": 6,
+      "currentSessions": 0,
+      "desiredSessions": 2
+    }
+  ],
+  "availability": [
+    {
+      "weekday": 2,
+      "maxMinutes": 45,
+      "preferred": false
+    },
+    {
+      "weekday": 6,
+      "maxMinutes": 60,
+      "preferred": true
+    }
+  ],
+  "equipment": ["commercial gym with dumbbells, machines and benches", "bodyweight exercise space"],
+  "constraints": [
+    "No current injuries or health restrictions",
+    "No barbell technique experience",
+    "No established working weights"
+  ],
+  "preferences": [
+    "A simple repeatable routine",
+    "Explain exercise names, sets, repetitions, rest and effort",
+    "Strength training only; no added endurance sessions"
+  ],
+  "performanceEvidence": [],
+  "factTemplates": {
+    "availability": "I can train only on these days: {{availability}}",
+    "equipment": "I have access to: {{equipment}}.",
+    "constraints": "I'm {{age}}. {{constraints}}.",
+    "preferences": "{{preferences}}.",
+    "training": "I have not trained regularly in the last {{strengthBaselineWeeks}} weeks: {{strengthCurrentSessions}} strength sessions per week. I have no established working weights or programme.",
+    "frequency": "I want {{strengthDesiredSessions}} strength sessions per week.",
+    "lifting": "I don't know suitable starting weights or any one-rep maximum. Give understandable effort guidance and explain how to choose a starting weight; do not describe guessed weights as my measured lifts."
+  },
+  "accessRestrictions": []
+}

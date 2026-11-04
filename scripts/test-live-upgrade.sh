@@ -1,12 +1,10 @@
 #!/usr/bin/env sh
 set -eu
 # Rehearse the additive Phase 6 migration on a populated, disposable Phase 5 database.
-export TEST_DATABASE_PORT="${TEST_DATABASE_PORT:-55432}"
-docker compose --profile test up -d --wait postgres-test
-docker compose exec -T postgres-test createdb -U askesis_test askesis_live_upgrade
-cleanup() { docker compose exec -T postgres-test dropdb -U askesis_test askesis_live_upgrade; }
-trap cleanup EXIT INT TERM
-run_sql() { docker compose exec -T postgres-test psql -U askesis_test -d askesis_live_upgrade --set ON_ERROR_STOP=1 --quiet; }
+. ./scripts/lib/disposable-compose.sh
+test_compose --profile test up -d --wait postgres-test
+test_compose exec -T postgres-test createdb -U askesis_test askesis_live_upgrade
+run_sql() { test_compose exec -T postgres-test psql -U askesis_test -d askesis_live_upgrade --set ON_ERROR_STOP=1 --quiet; }
 for migration in database/migrations/*.sql; do
   case "$migration" in *20261005120000_live_coaching.sql) break;; esac
   run_sql < "$migration"

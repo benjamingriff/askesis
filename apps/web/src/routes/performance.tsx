@@ -4,7 +4,9 @@ import { useState, type ReactNode } from 'react';
 import { Link } from 'react-router';
 import type { RecordCalibration } from '@askesis/api-client';
 import { api } from '../api';
+import { useAskAgent } from '../components/AskAgent';
 import { CalibrationSource, ZoneGuides } from '../components/PlanWidgets';
+import { agentPrompt, useCoachWord, useInAppCoach } from '../coach';
 import {
   Button,
   ButtonLink,
@@ -49,6 +51,7 @@ export function parseClock(value: string): number {
  * from today; earlier workouts keep the zones they had. The coach can record results from chat.
  */
 export function PerformancePage() {
+  const coach = useCoachWord();
   const performance = usePerformance();
   const units = useUnits();
   const [added, setAdded] = useState<System[]>([]);
@@ -97,7 +100,7 @@ export function PerformancePage() {
               <Card className="add-sport">
                 <h2 className="card-title">Add another sport</h2>
                 <p className="muted">
-                  Only needed for sports you train. Your coach asks for these when a plan includes
+                  Only needed for sports you train. Your {coach} asks for these when a plan includes
                   them.
                 </p>
                 <div className="sport-chips">
@@ -135,13 +138,13 @@ export function PerformancePage() {
   );
 }
 
-const EMPTY: Record<System, string> = {
-  run_pace:
-    'No running fitness yet. Add a recent race or an estimated threshold pace below, or tell your coach about a recent result.',
-  cycle_power:
-    'No cycling power yet. Add your FTP or a recent test below, or ask your coach for an estimate.',
-  swim_pace:
-    'No swim paces yet. Add a 400/200 CSS test or an estimated CSS pace below, or ask your coach.',
+const EMPTY: Record<System, (coach: string) => string> = {
+  run_pace: (coach) =>
+    `No running fitness yet. Add a recent race or an estimated threshold pace below, or tell your ${coach} about a recent result.`,
+  cycle_power: (coach) =>
+    `No cycling power yet. Add your FTP or a recent test below, or ask your ${coach} for an estimate.`,
+  swim_pace: (coach) =>
+    `No swim paces yet. Add a 400/200 CSS test or an estimated CSS pace below, or ask your ${coach}.`,
 };
 
 function SystemCard({
@@ -157,6 +160,8 @@ function SystemCard({
 }) {
   const meta = SYSTEM_META[system];
   const sport = SPORT_META[meta.sport];
+  const coach = useCoachWord();
+  const askAgent = useAskAgent();
   return (
     <Card className="performance-current" data-system={system}>
       <SectionHeader
@@ -166,9 +171,25 @@ function SystemCard({
           </span>
         }
         action={
-          <ButtonLink to="/chat/new" size="sm" icon={MessagesSquare}>
-            Update with my coach
-          </ButtonLink>
+          coach === 'coach' ? (
+            <ButtonLink to="/chat/new" size="sm" icon={MessagesSquare}>
+              Update with my coach
+            </ButtonLink>
+          ) : (
+            <Button
+              size="sm"
+              icon={MessagesSquare}
+              onClick={() =>
+                askAgent(
+                  agentPrompt(
+                    `Help me update my ${meta.title.toLowerCase()}. Read my performance first, then ask me about recent results.`,
+                  ),
+                )
+              }
+            >
+              Update with my agent
+            </Button>
+          )
         }
       />
       {current ? (
@@ -177,7 +198,7 @@ function SystemCard({
           <ZoneGuides calibration={current} units={units} />
         </>
       ) : (
-        <p className="muted">{EMPTY[system]}</p>
+        <p className="muted">{EMPTY[system](coach)}</p>
       )}
       {system === 'run_pace' ? <RunResultForm today={today} units={units} /> : null}
       {system === 'cycle_power' ? <PowerResultForm today={today} /> : null}
@@ -556,6 +577,8 @@ function SwimResultForm({ today }: { today: string }) {
 
 function HistoryCard({ entries, units }: { entries: Calibration[]; units: Units }) {
   const { pool } = useSportUnits();
+  const inAppCoach = useInAppCoach();
+  const coach = useCoachWord();
   const evidence = (entry: Calibration) => describeEvidence(entry, { units, pool });
   const client = useQueryClient();
   const requestKey = useRequestKey();
@@ -601,7 +624,8 @@ function HistoryCard({ entries, units }: { entries: Calibration[]; units: Units 
                 {entry.recordedBy === 'coach' ? (
                   <>
                     <Bot size={13} aria-hidden="true" />
-                    {entry.conversationId ? (
+                    {/* Conversations are only shown with the in-app coach. */}
+                    {entry.conversationId && inAppCoach ? (
                       <Link to={`/chat/${entry.conversationId}`}>Recorded by your coach</Link>
                     ) : (
                       'Recorded by your coach'
@@ -626,7 +650,7 @@ function HistoryCard({ entries, units }: { entries: Calibration[]; units: Units 
           ))}
         </ol>
       ) : (
-        <p className="muted">Results you or your coach record appear here.</p>
+        <p className="muted">Results you or your {coach} record appear here.</p>
       )}
       <Dialog
         open={!!withdrawing}

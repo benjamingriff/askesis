@@ -8,21 +8,27 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
   Zap,
-  CircleUserRound,
   type LucideIcon,
 } from 'lucide-react';
-import { useState } from 'react';
-import { Link, NavLink, Outlet, useLocation } from 'react-router';
+import { useRef, useState, type CSSProperties } from 'react';
+import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router';
 import { useConversations } from '../chat';
+import { useInAppCoach } from '../coach';
+import { AskAgentProvider } from './AskAgent';
 import { readStorage, writeStorage } from '../lib/storage';
+import { useTabSwipe } from '../lib/tab-swipe';
 import { cx } from './ui';
 
 const TABS: { to: string; label: string; icon: LucideIcon }[] = [
   { to: '/today', label: 'Today', icon: Zap },
   { to: '/plan', label: 'Plan', icon: CalendarDays },
   { to: '/chat', label: 'Coach', icon: MessagesSquare },
-  { to: '/settings', label: 'You', icon: CircleUserRound },
 ];
+
+function sectionIndex(tabs: typeof TABS, pathname: string) {
+  // `/plan` also covers the plan library and plan detail pages under `/plans`.
+  return tabs.findIndex(({ to }) => pathname.startsWith(to));
+}
 
 export function initialsFor(name: string) {
   return (
@@ -37,15 +43,31 @@ export function initialsFor(name: string) {
 
 /**
  * Desktop: a T3 Code-style sidebar with navigation and recent chats.
- * Narrow screens: the mobile app's floating tab bar.
+ * Narrow screens: a slim bar above the page with You and Today · Plan · Coach, swipeable between tabs.
+ * Coach and recent chats appear only when the deployment offers the in-app coach.
  */
 export function AppShell() {
-  const chats = useConversations();
+  const coach = useInAppCoach();
+  // Without the in-app coach, athletes plan with their own agent; chat is not offered.
+  const tabs = coach ? TABS : TABS.filter(({ to }) => to !== '/chat');
+  const chats = useConversations(false, coach);
   const [collapsed, setCollapsed] = useState(
     () => readStorage('askesis-sidebar-collapsed') === 'true',
   );
   const { user } = useUser();
-  const onChat = useLocation().pathname.startsWith('/chat');
+  const { pathname } = useLocation();
+  const navigate = useNavigate();
+  const onChat = pathname.startsWith('/chat');
+  const active = sectionIndex(tabs, pathname);
+  const workspace = useRef<HTMLDivElement>(null);
+  const tabBar = useRef<HTMLElement>(null);
+  // Swipe between each tab's landing page, not its detail pages.
+  const swipePage = tabs.some(({ to }) => to === pathname);
+  useTabSwipe(workspace, tabBar, {
+    index: swipePage ? active : -1,
+    count: tabs.length,
+    onCommit: (index) => void navigate(tabs[index]!.to, { flushSync: true }),
+  });
   const displayName = user?.fullName ?? user?.firstName ?? 'Askesis athlete';
   const email = user?.primaryEmailAddress?.emailAddress ?? '';
   const toggle = () =>
@@ -73,13 +95,15 @@ export function AppShell() {
           </button>
         </div>
 
-        <Link to="/chat/new" className="sidebar-new-chat" title="New chat">
-          <MessageSquarePlus size={17} aria-hidden="true" />
-          <span>New chat</span>
-        </Link>
+        {coach ? (
+          <Link to="/chat/new" className="sidebar-new-chat" title="New chat">
+            <MessageSquarePlus size={17} aria-hidden="true" />
+            <span>New chat</span>
+          </Link>
+        ) : null}
 
         <nav className="sidebar-nav" aria-label="Primary navigation">
-          {TABS.slice(0, 3).map(({ to, label, icon: Icon }) => (
+          {tabs.map(({ to, label, icon: Icon }) => (
             <NavLink key={to} to={to} title={label}>
               <Icon size={18} aria-hidden="true" />
               <span>{label}</span>
@@ -95,21 +119,23 @@ export function AppShell() {
           </NavLink>
         </nav>
 
-        <div className="sidebar-section">
-          <span className="label">Recent chats</span>
-          <div className="sidebar-chats">
-            {chats.data?.pages[0]?.conversations.slice(0, 12).map((chat) => (
-              <NavLink to={`/chat/${chat.id}`} key={chat.id} title={chat.title}>
-                <span>{chat.title}</span>
-                {chat.planName ? <small>{chat.planName}</small> : null}
-              </NavLink>
-            ))}
-            {chats.error ? <span className="muted">Could not load chats.</span> : null}
-            {chats.data && !chats.data.pages[0]?.conversations.length ? (
-              <span className="muted">No chats yet.</span>
-            ) : null}
+        {coach ? (
+          <div className="sidebar-section">
+            <span className="label">Recent chats</span>
+            <div className="sidebar-chats">
+              {chats.data?.pages[0]?.conversations.slice(0, 12).map((chat) => (
+                <NavLink to={`/chat/${chat.id}`} key={chat.id} title={chat.title}>
+                  <span>{chat.title}</span>
+                  {chat.planName ? <small>{chat.planName}</small> : null}
+                </NavLink>
+              ))}
+              {chats.error ? <span className="muted">Could not load chats.</span> : null}
+              {chats.data && !chats.data.pages[0]?.conversations.length ? (
+                <span className="muted">No chats yet.</span>
+              ) : null}
+            </div>
           </div>
-        </div>
+        ) : null}
 
         <NavLink to="/settings" className="sidebar-account" title="You">
           {user?.hasImage ? (
@@ -124,18 +150,39 @@ export function AppShell() {
         </NavLink>
       </aside>
 
-      <div className="workspace">
-        <Outlet />
-      </div>
+      {/* Scrolls away with the page: scroll back to the top to switch screens. */}
+      <header className="top-bar">
+        <NavLink to="/settings" className="top-bar-account" aria-label="You" title="You">
+          {initialsFor(displayName)}
+        </NavLink>
+        <nav
+          ref={tabBar}
+          className="top-tabs"
+          aria-label="Primary navigation"
+          style={
+            { '--tab-index': Math.max(active, 0), '--tab-count': tabs.length } as CSSProperties
+          }
+        >
+          {tabs.map(({ to, label }, index) => (
+            <Link
+              key={to}
+              to={to}
+              className={cx('top-tab', index === active && 'active')}
+              aria-current={index === active ? 'page' : undefined}
+              onClick={() => window.scrollTo(0, 0)}
+            >
+              {label}
+            </Link>
+          ))}
+          {active >= 0 ? <span className="top-tab-indicator" aria-hidden="true" /> : null}
+        </nav>
+      </header>
 
-      <nav className="tab-bar" aria-label="Primary navigation">
-        {TABS.map(({ to, label, icon: Icon }) => (
-          <NavLink key={to} to={to} className="tab">
-            <Icon size={22} aria-hidden="true" />
-            <span>{label}</span>
-          </NavLink>
-        ))}
-      </nav>
+      <div className="workspace" ref={workspace}>
+        <AskAgentProvider>
+          <Outlet />
+        </AskAgentProvider>
+      </div>
     </div>
   );
 }

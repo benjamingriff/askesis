@@ -1,4 +1,4 @@
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   Archive,
   ArchiveRestore,
@@ -13,35 +13,59 @@ import {
   Power,
   PowerOff,
   Trash2,
+  Trash,
 } from 'lucide-react';
 import { useState } from 'react';
 import { useNavigate } from 'react-router';
 import { api } from '../api';
+import { agentPrompt, useCoachWord, useInAppCoach } from '../coach';
 import { result } from '../lib/result';
 import { useRequestKey } from '../lib/use-request-key';
 import { usePlanPreferences } from '../plan-selection';
 import type { Plan, Preview } from '../plan-data';
+import { useAskAgent } from './AskAgent';
 import { Button, Dialog, Menu, Notice } from './ui';
 import { EditDetailsDialog } from './EditDetailsDialog';
 import { LockReviewDialog } from './LockReviewDialog';
 
 type Action = 'unlock' | 'discard' | 'archive' | 'unarchive' | 'activate' | 'deactivate' | 'lock';
-type Confirm = 'unlock' | 'discard' | 'archive' | 'unarchive' | 'review' | 'details' | null;
+type Confirm =
+  'unlock' | 'discard' | 'archive' | 'unarchive' | 'review' | 'details' | 'delete' | null;
 
-/** Opens (or reuses) the plan's coaching conversation. */
-export function useOpenPlanChat(planId: string) {
+/**
+ * Opens (or reuses) the plan's coaching conversation. Without the in-app coach, it hands the same
+ * request to the athlete's own agent instead.
+ */
+export function useOpenPlanChat(plan: { id: string; displayName: string }) {
   const navigate = useNavigate();
+  const coach = useInAppCoach();
+  const askAgent = useAskAgent();
   return useMutation({
-    mutationFn: async (prefill?: string) => ({
-      conversation: result(
-        await api.POST('/api/v1/plans/{planId}/conversations/open', {
-          params: { path: { planId } },
-        }),
-      ),
-      prefill,
-    }),
-    onSuccess: ({ conversation, prefill }) =>
-      void navigate(`/chat/${conversation.id}`, { state: prefill ? { prefill } : undefined }),
+    mutationFn: async (prefill?: string) => {
+      if (!coach) {
+        askAgent(
+          agentPrompt(
+            prefill ?? 'Help me review and edit this plan. Read the plan context first.',
+            { id: plan.id, name: plan.displayName },
+          ),
+        );
+        return null;
+      }
+      return {
+        conversation: result(
+          await api.POST('/api/v1/plans/{planId}/conversations/open', {
+            params: { path: { planId: plan.id } },
+          }),
+        ),
+        prefill,
+      };
+    },
+    onSuccess: (opened) => {
+      if (opened)
+        void navigate(`/chat/${opened.conversation.id}`, {
+          state: opened.prefill ? { prefill: opened.prefill } : undefined,
+        });
+    },
   });
 }
 
@@ -88,7 +112,8 @@ export function PlanToolbar({
   const navigate = useNavigate();
   const preferences = usePlanPreferences();
   const requestKey = useRequestKey();
-  const chat = useOpenPlanChat(plan.id);
+  const chat = useOpenPlanChat(plan);
+  const coachWord = useCoachWord();
   const [confirm, setConfirm] = useState<Confirm>(null);
   const [reviewedPlan, setReviewedPlan] = useState<Plan | null>(null);
   const [preview, setPreview] = useState<Preview | null>(null);
@@ -229,13 +254,17 @@ export function PlanToolbar({
           <Button
             className="collapsible"
             icon={MessageSquare}
-            aria-label="Chat about this plan"
-            title="Chat about this plan"
+            aria-label={
+              coachWord === 'coach' ? 'Chat about this plan' : 'Ask your agent about this plan'
+            }
+            title={
+              coachWord === 'coach' ? 'Chat about this plan' : 'Ask your agent about this plan'
+            }
             disabled={archived || chat.isPending}
             busy={chat.isPending}
             onClick={() => chat.mutate(undefined)}
           >
-            <span className="btn-text">Coach</span>
+            <span className="btn-text">{coachWord === 'coach' ? 'Coach' : 'Agent'}</span>
           </Button>
         ) : null}
         {archived ? (
@@ -313,6 +342,12 @@ export function PlanToolbar({
               danger: true,
               onSelect: () => open('archive'),
             },
+            {
+              label: 'Delete plan…',
+              icon: Trash,
+              danger: true,
+              onSelect: () => open('delete'),
+            },
           ]}
         />
       </div>
@@ -369,6 +404,18 @@ export function PlanToolbar({
         onLock={() => mutation.mutate('lock')}
         onClose={close}
       />
+      {confirm === 'delete' ? (
+        <DeletePlanDialog
+          plan={reviewedPlan ?? plan}
+          onClose={close}
+          onDeleted={() => {
+            setConfirm(null);
+            void client.invalidateQueries({ queryKey: ['plans'] });
+            void client.invalidateQueries({ queryKey: ['chat'] });
+            void navigate('/plans');
+          }}
+        />
+      ) : null}
       {confirm === 'details' ? (
         <EditDetailsDialog
           plan={plan}
@@ -380,6 +427,94 @@ export function PlanToolbar({
         />
       ) : null}
     </>
+  );
+}
+
+const count = (value: number, one: string, many = `${one}s`) =>
+  `${value} ${value === 1 ? one : many}`;
+
+/** Lists what goes with the plan; it can be restored from Recently deleted until purged. */
+function DeletePlanDialog({
+  plan,
+  onClose,
+  onDeleted,
+}: {
+  plan: Plan;
+  onClose: () => void;
+  onDeleted: () => void;
+}) {
+  const params = { path: { planId: plan.id } };
+  const impact = useQuery({
+    queryKey: ['plans', plan.id, 'deletion-impact'],
+    queryFn: async () =>
+      result(await api.GET('/api/v1/plans/{planId}/deletion-impact', { params })),
+  });
+  const remove = useMutation({
+    mutationFn: async () =>
+      result(
+        await api.POST('/api/v1/plans/{planId}/delete', {
+          params,
+          body: { expectedStateVersion: plan.stateVersion },
+        }),
+      ),
+    onSuccess: onDeleted,
+  });
+  const data = impact.data;
+  const removed = data
+    ? [
+        data.versions ? count(data.versions, 'locked version') : null,
+        data.conversations
+          ? `${count(data.conversations, 'coach conversation')} (${count(data.messages, 'message')})`
+          : null,
+        data.workoutLogs ? count(data.workoutLogs, 'logged session') : null,
+        data.checkIns ? count(data.checkIns, 'check-in') : null,
+      ].filter(Boolean)
+    : [];
+  return (
+    <Dialog
+      open
+      size="sm"
+      busy={remove.isPending}
+      onClose={onClose}
+      title={`Delete “${plan.displayName}”?`}
+      footer={
+        <>
+          <Button variant="ghost" disabled={remove.isPending} onClick={onClose}>
+            Cancel
+          </Button>
+          <Button
+            variant="danger"
+            icon={Trash}
+            busy={remove.isPending}
+            disabled={remove.isPending || !data}
+            onClick={() => remove.mutate()}
+          >
+            Delete plan
+          </Button>
+        </>
+      }
+    >
+      {impact.isPending ? <p className="muted">Checking what this plan holds…</p> : null}
+      {data ? (
+        <>
+          <p>
+            {removed.length
+              ? `This deletes the plan with its ${removed.join(', ')}.`
+              : 'This deletes the plan and everything in it.'}{' '}
+            Your fitness results stay with you.
+          </p>
+          <p>
+            You can restore it from Recently deleted for {data.restoreDays} days. After that it is
+            permanently deleted.
+          </p>
+        </>
+      ) : null}
+      {impact.error || remove.error ? (
+        <Notice tone="danger" role="alert">
+          {(remove.error ?? impact.error)!.message}
+        </Notice>
+      ) : null}
+    </Dialog>
   );
 }
 
@@ -398,7 +533,7 @@ const COPY = {
   },
   unlock: {
     title: 'Unlock to edit?',
-    body: 'Locking freezes your brief, pace guides and workouts together. Unlocking copies the current version into an editable draft. Your coach can then make changes, and you review and lock again when you are happy. The locked version stays unchanged.',
+    body: 'Locking freezes your brief, pace guides and workouts together. Unlocking copies the current version into an editable draft. Your {coach} can then make changes, and you review and lock again when you are happy. The locked version stays unchanged.',
     action: 'Unlock and edit',
     icon: LockOpen,
   },
@@ -427,6 +562,7 @@ function ConfirmDialog({
   onClose: () => void;
   onConfirm: (action: 'archive' | 'unarchive' | 'unlock' | 'discard') => void;
 }) {
+  const coach = useCoachWord();
   if (
     confirm !== 'archive' &&
     confirm !== 'unarchive' &&
@@ -463,7 +599,7 @@ function ConfirmDialog({
       <p>
         {confirm === 'discard'
           ? `All draft changes will be permanently removed. Locked version ${plan.locked?.versionNumber} stays unchanged.`
-          : copy.body}
+          : copy.body.replace('{coach}', coach)}
       </p>
       {changed ? (
         <Notice tone="warning">

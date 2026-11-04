@@ -31,8 +31,15 @@ export async function readEntries(db: Database, athleteId: string): Promise<Cali
   const rows = await db
     .selectFrom('athlete_calibrations as c')
     .leftJoin('agent_runs as r', 'r.id', 'c.recorded_by_run_id')
+    .leftJoin('conversations as v', 'v.id', 'r.conversation_id')
+    .leftJoin('plans as p', 'p.id', 'v.plan_id')
     .selectAll('c')
-    .select('r.conversation_id')
+    // A deleted plan's chat is gone for the athlete, so the entry no longer links to it.
+    .select(
+      sql<string | null>`CASE WHEN p.deleted_at IS NULL THEN r.conversation_id END`.as(
+        'conversation_id',
+      ),
+    )
     .where('c.athlete_id', '=', athleteId)
     .orderBy('c.effective_from')
     .orderBy('c.recorded_at')
@@ -62,7 +69,7 @@ export async function readEntries(db: Database, athleteId: string): Promise<Cali
       observedOn: day(row.observed_on),
       effectiveFrom: day(row.effective_from),
       recordedAt: instant(row.recorded_at),
-      recordedBy: row.recorded_by_run_id ? 'coach' : 'athlete',
+      recordedBy: row.recorded_by,
       conversationId: row.conversation_id,
       retractedAt: row.retracted_at === null ? null : instant(row.retracted_at),
       zones: zones
@@ -204,6 +211,7 @@ export async function recordCalibrationRows(
       observed_on: input.observedOn ?? null,
       effective_from: today,
       recorded_by_run_id: options.runId ?? null,
+      recorded_by: options.runId ? 'coach' : 'athlete',
     })
     .returning('id')
     .executeTakeFirstOrThrow();
@@ -352,8 +360,8 @@ async function versionOwner(db: Database, versionId: string) {
 }
 
 /**
- * A plan can lock only when its athlete has calibrated every system its sports use. Sports are
- * read from each effort step as well as the workout, so a brick's ride and run both count.
+ * Running and swimming require calibration. Cycling can instead use explicit RPE on every
+ * effort, including efforts in mixed workouts. Power/zone targets still require calibration.
  */
 export async function performanceLockFindings(
   db: Database,
@@ -367,6 +375,25 @@ export async function performanceLockFindings(
     db,
   );
   const systems = new Set(rows.map((row) => systemForDiscipline(row.discipline)));
+  if (systems.has('cycle_power')) {
+    // A power target still needs calibration even when RPE is supplied alongside it.
+    // Keep the existing requirement for empty rides without explicit effort targets.
+    const needsPower = await sql<{ id: string }>`
+      SELECT w.id FROM workouts w
+      LEFT JOIN workout_steps s ON s.workout_id = w.id AND s.kind = 'effort'
+      WHERE w.plan_version_id = ${versionId}::uuid
+        AND COALESCE(s.discipline, w.primary_discipline) = 'cycle'
+        AND (s.id IS NULL OR NOT EXISTS (
+          SELECT 1 FROM step_targets t WHERE t.step_id = s.id
+            AND t.target_type = 'rpe' AND (t.target_value IS NOT NULL
+              OR (t.minimum_value IS NOT NULL AND t.maximum_value IS NOT NULL))
+        ) OR EXISTS (
+          SELECT 1 FROM step_targets t WHERE t.step_id = s.id
+            AND t.target_type IN ('zone', 'power')
+        ))
+      LIMIT 1`.execute(db);
+    if (!needsPower.rows.length) systems.delete('cycle_power');
+  }
   return PERFORMANCE_SYSTEMS.filter(
     (system) =>
       systems.has(system) &&

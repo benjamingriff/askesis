@@ -1,3 +1,4 @@
+import { SESSION_TYPES } from './session-types.js';
 import { z } from '@hono/zod-openapi';
 import { BLOCK_PHASES, RACE_PRIORITIES } from '../plans/periodization.js';
 
@@ -16,6 +17,9 @@ export const RacePrioritySchema = z.enum(RACE_PRIORITIES);
 export const WorkoutSummarySchema = z
   .object({
     id: DatabaseIdSchema,
+    lineageId: DatabaseIdSchema,
+    sessionType: z.enum(SESSION_TYPES).nullable(),
+    plannedRpe: z.number().nullable(),
     planId: DatabaseIdSchema,
     planVersionId: DatabaseIdSchema,
     planTitle: z.string(),
@@ -30,6 +34,10 @@ export const WorkoutSummarySchema = z
     racePriority: RacePrioritySchema.nullable(),
     estimatedDurationSeconds: z.number().int().positive().nullable(),
     estimatedDistanceMetres: z.number().positive().nullable(),
+    /** Booked training decided elsewhere (a club session or another sport); details come in the log. */
+    placeholder: z.boolean(),
+    /** A placeholder's expected effort range; null for prescribed workouts. */
+    expectedRpe: z.object({ minimum: z.number(), maximum: z.number() }).nullable(),
   })
   .openapi('WorkoutSummary');
 

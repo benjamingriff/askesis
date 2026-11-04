@@ -1,0 +1,70 @@
+{
+  "schemaVersion": 1,
+  "id": "cycle-beginner",
+  "version": 1,
+  "category": "cycling",
+  "experience": "beginner",
+  "label": "Casual rider building comfortable longer rides",
+  "reviewStatus": "exploratory",
+  "age": 42,
+  "timezone": "Europe/London",
+  "communication": {
+    "style": "plain language; unfamiliar with training zones",
+    "disclosurePolicy": "answer_requested_facts",
+    "unknownResponse": "I don't know anything else about that. Please explain any material assumptions."
+  },
+  "sports": [
+    {
+      "sport": "cycle",
+      "experience": "beginner",
+      "historyYears": 0.5,
+      "recentBaselineWeeks": 6,
+      "currentSessions": 2,
+      "desiredSessions": 3,
+      "weeklyDurationSeconds": 5400,
+      "longestDurationSeconds": 2700
+    }
+  ],
+  "availability": [
+    {
+      "weekday": 2,
+      "maxMinutes": 45,
+      "preferred": false
+    },
+    {
+      "weekday": 4,
+      "maxMinutes": 45,
+      "preferred": false
+    },
+    {
+      "weekday": 7,
+      "maxMinutes": 90,
+      "preferred": true
+    }
+  ],
+  "equipment": [
+    "road bike without a power meter",
+    "flat local roads",
+    "stationary gym bike without a reliable power display"
+  ],
+  "constraints": [
+    "No current injuries or health restrictions",
+    "Outdoor riding depends on safe weather"
+  ],
+  "preferences": [
+    "Use minutes and understandable effort descriptions",
+    "Sunday is best for a longer ride",
+    "No racing or finish-time target"
+  ],
+  "performanceEvidence": [],
+  "factTemplates": {
+    "availability": "I can train only on these days: {{availability}}",
+    "equipment": "I have access to: {{equipment}}.",
+    "constraints": "I'm {{age}}. {{constraints}}.",
+    "preferences": "{{preferences}}.",
+    "training": "For the last {{cycleBaselineWeeks}} weeks I have ridden {{cycleCurrentSessions}} times each week, about {{cycleWeeklyMinutes}} minutes altogether. My longest recent ride is {{cycleLongestMinutes}} minutes. I ride casually and have not followed structured training.",
+    "frequency": "I would like {{cycleDesiredSessions}} rides per week.",
+    "fitness": "I don't know my FTP and have no power test result. I can ride comfortably for about {{cycleLongestMinutes}} minutes on flat roads, but I do not know the speed or power. I need practical effort instructions rather than relying on watts."
+  },
+  "accessRestrictions": []
+}

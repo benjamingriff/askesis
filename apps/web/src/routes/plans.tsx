@@ -1,8 +1,10 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { ArrowLeft, CalendarDays, ChevronRight, Plus } from 'lucide-react';
+import { ArchiveRestore, ArrowLeft, CalendarDays, ChevronRight, Plus, Trash } from 'lucide-react';
 import { useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router';
 import { api } from '../api';
+import { agentPrompt, useCoachWord, useInAppCoach } from '../coach';
+import { useAskAgent } from '../components/AskAgent';
 import { PlanStatus } from '../components/PlanWidgets';
 import { useRequestKey } from '../lib/use-request-key';
 import { PlanView } from '../components/PlanView';
@@ -13,23 +15,40 @@ import {
   ErrorState,
   LoadingState,
   Notice,
+  Pill,
   Segmented,
 } from '../components/ui';
-import { formatRange } from '../lib/format';
+import { formatInstantShort, formatRange } from '../lib/format';
 import { result } from '../lib/result';
-import { usePlan, type PlanView as View } from '../plan-data';
+import { usePlan, type Plan, type PlanView as View } from '../plan-data';
 
-export function PlansPage({ archived = false }: { archived?: boolean }) {
+type Collection = 'library' | 'archive' | 'deleted';
+const COLLECTION_PATHS: Record<Collection, string> = {
+  library: '/plans',
+  archive: '/plans/archive',
+  deleted: '/plans/deleted',
+};
+const EMPTY: Record<Collection, { title: string; body: string }> = {
+  library: {
+    title: 'No plans yet',
+    body: 'Create a plan and your {coach} will help you shape it.',
+  },
+  archive: { title: 'Nothing archived', body: 'Archived plans are kept here and can be restored.' },
+  deleted: {
+    title: 'Nothing deleted',
+    body: 'Deleted plans stay here for 30 days so you can restore them, then they are gone for good.',
+  },
+};
+
+export function PlansPage({ collection = 'library' }: { collection?: Collection }) {
+  const coach = useCoachWord();
   const navigate = useNavigate();
   const [creating, setCreating] = useState(false);
+  const archived = collection !== 'library';
   const plans = useQuery({
-    queryKey: ['plans', 'collection', archived ? 'archive' : 'library'],
+    queryKey: ['plans', 'collection', collection],
     queryFn: async () =>
-      result(
-        await api.GET('/api/v1/plans', {
-          params: { query: { collection: archived ? 'archive' : 'library' } },
-        }),
-      ).plans,
+      result(await api.GET('/api/v1/plans', { params: { query: { collection } } })).plans,
   });
   return (
     <div className="page">
@@ -38,7 +57,7 @@ export function PlansPage({ archived = false }: { archived?: boolean }) {
           <span className="label">Your training</span>
           <h1>Plans</h1>
           <p className="muted">
-            Plan with your coach, then review and lock a version. Plans stay private to your
+            Plan with your {coach}, then review and lock a version. Plans stay private to your
             account.
           </p>
         </div>
@@ -48,13 +67,14 @@ export function PlansPage({ archived = false }: { archived?: boolean }) {
           </Button>
         ) : null}
       </header>
-      <Segmented<'library' | 'archive'>
+      <Segmented<Collection>
         label="Plan collection"
-        value={archived ? 'archive' : 'library'}
-        onChange={(next) => void navigate(next === 'archive' ? '/plans/archive' : '/plans')}
+        value={collection}
+        onChange={(next) => void navigate(COLLECTION_PATHS[next])}
         options={[
           { value: 'library', label: 'Library' },
           { value: 'archive', label: 'Archived' },
+          { value: 'deleted', label: 'Recently deleted' },
         ]}
       />
       {plans.isPending ? <LoadingState>Loading plans…</LoadingState> : null}
@@ -64,7 +84,7 @@ export function PlansPage({ archived = false }: { archived?: boolean }) {
       {plans.data?.length === 0 ? (
         <EmptyState
           icon={CalendarDays}
-          title={archived ? 'Nothing archived' : 'No plans yet'}
+          title={EMPTY[collection].title}
           dashed
           action={
             archived ? undefined : (
@@ -74,14 +94,18 @@ export function PlansPage({ archived = false }: { archived?: boolean }) {
             )
           }
         >
-          {archived
-            ? 'Archived plans are kept here and can be restored.'
-            : 'Create a plan and your coach will help you shape it.'}
+          {EMPTY[collection].body.replace('{coach}', coach)}
         </EmptyState>
       ) : null}
       <ul className="plan-cards">
         {plans.data?.map((plan) => {
           const version = plan.draft ?? plan.locked;
+          if (collection === 'deleted')
+            return (
+              <li key={plan.id}>
+                <DeletedPlanCard plan={plan} />
+              </li>
+            );
           return (
             <li key={plan.id}>
               <Link to={`/plans/${plan.id}`} className="plan-card">
@@ -104,7 +128,60 @@ export function PlansPage({ archived = false }: { archived?: boolean }) {
   );
 }
 
+/** A deleted plan can't be opened, only restored to the archive before it is purged. */
+function DeletedPlanCard({ plan }: { plan: Plan }) {
+  const client = useQueryClient();
+  const navigate = useNavigate();
+  const version = plan.draft ?? plan.locked;
+  const restore = useMutation({
+    mutationFn: async () =>
+      result(
+        await api.POST('/api/v1/plans/{planId}/undelete', {
+          params: { path: { planId: plan.id } },
+        }),
+      ),
+    onSuccess: async () => {
+      await client.invalidateQueries({ queryKey: ['plans'] });
+      void navigate('/plans/archive');
+    },
+  });
+  return (
+    <div className="plan-card plan-card-deleted">
+      <div className="plan-card-top">
+        <Pill tone="danger" icon={Trash}>
+          {plan.purgeAfter
+            ? `Deleted for good on ${formatInstantShort(plan.purgeAfter)}`
+            : 'Deleted'}
+        </Pill>
+      </div>
+      <strong>{plan.displayName}</strong>
+      <span className="muted">
+        {formatRange(version?.startDate ?? null, version?.endDate ?? null)}
+      </span>
+      <div className="plan-card-actions">
+        <Button
+          size="sm"
+          icon={ArchiveRestore}
+          busy={restore.isPending}
+          disabled={restore.isPending}
+          onClick={() => restore.mutate()}
+        >
+          Restore to archive
+        </Button>
+      </div>
+      {restore.error ? (
+        <Notice tone="danger" role="alert">
+          {restore.error.message}
+        </Notice>
+      ) : null}
+    </div>
+  );
+}
+
 function NewPlanDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const inAppCoach = useInAppCoach();
+  const coach = useCoachWord();
+  const askAgent = useAskAgent();
   const navigate = useNavigate();
   const client = useQueryClient();
   const requestKey = useRequestKey();
@@ -116,12 +193,19 @@ function NewPlanDialog({ open, onClose }: { open: boolean; onClose: () => void }
       result(
         await api.POST('/api/v1/plans', {
           params: { header: { 'idempotency-key': requestKey([name.trim(), startDate, endDate]) } },
-          body: { displayName: name.trim(), startDate, endDate, createConversation: true },
+          body: { displayName: name.trim(), startDate, endDate, createConversation: inAppCoach },
         }),
       ),
     onSuccess: async (plan) => {
       await client.invalidateQueries({ queryKey: ['plans'] });
       void navigate(plan.conversationId ? `/chat/${plan.conversationId}` : `/plans/${plan.id}`);
+      if (!inAppCoach)
+        askAgent(
+          agentPrompt(
+            'I’ve just created this plan. Talk it through with me before writing any workouts: ask about my goal, my current training and when I can train, then save the brief.',
+            { id: plan.id, name: plan.displayName },
+          ),
+        );
     },
   });
   return (
@@ -130,7 +214,7 @@ function NewPlanDialog({ open, onClose }: { open: boolean; onClose: () => void }
       onClose={onClose}
       busy={create.isPending}
       title="New plan"
-      description="Name it and set the dates. Your coach will talk it through with you before writing any workouts."
+      description={`Name it and set the dates. Your ${coach} will talk it through with you before writing any workouts.`}
       footer={
         <>
           <Button variant="ghost" disabled={create.isPending} onClick={onClose}>

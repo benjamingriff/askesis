@@ -5,6 +5,7 @@ The owner is continuing development of the responsive web app and will choose fu
 ## Behavior contracts
 
 - [Plan lifecycle](./phase-2-plan-lifecycle-refinement.md): drafts, immutable revisions, activation, archive and human review.
+- [Deletion and retention](./data-deletion-and-retention.md): plan and account deletion, restore windows, the purge and the retention policy.
 - [Plan brief and athlete training zones](./phase-3-plan-brief-and-calibration-refinement.md): plan-specific context and per-sport baselines, confirmation and athlete-owned, effective-dated zones for running, cycling and swimming shared by every plan.
 - [Conversations and runs](./phase-4-design.md): ownership, durable messages, cancellation, archive and concurrency.
 - [Coaching and domain tools](./phase-5-design.md): conversational generation, worker permissions and partial planning horizons.
@@ -12,6 +13,16 @@ The owner is continuing development of the responsive web app and will choose fu
 - [Phase 7 refinements](../archive/phase-7/phase-7-closeout.md): confirmed defaults and management-control closeout.
 
 These guides describe implemented behavior and were reconciled against code on 2026-10-06. Phases 1–7 are implemented; release-readiness tasks and future ideas are explicitly labelled in the product plan. Original design/delivery checkpoints remain in the archive.
+
+## Benchmark design
+
+- [Training-plan model benchmarks](./training-plan-benchmarks-proposal.md): headless model/prompt comparisons, simulated athletes, saved-plan checks and coaching evaluation. The local running proof of concept is implemented; broader comparisons remain proposed.
+- [Athlete scenario evaluation framework](./athlete-scenario-evaluation-proposal.md): seven-sport catalogue, independent experience/capacity/language dimensions and staged run-and-review workflow. The [eight-case pilot datasets and coverage tracker](../../apps/bench/datasets/README.md) are authored; broader execution remains proposed.
+
+## Proposals
+
+- [Workout logging and feedback](./workout-log-and-feedback-proposal.md): Done/Changed/Skipped logging, key-session feedback, coaching responses and the path to Strava. Proposed for owner review, with [design mockups](./workout-feedback-mockups/).
+- [In-app coach flag and "Ask your agent"](./in-app-coach-flag-proposal.md): hiding the in-app coach for the MCP release and replacing chat entry points with agent prompts. Accepted; in delivery.
 
 ## Interface and pace policy
 
@@ -22,4 +33,12 @@ These guides describe implemented behavior and were reconciled against code on 2
 - [Mobile app](../../apps/mobile/README.md): the Expo client on the real API.
 - [Mobile reference prototype](../../apps/mobile-prototype/README.md): the dummy app used as a source of feature and interaction ideas.
 
+## Explorations
+
+- [Coaching agent feature exploration](./coaching-agent-exploration.md): researched opportunities for richer inputs, coaching memory, agent interaction, parallel generation and ongoing feedback. This is exploratory guidance; linked GitHub issues track scope, decisions and delivery state.
+- [Validation dashboard roadmap](./validation-dashboard-roadmap.md): a launch panel for benchmark runs, data to add to the benchmark and further review views for the local validation dashboard.
+
 Completed delivery plans and test evidence live in the [archive](../archive/README.md). Runtime limits and recovery procedures live in [operations](../operations/README.md).
+
+- [Workout logs and feedback](./training-log.md): manual logging, corrections, coaching and the local demo.
+- [Placeholder sessions](./placeholder-sessions.md): club sessions and other activities the coach books without prescribing, planning around them and logging what they turned out to be.

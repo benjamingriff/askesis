@@ -1,0 +1,57 @@
+{
+  "schemaVersion": 1,
+  "id": "strength-beginner",
+  "version": 1,
+  "persona": {
+    "id": "strength-beginner",
+    "version": 1
+  },
+  "mode": "conversation_to_plan",
+  "split": "development",
+  "reviewStatus": "exploratory",
+  "goal": "I want a simple sustainable strength-training habit. I am new to lifting and want resistance training only.",
+  "openingMessage": "I'd like a {{planSpanWeeks}}-week beginner strength plan, prescribing only the first {{prescriptionWeeks}} weeks now.",
+  "openingFactIds": ["goal", "horizon"],
+  "planSpanWeeks": 12,
+  "prescriptionWeeks": 4,
+  "startPolicy": "next_monday",
+  "events": [],
+  "expectations": {
+    "outcome": "saved_draft",
+    "frequencyPolicy": "workouts_per_sport",
+    "requiredDiscovery": [
+      "goal",
+      "dates",
+      "horizon",
+      "training",
+      "frequency",
+      "availability",
+      "equipment",
+      "lifting"
+    ],
+    "checks": [
+      "saved_plan",
+      "plan_dates",
+      "coverage",
+      "sports",
+      "baseline",
+      "availability",
+      "time_budgets",
+      "daily_limit",
+      "prescriptions",
+      "performance_provenance"
+    ],
+    "reviewAnchors": {
+      "goal_fit": "Establish a strength habit without invented endurance goals or measured maxima.",
+      "progression": "Use a zero recent strength baseline; do not import an experienced lifting dose.",
+      "recovery": "Separate manageable strength days and include rest between sets.",
+      "prescriptions": "Named exercises, set/repetition completions, rests and understandable RIR or RPE; no strength zone calibration.",
+      "personalization": "Use accessible dumbbells/machines/bodyweight, respect limited technique experience and time.",
+      "conversation": "Discover relevant facts without unrelated sport questions; distinguish unknowns from unanswered facts, explain assumptions, and accurately describe what is saved and what remains unprescribed. Explain starting-weight selection without pretending to know supplied working weights."
+    }
+  },
+  "limits": {
+    "maxAthleteMessages": 18,
+    "maxElapsedMinutes": 30
+  }
+}

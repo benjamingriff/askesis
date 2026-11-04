@@ -578,6 +578,58 @@ fieldset:disabled {
   border-top: 1px solid var(--border);
 }
 
+/* Dialog aside: a reference panel beside the dialog on wide screens, above it on narrow ones. */
+.dialog-with-aside {
+  flex-direction: row;
+  max-width: min(1000px, 100%);
+}
+/* Without an aside the wrapper is invisible to layout, so ordinary dialogs are unchanged. */
+.dialog-main {
+  display: contents;
+}
+.dialog-with-aside > .dialog-main {
+  display: flex;
+  flex: 1 1 560px;
+  flex-direction: column;
+  min-width: 0;
+  max-height: inherit;
+}
+.dialog-aside {
+  display: flex;
+  flex: 0 0 360px;
+  flex-direction: column;
+  min-width: 0;
+  overflow-y: auto;
+  border-left: 1px solid var(--border);
+  border-radius: 0 var(--radius-xl) var(--radius-xl) 0;
+  background: var(--surface);
+  animation: aside-in 0.2s ease-out;
+}
+@keyframes aside-in {
+  from {
+    opacity: 0;
+    transform: translateX(-12px);
+  }
+}
+@media (max-width: 899px) {
+  .dialog-with-aside {
+    flex-direction: column;
+    max-width: 560px;
+  }
+  .dialog-with-aside > .dialog-main {
+    flex: 1 1 auto;
+    min-height: 0;
+  }
+  .dialog-aside {
+    flex: 0 1 auto;
+    order: -1;
+    max-height: 42dvh;
+    border-left: 0;
+    border-bottom: 1px solid var(--border);
+    border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+  }
+}
+
 /* Menu */
 .menu {
   position: relative;

@@ -9,6 +9,7 @@ export type Plan =
 export type PlanVersion = NonNullable<Plan['draft']>;
 export type BriefState =
   paths['/api/v1/plans/{planId}/draft/brief']['get']['responses'][200]['content']['application/json'];
+export type BriefTarget = { kind: 'draft' } | { kind: 'revision'; revisionId: string };
 export type Calibration = CalibrationEntry;
 export type Preview =
   paths['/api/v1/plans/{planId}/validate']['post']['responses'][200]['content']['application/json'];
@@ -56,6 +57,17 @@ export function useDraftChanges(planId: string, draft: PlanVersion | null) {
   return { ...changes, data: current ? changes.data : undefined };
 }
 
+/** Read a draft or saved revision without requiring query/cache metadata. */
+export async function readBrief(planId: string, target: BriefTarget): Promise<BriefState> {
+  return target.kind === 'draft'
+    ? result(await api.GET('/api/v1/plans/{planId}/draft/brief', { params: { path: { planId } } }))
+    : result(
+        await api.GET('/api/v1/plans/{planId}/revisions/{revisionId}/brief', {
+          params: { path: { planId, revisionId: target.revisionId } },
+        }),
+      );
+}
+
 /** The brief and prescribed coverage for one version of a plan. */
 export function useBriefState(planId: string, version: PlanVersion | null) {
   const draft = version?.state === 'draft';
@@ -68,16 +80,8 @@ export function useBriefState(planId: string, version: PlanVersion | null) {
       query?.queryKey.at(-2) === version?.id ? previous : undefined,
     // Locked versions never change, and draft changes advance editNumber (part of the key).
     refetchOnWindowFocus: false,
-    queryFn: async () =>
-      draft
-        ? result(
-            await api.GET('/api/v1/plans/{planId}/draft/brief', { params: { path: { planId } } }),
-          )
-        : result(
-            await api.GET('/api/v1/plans/{planId}/revisions/{revisionId}/brief', {
-              params: { path: { planId, revisionId: version!.id } },
-            }),
-          ),
+    queryFn: () =>
+      readBrief(planId, draft ? { kind: 'draft' } : { kind: 'revision', revisionId: version!.id }),
   });
 }
 

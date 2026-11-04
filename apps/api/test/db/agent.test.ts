@@ -2,7 +2,7 @@ import { draftChanges, getTurn } from '../../src/modules/live/live.service.js';
 import { startAgentSweeper } from '../../src/modules/agent/agent.sweeper.js';
 import { randomUUID } from 'node:crypto';
 import { sql } from 'kysely';
-import { afterAll, beforeEach, expect, it } from 'vitest';
+import { afterAll, afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { getDatabase, closeDatabase } from '../../src/database/client.js';
 import { resetApiConfigForTests } from '../../src/config.js';
 import { app } from '../../src/app.js';
@@ -22,6 +22,8 @@ import {
   heartbeatRun,
   registerWorker,
   runContext,
+  sweepAgentRuns,
+  USAGE_REPORT_GRACE_MS,
 } from '../../src/modules/agent/agent.service.js';
 import {
   createPlan,
@@ -37,11 +39,13 @@ import { getPerformance } from '../../src/modules/performance/performance.servic
 import { confirmBrief, getBrief } from '../../src/modules/plans/brief.service.js';
 import { emptyBrief } from '../../src/modules/plans/brief.schemas.js';
 import type { z } from 'zod';
-import type { ScheduleSchema } from '../../src/modules/agent/agent.schemas.js';
+import { UsageLedgerSchema, type ScheduleSchema } from '../../src/modules/agent/agent.schemas.js';
 import { calculatePaces } from '../../src/modules/performance/run-pace.calculator.js';
+import { getWorkoutDetail, listWorkouts } from '../../src/modules/workouts/workout.repository.js';
 const owner = '00000000-0000-0000-0000-000000000001';
 const bootstrap = 'local-test-bootstrap-credential-32-characters';
 const db = getDatabase();
+afterEach(() => vi.useRealTimers());
 beforeEach(async () => {
   process.env.CHAT_EXECUTION_MODE = 'agent';
   process.env.AGENT_BOOTSTRAP_TOKEN = bootstrap;
@@ -64,7 +68,8 @@ async function worker() {
     provider: 'openai',
     model: 'gpt-6.1-sol',
     reasoning: 'medium',
-    promptVersion: 'multisport-coach-v3',
+    promptVersion: 'coach-v2',
+    promptHash: 'a'.repeat(64),
     ready: true,
   });
   return id;
@@ -387,6 +392,68 @@ it('rejects machine credentials at the private boundary and keeps bootstrap auth
   });
   expect(r.status).toBe(401);
   await expect(runContext(randomUUID(), claim.token)).rejects.toMatchObject({ code: 'LEASE_LOST' });
+});
+it('registers a Claude worker over the private API, attributes its run and records a refusal', async () => {
+  const id = randomUUID();
+  const register = (provider: string) =>
+    app.request('/internal/agent/register', {
+      method: 'POST',
+      headers: { authorization: `Bearer ${bootstrap}`, 'content-type': 'application/json' },
+      body: JSON.stringify({
+        id,
+        provider,
+        model: 'claude-opus-5-5',
+        reasoning: 'medium',
+        promptVersion: 'coach-v2',
+        promptHash: 'a'.repeat(64),
+        ready: true,
+      }),
+    });
+  expect((await register('gemini')).status).toBe(400);
+  expect((await register('anthropic')).status).toBe(200);
+  const created = await createConversation(
+    owner,
+    { initialMessage: { content: 'Plan my first 10K', target: null } },
+    randomUUID(),
+  );
+  const claim = (await claimRun(id)).claim!;
+  expect(claim.runId).toBe(created.accepted!.run.id);
+  const finished = await app.request(`/internal/agent/runs/${claim.runId}/finish`, {
+    method: 'POST',
+    headers: { authorization: `Bearer ${claim.token}`, 'content-type': 'application/json' },
+    body: JSON.stringify({ status: 'failed', failureCode: 'MODEL_REFUSAL' }),
+  });
+  expect(finished.status).toBe(200);
+  expect(await getRun(owner, claim.runId)).toMatchObject({
+    status: 'failed',
+    failureCode: 'MODEL_REFUSAL',
+  });
+  expect(
+    await db
+      .selectFrom('agent_runs')
+      .select(['provider', 'model'])
+      .where('id', '=', claim.runId)
+      .executeTakeFirstOrThrow(),
+  ).toEqual({ provider: 'anthropic', model: 'claude-opus-5-5' });
+  await expect(
+    db.updateTable('agent_workers').set({ provider: 'gemini' }).where('id', '=', id).execute(),
+  ).rejects.toMatchObject({ code: '23514' });
+  // The refused request stays in the chat but is not sent with the rephrased one.
+  await sendMessage(
+    owner,
+    created.conversation.id,
+    { content: 'Plan a first 10K in eight weeks', target: null },
+    randomUUID(),
+  );
+  const retry = (await claimRun(id)).claim!;
+  const context = await runContext(retry.runId, retry.token);
+  expect(context.messages.map((m) => m.content)).toEqual(['Plan a first 10K in eight weeks']);
+  expect(context.historyTruncated).toBe(false);
+  expect(
+    (await listMessages(owner, created.conversation.id, undefined, 50)).messages.map(
+      (m) => m.content,
+    ),
+  ).toEqual(['Plan my first 10K', 'Plan a first 10K in eight weeks']);
 });
 it('claims once across workers, allows discussion without generating, and persists one final reply', async () => {
   const w1 = await worker(),
@@ -789,6 +856,104 @@ it('stores the race priorities and cutback weeks the coach writes', async () => 
   };
   expect(schedule.result.training_weeks.map((w) => w.cutback)).toEqual([true]);
   expect(schedule.result.workouts.map((w) => w.race_priority)).toEqual(['B']);
+});
+it('books placeholders and other activities as one open effort with an effort range', async () => {
+  const { claim } = await planning();
+  const club = {
+    ...batch.workouts[0]!,
+    key: 'club',
+    date: '2027-01-05',
+    title: 'Tuesday track club',
+    purpose: 'Track nights are usually intervals; treated as the week’s quality session.',
+    priority: 'high' as const,
+    sessionType: 'intervals' as const,
+    estimatedDurationSeconds: 4500,
+    steps: [],
+    placeholder: { minimumRpe: 5, maximumRpe: 8 },
+  };
+  const football = {
+    ...club,
+    key: 'football',
+    date: '2027-01-06',
+    discipline: 'other' as const,
+    title: '5-a-side football',
+    priority: 'medium' as const,
+    sessionType: 'speed' as const,
+    estimatedDurationSeconds: 3600,
+    placeholder: { minimumRpe: 6, maximumRpe: 9 },
+  };
+  for (const invalid of [
+    { ...club, steps: [effort] },
+    { ...club, estimatedDurationSeconds: null },
+    { ...club, sessionType: undefined },
+    { ...club, placeholder: { minimumRpe: 8, maximumRpe: 5 } },
+    { ...batch.workouts[0]!, steps: [] },
+  ])
+    await expect(
+      tool(claim, 'apply_schedule_changes', { ...batch, workouts: [invalid] }),
+    ).rejects.toMatchObject({ code: 'INVALID_TOOL_INPUT' });
+  const written = (await tool(claim, 'apply_schedule_changes', {
+    ...batch,
+    workouts: [batch.workouts[0]!, club, football],
+  })) as { result: { ids: Record<string, string> } };
+  const { versionId } = await runContext(claim.runId, claim.token);
+  const booked = (await listWorkouts(owner, versionId!)).filter((w) => w.placeholder);
+  expect(
+    booked.map(({ title, discipline, sessionType, expectedRpe, plannedRpe }) => ({
+      title,
+      discipline,
+      sessionType,
+      expectedRpe,
+      plannedRpe,
+    })),
+  ).toEqual([
+    {
+      title: 'Tuesday track club',
+      discipline: 'run',
+      sessionType: 'intervals',
+      expectedRpe: { minimum: 5, maximum: 8 },
+      plannedRpe: 6.5,
+    },
+    {
+      title: '5-a-side football',
+      discipline: 'other',
+      sessionType: 'speed',
+      expectedRpe: { minimum: 6, maximum: 9 },
+      plannedRpe: 7.5,
+    },
+  ]);
+  const detail = await getWorkoutDetail(owner, written.result.ids.club!);
+  expect(detail?.workout.expectedRpe).toEqual({ minimum: 5, maximum: 8 });
+  expect(detail?.prescription).toMatchObject({
+    kind: 'effort',
+    discipline: 'run',
+    label: 'Tuesday track club',
+    completion: { type: 'duration', value: 4500 },
+    targets: [{ type: 'rpe', minimumValue: 5, maximumValue: 8 }],
+    steps: [],
+  });
+  // One occurrence becomes a prescribed session; the placeholder flag and range go with it.
+  await tool(claim, 'apply_schedule_changes', {
+    ...batch,
+    blocks: [],
+    weeks: [],
+    workouts: [
+      {
+        ...batch.workouts[0]!,
+        key: 'club',
+        id: written.result.ids.club,
+        weekKey: written.result.ids.week1,
+        date: '2027-01-05',
+        title: 'Track intervals',
+        sessionType: 'intervals',
+        placeholder: null,
+      },
+    ],
+    generation: null,
+    coverage: null,
+  });
+  const after = (await listWorkouts(owner, versionId!)).find((w) => w.title === 'Track intervals');
+  expect(after).toMatchObject({ placeholder: false, expectedRpe: null });
 });
 it('swaps dated workouts in one coherent transaction without intermediate uniqueness failures', async () => {
   const { claim, p } = await planning();
@@ -1278,7 +1443,8 @@ it('requires the current prompt contract before a worker contributes readiness o
     provider: 'openai',
     model: 'gpt-6.1-sol',
     reasoning: 'medium',
-    promptVersion: 'multisport-coach-v3',
+    promptVersion: 'coach-v2',
+    promptHash: 'a'.repeat(64),
     ready: true,
   });
   expect((await chatCapabilities()).executionAvailable).toBe(true);
@@ -1669,4 +1835,259 @@ it('prescribes rides, swims, bricks and strength with sport-specific targets and
     unit: 'seconds_per_100_metres',
     targetValue: 105,
   });
+});
+
+function usageReport() {
+  return UsageLedgerSchema.parse({
+    version: 1,
+    omittedRequests: 0,
+    requests: [
+      {
+        sequence: 1,
+        provider: 'openai',
+        requestedModel: 'gpt-6.1-sol',
+        returnedModel: 'gpt-6.1-sol',
+        responseId: 'resp_usage',
+        status: 'completed',
+        stopReason: null,
+        settings: {
+          reasoningEffort: 'medium',
+          maxOutputTokens: 12000,
+          requestedServiceTier: null,
+          cacheControl: 'provider_default',
+        },
+        returnedServiceTier: 'default',
+        speed: null,
+        inferenceGeo: null,
+        usageSource: 'provider',
+        usageCompleteness: 'final',
+        tokens: {
+          input: 12,
+          uncachedInput: 8,
+          cacheRead: 4,
+          cacheWrite: 0,
+          cacheWrite5m: null,
+          cacheWrite1h: null,
+          output: 3,
+          reasoning: 1,
+        },
+        raw: {
+          input_tokens: 12,
+          input_tokens_details: { cached_tokens: 4, cache_write_tokens: 0 },
+          output_tokens: 3,
+          output_tokens_details: { reasoning_tokens: 1 },
+        },
+      },
+    ],
+  });
+}
+const storedRun = (id: string) =>
+  db.selectFrom('agent_runs').selectAll().where('id', '=', id).executeTakeFirstOrThrow();
+
+it.each(['completed', 'failed', 'cancelled'] as const)(
+  'stores detailed usage on a %s finish and derives legacy totals',
+  async (status) => {
+    const { claim } = await accepted();
+    if (status === 'cancelled') await cancelRun(owner, claim.runId);
+    const usage = usageReport();
+    const input = {
+      status,
+      usage,
+      ...(status === 'completed' ? { content: 'Your plan is ready.' } : {}),
+    };
+    expect(await finishRun(claim.runId, claim.token, input)).toEqual({ status });
+    expect(await storedRun(claim.runId)).toMatchObject({
+      status,
+      usage,
+      input_tokens: 12,
+      output_tokens: 3,
+    });
+    expect(await finishRun(claim.runId, claim.token, input)).toEqual({ status });
+    await expect(
+      finishRun(claim.runId, claim.token, { ...input, usage: { ...usage, omittedRequests: 1 } }),
+    ).rejects.toMatchObject({ code: 'IDEMPOTENCY_CONFLICT' });
+  },
+);
+
+it('stores an explicit empty ledger and preserves old workers without a usage report', async () => {
+  const first = await accepted();
+  const usage = { version: 1 as const, requests: [], omittedRequests: 0 };
+  await finishRun(first.claim.runId, first.claim.token, { status: 'failed', usage });
+  expect(await storedRun(first.claim.runId)).toMatchObject({
+    usage,
+    input_tokens: null,
+    output_tokens: null,
+  });
+  const second = await accepted();
+  await finishRun(second.claim.runId, second.claim.token, {
+    status: 'failed',
+    inputTokens: 5,
+    outputTokens: 0,
+  });
+  expect(await storedRun(second.claim.runId)).toMatchObject({
+    usage: null,
+    input_tokens: 5,
+    output_tokens: 0,
+  });
+});
+
+it('validates bounded usage at the authenticated finish route before changing a run', async () => {
+  const { claim } = await accepted();
+  const usage = usageReport();
+  const request = usage.requests[0]!;
+  const badLedgers = [
+    { ...usage, version: 2 },
+    {
+      ...usage,
+      requests: Array.from({ length: 201 }, (_, i) => ({ ...request, sequence: i + 1 })),
+    },
+    { ...usage, requests: [{ ...request, tokens: { ...request.tokens, cacheRead: -1 } }] },
+    { ...usage, requests: [{ ...request, raw: { authorization: 'secret' } }] },
+    { ...usage, requests: [{ ...request, responseId: 'not a safe id' }] },
+    { ...usage, requests: [request, request] },
+  ];
+  for (const bad of badLedgers) {
+    const response = await app.request(`/internal/agent/runs/${claim.runId}/finish`, {
+      method: 'POST',
+      headers: { authorization: `Bearer ${claim.token}`, 'content-type': 'application/json' },
+      body: JSON.stringify({ status: 'failed', usage: bad }),
+    });
+    expect(response.status).toBe(400);
+    expect(await response.json()).toMatchObject({ error: { code: 'VALIDATION_ERROR' } });
+  }
+  expect(await storedRun(claim.runId)).toMatchObject({ status: 'running', usage: null });
+});
+
+it.each(['deadline', 'lease'] as const)(
+  'retains usage after %s expiry without changing execution or creating a finish receipt',
+  async (expiry) => {
+    const { claim } = await accepted();
+    if (expiry === 'deadline') {
+      vi.useFakeTimers({ toFake: ['Date'] });
+      vi.setSystemTime(Date.parse(claim.deadlineAt) + 1);
+    } else {
+      await db
+        .updateTable('agent_runs')
+        .set({ lease_expires_at: new Date(Date.now() - 1) })
+        .where('id', '=', claim.runId)
+        .execute();
+    }
+    const before = await storedRun(claim.runId);
+    const events = await db
+      .selectFrom('agent_run_events')
+      .selectAll()
+      .where('run_id', '=', claim.runId)
+      .execute();
+    const usage = usageReport();
+    await expect(
+      finishRun(claim.runId, claim.token, {
+        status: 'failed',
+        failureCode: 'EXECUTION_TIMEOUT',
+        usage,
+      }),
+    ).rejects.toMatchObject({ code: 'LEASE_LOST' });
+    const after = await storedRun(claim.runId);
+    expect(after).toEqual({ ...before, usage, input_tokens: 12, output_tokens: 3 });
+    expect(
+      await db
+        .selectFrom('agent_run_events')
+        .selectAll()
+        .where('run_id', '=', claim.runId)
+        .execute(),
+    ).toEqual(events);
+    expect(
+      await db
+        .selectFrom('agent_run_finishes')
+        .selectAll()
+        .where('run_id', '=', claim.runId)
+        .execute(),
+    ).toEqual([]);
+    await expect(heartbeatRun(claim.runId, claim.token)).rejects.toMatchObject({
+      code: 'LEASE_LOST',
+    });
+    await expect(runContext(claim.runId, claim.token)).rejects.toMatchObject({
+      code: 'LEASE_LOST',
+    });
+    await sweepAgentRuns();
+    expect(await storedRun(claim.runId)).toMatchObject({
+      usage,
+      status: 'failed',
+      failure_code: expiry === 'deadline' ? 'EXECUTION_TIMEOUT' : 'WORKER_LOST',
+    });
+  },
+);
+
+it.each([false, true])(
+  'accepts only the first late usage after a sweeper terminal transition (cancelled=%s)',
+  async (cancelled) => {
+    const { claim } = await accepted();
+    if (cancelled) await cancelRun(owner, claim.runId);
+    await db
+      .updateTable('agent_runs')
+      .set({ lease_expires_at: new Date(Date.now() - 1) })
+      .where('id', '=', claim.runId)
+      .execute();
+    await sweepAgentRuns();
+    const before = await storedRun(claim.runId);
+    expect(before.status).toBe(cancelled ? 'cancelled' : 'failed');
+    const usage = usageReport();
+    const finish = { status: 'failed' as const, usage };
+    await expect(finishRun(claim.runId, claim.token, finish)).rejects.toMatchObject({
+      code: 'LEASE_LOST',
+    });
+    const stored = await storedRun(claim.runId);
+    expect(stored).toEqual({ ...before, usage, input_tokens: 12, output_tokens: 3 });
+    await expect(finishRun(claim.runId, claim.token, finish)).rejects.toMatchObject({
+      code: 'LEASE_LOST',
+    });
+    await expect(
+      finishRun(claim.runId, claim.token, { ...finish, usage: { ...usage, omittedRequests: 1 } }),
+    ).rejects.toMatchObject({ code: 'LEASE_LOST' });
+    expect(await storedRun(claim.runId)).toEqual(stored);
+  },
+);
+
+it('keeps terminal history immutable outside the exact first usage attachment', async () => {
+  const { claim } = await accepted();
+  await finishRun(claim.runId, claim.token, { status: 'failed', inputTokens: 20, outputTokens: 5 });
+  const usage = usageReport();
+  for (const values of [
+    { usage, input_tokens: 21 },
+    { usage, output_tokens: 6 },
+    { usage, model: 'another-model' },
+    { usage, failure_code: 'CHANGED' },
+    { usage, lease_generation: 200 },
+    { input_tokens: 20 },
+  ]) {
+    await expect(
+      db.updateTable('agent_runs').set(values).where('id', '=', claim.runId).execute(),
+    ).rejects.toThrow('Terminal run is immutable');
+  }
+  await db.updateTable('agent_runs').set({ usage }).where('id', '=', claim.runId).execute();
+  expect(await storedRun(claim.runId)).toMatchObject({ usage, input_tokens: 20, output_tokens: 5 });
+  await expect(
+    db.updateTable('agent_runs').set({ usage }).where('id', '=', claim.runId).execute(),
+  ).rejects.toThrow('Terminal run is immutable');
+  await expect(db.deleteFrom('agent_runs').where('id', '=', claim.runId).execute()).rejects.toThrow(
+    'Run history is retained',
+  );
+});
+
+it('rejects wrong credentials and usage reports beyond the grace window without writing', async () => {
+  const { claim } = await accepted();
+  await db
+    .updateTable('agent_runs')
+    .set({ lease_expires_at: new Date(Date.now() - 1) })
+    .where('id', '=', claim.runId)
+    .execute();
+  const before = await storedRun(claim.runId);
+  await expect(
+    finishRun(claim.runId, 'wrong-token', { status: 'failed', usage: usageReport() }),
+  ).rejects.toMatchObject({ code: 'LEASE_LOST' });
+  vi.useFakeTimers({ toFake: ['Date'] });
+  vi.setSystemTime(Date.parse(claim.deadlineAt) + USAGE_REPORT_GRACE_MS + 1);
+  await expect(
+    finishRun(claim.runId, claim.token, { status: 'failed', usage: usageReport() }),
+  ).rejects.toMatchObject({ code: 'LEASE_LOST' });
+  expect(await storedRun(claim.runId)).toEqual(before);
 });

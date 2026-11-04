@@ -1,5 +1,7 @@
 import { workerReady } from '../agent/agent.service.js';
 import { generationState } from '../plans/schedule-generation.js';
+import { feedbackReferences } from '../training-log/training-log.service.js';
+import type { FeedbackReference } from '../training-log/training-log.schemas.js';
 import { randomUUID } from 'node:crypto';
 import { sql, type Transaction, type Selectable } from 'kysely';
 import { getDatabase } from '../../database/client.js';
@@ -7,7 +9,13 @@ import { getApiConfig } from '../../config.js';
 import type { DB, Json } from '../../database/generated.js';
 import { contentHash, type SemanticValue } from '../plans/plan.canonical.js';
 import { Id } from '../plans/plan.schemas.js';
-import { activeStatuses, assertPlanIdle, ChatError, createConversationRow } from './chat.core.js';
+import {
+  activeStatuses,
+  assertAccountOpen,
+  assertPlanIdle,
+  ChatError,
+  createConversationRow,
+} from './chat.core.js';
 import {
   ContextSchema,
   ConversationSchema,
@@ -32,6 +40,10 @@ export async function chatCapabilities(db?: Tx) {
   const mode = getApiConfig().CHAT_EXECUTION_MODE;
   return { executionAvailable: mode === 'test' || (await workerReady(db)), mode };
 }
+function assertCoachOffered() {
+  if (getApiConfig().IN_APP_COACH === 'hidden')
+    throw new ChatError('COACH_NOT_OFFERED', 'The in-app coach is not offered.', 403);
+}
 async function available(db?: Tx) {
   if (!(await chatCapabilities(db)).executionAvailable)
     throw new ChatError(
@@ -47,6 +59,8 @@ async function idempotent<T>(
   key: string,
   input: unknown,
   schema: z.ZodType<T>,
+  /** The conversation a response belongs to; a replay must not reveal one hidden since. */
+  conversationOf: (result: T) => string,
   perform: (db: Tx) => Promise<T>,
 ) {
   return getDatabase()
@@ -69,9 +83,16 @@ async function idempotent<T>(
             'IDEMPOTENCY_CONFLICT',
             'This request key was already used for different input.',
           );
-        return schema.parse(existing.response_body);
+        const cached = schema.parse(existing.response_body);
+        await ownedConversation(db, owner, conversationOf(cached));
+        return cached;
       }
       const result = await perform(db);
+      const conversation = await db
+        .selectFrom('conversations')
+        .select('plan_id')
+        .where('id', '=', conversationOf(result))
+        .executeTakeFirstOrThrow();
       await db
         .insertInto('api_idempotency_keys')
         .values({
@@ -81,6 +102,7 @@ async function idempotent<T>(
           request_hash: hash,
           response_status: scope === 'chat.send' ? 202 : 201,
           response_body: json(result),
+          plan_id: conversation.plan_id,
         })
         .execute();
       return result;
@@ -92,17 +114,21 @@ async function ownedPlan(db: Tx, owner: string, id: string) {
     .selectAll()
     .where('id', '=', id)
     .where('owner_id', '=', owner)
+    .where('deleted_at', 'is', null)
     .forUpdate()
     .executeTakeFirst();
   if (!plan) throw notFound();
   return plan;
 }
 export async function ownedConversation(db: Tx, owner: string, id: string, lock = false) {
+  // A deleted plan's conversations are gone with it.
   const row = await db
     .selectFrom('conversations')
-    .selectAll()
-    .where('id', '=', id)
-    .where('owner_id', '=', owner)
+    .leftJoin('plans', 'plans.id', 'conversations.plan_id')
+    .selectAll('conversations')
+    .where('conversations.id', '=', id)
+    .where('conversations.owner_id', '=', owner)
+    .where('plans.deleted_at', 'is', null)
     .executeTakeFirst();
   if (!row) throw notFound();
   if (!lock) return row;
@@ -184,6 +210,7 @@ function messageView(row: Selectable<DB['conversation_messages']>) {
     sequence: row.sequence,
     role: row.role,
     content: row.content,
+    references: row.references,
     producingRunId: row.producing_run_id,
     context: row.context,
     createdAt: iso(row.created_at),
@@ -230,6 +257,7 @@ export async function appendMessage(
   content: string,
   context: Context,
   runId: string | null = null,
+  references: FeedbackReference[] | null = null,
 ) {
   const counter = await db
     .updateTable('conversations')
@@ -248,6 +276,8 @@ export async function appendMessage(
         content,
         context: context === null ? null : json(context),
         producing_run_id: runId,
+        // pg treats top-level JS arrays as SQL arrays; encode the JSON array explicitly.
+        references: references === null ? null : JSON.stringify(references),
       })
       .returningAll()
       .executeTakeFirstOrThrow(),
@@ -270,7 +300,11 @@ async function accept(db: Tx, row: Conversation, input: Send) {
       .where('id', '=', row.id)
       .execute();
   }
-  const message = await appendMessage(db, row, 'user', input.content, context);
+  const references = input.references
+    ? await feedbackReferences(db, row.owner_id, row.plan_id, input.references)
+    : null;
+  const message = await appendMessage(db, row, 'user', input.content, context, null, references);
+  await assertAccountOpen(db, row.owner_id);
   const run = await db
     .insertInto('agent_runs')
     .values({
@@ -295,33 +329,49 @@ export async function createConversation(
   input: { planId?: string | undefined; initialMessage?: Send | undefined },
   key: string,
 ) {
-  return idempotent(owner, 'chat.create', key, input, CreatedSchema, async (db) => {
-    if (input.planId) {
-      const plan = await ownedPlan(db, owner, input.planId);
-      if (plan.archived_at)
-        throw new ChatError('PLAN_ARCHIVED', 'Unarchive this plan before creating a conversation.');
-    }
-    if (input.initialMessage) await available(db);
-    const id = await createConversationRow(db, owner, input.planId ?? null);
-    const row = await ownedConversation(db, owner, id, true);
-    const accepted = input.initialMessage ? await accept(db, row, input.initialMessage) : null;
-    return {
-      conversation: await conversationView(db, await ownedConversation(db, owner, id)),
-      accepted,
-    };
-  });
+  // After route authentication/validation, before resource lookups or cached responses.
+  assertCoachOffered();
+  return idempotent(
+    owner,
+    'chat.create',
+    key,
+    input,
+    CreatedSchema,
+    (created) => created.conversation.id,
+    async (db) => {
+      if (input.planId) {
+        const plan = await ownedPlan(db, owner, input.planId);
+        if (plan.archived_at)
+          throw new ChatError(
+            'PLAN_ARCHIVED',
+            'Unarchive this plan before creating a conversation.',
+          );
+      }
+      if (input.initialMessage) await available(db);
+      const id = await createConversationRow(db, owner, input.planId ?? null);
+      const row = await ownedConversation(db, owner, id, true);
+      const accepted = input.initialMessage ? await accept(db, row, input.initialMessage) : null;
+      return {
+        conversation: await conversationView(db, await ownedConversation(db, owner, id)),
+        accepted,
+      };
+    },
+  );
 }
 export async function sendMessage(owner: string, id: string, input: Send, key: string) {
+  assertCoachOffered();
   return idempotent(
     owner,
     'chat.send',
     key,
     { conversationId: id, ...input },
     AcceptedSchema,
+    (accepted) => accepted.message.conversationId,
     async (db) => accept(db, await ownedConversation(db, owner, id, true), input),
   );
 }
 export async function openPlanConversation(owner: string, planId: string) {
+  assertCoachOffered();
   return getDatabase()
     .transaction()
     .execute(async (db) => {
@@ -384,7 +434,8 @@ export async function listConversations(
             'cursor_time',
           ),
         )
-        .where('c.owner_id', '=', owner);
+        .where('c.owner_id', '=', owner)
+        .where('p.deleted_at', 'is', null);
       query =
         input.collection === 'archive'
           ? query.where((eb) =>
@@ -397,6 +448,7 @@ export async function listConversations(
           .select('id')
           .where('id', '=', input.planId)
           .where('owner_id', '=', owner)
+          .where('deleted_at', 'is', null)
           .executeTakeFirst();
         if (!plan) throw notFound();
         query = query.where('c.plan_id', '=', input.planId);
@@ -522,8 +574,8 @@ export async function ownedRun(db: Tx, owner: string, id: string, lock = false) 
     .where('owner_id', '=', owner)
     .executeTakeFirst();
   if (!run) throw notFound();
+  await ownedConversation(db, owner, run.conversation_id, lock);
   if (!lock) return run;
-  await ownedConversation(db, owner, run.conversation_id, true);
   return db
     .selectFrom('agent_runs')
     .selectAll()

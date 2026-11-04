@@ -3,6 +3,12 @@
   "private": true,
   "version": "0.1.0",
   "type": "module",
+  "exports": {
+    "./benchmark": {
+      "types": "./dist/benchmark/operator.d.ts",
+      "default": "./dist/benchmark/operator.js"
+    }
+  },
   "scripts": {
     "fixture:publish": "tsx --env-file-if-exists=../../.env src/development/publish-fixture.ts",
     "verification:check": "tsx --env-file-if-exists=../../.env src/development/verification.ts check",
@@ -12,6 +18,9 @@
     "build": "tsc -p tsconfig.json",
     "start": "node dist/operations/start.js",
     "example:seed": "tsx --env-file-if-exists=../../.env src/examples/cli.ts",
+    "strava:simulate": "tsx --env-file-if-exists=../../.env src/development/strava-simulator.ts",
+    "retention:run": "tsx --env-file-if-exists=../../.env src/operations/retention.ts",
+    "retention:replay": "tsx --env-file-if-exists=../../.env src/operations/retention-replay.ts",
     "test": "vitest run --config vitest.config.ts",
     "test:db": "vitest run --config vitest.db.config.ts",
     "test:coverage": "vitest run --coverage --config vitest.config.ts",

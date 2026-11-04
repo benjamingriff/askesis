@@ -59,6 +59,7 @@ export interface AgentRunOutputs {
   position: number;
   revision: number;
   run_id: string;
+  started_at: Generated<Timestamp | null>;
   truncated: Generated<boolean>;
 }
 
@@ -87,12 +88,14 @@ export interface AgentRuns {
   output_tokens: number | null;
   owner_id: string;
   plan_id: string | null;
+  prompt_hash: string | null;
   prompt_version: string | null;
   provider: string | null;
   reasoning: string | null;
   started_at: Timestamp | null;
   status: Generated<string>;
   tool_count: Generated<number>;
+  usage: Json | null;
   user_message_id: string;
   worker_id: string | null;
 }
@@ -114,10 +117,23 @@ export interface AgentToolReceipts {
   tool_name: string;
 }
 
+export interface AgentUsageRollups {
+  day: Timestamp;
+  input_tokens: Generated<Int8>;
+  model: string;
+  output_tokens: Generated<Int8>;
+  prompt_version: string;
+  provider: string;
+  runs: number;
+  status: string;
+  tool_calls: Generated<Int8>;
+}
+
 export interface AgentWorkers {
   id: string;
   last_seen_at: Generated<Timestamp>;
   model: string;
+  prompt_hash: string | null;
   prompt_version: string;
   provider: string;
   ready: Generated<boolean>;
@@ -131,6 +147,7 @@ export interface ApiIdempotencyKeys {
   expires_at: Timestamp | null;
   id: Generated<string>;
   idempotency_key: string;
+  plan_id: string | null;
   request_hash: string;
   response_body: Json;
   response_status: number;
@@ -148,6 +165,7 @@ export interface AthleteCalibrations {
   observed_on: Timestamp | null;
   provenance: string;
   recorded_at: Generated<Timestamp>;
+  recorded_by: Generated<string>;
   recorded_by_run_id: string | null;
   retracted_at: Timestamp | null;
   retracted_by_run_id: string | null;
@@ -164,6 +182,17 @@ export interface AthleteCalibrationZones {
   zone_key: string;
 }
 
+export interface AthleteCheckIns {
+  athlete_id: string;
+  created_at: Generated<Timestamp>;
+  details: Json;
+  ends_on: Timestamp | null;
+  id: Generated<string>;
+  kind: string;
+  plan_id: string;
+  starts_on: Timestamp;
+}
+
 export interface AthleteIdentities {
   athlete_id: string;
   created_at: Generated<Timestamp>;
@@ -175,8 +204,11 @@ export interface AthleteIdentities {
 
 export interface Athletes {
   created_at: Generated<Timestamp>;
+  deletion_requested_at: Timestamp | null;
   display_name: string;
   id: Generated<string>;
+  purge_after: Timestamp | null;
+  purge_started_at: Timestamp | null;
   timezone: Generated<string>;
   updated_at: Generated<Timestamp>;
 }
@@ -203,6 +235,7 @@ export interface ConversationMessages {
   created_at: Generated<Timestamp>;
   id: Generated<string>;
   producing_run_id: string | null;
+  references: Json | null;
   role: string;
   sequence: number;
 }
@@ -219,6 +252,19 @@ export interface Conversations {
   title: string;
 }
 
+export interface DeletionJournal {
+  event: string;
+  occurred_at: Timestamp;
+  sequence: Int8;
+  shipped_at: Timestamp | null;
+  subject_id: string;
+}
+
+export interface DeletionJournalHead {
+  sequence: Int8;
+  singleton: Generated<boolean>;
+}
+
 export interface ExamplePlanEditions {
   anchor_date: Timestamp;
   blueprint_revision: string;
@@ -227,6 +273,20 @@ export interface ExamplePlanEditions {
   plan_id: string;
   published_content_hash: string;
   published_state_version: number;
+}
+
+export interface IntegrationConnections {
+  access_token_ciphertext: string;
+  access_token_expires_at: Timestamp;
+  athlete_id: string;
+  connected_at: Generated<Timestamp>;
+  display_name: string | null;
+  id: Generated<string>;
+  provider: string;
+  provider_athlete_id: string;
+  refresh_token_ciphertext: string;
+  scopes: string[];
+  status: Generated<string>;
 }
 
 export interface LiveEventHeads {
@@ -299,6 +359,7 @@ export interface Plans {
   created_at: Generated<Timestamp>;
   current_draft_version_id: string | null;
   current_locked_version_id: string | null;
+  deleted_at: Timestamp | null;
   display_name: string;
   id: Generated<string>;
   owner_id: string;
@@ -423,6 +484,48 @@ export interface WeekTargets {
   week_id: string;
 }
 
+export interface WorkoutActivityLinks {
+  athlete_id: string;
+  connection_id: string;
+  id: Generated<string>;
+  linked_at: Generated<Timestamp>;
+  plan_id: string;
+  provider_activity_id: string;
+  workout_lineage_id: string;
+}
+
+export interface WorkoutLogs {
+  actual_distance_metres: Numeric | null;
+  actual_duration_seconds: number | null;
+  actual_session_type: string | null;
+  answers: Generated<Json>;
+  answers_schema_version: Generated<number>;
+  athlete_id: string;
+  created_at: Generated<Timestamp>;
+  discipline: string;
+  feel: number | null;
+  id: Generated<string>;
+  key_session: boolean;
+  logged_version_id: string;
+  note: string | null;
+  performed_on: Timestamp;
+  placeholder: Generated<boolean>;
+  plan_id: string;
+  planned_distance_metres: Numeric | null;
+  planned_duration_seconds: number | null;
+  planned_rpe: Numeric | null;
+  reasons: Generated<string[]>;
+  recorded_by_run_id: string | null;
+  rpe: number | null;
+  scheduled_on: Timestamp;
+  session_type: string | null;
+  source: Generated<string>;
+  status: string;
+  title: string;
+  updated_at: Generated<Timestamp>;
+  workout_lineage_id: string;
+}
+
 export interface WorkoutPrescriptionTotals {
   discipline: string | null;
   distance_metres: Numeric | null;
@@ -439,6 +542,7 @@ export interface Workouts {
   estimated_duration_seconds: number | null;
   id: Generated<string>;
   lineage_id: Generated<string>;
+  placeholder: Generated<boolean>;
   plan_version_id: string;
   position: number;
   primary_discipline: string;
@@ -446,6 +550,7 @@ export interface Workouts {
   purpose: string | null;
   race_priority: string | null;
   scheduled_date: Timestamp;
+  session_type: string | null;
   title: string;
   updated_at: Generated<Timestamp>;
   week_id: string;
@@ -482,16 +587,21 @@ export interface DB {
   agent_runs: AgentRuns;
   agent_tool_changes: AgentToolChanges;
   agent_tool_receipts: AgentToolReceipts;
+  agent_usage_rollups: AgentUsageRollups;
   agent_workers: AgentWorkers;
   api_idempotency_keys: ApiIdempotencyKeys;
   athlete_calibration_zones: AthleteCalibrationZones;
   athlete_calibrations: AthleteCalibrations;
+  athlete_check_ins: AthleteCheckIns;
   athlete_identities: AthleteIdentities;
   athletes: Athletes;
   "atlas_schema_revisions.atlas_schema_revisions": AtlasSchemaRevisionsAtlasSchemaRevisions;
   conversation_messages: ConversationMessages;
   conversations: Conversations;
+  deletion_journal: DeletionJournal;
+  deletion_journal_head: DeletionJournalHead;
   example_plan_editions: ExamplePlanEditions;
+  integration_connections: IntegrationConnections;
   live_event_heads: LiveEventHeads;
   live_events: LiveEvents;
   movement_definitions: MovementDefinitions;
@@ -508,6 +618,8 @@ export interface DB {
   training_weeks: TrainingWeeks;
   week_targets: WeekTargets;
   weekly_plan_summary: WeeklyPlanSummary;
+  workout_activity_links: WorkoutActivityLinks;
+  workout_logs: WorkoutLogs;
   workout_prescription_totals: WorkoutPrescriptionTotals;
   workout_steps: WorkoutSteps;
   workout_tags: WorkoutTags;

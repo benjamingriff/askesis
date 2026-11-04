@@ -179,15 +179,6 @@ export function applyTheme(theme: Theme, root: HTMLElement = document.documentEl
     '--warning-soft': alpha(STATUS_COLORS.warning, 0.14),
     '--danger': readableOn(STATUS_COLORS.danger, c.bg),
     '--danger-soft': alpha(STATUS_COLORS.danger, 0.14),
-    // Dark themes lift the floating tab bar with a lighter fill and rim; a shadow alone
-    // barely shows against a near-black page. The shadow only falls upward so nothing
-    // darkens the gap between the pill and the iOS Safari toolbar.
-    '--tab-bar-bg': alpha(theme.isDark ? c.surfaceRaised : c.surface, theme.isDark ? 0.78 : 0.72),
-    '--tab-bar-border': alpha(c.text, theme.isDark ? 0.16 : 0.12),
-    '--tab-bar-active': theme.isDark ? alpha(c.text, 0.1) : c.surfaceRaised,
-    '--tab-bar-shadow': theme.isDark
-      ? 'inset 0 1px 0 rgba(255, 255, 255, 0.12), 0 -10px 30px -12px rgba(0, 0, 0, 0.6)'
-      : 'inset 0 1px 0 rgba(255, 255, 255, 0.7), 0 -10px 30px -12px rgba(0, 0, 0, 0.16)',
   };
   for (const effort of EFFORTS)
     vars[`--effort-${effort}`] = EFFORT_META[effort][theme.isDark ? 'dark' : 'light'];

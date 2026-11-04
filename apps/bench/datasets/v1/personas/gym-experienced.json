@@ -1,0 +1,83 @@
+{
+  "schemaVersion": 1,
+  "id": "gym-experienced",
+  "version": 1,
+  "category": "gym",
+  "experience": "experienced",
+  "label": "Long-time gym attendee wanting practical maintenance",
+  "reviewStatus": "exploratory",
+  "age": 56,
+  "timezone": "Europe/London",
+  "communication": {
+    "style": "informal, concise, familiar exercises without specialist jargon",
+    "disclosurePolicy": "answer_requested_facts",
+    "unknownResponse": "I don't know anything else about that. Please explain any material assumptions."
+  },
+  "sports": [
+    {
+      "sport": "cycle",
+      "experience": "improver",
+      "historyYears": 8,
+      "recentBaselineWeeks": 6,
+      "currentSessions": 2,
+      "desiredSessions": 2,
+      "weeklyDurationSeconds": 5400,
+      "longestDurationSeconds": 2700
+    },
+    {
+      "sport": "strength",
+      "experience": "experienced",
+      "historyYears": 12,
+      "recentBaselineWeeks": 6,
+      "currentSessions": 2,
+      "desiredSessions": 2
+    }
+  ],
+  "availability": [
+    {
+      "weekday": 1,
+      "maxMinutes": 60,
+      "preferred": false
+    },
+    {
+      "weekday": 3,
+      "maxMinutes": 60,
+      "preferred": false
+    },
+    {
+      "weekday": 5,
+      "maxMinutes": 60,
+      "preferred": false
+    },
+    {
+      "weekday": 6,
+      "maxMinutes": 75,
+      "preferred": true
+    }
+  ],
+  "equipment": [
+    "commercial gym with dumbbells, cable machines and benches",
+    "stationary bike without a reliable power display"
+  ],
+  "constraints": [
+    "No current injuries or health restrictions",
+    "Current routine and stated time budget reflect present capacity, not historical peak",
+    "No recorded working-weight measurements"
+  ],
+  "preferences": [
+    "Maintain general fitness and strength",
+    "Simple separate bike and resistance sessions",
+    "No race, maximal-strength goal or compulsory circuit format"
+  ],
+  "performanceEvidence": [],
+  "factTemplates": {
+    "availability": "I can train only on these days: {{availability}}",
+    "equipment": "I have access to: {{equipment}}.",
+    "constraints": "I'm {{age}}. {{constraints}}.",
+    "preferences": "{{preferences}}.",
+    "training": "I've been going to the gym for years. For the last {{strengthBaselineWeeks}} weeks I have done {{strengthCurrentSessions}} resistance sessions per week. For the last {{cycleBaselineWeeks}} weeks I have done {{cycleCurrentSessions}} bike sessions per week, about {{cycleWeeklyMinutes}} minutes weekly, longest {{cycleLongestMinutes}} minutes. I use manageable weights but have not written them down.",
+    "frequency": "I'd like {{strengthDesiredSessions}} lifting sessions and {{cycleDesiredSessions}} bike sessions a week. Keep it practical rather than chasing records.",
+    "fitness": "I don't know FTP or have a bike power test. I have no recorded lifting numbers. I want effort-based instructions I can follow on the gym bike and familiar resistance exercises."
+  },
+  "accessRestrictions": []
+}

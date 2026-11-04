@@ -545,7 +545,9 @@
 @media (max-width: 900px) {
   .chat-layout {
     grid-template-columns: minmax(0, 1fr);
-    height: calc(100dvh - var(--tab-bar-height) - 28px - env(safe-area-inset-bottom));
+    height: calc(
+      100dvh - var(--top-bar-height) - env(safe-area-inset-top) - env(safe-area-inset-bottom)
+    );
   }
   .chat-main {
     height: 100%;

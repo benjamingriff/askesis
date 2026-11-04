@@ -1,0 +1,231 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Mockup · Talking feedback through with the coach</title>
+    <link rel="stylesheet" href="mockups.css" />
+    <script src="icons.js"></script>
+    <script src="shell.js"></script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <template data-shell="chat">
+      <div class="chat-layout has-conversation">
+        <aside class="conversation-list-panel">
+          <div class="conversation-list-header">
+            <h1>Coach</h1>
+            <button class="icon-btn icon-btn-accent">
+              <i data-icon="plus" data-size="18"></i>
+            </button>
+          </div>
+          <div class="segmented"><button class="active">Open</button><button>Archived</button></div>
+          <nav class="conversation-list">
+            <a class="conversation-row active" href="#"
+              ><span class="conversation-row-top"
+                ><strong>Tuesday’s threshold run</strong><small>now</small></span
+              ><span class="conversation-row-meta">Olympic triathlon · 12 weeks</span></a
+            >
+          </nav>
+        </aside>
+        <div class="conversation-workspace">
+          <header class="chat-topbar">
+            <div class="chat-heading">
+              <h1>Tuesday’s threshold run</h1>
+              <span class="chat-subtitle"
+                ><i class="status-dot locked"></i>Olympic triathlon · Locked</span
+              >
+            </div>
+          </header>
+          <div class="conversation-body">
+            <section class="chat-main">
+              <div class="message-scroll">
+                <div class="messages">
+                  <div class="message-group">
+                    <article
+                      class="message user feedback-message"
+                      style="--kind: var(--effort-threshold)"
+                    >
+                      <div class="feedback-message-head">
+                        <span
+                          class="kind-icon"
+                          style="width: 32px; height: 32px; --kind: var(--effort-threshold)"
+                          ><i data-icon="footprints" data-size="16"></i
+                        ></span>
+                        <span class="copy"
+                          ><strong>Threshold intervals 5 × 6 min</strong
+                          ><small>Workout feedback · Tue 13 Oct · Key session</small></span
+                        >
+                      </div>
+                      <div class="feedback-message-body">
+                        <div class="feedback-facts">
+                          <span class="log-chip done"
+                            ><i data-icon="check" data-size="12"></i>Done</span
+                          >
+                          <span class="fact hot">RPE 8 · planned ~7</span>
+                          <span class="fact">Faded on the last reps</span>
+                          <span class="fact">Felt tired</span>
+                          <span class="fact">Poor sleep</span>
+                          <span class="fact">Heavy legs</span>
+                        </div>
+                        <p class="chat-text">
+                          Reps 4 and 5 were 4:21 and 4:24/km. Legs still heavy from Sunday’s long
+                          ride.
+                        </p>
+                      </div>
+                    </article>
+                    <article class="message assistant turn">
+                      <span class="message-author"
+                        ><span class="coach-avatar"
+                          ><i data-icon="sparkles" data-size="12"></i></span
+                        >Askesis</span
+                      >
+                      <div class="run-activity completed">
+                        <button type="button" class="run-summary">
+                          <i data-icon="check" data-size="15" class="ok"></i
+                          ><span>Read your training log and this week’s schedule · 6s</span>
+                        </button>
+                      </div>
+                      <div class="chat-markdown">
+                        <p>
+                          Thanks — the detail helps. Here’s the last two weeks next to what was
+                          planned:
+                        </p>
+                      </div>
+                      <div class="evidence">
+                        <div>
+                          <span>Sessions done</span><strong>9 of 10</strong
+                          ><span class="bar"
+                            ><i style="width: 90%; background: var(--locked)"></i
+                          ></span>
+                        </div>
+                        <div>
+                          <span>Easy sessions</span><strong>RPE 3 · as planned</strong
+                          ><span class="bar"
+                            ><i style="width: 30%; background: var(--effort-easy)"></i
+                          ></span>
+                        </div>
+                        <div>
+                          <span>Key sessions</span><strong>RPE +0.5 vs plan</strong
+                          ><span class="bar"
+                            ><i style="width: 55%; background: var(--effort-threshold)"></i
+                          ></span>
+                        </div>
+                        <div>
+                          <span>Poor sleep noted</span><strong>2 of 9 logs</strong
+                          ><span class="bar"
+                            ><i style="width: 22%; background: var(--warning)"></i
+                          ></span>
+                        </div>
+                      </div>
+                      <div class="chat-markdown">
+                        <p>
+                          One threshold session that fades on the last two reps, after a poor night
+                          and a big weekend, isn’t a sign your threshold pace is wrong. Last week’s
+                          threshold run was on target at RPE 7, and your easy sessions feel as easy
+                          as they should. I wouldn’t change your pace zones on this.
+                        </p>
+                        <p>
+                          Worth watching: if Saturday’s long ride also feels harder than planned,
+                          that’s two in a row, and I’d lighten next week.
+                        </p>
+                      </div>
+                      <div class="choice-card">
+                        <header>
+                          <strong>How do you want to handle it?</strong
+                          ><span class="pill">Choose one</span>
+                        </header>
+                        <button class="choice active">
+                          <span class="radio"></span>
+                          <span class="copy"
+                            ><strong>Keep the plan as it is</strong
+                            ><small
+                              >Count it as a tough day. I’ll check again after the weekend.</small
+                            ></span
+                          >
+                          <span class="pill pill-accent tag">Recommended</span>
+                        </button>
+                        <button class="choice">
+                          <span class="radio"></span>
+                          <span class="copy"
+                            ><strong>Ease the next three days</strong
+                            ><small
+                              >Cut Saturday’s long ride to 1h 30 and keep Sunday conversational.
+                              You’ll review the change before it replaces your plan.</small
+                            ></span
+                          >
+                        </button>
+                        <button class="choice">
+                          <span class="radio"></span>
+                          <span class="copy"
+                            ><strong>Check my threshold pace</strong
+                            ><small
+                              >Swap next Tuesday’s session for a 5K time trial. If you’re slower,
+                              your pace zones update from that day.</small
+                            ></span
+                          >
+                        </button>
+                        <footer>
+                          <small>Or reply in your own words below.</small
+                          ><button class="btn btn-sm btn-primary">Choose</button>
+                        </footer>
+                      </div>
+                    </article>
+                  </div>
+                  <div class="message-group">
+                    <article class="message user">
+                      <p class="chat-text">
+                        Actually I think I’m coming down with a cold. Ease the next three days.
+                      </p>
+                    </article>
+                    <article class="message assistant turn">
+                      <span class="message-author"
+                        ><span class="coach-avatar"
+                          ><i data-icon="sparkles" data-size="12"></i></span
+                        >Askesis</span
+                      >
+                      <div class="chat-markdown">
+                        <p>
+                          Good call. If it stays above the neck — a runny nose or sore throat — easy
+                          movement is fine. If it reaches your chest, or you have a fever or aches,
+                          rest completely until it’s gone.
+                        </p>
+                        <p>
+                          Your plan is locked, so I can’t edit it yet. Unlock it and I’ll make
+                          Thursday easy, cut Saturday to 1h 30, and keep Sunday conversational. Then
+                          you review the change and lock it again.
+                        </p>
+                      </div>
+                      <div class="notice notice-accent">
+                        <i data-icon="lock-open" data-size="18" class="notice-icon"></i>
+                        <div class="notice-body">
+                          <strong>Unlock to let your coach adjust this week</strong
+                          ><span
+                            >Your current schedule stays in use until you lock the new
+                            version.</span
+                          >
+                        </div>
+                        <button class="btn btn-sm btn-primary notice-action">
+                          <i data-icon="lock-open" data-size="14"></i>Unlock
+                        </button>
+                      </div>
+                    </article>
+                  </div>
+                </div>
+              </div>
+              <div class="composer-wrap">
+                <form class="chat-composer">
+                  <textarea rows="1" placeholder="Ask your coach anything…"></textarea>
+                  <button class="composer-button send" type="button" disabled>
+                    <i data-icon="arrow-up" data-size="19"></i>
+                  </button>
+                </form>
+              </div>
+            </section>
+          </div>
+        </div>
+      </div>
+    </template>
+    <span class="mock-caption">Mockup · Coach conversation</span>
+  </body>
+</html>

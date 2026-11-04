@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "id": "anxious",
+  "version": 1,
+  "label": "Chatty and anxious",
+  "description": "Friendly and talkative, worries about getting injured or not being good enough, and wraps facts in personal context and reassurance-seeking. Often asks whether something is normal or safe.",
+  "traits": [
+    "longer replies with personal asides",
+    "expresses worry about injury, failure or doing it wrong",
+    "asks the coach for reassurance or an explanation",
+    "thanks the coach and apologises for rambling"
+  ],
+  "examples": [
+    "Sorry, this is a long answer! I've kept up my usual runs but I'm not sure it's enough to start from?",
+    "I'm honestly a bit nervous about the long runs. Is it normal to worry about this?"
+  ]
+}

@@ -1,3 +1,6 @@
+import { LogChip, WorkoutLogActions, useLogContext } from './TrainingLog';
+import { useLocalToday } from '../lib/use-local-today';
+import { effortFlag } from '../training-log';
 import type { StepTarget, WorkoutStep, WorkoutSummary } from '@askesis/api-client';
 import { CalendarOff, ChevronRight, MessageSquare, Moon, Repeat } from 'lucide-react';
 import type { CSSProperties } from 'react';
@@ -17,7 +20,7 @@ import {
   type PoolUnits,
 } from '../lib/format';
 import { formatZoneValue, SPORT_META, zoneLabel, type Sport } from '../lib/sports';
-import { RACE_META, stepEffort, workoutLook } from '../lib/workouts';
+import { KIND_META, RACE_META, expectedEffort, stepEffort, workoutLook } from '../lib/workouts';
 import { effortColor } from '../theme/palette';
 import { useWorkoutDetail, type PlanVersion } from '../plan-data';
 import { useSportUnits, type Units } from '../settings';
@@ -25,6 +28,7 @@ import { WorkoutChangeBadge } from './PlanChanges';
 import { IntensityChart } from './IntensityChart';
 import { Stat } from './PlanWidgets';
 import { Button, Dialog, ErrorState, KindIcon, LoadingState, cx } from './ui';
+import { useCoachWord } from '../coach';
 
 export function workoutMeta(workout: WorkoutSummary, units: Units, pool: PoolUnits = 'm'): string {
   const parts = [];
@@ -35,7 +39,11 @@ export function workoutMeta(workout: WorkoutSummary, units: Units, pool: PoolUni
         : formatDistance(workout.estimatedDistanceMetres, units),
     );
   if (workout.estimatedDurationSeconds !== null)
-    parts.push(formatDuration(workout.estimatedDurationSeconds));
+    parts.push(
+      `${workout.placeholder ? '~' : ''}${formatDuration(workout.estimatedDurationSeconds)}`,
+    );
+  const effort = expectedEffort(workout);
+  if (effort) parts.push(effort);
   return parts.join(' · ') || SPORT_META[workout.discipline as Sport]?.label || workout.discipline;
 }
 
@@ -49,8 +57,18 @@ export function workoutStats(workout: WorkoutSummary, units: Units, pool: PoolUn
         ? { label: 'Distance', value: formatSwimDistance(metres, pool) }
         : { label: 'Distance', value: formatDistance(metres, units, false), unit: units },
     );
-  if (seconds !== null) stats.push({ label: 'Time', value: formatDuration(seconds) });
-  if (metres && seconds) {
+  if (seconds !== null)
+    stats.push({
+      label: 'Time',
+      value: `${workout.placeholder ? '~' : ''}${formatDuration(seconds)}`,
+    });
+  if (workout.expectedRpe)
+    stats.push({
+      label: 'Effort',
+      value: expectedEffort(workout)!.replace('RPE ', ''),
+      unit: 'RPE',
+    });
+  if (metres && seconds && !workout.placeholder) {
     if (workout.discipline === 'run')
       stats.push({
         label: 'Avg pace',
@@ -127,34 +145,102 @@ export function WorkoutCard({
   units: Units;
   onOpen: (workout: WorkoutSummary) => void;
 }) {
+  const coach = useCoachWord();
   const look = workoutLook(workout);
   const { pool } = useSportUnits();
+  const logContext = useLogContext(),
+    today = useLocalToday();
+  const log = logContext?.logs.find((l) => l.lineageId === workout.lineageId);
   return (
-    <button
-      type="button"
-      className="workout-card"
-      style={{ '--kind': look.color } as CSSProperties}
-      onClick={() => onOpen(workout)}
-      aria-label={`${workout.title}, ${look.label}, ${formatLong(workout.scheduledDate)}`}
-    >
-      <KindIcon icon={look.icon} color={look.color} />
-      <span className="workout-card-copy">
-        <span className="workout-card-kind">
-          {look.label}
-          {workout.racePriority ? (
-            <em className="race-badge" title={RACE_META[workout.racePriority].description}>
-              {RACE_META[workout.racePriority].label}
-            </em>
-          ) : workout.priority === 'high' ? (
-            <em>Key session</em>
+    <div className="workout-card-wrap">
+      <button
+        type="button"
+        className={`workout-card${workout.placeholder ? ' is-placeholder' : ''}${log ? ' is-logged' : ''}${log?.status === 'skipped' ? ' is-skipped' : ''}`}
+        style={{ '--kind': look.color } as CSSProperties}
+        onClick={() => onOpen(workout)}
+        aria-label={`${workout.title}, ${look.label}, ${formatLong(workout.scheduledDate)}`}
+      >
+        <KindIcon icon={look.icon} color={look.color} />
+        <span className="workout-card-copy">
+          <span className="workout-card-kind">
+            {look.label}
+            {workout.racePriority ? (
+              <em className="race-badge" title={RACE_META[workout.racePriority].description}>
+                {RACE_META[workout.racePriority].label}
+              </em>
+            ) : workout.priority === 'high' ? (
+              <em>Key session</em>
+            ) : null}
+            {workout.placeholder ? (
+              <em className="placeholder-badge" title={placeholderHint(coach)}>
+                Placeholder
+              </em>
+            ) : null}
+            <WorkoutChangeBadge id={workout.id} />
+          </span>
+          <strong>{workout.title}</strong>
+          <small>{workoutMeta(workout, units, pool)}</small>
+          {log ? (
+            <span className="workout-card-log">
+              <LogChip log={log} />
+              {log.actualSessionType ? (
+                <small>Was {KIND_META[log.actualSessionType].label.toLowerCase()}</small>
+              ) : null}
+              {effortFlag(log) ? <small>{effortFlag(log)}</small> : null}
+            </span>
           ) : null}
-          <WorkoutChangeBadge id={workout.id} />
         </span>
-        <strong>{workout.title}</strong>
-        <small>{workoutMeta(workout, units, pool)}</small>
+        <ChevronRight size={18} aria-hidden="true" className="chevron" />
+      </button>
+      {!log &&
+      logContext?.ready &&
+      logContext.writable &&
+      workout.planVersionId === logContext.lockedVersionId &&
+      workout.scheduledDate < today ? (
+        <WorkoutLogActions workout={workout} compact />
+      ) : null}
+    </div>
+  );
+}
+
+const placeholderHint = (coach: string) =>
+  `Booked, not prescribed: your ${coach} plans around it, and you log what it turned out to be.`;
+
+/** Where a placeholder's expected effort sits on the 1–10 RPE scale. */
+export function PlaceholderBand({ workout }: { workout: WorkoutSummary }) {
+  const range = workout.expectedRpe;
+  if (!range) return null;
+  const left = ((range.minimum - 1) / 9) * 100,
+    width = Math.max(((range.maximum - range.minimum) / 9) * 100, 4);
+  return (
+    <span className="placeholder-band" aria-label={`Expected effort ${expectedEffort(workout)}`}>
+      <span className="placeholder-band-track" aria-hidden="true">
+        <i style={{ left: `${left}%`, width: `${width}%` }} />
       </span>
-      <ChevronRight size={18} aria-hidden="true" className="chevron" />
-    </button>
+      <span className="placeholder-band-scale" aria-hidden="true">
+        <span>Easy</span>
+        <span>{expectedEffort(workout)}</span>
+        <span>Max</span>
+      </span>
+    </span>
+  );
+}
+
+/** What a placeholder is, and what the coach assumed when planning around it. */
+function PlaceholderSummary({ workout }: { workout: WorkoutSummary }) {
+  const coach = useCoachWord();
+  const assumed = workout.sessionType ? KIND_META[workout.sessionType].label.toLowerCase() : null;
+  return (
+    <div className="placeholder-summary">
+      <span className="label">Placeholder session</span>
+      <PlaceholderBand workout={workout} />
+      <p>
+        There’s no prescription for this one. Your {coach} has planned the rest of your training
+        around it{assumed ? `, assuming ${assumed}` : ''}
+        {workout.expectedRpe ? ` at ${expectedEffort(workout)}` : ''}. Do the session as it comes,
+        then log what it turned out to be.
+      </p>
+    </div>
   );
 }
 
@@ -337,6 +423,7 @@ export function WorkoutDialog({
   onClose: () => void;
   onAskCoach?: ((workout: WorkoutSummary) => void) | undefined;
 }) {
+  const coach = useCoachWord();
   const detail = useWorkoutDetail(workout?.id, version);
   const { pool } = useSportUnits();
   if (!workout) return null;
@@ -353,6 +440,7 @@ export function WorkoutDialog({
           <span className="workout-kind-label">
             <look.icon size={15} aria-hidden="true" /> {look.label}
             {workout.racePriority ? ` · ${RACE_META[workout.racePriority].label}` : ''}
+            {workout.placeholder ? ' · Placeholder' : ''}
           </span>
           {workout.title}
         </span>
@@ -361,12 +449,13 @@ export function WorkoutDialog({
       footer={
         onAskCoach ? (
           <Button icon={MessageSquare} onClick={() => onAskCoach(workout)}>
-            Ask your coach about this
+            Ask your {coach} about this
           </Button>
         ) : undefined
       }
     >
       <div className="workout-detail">
+        <WorkoutLogActions workout={workout} detail />
         <div className="workout-stats">
           {workoutStats(workout, units, pool).map((stat) => (
             <Stat key={stat.label} label={stat.label} value={stat.value} unit={stat.unit} large />
@@ -374,11 +463,21 @@ export function WorkoutDialog({
         </div>
         {workout.purpose ? <p className="workout-purpose">{workout.purpose}</p> : null}
         {workout.description ? <p className="muted">{workout.description}</p> : null}
-        {detail.isPending ? <LoadingState>Loading prescription…</LoadingState> : null}
+        {workout.placeholder ? <PlaceholderSummary workout={workout} /> : null}
+        {detail.isPending && !workout.placeholder ? (
+          <LoadingState>Loading prescription…</LoadingState>
+        ) : null}
         {detail.error ? (
           <ErrorState message={detail.error.message} onRetry={() => void detail.refetch()} />
         ) : null}
-        {detail.data ? (
+        {detail.data && workout.placeholder && detail.data.tags.length ? (
+          <div className="tag-list">
+            {detail.data.tags.map((tag) => (
+              <span key={tag}>{tag.replaceAll('-', ' ')}</span>
+            ))}
+          </div>
+        ) : null}
+        {detail.data && !workout.placeholder ? (
           <>
             <div className="effort-profile">
               <span className="label">Effort profile</span>

@@ -5,11 +5,13 @@ import { getApiConfig } from './config.js';
 import { closeDatabase } from './database/client.js';
 import { logger } from './logger.js';
 import { startAgentSweeper } from './modules/agent/agent.sweeper.js';
+import { startRetentionSweeper } from './modules/account/retention.sweeper.js';
 import { startTestExecutor } from './modules/chat/chat.executor.js';
 
 const config = getApiConfig();
 const stopTestExecutor = startTestExecutor();
 const stopAgentSweeper = startAgentSweeper();
+const stopRetentionSweeper = startRetentionSweeper();
 const server = serve(
   {
     fetch: app.fetch,
@@ -40,6 +42,7 @@ async function shutdown(signal: string): Promise<void> {
   });
   await stopTestExecutor();
   await stopAgentSweeper();
+  await stopRetentionSweeper();
   await closeDatabase();
   clearTimeout(forcedExit);
   logger.info({ signal }, 'Askesis API stopped');
