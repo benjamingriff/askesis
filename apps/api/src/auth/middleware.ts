@@ -9,20 +9,20 @@ import type { AppEnvironment } from './types.js';
 export const TIMEZONE_HEADER = 'X-Askesis-Timezone';
 
 /**
- * Whether a bearer session token names the origin it was issued to (`azp`). Browsers always send
- * one, so Clerk records it; Clerk's native SDKs (the Expo app) send no origin and their tokens
- * carry none. Only the claim's presence is read here, to choose how the token is verified.
+ * A native app's session token: a bearer token whose claims name no origin (`azp`). Browsers
+ * always send one, so Clerk records it; Clerk's native SDKs (the Expo app) send no origin and
+ * their tokens carry none. Only the claim's presence is read here, to choose how to verify.
  */
-export function namesAuthorizedParty(request: Request): boolean {
+export function nativeSessionToken(request: Request): string | null {
   const token = /^Bearer\s+(\S+)$/i.exec(request.headers.get('authorization') ?? '')?.[1];
-  if (!token) return true;
+  if (!token) return null;
   try {
     const claims: unknown = JSON.parse(
       Buffer.from(token.split('.')[1] ?? '', 'base64url').toString('utf8'),
     );
-    return !!claims && typeof claims === 'object' && 'azp' in claims;
+    return !!claims && typeof claims === 'object' && !('azp' in claims) ? token : null;
   } catch {
-    return true;
+    return null;
   }
 }
 
@@ -34,12 +34,16 @@ export const requireAuthentication: MiddlewareHandler<AppEnvironment> = async (c
   });
   // Authorized parties restrict which browser origins a token may come from. A native app's
   // token has no origin to check, so it is verified (signature, expiry, issuer) without the list;
-  // the claim can't be added or removed without invalidating the signature.
-  const authorizedParties = namesAuthorizedParty(context.req.raw)
-    ? config.clerkAuthorizedParties
-    : undefined;
-  const requestState =
-    authorizedParties === undefined
+  // the claim can't be added or removed without invalidating the signature. Clerk gets only that
+  // token, with no cookies, so the exemption covers exactly the token it verifies.
+  const nativeToken = nativeSessionToken(context.req.raw);
+  const authorizedParties = config.clerkAuthorizedParties;
+  const requestState = nativeToken
+    ? await clerk.authenticateRequest(
+        new Request(context.req.url, { headers: { Authorization: `Bearer ${nativeToken}` } }),
+        { acceptsToken: 'session_token' },
+      )
+    : authorizedParties === undefined
       ? await clerk.authenticateRequest(context.req.raw, { acceptsToken: 'session_token' })
       : await clerk.authenticateRequest(context.req.raw, {
           acceptsToken: 'session_token',
