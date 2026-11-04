@@ -23,6 +23,7 @@ These guides describe implemented behavior and were reconciled against code on 2
 
 - [Workout logging and feedback](./workout-log-and-feedback-proposal.md): Done/Changed/Skipped logging, key-session feedback, coaching responses and the path to Strava. Proposed for owner review, with [design mockups](./workout-feedback-mockups/).
 - [In-app coach flag and "Ask your agent"](./in-app-coach-flag-proposal.md): hiding the in-app coach for the MCP release and replacing chat entry points with agent prompts. Accepted; in delivery.
+- [Mobile app follow-up work](./mobile-follow-up-work.md): bringing the Expo app up to date with the web app, then the release path, CI and housekeeping. Proposed; the native navigation choice is open.
 
 ## Interface and pace policy
 
