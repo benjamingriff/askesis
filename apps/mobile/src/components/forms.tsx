@@ -38,6 +38,7 @@ export function FormScreen({
   title,
   subtitle,
   guard,
+  cancelLabel = 'Cancel',
   saveLabel = 'Save',
   canSave = true,
   saving = false,
@@ -48,6 +49,8 @@ export function FormScreen({
   title: string;
   subtitle?: string;
   guard?: LeaveGuard;
+  /** The left button, which leaves the screen. */
+  cancelLabel?: string;
   saveLabel?: string;
   canSave?: boolean;
   saving?: boolean;
@@ -79,7 +82,7 @@ export function FormScreen({
           style={{ minWidth: 76, paddingHorizontal: 6, paddingVertical: 6 }}
         >
           <Text variant="subheading" color="dim" style={{ opacity: saving ? 0.4 : 1 }}>
-            Cancel
+            {cancelLabel}
           </Text>
         </Pressable>
         <View style={{ flex: 1, alignItems: 'center' }}>

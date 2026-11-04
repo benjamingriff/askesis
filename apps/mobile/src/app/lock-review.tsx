@@ -17,6 +17,7 @@ import {
   useHaptics,
   type IconName,
 } from '../components/ui';
+import { useCoachWord } from '../data/account';
 import { usePlan, writePlan, type BriefState, type Plan, type Preview } from '../data/plan-data';
 import { api } from '../lib/api';
 import {
@@ -205,6 +206,7 @@ export default function LockReviewScreen() {
 
 function LockReview({ plan }: { plan: Plan }) {
   const theme = useTheme();
+  const coach = useCoachWord();
   const insets = useSafeAreaInsets();
   const buzz = useHaptics();
   const client = useQueryClient();
@@ -388,8 +390,7 @@ function LockReview({ plan }: { plan: Plan }) {
         showsVerticalScrollIndicator={false}
       >
         <Text variant="caption">
-          Locking makes this version immutable. Confirming and locking are human decisions — your
-          coach can’t do them for you.
+          {`Locking makes this version immutable. Confirming and locking are human decisions — your ${coach} can’t do them for you.`}
         </Text>
         {validate.isPending ? <LoadingState label="Checking the draft…" /> : null}
         {validate.error ? <ErrorState message={validate.error.message} onRetry={retry} /> : null}
@@ -420,7 +421,7 @@ function LockReview({ plan }: { plan: Plan }) {
                     checked={briefConfirmed}
                     onToggle={() => setBriefConfirmed((v) => !v)}
                     label="These assumptions and pace guides are right"
-                    sub="Your coach can update assumptions, but only you can confirm them."
+                    sub={`Your ${coach} can update assumptions, but only you can confirm them.`}
                   />
                 ) : (
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>

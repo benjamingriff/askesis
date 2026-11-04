@@ -15,6 +15,7 @@ import {
   Segmented,
   Text,
 } from '../../components/ui';
+import { useCoachWord } from '../../data/account';
 import { usePlans } from '../../data/plan-data';
 import { formatRange } from '../../lib/format';
 import { useTheme } from '../../state/settings';
@@ -22,6 +23,7 @@ import { useTheme } from '../../state/settings';
 /** Every plan: the library (active and inactive) and the archive. */
 export default function PlansScreen() {
   const theme = useTheme();
+  const coach = useCoachWord();
   const [collection, setCollection] = useState<'library' | 'archive'>('library');
   const plans = usePlans(collection);
   return (
@@ -80,7 +82,7 @@ export default function PlansScreen() {
             >
               {collection === 'archive'
                 ? 'Archived plans are kept here and can be restored.'
-                : 'Start a plan with your coach.'}
+                : `Start a plan with your ${coach}.`}
             </EmptyState>
           ) : undefined
         }

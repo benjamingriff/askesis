@@ -2,6 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Tabs } from 'expo-router';
 import type { ColorValue } from 'react-native';
 import { FloatingTabBar } from '../../components/FloatingTabBar';
+import { useInAppCoach } from '../../data/account';
 import { useTheme } from '../../state/settings';
 
 type TabIcon = keyof typeof Ionicons.glyphMap;
@@ -15,6 +16,8 @@ const icon =
 
 export default function TabsLayout() {
   const theme = useTheme();
+  // Without the in-app coach there are three tabs; links to the Coach tab land on Today.
+  const coach = useInAppCoach();
 
   return (
     <Tabs
@@ -35,13 +38,15 @@ export default function TabsLayout() {
           tabBarIcon: icon('calendar', 'calendar-outline'),
         }}
       />
-      <Tabs.Screen
-        name="coach"
-        options={{
-          title: 'Coach',
-          tabBarIcon: icon('chatbubble-ellipses', 'chatbubble-ellipses-outline'),
-        }}
-      />
+      <Tabs.Protected guard={coach}>
+        <Tabs.Screen
+          name="coach"
+          options={{
+            title: 'Coach',
+            tabBarIcon: icon('chatbubble-ellipses', 'chatbubble-ellipses-outline'),
+          }}
+        />
+      </Tabs.Protected>
       <Tabs.Screen
         name="you"
         options={{ title: 'You', tabBarIcon: icon('person-circle', 'person-circle-outline') }}

@@ -76,7 +76,7 @@ Tokens that name an origin must still match it.
 
 ```
 src/app/            Expo Router screens: (tabs)/ Today · Plan · Coach · You, workout/[id],
-                    chat/[id] (Chat ↔ Plan pager), lock-review, plans/, plan-details, new-plan,
+                    chat/[id] (Chat ↔ Plan pager), ask-agent, lock-review, plans/, plan-details, new-plan,
                     brief, plan-history, revision, draft-content, performance, record-result,
                     account, appearance, sign-in
 src/components/     UI kit, form fields and date picker, plan view and widgets, workout rows,
@@ -92,6 +92,16 @@ API types come from `packages/api-client/src/schema.ts` as type-only imports, so
 contract is shared without adding the pnpm package to this npm app. Live updates follow the same
 event stream as the web (`/api/v1/live/events`) through `expo/fetch`, falling back to polling
 while disconnected.
+
+## In-app coach setting
+
+The app reads `features.inAppCoach` from `GET /api/v1/account` before any signed-in screen renders,
+as the web app does ([proposal](../../docs/product/in-app-coach-flag-proposal.md)). When the API
+runs with `IN_APP_COACH=hidden`, the Coach tab and chat screens are removed (old chat links land on
+Today). Every chat entry point opens **Ask your agent** (`src/app/ask-agent.tsx`) instead. That
+screen copies the same prompt as the web app (`src/lib/coach.ts`) and shows it so it can be pasted.
+Copy says "your agent" (`useCoachWord()` in `src/data/account.ts`). To try it locally, start the
+API with `IN_APP_COACH=hidden pnpm dev`.
 
 ## Not yet on mobile
 

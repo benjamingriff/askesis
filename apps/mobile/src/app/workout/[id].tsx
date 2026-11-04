@@ -16,6 +16,7 @@ import {
   Stat,
   Text,
 } from '../../components/ui';
+import { useCoachWord } from '../../data/account';
 import { useOpenPlanChat } from '../../data/plan-actions';
 import { useBriefState, usePlan, useWorkoutDetail, planVersion } from '../../data/plan-data';
 import { formatLong } from '../../lib/format';
@@ -39,7 +40,11 @@ export default function WorkoutScreen() {
     : null;
   const brief = useBriefState(workout?.planId ?? '', version ?? null);
   const units = useUnits(brief.data?.brief.unit);
-  const chat = useOpenPlanChat(workout?.planId ?? '');
+  const coach = useCoachWord();
+  const chat = useOpenPlanChat({
+    id: workout?.planId ?? '',
+    displayName: plan.data?.displayName ?? '',
+  });
 
   if (!workout)
     return (
@@ -131,7 +136,7 @@ export default function WorkoutScreen() {
                 <Ionicons name="chatbubble-ellipses" size={16} color={theme.accentText} />
               </View>
               <View style={{ flex: 1, gap: 6 }}>
-                <Text variant="label">Coach says</Text>
+                <Text variant="label">{coach === 'coach' ? 'Coach says' : 'Agent says'}</Text>
                 {workout.purpose ? <Text variant="body">{workout.purpose}</Text> : null}
                 {workout.description ? (
                   <Text variant="body" color="dim">
@@ -214,7 +219,7 @@ export default function WorkoutScreen() {
           }}
         >
           <Button
-            label="Ask your coach about this"
+            label={`Ask your ${coach} about this`}
             icon="chatbubble-ellipses"
             busy={chat.isPending}
             onPress={() => chat.mutate(`About “${workout.title}” on ${workout.scheduledDate}: `)}

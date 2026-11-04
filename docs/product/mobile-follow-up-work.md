@@ -8,12 +8,12 @@ Verification: cheap checks happen in Expo web or Expo Go. Limrun, which is paid,
 
 When an account's `features.inAppCoach` is off, the app hides chat entirely and points athletes to their own agent, matching the web app ([proposal](./in-app-coach-flag-proposal.md), PR #100).
 
-- [ ] Read `features.inAppCoach` from the account query; default to on, as the web app does.
-- [ ] Hide the Coach tab, the Chat ↔ Plan pager and every chat entry point; old chat links land on Today.
-- [ ] Port **Ask your agent**: build the same prompt as `agentPrompt()` (plan name and `planId`), copy it to the clipboard and show it in a sheet so it can be pasted.
-- [ ] Swap "coach" for "agent" in copy wherever the web app uses `useCoachWord()` (lock review, plan changes, empty states).
-- [ ] New plans are created without a conversation while the coach is hidden, then open the plan rather than a chat.
-- [ ] Verify with the flag on and off on the verification account.
+- [x] Read `features.inAppCoach` from the account query; default to on, as the web app does.
+- [x] Hide the Coach tab, the Chat ↔ Plan pager and every chat entry point; old chat links land on Today.
+- [x] Port **Ask your agent**: build the same prompt as `agentPrompt()` (plan name and `planId`), copy it to the clipboard and show it in a sheet so it can be pasted.
+- [x] Swap "coach" for "agent" in copy wherever the web app uses `useCoachWord()` (lock review, plan changes, empty states).
+- [x] New plans are created without a conversation while the coach is hidden, then open the plan rather than a chat.
+- [x] Verify with the flag on and off on the verification account (Expo web, and native iOS on a Limrun simulator).
 
 ## 2. Plan and account deletion
 

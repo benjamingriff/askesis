@@ -1,5 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { ScrollView, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
+import { useCoachWord } from '../data/account';
 import {
   currentEntry,
   isEstimate,
@@ -557,6 +558,7 @@ export function ZoneCards({
   showSource?: boolean;
 }) {
   const theme = useTheme();
+  const coach = useCoachWord();
   const { pool } = useSportUnits();
   const performance = usePerformance();
   const systems = systemsForSports(sports.length ? sports : ['run']);
@@ -622,8 +624,7 @@ export function ZoneCards({
               </ScrollView>
             ) : performance.isPending ? null : (
               <Text variant="caption" color="muted" style={{ paddingHorizontal: 20 }}>
-                No {meta.noun} yet. Add a result or an estimate on the Performance page, or share
-                one with your coach.
+                {`No ${meta.noun} yet. Add a result or an estimate on the Performance page, or share one with your ${coach}.`}
               </Text>
             )}
             {entry && showSource ? (
