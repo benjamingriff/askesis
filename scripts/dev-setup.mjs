@@ -20,7 +20,8 @@ async function assertPortAvailable(port) {
 
 try {
   if (!existsSync(resolve(root, '.env'))) {
-    // Read only development Clerk keys from the main checkout; never copy provider credentials.
+    // Read only development Clerk keys and the optional Limrun key from the main checkout; never
+    // copy provider credentials.
     const common = execFileSync(
       'git',
       ['rev-parse', '--path-format=absolute', '--git-common-dir'],
@@ -67,6 +68,7 @@ try {
       VITE_API_PROXY_TARGET: `http://127.0.0.1:${apiPort}`,
       LOCAL_WEB_URL: `http://localhost:${webPort}`,
       CHAT_EXECUTION_MODE: 'test',
+      ...(sourceEnv.LIM_API_KEY ? { LIM_API_KEY: sourceEnv.LIM_API_KEY } : {}),
     };
     writeFileSync(
       resolve(root, '.env'),
@@ -76,6 +78,19 @@ try {
       { mode: 0o600, flag: 'wx' },
     );
     console.log('Created private .env with development Clerk keys and worktree-specific ports.');
+  }
+  // Cloud builds (`lim run` in apps/mobile) see only the app's folder: give it the Limrun key and
+  // the public Clerk key there.
+  const local = parseEnv(readFileSync(resolve(root, '.env'), 'utf8'));
+  const mobileEnv = resolve(root, 'apps/mobile/.env');
+  if (local.LIM_API_KEY && !existsSync(mobileEnv)) {
+    writeFileSync(
+      mobileEnv,
+      `LIM_API_KEY=${local.LIM_API_KEY}\n` +
+        `EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY=${local.VITE_CLERK_PUBLISHABLE_KEY}\n`,
+      { mode: 0o600, flag: 'wx' },
+    );
+    console.log('Created apps/mobile/.env for Limrun builds.');
   }
   // Validate before running any database jobs, including on repeat invocations.
   run('pnpm', ['--filter', '@askesis/api', 'verification:check']);
