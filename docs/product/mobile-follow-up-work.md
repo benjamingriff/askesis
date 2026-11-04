@@ -13,7 +13,7 @@ When an account's `features.inAppCoach` is off, the app hides chat entirely and 
 - [x] Port **Ask your agent**: build the same prompt as `agentPrompt()` (plan name and `planId`), copy it to the clipboard and show it in a sheet so it can be pasted.
 - [x] Swap "coach" for "agent" in copy wherever the web app uses `useCoachWord()` (lock review, plan changes, empty states).
 - [x] New plans are created without a conversation while the coach is hidden, then open the plan rather than a chat.
-- [x] Verify with the flag on and off on the verification account (Expo web; native not yet checked on Limrun).
+- [x] Verify with the flag on and off on the verification account (Expo web, and native iOS on a Limrun simulator).
 
 ## 2. Plan and account deletion
 
