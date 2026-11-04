@@ -23,7 +23,7 @@ export function useTabBarInset() {
   return TAB_BAR_HEIGHT + bottomOffset(insets.bottom) + 20;
 }
 
-export function FloatingTabBar({ state, descriptors, navigation }: TabBarProps) {
+export function FloatingTabBar({ state, descriptors, emitter, navigateToTab }: TabBarProps) {
   const theme = useTheme();
   const insets = useSafeAreaInsets();
   const bottom = bottomOffset(insets.bottom);
@@ -68,12 +68,12 @@ export function FloatingTabBar({ state, descriptors, navigation }: TabBarProps) 
           const badge = options.tabBarBadge;
 
           const onPress = () => {
-            const event = navigation.emit({
+            const event = emitter.emit({
               type: 'tabPress',
               target: route.key,
               canPreventDefault: true,
             });
-            if (!focused && !event.defaultPrevented) navigation.navigate(route.name, route.params);
+            if (!focused && !event.defaultPrevented) navigateToTab(route.key);
           };
 
           return (
@@ -81,7 +81,7 @@ export function FloatingTabBar({ state, descriptors, navigation }: TabBarProps) 
               key={route.key}
               focused={focused}
               onPress={onPress}
-              onLongPress={() => navigation.emit({ type: 'tabLongPress', target: route.key })}
+              onLongPress={() => emitter.emit({ type: 'tabLongPress', target: route.key })}
               label={label}
               color={color}
               badge={badge}

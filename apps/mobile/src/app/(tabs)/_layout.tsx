@@ -2,21 +2,19 @@ import { Ionicons } from '@expo/vector-icons';
 import { Tabs } from 'expo-router';
 import type { ColorValue } from 'react-native';
 import { FloatingTabBar } from '../../components/FloatingTabBar';
-import { useChat } from '../../state/chat';
 import { useTheme } from '../../state/settings';
 
 type TabIcon = keyof typeof Ionicons.glyphMap;
 
+// FloatingTabBar passes theme colours, which are always strings.
 const icon =
   (active: TabIcon, inactive: TabIcon) =>
   ({ color, focused, size }: { color: ColorValue; focused: boolean; size: number }) => (
-    <Ionicons name={focused ? active : inactive} size={size} color={color} />
+    <Ionicons name={focused ? active : inactive} size={size} color={color as string} />
   );
 
 export default function TabsLayout() {
   const theme = useTheme();
-  const { conversations } = useChat();
-  const unread = conversations.filter((c) => c.unread && !c.archived).length;
 
   return (
     <Tabs
@@ -42,7 +40,6 @@ export default function TabsLayout() {
         options={{
           title: 'Coach',
           tabBarIcon: icon('chatbubble-ellipses', 'chatbubble-ellipses-outline'),
-          tabBarBadge: unread > 0 ? unread : undefined,
         }}
       />
       <Tabs.Screen

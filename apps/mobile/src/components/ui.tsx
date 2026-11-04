@@ -1,7 +1,9 @@
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useCallback, useEffect, useRef, type ReactNode } from 'react';
 import {
+  ActivityIndicator,
   Animated,
   Easing,
   Platform,
@@ -209,8 +211,10 @@ export function IconButton({
         backgroundColor: bg,
         alignItems: 'center',
         justifyContent: 'center',
+        overflow: 'hidden',
       }}
     >
+      {tone === 'accent' ? <AccentFill /> : null}
       <Ionicons name={icon} size={size} color={fg} />
       {badge ? (
         <View
@@ -237,16 +241,18 @@ export function Button({
   icon,
   variant = 'primary',
   disabled,
+  busy,
   style,
   size = 'lg',
 }: {
   label: string;
   onPress?: () => void;
   icon?: IconName;
-  variant?: 'primary' | 'secondary' | 'ghost';
+  variant?: 'primary' | 'secondary' | 'ghost' | 'danger';
   disabled?: boolean;
+  busy?: boolean;
   style?: StyleProp<ViewStyle>;
-  size?: 'md' | 'lg';
+  size?: 'sm' | 'md' | 'lg';
 }) {
   const theme = useTheme();
   const bg =
@@ -255,30 +261,46 @@ export function Button({
       : variant === 'secondary'
         ? theme.colors.surfaceRaised
         : 'transparent';
-  const fg = variant === 'primary' ? theme.onAccent : theme.colors.text;
+  const fg =
+    variant === 'primary'
+      ? theme.onAccent
+      : variant === 'danger'
+        ? theme.danger
+        : theme.colors.text;
   return (
     <PressableScale
-      onPress={disabled ? undefined : onPress}
+      onPress={disabled || busy ? undefined : onPress}
       accessibilityRole="button"
-      accessibilityState={{ disabled: !!disabled }}
+      accessibilityLabel={label}
+      accessibilityState={{ disabled: !!disabled, busy: !!busy }}
       style={[
         {
-          height: size === 'lg' ? 54 : 44,
-          borderRadius: size === 'lg' ? 18 : 14,
+          height: size === 'lg' ? 54 : size === 'md' ? 44 : 34,
+          borderRadius: size === 'lg' ? 18 : size === 'md' ? 14 : 11,
           backgroundColor: bg,
           flexDirection: 'row',
           alignItems: 'center',
           justifyContent: 'center',
           gap: 8,
-          paddingHorizontal: 20,
+          paddingHorizontal: size === 'sm' ? 12 : 20,
           opacity: disabled ? 0.4 : 1,
+          overflow: 'hidden',
         },
         variant === 'ghost' && { borderWidth: 1, borderColor: theme.colors.border },
+        variant === 'danger' && { borderWidth: 1, borderColor: alphaHex(theme.danger, 0.4) },
         style,
       ]}
     >
-      {icon ? <Ionicons name={icon} size={18} color={fg} /> : null}
-      <Text variant="subheading" style={{ color: fg, fontWeight: '700' }}>
+      {variant === 'primary' ? <AccentFill /> : null}
+      {busy ? (
+        <ActivityIndicator size="small" color={fg} />
+      ) : icon ? (
+        <Ionicons name={icon} size={size === 'sm' ? 15 : 18} color={fg} />
+      ) : null}
+      <Text
+        variant={size === 'sm' ? 'caption' : 'subheading'}
+        style={{ color: fg, fontWeight: '700' }}
+      >
         {label}
       </Text>
     </PressableScale>
@@ -338,6 +360,75 @@ export function Card({
   );
 }
 
+/**
+ * A small rounded label. Height comes from padding around a tight line box rather than a fixed
+ * height, and uppercase tracking is balanced on both sides, so the text sits centred
+ * with the system font on every platform.
+ */
+export function Badge({
+  label,
+  icon,
+  color,
+  background,
+  border,
+  size = 'md',
+  caps = false,
+  style,
+}: {
+  label: string;
+  icon?: IconName;
+  /** Text and icon colour. */
+  color: string;
+  background: string;
+  border?: string;
+  size?: 'sm' | 'md' | 'lg';
+  caps?: boolean;
+  style?: StyleProp<ViewStyle>;
+}) {
+  const fontSize = { sm: caps ? 9.5 : 11, md: caps ? 10.5 : 12, lg: 13 }[size];
+  const padY = { sm: 3, md: 5, lg: 7 }[size];
+  const tracking = caps ? 0.7 : 0;
+  return (
+    <View
+      style={[
+        {
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: size === 'sm' ? 4 : 5,
+          paddingVertical: padY,
+          paddingHorizontal: size === 'sm' ? 7 : size === 'md' ? 10 : 12,
+          borderRadius: 999,
+          backgroundColor: background,
+          borderWidth: border ? StyleSheet.hairlineWidth : 0,
+          borderColor: border,
+        },
+        style,
+      ]}
+    >
+      {icon ? <Ionicons name={icon} size={fontSize + 1} color={color} /> : null}
+      <RNText
+        numberOfLines={1}
+        style={{
+          fontSize,
+          lineHeight: Math.round(fontSize * 1.25),
+          fontWeight: '700',
+          color,
+          letterSpacing: tracking,
+          // Tracking also follows the last letter; matching it on the left keeps the label centred.
+          paddingLeft: tracking,
+          textTransform: caps ? 'uppercase' : 'none',
+          includeFontPadding: false,
+          textAlignVertical: 'center',
+          flexShrink: 1,
+        }}
+      >
+        {label}
+      </RNText>
+    </View>
+  );
+}
+
 export function Pill({
   label,
   icon,
@@ -354,29 +445,13 @@ export function Pill({
   const theme = useTheme();
   const tint = color ?? theme.accentText;
   return (
-    <View
-      style={[
-        {
-          flexDirection: 'row',
-          alignItems: 'center',
-          gap: 5,
-          paddingHorizontal: 10,
-          height: 26,
-          borderRadius: 13,
-          backgroundColor: filled ? tint : theme.colors.surfaceRaised,
-          alignSelf: 'flex-start',
-        },
-        style,
-      ]}
-    >
-      {icon ? <Ionicons name={icon} size={12} color={filled ? theme.colors.bg : tint} /> : null}
-      <Text
-        variant="caption"
-        style={{ color: filled ? theme.colors.bg : tint, fontWeight: '700', fontSize: 12 }}
-      >
-        {label}
-      </Text>
-    </View>
+    <Badge
+      label={label}
+      icon={icon}
+      color={filled ? theme.colors.bg : tint}
+      background={filled ? tint : theme.colors.surfaceRaised}
+      style={style}
+    />
   );
 }
 
@@ -597,6 +672,364 @@ export function KindIcon({
       }}
     >
       <Ionicons name={icon} size={size * 0.5} color={color} />
+    </View>
+  );
+}
+
+function alphaHex(hex: string, a: number) {
+  const n = parseInt(hex.replace('#', ''), 16);
+  return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${a})`;
+}
+
+/** Fills its parent with the accent: a diagonal gradient for blends, a flat colour otherwise. */
+export function AccentFill() {
+  const theme = useTheme();
+  if (theme.accentStops.length < 2)
+    return (
+      <View
+        pointerEvents="none"
+        style={[StyleSheet.absoluteFill, { backgroundColor: theme.accent }]}
+      />
+    );
+  return (
+    <LinearGradient
+      pointerEvents="none"
+      colors={theme.accentStops as [string, string]}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 1, y: 1 }}
+      style={StyleSheet.absoluteFill}
+    />
+  );
+}
+
+// ---- Action lists -------------------------------------------------------------------------------
+
+export type ListAction = {
+  label: string;
+  icon: IconName;
+  onPress: () => void;
+  tone?: 'default' | 'danger';
+  /** A short value on the right, such as the current setting. */
+  detail?: string;
+  busy?: boolean;
+};
+
+/** A grouped list of actions, as in an iOS action sheet or settings page. */
+export function ActionList({
+  actions,
+  style,
+}: {
+  actions: (ListAction | null | false | undefined)[];
+  style?: StyleProp<ViewStyle>;
+}) {
+  const theme = useTheme();
+  const buzz = useHaptics();
+  const rows = actions.filter((action): action is ListAction => !!action);
+  if (!rows.length) return null;
+  return (
+    <View
+      style={[
+        {
+          borderRadius: 18,
+          backgroundColor: theme.colors.surfaceRaised,
+          overflow: 'hidden',
+        },
+        style,
+      ]}
+    >
+      {rows.map((action, i) => {
+        const tint = action.tone === 'danger' ? theme.danger : theme.colors.text;
+        return (
+          <View key={action.label}>
+            {i ? <Divider inset={58} /> : null}
+            <Pressable
+              onPress={() => {
+                if (action.busy) return;
+                buzz('light');
+                action.onPress();
+              }}
+              accessibilityRole="button"
+              accessibilityLabel={action.label}
+              accessibilityState={{ busy: !!action.busy }}
+              style={({ pressed }) => ({
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: 14,
+                minHeight: 52,
+                paddingHorizontal: 14,
+                paddingVertical: 10,
+                backgroundColor: pressed ? theme.colors.border : 'transparent',
+              })}
+            >
+              <View
+                style={{
+                  width: 30,
+                  height: 30,
+                  borderRadius: 9,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  backgroundColor:
+                    action.tone === 'danger' ? theme.dangerSoft : theme.colors.surface,
+                }}
+              >
+                <Ionicons name={action.icon} size={16} color={tint} />
+              </View>
+              <Text variant="subheading" style={{ flex: 1, color: tint, fontWeight: '600' }}>
+                {action.label}
+              </Text>
+              {action.busy ? (
+                <ActivityIndicator size="small" color={theme.colors.textDim} />
+              ) : action.detail ? (
+                <Text variant="caption" color="muted">
+                  {action.detail}
+                </Text>
+              ) : null}
+            </Pressable>
+          </View>
+        );
+      })}
+    </View>
+  );
+}
+
+// ---- States ---------------------------------------------------------------------------------
+
+export function LoadingState({ label, style }: { label: string; style?: StyleProp<ViewStyle> }) {
+  const theme = useTheme();
+  return (
+    <View
+      accessibilityRole="progressbar"
+      accessibilityLabel={label}
+      style={[{ flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 14 }, style]}
+    >
+      <ActivityIndicator size="small" color={theme.accentText} />
+      <Text variant="caption">{label}</Text>
+    </View>
+  );
+}
+
+type Tone = 'neutral' | 'accent' | 'warning' | 'danger' | 'locked';
+
+export function Notice({
+  tone = 'neutral',
+  icon,
+  title,
+  children,
+  action,
+  onAction,
+  style,
+}: {
+  tone?: Tone;
+  icon?: IconName;
+  title?: string;
+  children?: ReactNode;
+  action?: string;
+  onAction?: () => void;
+  style?: StyleProp<ViewStyle>;
+}) {
+  const theme = useTheme();
+  const tint = {
+    neutral: theme.colors.textDim,
+    accent: theme.accentText,
+    warning: theme.warning,
+    danger: theme.danger,
+    locked: theme.locked,
+  }[tone];
+  const bg = {
+    neutral: theme.colors.surface,
+    accent: theme.accentSoft,
+    warning: theme.warningSoft,
+    danger: theme.dangerSoft,
+    locked: theme.lockedSoft,
+  }[tone];
+  const fallbackIcon: IconName =
+    tone === 'danger' ? 'alert-circle' : tone === 'warning' ? 'warning' : 'information-circle';
+  return (
+    <View
+      accessibilityRole={tone === 'danger' ? 'alert' : undefined}
+      style={[
+        {
+          flexDirection: 'row',
+          gap: 12,
+          padding: 14,
+          borderRadius: 18,
+          backgroundColor: bg,
+          borderWidth: StyleSheet.hairlineWidth,
+          borderColor: tone === 'neutral' ? theme.colors.border : alphaHex(tint, 0.4),
+        },
+        style,
+      ]}
+    >
+      <Ionicons name={icon ?? fallbackIcon} size={18} color={tint} style={{ marginTop: 1 }} />
+      <View style={{ flex: 1, gap: 2 }}>
+        {title ? <Text variant="subheading">{title}</Text> : null}
+        {typeof children === 'string' ? (
+          <Text variant="caption" color={title ? 'dim' : 'text'}>
+            {children}
+          </Text>
+        ) : (
+          children
+        )}
+        {action ? (
+          <Pressable onPress={onAction} hitSlop={8} style={{ marginTop: 6 }}>
+            <Text variant="caption" style={{ color: tint, fontWeight: '800' }}>
+              {action}
+            </Text>
+          </Pressable>
+        ) : null}
+      </View>
+    </View>
+  );
+}
+
+export function ErrorState({
+  message,
+  onRetry,
+  style,
+}: {
+  message: string;
+  onRetry?: () => void;
+  style?: StyleProp<ViewStyle>;
+}) {
+  return (
+    <Notice
+      tone="danger"
+      action={onRetry ? 'Try again' : undefined}
+      onAction={onRetry}
+      style={style}
+    >
+      {message}
+    </Notice>
+  );
+}
+
+export function EmptyState({
+  icon,
+  title,
+  children,
+  action,
+  dashed,
+  style,
+}: {
+  icon: IconName;
+  title: string;
+  children?: ReactNode;
+  action?: ReactNode;
+  dashed?: boolean;
+  style?: StyleProp<ViewStyle>;
+}) {
+  const theme = useTheme();
+  return (
+    <View
+      style={[
+        {
+          alignItems: 'center',
+          padding: 22,
+          borderRadius: 24,
+          backgroundColor: dashed ? 'transparent' : theme.colors.surface,
+          borderWidth: dashed ? 1.5 : StyleSheet.hairlineWidth,
+          borderStyle: dashed ? 'dashed' : 'solid',
+          borderColor: theme.colors.border,
+        },
+        style,
+      ]}
+    >
+      <View
+        style={{
+          width: 48,
+          height: 48,
+          borderRadius: 24,
+          backgroundColor: theme.accentSoft,
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
+        <Ionicons name={icon} size={22} color={theme.accentText} />
+      </View>
+      <Text variant="heading" style={{ marginTop: 14, textAlign: 'center' }}>
+        {title}
+      </Text>
+      {typeof children === 'string' ? (
+        <Text variant="body" color="dim" style={{ textAlign: 'center', marginTop: 6 }}>
+          {children}
+        </Text>
+      ) : (
+        children
+      )}
+      {action ? (
+        <View style={{ alignSelf: 'stretch', marginTop: 18, gap: 10 }}>{action}</View>
+      ) : null}
+    </View>
+  );
+}
+
+/** A screen title row with a back button, for pushed screens. */
+export function ScreenHeader({
+  title,
+  subtitle,
+  onBack,
+  right,
+}: {
+  title: string;
+  subtitle?: string;
+  onBack: () => void;
+  right?: ReactNode;
+}) {
+  return (
+    <View
+      style={{
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+        gap: 4,
+      }}
+    >
+      <IconButton icon="chevron-back" accessibilityLabel="Back" onPress={onBack} />
+      <View style={{ flex: 1 }}>
+        <Text variant="heading" numberOfLines={1}>
+          {title}
+        </Text>
+        {subtitle ? (
+          <Text variant="caption" numberOfLines={1}>
+            {subtitle}
+          </Text>
+        ) : null}
+      </View>
+      {right}
+    </View>
+  );
+}
+
+/** A headline number with its label and unit. */
+export function Stat({
+  label,
+  value,
+  unit,
+  size = 24,
+}: {
+  label: string;
+  value: string;
+  unit?: string;
+  size?: number;
+}) {
+  return (
+    <View>
+      <Text variant="label">{label}</Text>
+      <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 3, marginTop: 3 }}>
+        <Text
+          variant="heading"
+          numeric
+          style={{ fontSize: size, lineHeight: size + 4, fontWeight: '800', letterSpacing: -0.6 }}
+        >
+          {value}
+        </Text>
+        {unit ? (
+          <Text variant="caption" numeric>
+            {unit}
+          </Text>
+        ) : null}
+      </View>
     </View>
   );
 }

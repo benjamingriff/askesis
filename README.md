@@ -93,7 +93,8 @@ apps/
   agent/        Private coaching worker using the OpenAI Agents SDK
   web/          React, Vite, and React Router
   marketing/    Static Astro marketing site
-  mobile/       Separate Expo UI reference prototype
+  mobile/       Expo app (npm; API, Clerk, live updates)
+  mobile-prototype/  Expo design reference with scripted data
 packages/
   api-client/   Generated OpenAPI types and client factory
 database/

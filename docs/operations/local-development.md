@@ -8,7 +8,7 @@ pnpm install --frozen-lockfile
 cp .env.example .env
 ```
 
-Configure real Clerk development keys in the ignored `.env`. Placeholder keys cannot authenticate a browser. Keep secret/provider keys out of `VITE_*` variables. Root pnpm workspaces use `pnpm-lock.yaml`; the separate Expo reference app uses npm and its own lockfile.
+Configure real Clerk development keys in the ignored `.env`. Placeholder keys cannot authenticate a browser. Keep secret/provider keys out of `VITE_*` variables. Root pnpm workspaces use `pnpm-lock.yaml`; the Expo apps (`apps/mobile`, `apps/mobile-prototype`) use npm and their own lockfiles. To run the mobile app against this local API, see [its README](../../apps/mobile/README.md).
 
 ## Agent browser verification in a worktree
 
@@ -131,7 +131,7 @@ Use root commands from any worktree. `pnpm dev` is the normal main-app entry poi
 | `pnpm dev:marketing`                      | Static Astro site; no Docker/auth                       | Root `MARKETING_PORT`, `SITE_URL`, `APP_URL`, or shell overrides                           |
 | `pnpm dev:evals`                          | Local benchmark-artifact viewer; no Docker/auth         | Root `EVALS_PORT`, `EVALS_RESULTS_DIR`, or shell overrides                                 |
 | `pnpm dev:agent`                          | Worker; requires a running API and provider credentials | Separate `apps/agent/.env`; API URL derived from the worktree unless explicitly overridden |
-| `pnpm dev:mobile` / `pnpm dev:mobile:web` | Separate Expo prototype; no backend                     | Delegates to npm; first run `npm ci --prefix apps/mobile`                                  |
+| `pnpm dev:mobile` / `pnpm dev:mobile:web` | Expo app; calls this worktree's API through Metro       | Delegates to npm; first run `npm ci --prefix apps/mobile`; start the API with `pnpm dev`   |
 
 Marketing explicitly disables Astro’s agent-triggered backgrounding with `--ignore-lock`; the root supervisor handles its session lock. All these commands stay in the foreground and stop their owned process groups on Ctrl+C or `pnpm dev:stop [app]`. App-level `pnpm --filter @askesis/<app> dev` commands remain available when manually coordinating processes. Mobile remains outside the pnpm workspace with its own npm lockfile.
 
