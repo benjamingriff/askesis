@@ -10,3 +10,5 @@ apps/mobile-prototype/package-lock.json
 apps/mobile/.expo
 apps/mobile-prototype/.expo
 apps/marketing/.astro
+apps/mobile/.claude
+apps/mobile/.agents

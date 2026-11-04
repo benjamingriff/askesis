@@ -1,7 +1,6 @@
 import { OpenAPIHono } from '@hono/zod-openapi';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ClerkAPIResponseError } from '@clerk/backend/errors';
-import { resetApiConfigForTests } from '../config.js';
 import type { AppEnvironment } from './types.js';
 
 const authenticateRequest = vi.fn();
