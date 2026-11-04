@@ -367,7 +367,6 @@ export default function YouScreen() {
             style={{ marginHorizontal: 20, marginTop: 10 }}
           />
         ) : null}
-        <DeleteAccountSheet visible={deleting} onClose={() => setDeleting(false)} />
 
         <View style={{ paddingHorizontal: 20, marginTop: 24, gap: 10 }}>
           {error ? <ErrorState message={error} /> : null}
@@ -396,6 +395,9 @@ export default function YouScreen() {
           </Text>
         </View>
       </ScrollView>
+      {/* Outside the ScrollView: touches follow the React tree, and that ScrollView would take the
+          first tap to dismiss the keyboard instead of pressing Delete. */}
+      <DeleteAccountSheet visible={deleting} onClose={() => setDeleting(false)} />
     </Screen>
   );
 }
