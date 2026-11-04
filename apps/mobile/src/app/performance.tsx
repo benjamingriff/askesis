@@ -19,7 +19,9 @@ import {
   Text,
 } from '../components/ui';
 import { currentEntry, usePerformance, type Calibration } from '../data/plan-data';
+import { useAskAgent, useCoachWord } from '../data/account';
 import { api } from '../lib/api';
+import { agentPrompt } from '../lib/coach';
 import { formatDateTime, formatShortYear } from '../lib/format';
 import { useRequestKey } from '../lib/request-key';
 import { result } from '../lib/result';
@@ -42,6 +44,7 @@ import { zoneEffort } from '../theme/palette';
  */
 export default function PerformanceScreen() {
   const theme = useTheme();
+  const coach = useCoachWord();
   const insets = useSafeAreaInsets();
   const performance = usePerformance();
   const units = useUnits();
@@ -100,7 +103,7 @@ export default function PerformanceScreen() {
               Add another sport
             </Text>
             <Text variant="caption">
-              Only needed for sports you train. Your coach asks for these when a plan includes them.
+              {`Only needed for sports you train. Your ${coach} asks for these when a plan includes them.`}
             </Text>
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
               {hidden.map((system) => (
@@ -130,13 +133,13 @@ export default function PerformanceScreen() {
   );
 }
 
-const EMPTY: Record<System, string> = {
-  run_pace:
-    'No running fitness yet. Add a recent race or an estimated threshold pace, or tell your coach about a recent result.',
-  cycle_power:
-    'No cycling power yet. Add your FTP or a recent test, or ask your coach for an estimate.',
-  swim_pace:
-    'No swim paces yet. Add a 400/200 CSS test or an estimated CSS pace, or ask your coach.',
+const EMPTY: Record<System, (coach: string) => string> = {
+  run_pace: (coach) =>
+    `No running fitness yet. Add a recent race or an estimated threshold pace, or tell your ${coach} about a recent result.`,
+  cycle_power: (coach) =>
+    `No cycling power yet. Add your FTP or a recent test, or ask your ${coach} for an estimate.`,
+  swim_pace: (coach) =>
+    `No swim paces yet. Add a 400/200 CSS test or an estimated CSS pace, or ask your ${coach}.`,
 };
 
 function SystemCard({
@@ -152,6 +155,8 @@ function SystemCard({
   const { pool } = useSportUnits();
   const display = { units, pool };
   const meta = SYSTEM_META[system];
+  const coach = useCoachWord();
+  const askAgent = useAskAgent();
   return (
     <Card style={{ gap: 14 }}>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
@@ -209,7 +214,7 @@ function SystemCard({
         </>
       ) : (
         <Text variant="body" color="dim">
-          {EMPTY[system]}
+          {EMPTY[system](coach)}
         </Text>
       )}
       <View style={{ flexDirection: 'row', gap: 10 }}>
@@ -221,19 +226,25 @@ function SystemCard({
           onPress={() => router.push({ pathname: '/record-result', params: { system } })}
         />
         <Button
-          label="Ask coach"
+          label={coach === 'coach' ? 'Ask coach' : 'Ask agent'}
           icon="chatbubble-ellipses-outline"
           size="md"
           variant="secondary"
           style={{ flex: 1 }}
           onPress={() =>
-            router.push({
-              pathname: '/chat/[id]',
-              params: {
-                id: 'new',
-                prefill: `I have a new ${SPORT_META[SYSTEM_META[system].sport].noun} result to update my zones: `,
-              },
-            })
+            coach === 'agent'
+              ? askAgent(
+                  agentPrompt(
+                    `Help me update my ${meta.title.toLowerCase()}. Read my performance first, then ask me about recent results.`,
+                  ),
+                )
+              : router.push({
+                  pathname: '/chat/[id]',
+                  params: {
+                    id: 'new',
+                    prefill: `I have a new ${SPORT_META[SYSTEM_META[system].sport].noun} result to update my zones: `,
+                  },
+                })
           }
         />
       </View>
@@ -250,6 +261,7 @@ function History({
   units: ReturnType<typeof useUnits>;
 }) {
   const theme = useTheme();
+  const coach = useCoachWord();
   const { pool } = useSportUnits();
   const evidence = (entry: Calibration) => describeEvidence(entry, { units, pool });
   const client = useQueryClient();
@@ -323,11 +335,12 @@ function History({
               applies from {formatShortYear(entry.effectiveFrom)}
             </Text>
             {entry.recordedBy === 'coach' ? (
+              // Conversations are only shown with the in-app coach.
               <Text
                 variant="caption"
-                color={entry.conversationId ? 'accent' : 'muted'}
+                color={entry.conversationId && coach === 'coach' ? 'accent' : 'muted'}
                 onPress={
-                  entry.conversationId
+                  entry.conversationId && coach === 'coach'
                     ? () =>
                         router.push({
                           pathname: '/chat/[id]',
@@ -364,7 +377,7 @@ function History({
           </View>
         ))
       ) : (
-        <Text variant="caption">Results you or your coach record appear here.</Text>
+        <Text variant="caption">{`Results you or your ${coach} record appear here.`}</Text>
       )}
       <BottomSheet
         visible={!!withdrawing}

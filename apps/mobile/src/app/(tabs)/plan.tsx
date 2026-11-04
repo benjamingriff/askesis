@@ -14,6 +14,8 @@ import {
   Screen,
   Text,
 } from '../../components/ui';
+import { StartPlanButton } from '../../components/StartPlanButton';
+import { useCoachWord } from '../../data/account';
 import { useActivePlans } from '../../data/plan-data';
 import { formatRange } from '../../lib/format';
 import { usePlanSelection } from '../../state/plan-selection';
@@ -33,6 +35,7 @@ export default function PlanScreen() {
     selection?.planId === plan?.id && selection?.view === 'draft' && plan?.draft
       ? 'draft'
       : 'locked';
+  const coach = useCoachWord();
   const [switching, setSwitching] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -93,11 +96,7 @@ export default function PlanScreen() {
               title="No active plans"
               action={
                 <>
-                  <Button
-                    label="Plan with your coach"
-                    icon="chatbubble-ellipses"
-                    onPress={() => router.push('/coach')}
-                  />
+                  <StartPlanButton coachLabel="Plan with your coach" />
                   <Button
                     label="All plans"
                     icon="library-outline"
@@ -107,8 +106,7 @@ export default function PlanScreen() {
                 </>
               }
             >
-              Lock and activate a plan from your library to see its schedule here, or start one with
-              your coach.
+              {`Lock and activate a plan from your library to see its schedule here, or start one with your ${coach}.`}
             </EmptyState>
           </>
         ) : null}

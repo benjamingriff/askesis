@@ -15,6 +15,7 @@ import {
   Divider,
   type IconName,
 } from '../../components/ui';
+import { useInAppCoach } from '../../data/account';
 import { useActivePlans } from '../../data/plan-data';
 import { apiBaseUrl } from '../../lib/config';
 import {
@@ -135,6 +136,7 @@ export default function YouScreen() {
   const tabInset = useTabBarInset();
   const theme = useTheme();
   const { settings, update } = useSettings();
+  const coach = useInAppCoach();
   const { user } = useUser();
   const { signOut } = useClerk();
   const plans = useActivePlans();
@@ -300,12 +302,14 @@ export default function YouScreen() {
           />
         </Group>
 
-        <Group title="Coach">
-          <Row
-            icon="hammer"
-            label="Show tool activity"
-            right={switchRow(settings.showActivity, (showActivity) => update({ showActivity }))}
-          />
+        <Group title={coach ? 'Coach' : 'General'}>
+          {coach ? (
+            <Row
+              icon="hammer"
+              label="Show tool activity"
+              right={switchRow(settings.showActivity, (showActivity) => update({ showActivity }))}
+            />
+          ) : null}
           <Row
             icon="phone-portrait"
             label="Haptic feedback"

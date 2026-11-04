@@ -22,6 +22,8 @@ import {
   Stat,
   Text,
 } from '../../components/ui';
+import { StartPlanButton } from '../../components/StartPlanButton';
+import { useCoachWord } from '../../data/account';
 import { useOpenPlanChat } from '../../data/plan-actions';
 import {
   currentEntry,
@@ -105,11 +107,7 @@ export default function TodayScreen() {
             title="Let’s build your plan"
             action={
               <>
-                <Button
-                  label="Talk to your coach"
-                  icon="chatbubble-ellipses"
-                  onPress={() => router.push('/coach')}
-                />
+                <StartPlanButton coachLabel="Talk to your coach" />
                 <Button
                   label="All plans"
                   icon="library-outline"
@@ -136,7 +134,8 @@ function TodayForPlan({ plan, today }: { plan: Plan; today: string }) {
   const workouts = useWorkouts(version);
   const brief = useBriefState(plan.id, version);
   const units = useUnits(brief.data?.brief.unit);
-  const chat = useOpenPlanChat(plan.id);
+  const coach = useCoachWord();
+  const chat = useOpenPlanChat(plan);
   const [selected, setSelected] = useState(today);
   useEffect(() => setSelected(today), [today]);
   const days = useMemo(
@@ -296,7 +295,7 @@ function TodayForPlan({ plan, today }: { plan: Plan; today: string }) {
             action={
               unplanned && !plan.archived ? (
                 <Button
-                  label="Plan it with your coach"
+                  label={`Plan it with your ${coach}`}
                   icon="chatbubble-ellipses"
                   size="md"
                   busy={chat.isPending}

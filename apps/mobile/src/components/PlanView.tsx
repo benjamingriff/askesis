@@ -2,6 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { router, type Href } from 'expo-router';
 import { useMemo, useState, type ReactNode } from 'react';
 import { Pressable, View } from 'react-native';
+import { useCoachWord } from '../data/account';
 import { useOpenPlanChat, usePlanLifecycle, type LifecycleAction } from '../data/plan-actions';
 import {
   knownCoverage,
@@ -128,7 +129,8 @@ export function PlanView({
   const storedWeeks = blockQuery.data?.weeks ?? [];
   const changes = useDraftChanges(plan.id, view === 'draft' ? plan.draft : null);
   const units = useUnits(brief.data?.brief.unit);
-  const chat = useOpenPlanChat(plan.id);
+  const coach = useCoachWord();
+  const chat = useOpenPlanChat(plan);
   const lifecycle = usePlanLifecycle(plan);
   const askCoach = onAskCoach ?? ((prompt: string) => chat.mutate(prompt));
   const [confirm, setConfirm] = useState<Confirm>(null);
@@ -320,8 +322,8 @@ export function PlanView({
               {changes.data && hasChanges(changes.data)
                 ? describeChanges(changes.data)
                 : plan.locked
-                  ? `Your coach can edit this. Locked v${plan.locked.versionNumber} stays unchanged until you lock.`
-                  : 'Your coach can edit this. Review and lock it to start following it.'}
+                  ? `Your ${coach} can edit this. Locked v${plan.locked.versionNumber} stays unchanged until you lock.`
+                  : `Your ${coach} can edit this. Review and lock it to start following it.`}
             </Text>
           </View>
           {plan.archived ? null : (
@@ -369,7 +371,7 @@ export function PlanView({
           title="Nothing saved yet"
           dashed
         >
-          Ask your coach to plan your first weeks.
+          {`Ask your ${coach} to plan your first weeks.`}
         </EmptyState>
       ) : null}
 
@@ -556,7 +558,7 @@ function DraftChanges({ changes }: { changes: NonNullable<DraftChanges> }) {
 
 const CONFIRM_COPY = {
   unlock: {
-    body: 'Locking freezes your brief, pace guides and workouts together. Unlocking copies the current version into an editable draft. Your coach can then make changes, and you review and lock again when you are happy. The locked version stays unchanged.',
+    body: 'Locking freezes your brief, pace guides and workouts together. Unlocking copies the current version into an editable draft. Your {coach} can then make changes, and you review and lock again when you are happy. The locked version stays unchanged.',
     action: 'Unlock and edit',
     icon: 'lock-open' as IconName,
   },
@@ -604,6 +606,7 @@ function PlanActionsSheet({
   onReview: () => void;
   onOpen: (href: Href) => void;
 }) {
+  const coach = useCoachWord();
   const archived = plan.archived;
   const copy = confirm && confirm !== 'menu' ? CONFIRM_COPY[confirm] : null;
   return (
@@ -625,7 +628,7 @@ function PlanActionsSheet({
       {copy && confirm && confirm !== 'menu' ? (
         <>
           <Text variant="body" color="dim">
-            {copy.body}
+            {copy.body.replace('{coach}', coach)}
           </Text>
           {error ? <ErrorState message={error} style={{ marginTop: 14 }} /> : null}
           <View style={{ gap: 10, marginTop: 20 }}>
@@ -653,7 +656,8 @@ function PlanActionsSheet({
             actions={[
               !embedded &&
                 !archived && {
-                  label: 'Chat about this plan',
+                  label:
+                    coach === 'coach' ? 'Chat about this plan' : 'Ask your agent about this plan',
                   icon: 'chatbubble-ellipses-outline',
                   onPress: onCoach,
                 },
@@ -755,6 +759,7 @@ export function Schedule({
   today: string;
   onPlanRest?: () => void;
 }) {
+  const coach = useCoachWord();
   const weeks = useMemo(
     () => summarizeWeeks(workouts, startDate, endDate, coverage),
     [workouts, startDate, endDate, coverage],
@@ -785,7 +790,7 @@ export function Schedule({
         title="No workouts scheduled yet"
         dashed
       >
-        Your coach adds workouts as you plan together.
+        {`Your ${coach} adds workouts as you plan together.`}
       </EmptyState>
     );
 
@@ -870,7 +875,7 @@ export function Schedule({
                 action={
                   onPlanRest ? (
                     <Button
-                      label="Plan it with your coach"
+                      label={`Plan it with your ${coach}`}
                       icon="chatbubble-ellipses"
                       size="md"
                       onPress={onPlanRest}

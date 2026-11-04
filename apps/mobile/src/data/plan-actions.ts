@@ -1,27 +1,47 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { router } from 'expo-router';
 import { api } from '../lib/api';
+import { agentPrompt, REVIEW_PLAN_REQUEST } from '../lib/coach';
 import { newRequestKey } from '../lib/request-key';
 import { result } from '../lib/result';
 import { usePlanSelection } from '../state/plan-selection';
+import { useAskAgent, useInAppCoach } from './account';
 import { writePlan, type Plan } from './plan-data';
 
-/** Opens (or reuses) the plan's coaching conversation, optionally with a message to finish. */
-export function useOpenPlanChat(planId: string) {
+/**
+ * Opens (or reuses) the plan's coaching conversation, optionally with a message to finish. Without
+ * the in-app coach, it hands the same request to the athlete's own agent instead.
+ */
+export function useOpenPlanChat(plan: { id: string; displayName: string }) {
+  const coach = useInAppCoach();
+  const askAgent = useAskAgent();
   return useMutation({
-    mutationFn: async (prefill?: string) => ({
-      conversation: result(
-        await api.POST('/api/v1/plans/{planId}/conversations/open', {
-          params: { path: { planId } },
-        }),
-      ),
-      prefill,
-    }),
-    onSuccess: ({ conversation, prefill }) =>
-      router.push({
-        pathname: '/chat/[id]',
-        params: { id: conversation.id, ...(prefill ? { prefill } : {}) },
-      }),
+    mutationFn: async (prefill?: string) => {
+      if (!coach) {
+        askAgent(
+          agentPrompt(prefill || REVIEW_PLAN_REQUEST, { id: plan.id, name: plan.displayName }),
+        );
+        return null;
+      }
+      return {
+        conversation: result(
+          await api.POST('/api/v1/plans/{planId}/conversations/open', {
+            params: { path: { planId: plan.id } },
+          }),
+        ),
+        prefill,
+      };
+    },
+    onSuccess: (opened) => {
+      if (opened)
+        router.push({
+          pathname: '/chat/[id]',
+          params: {
+            id: opened.conversation.id,
+            ...(opened.prefill ? { prefill: opened.prefill } : {}),
+          },
+        });
+    },
   });
 }
 

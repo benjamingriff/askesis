@@ -4,12 +4,20 @@ import { useState } from 'react';
 import { View } from 'react-native';
 import { DateField, Field, FormScreen, FormSection, useLeaveGuard } from '../components/forms';
 import { ErrorState, Text } from '../components/ui';
+import { useAskAgent, useCoachWord, useInAppCoach } from '../data/account';
 import { api } from '../lib/api';
+import { agentPrompt, NEW_PLAN_REQUEST } from '../lib/coach';
 import { useRequestKey } from '../lib/request-key';
 import { result } from '../lib/result';
 
-/** Name a plan and set its dates; the coach talks it through before writing any workouts. */
+/**
+ * Name a plan and set its dates; the coach talks it through before writing any workouts. Without
+ * the in-app coach the plan opens on its own and the athlete's agent is asked instead.
+ */
 export default function NewPlanScreen() {
+  const inAppCoach = useInAppCoach();
+  const coach = useCoachWord();
+  const askAgent = useAskAgent();
   const client = useQueryClient();
   const requestKey = useRequestKey();
   const [name, setName] = useState('');
@@ -20,16 +28,20 @@ export default function NewPlanScreen() {
       result(
         await api.POST('/api/v1/plans', {
           params: { header: { 'idempotency-key': requestKey([name.trim(), startDate, endDate]) } },
-          body: { displayName: name.trim(), startDate, endDate, createConversation: true },
+          body: { displayName: name.trim(), startDate, endDate, createConversation: inAppCoach },
         }),
       ),
     onSuccess: async (plan) => {
       await client.invalidateQueries({ queryKey: ['plans'] });
-      guard.exit(() =>
-        plan.conversationId
-          ? router.replace({ pathname: '/chat/[id]', params: { id: plan.conversationId } })
-          : router.replace({ pathname: '/plans/[id]', params: { id: plan.id } }),
-      );
+      guard.exit(() => {
+        if (plan.conversationId) {
+          router.replace({ pathname: '/chat/[id]', params: { id: plan.conversationId } });
+          return;
+        }
+        router.replace({ pathname: '/plans/[id]', params: { id: plan.id } });
+        if (!inAppCoach)
+          askAgent(agentPrompt(NEW_PLAN_REQUEST, { id: plan.id, name: plan.displayName }));
+      });
     },
   });
   const guard = useLeaveGuard(!!(name || startDate || endDate), { busy: create.isPending });
@@ -44,8 +56,7 @@ export default function NewPlanScreen() {
       onSave={() => create.mutate()}
     >
       <Text variant="body" color="dim">
-        Name it and set the dates. Your coach will talk it through with you before writing any
-        workouts.
+        {`Name it and set the dates. Your ${coach} will talk it through with you before writing any workouts.`}
       </Text>
       <FormSection>
         <Field
