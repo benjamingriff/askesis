@@ -1,6 +1,6 @@
 # Askesis documentation
 
-Start with the [current handoff](./current-handoff.md) for priorities and verified delivery status. The current direction is continued responsive web development, drawing selected features from the mobile prototype; native integration is deferred.
+Start with the [current handoff](./current-handoff.md) for priorities and verified delivery status. The current direction is continued responsive web development, with the Expo app (`apps/mobile`) now connected to the same API; `apps/mobile-prototype` is the design reference.
 
 | Area         | What belongs here                                                        | Start here                                     |
 | ------------ | ------------------------------------------------------------------------ | ---------------------------------------------- |

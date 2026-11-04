@@ -6,4 +6,6 @@ packages/api-client/src/schema.ts
 pnpm-lock.yaml
 database/fixtures/
 apps/mobile/package-lock.json
+apps/mobile-prototype/package-lock.json
 apps/mobile/.expo
+apps/mobile-prototype/.expo

@@ -8,7 +8,7 @@ pnpm install --frozen-lockfile
 cp .env.example .env
 ```
 
-Configure real Clerk development keys in the ignored `.env`. Placeholder keys cannot authenticate a browser. Keep secret/provider keys out of `VITE_*` variables. Root pnpm workspaces use `pnpm-lock.yaml`; the separate Expo reference app uses npm and its own lockfile.
+Configure real Clerk development keys in the ignored `.env`. Placeholder keys cannot authenticate a browser. Keep secret/provider keys out of `VITE_*` variables. Root pnpm workspaces use `pnpm-lock.yaml`; the Expo apps (`apps/mobile`, `apps/mobile-prototype`) use npm and their own lockfiles. To run the mobile app against this local API, see [its README](../../apps/mobile/README.md).
 
 ## Agent browser verification in a worktree
 

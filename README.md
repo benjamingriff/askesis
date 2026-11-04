@@ -79,7 +79,8 @@ apps/
   api/          Hono API and Kysely repositories
   agent/        Private coaching worker using the OpenAI Agents SDK
   web/          React, Vite, and React Router
-  mobile/       Separate Expo UI reference prototype
+  mobile/       Expo app (npm; API, Clerk, live updates)
+  mobile-prototype/  Expo design reference with scripted data
 packages/
   api-client/   Generated OpenAPI types and client factory
 database/

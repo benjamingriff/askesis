@@ -1,6 +1,6 @@
 # Product guidance
 
-The owner is continuing development of the responsive web app and will choose further features from the mobile prototype in separate threads. Native integration is deferred. The [current handoff](../current-handoff.md) records the latest priorities; the [V1 development plan](./v1-poc-development-plan.md) retains the broader roadmap, including Phase 8 release readiness and the Phase 9 backlog.
+The owner is continuing development of the responsive web app and will choose further features from the mobile prototype in separate threads. The Expo app (`apps/mobile`) now runs on the same API. The [current handoff](../current-handoff.md) records the latest priorities; the [V1 development plan](./v1-poc-development-plan.md) retains the broader roadmap, including Phase 8 release readiness and the Phase 9 backlog.
 
 ## Behavior contracts
 
@@ -19,6 +19,7 @@ These guides describe implemented behavior and were reconciled against code on 2
 - [Running pace calculation](./run-pace-v1.md): equations, coefficients and range policy.
 - [Cycling power zones](./cycle-power-v1.md): FTP protocols and Coggan zones.
 - [Swim pace zones](./swim-css-v1.md): the critical swim speed test and zone bands.
-- [Mobile reference prototype](../../apps/mobile/README.md): the dummy app used as a source of web feature and interaction ideas.
+- [Mobile app](../../apps/mobile/README.md): the Expo client on the real API.
+- [Mobile reference prototype](../../apps/mobile-prototype/README.md): the dummy app used as a source of feature and interaction ideas.
 
 Completed delivery plans and test evidence live in the [archive](../archive/README.md). Runtime limits and recovery procedures live in [operations](../operations/README.md).

@@ -4,7 +4,7 @@
 
 Accepted for the v1 prototype.
 
-**Scope clarification, 2026-10-06:** This decision governs the root pnpm workspace, CI and production services. The separate [Expo reference prototype](../../apps/mobile/README.md) is explicitly excluded from that workspace and uses npm with its own lockfile. The sole-lockfile statement below applies to the pnpm-managed workspaces.
+**Scope clarification, 2026-10-06:** This decision governs the root pnpm workspace, CI and production services. The Expo apps ([`apps/mobile`](../../apps/mobile/README.md) and the [reference prototype](../../apps/mobile-prototype/README.md)) are explicitly excluded from that workspace and use npm with their own lockfiles. The sole-lockfile statement below applies to the pnpm-managed workspaces.
 
 ## Context
 

@@ -1,4 +1,4 @@
-// Shared with the mobile prototype (apps/mobile/src/theme/palette.ts) so both clients read as one
+// Mirrored by the mobile app (apps/mobile/src/theme/palette.ts) so both clients read as one
 // product. Keep the theme, accent and effort values in step when either side changes.
 
 import type { BlockPhase } from '@askesis/api-client';

@@ -1,9 +1,13 @@
+import { useClerk, useUser } from '@clerk/expo';
 import { useTabBarInset } from '../../components/FloatingTabBar';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import type { ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import { ScrollView, Switch, View } from 'react-native';
 import {
+  AccentFill,
+  Button,
+  ErrorState,
   PressableScale,
   Screen,
   Segmented,
@@ -11,9 +15,24 @@ import {
   Divider,
   type IconName,
 } from '../../components/ui';
-import { formatPace, PACE_GUIDES } from '../../lib/metrics';
-import { useSettings, useTheme, type Units } from '../../state/settings';
+import { useActivePlans } from '../../data/plan-data';
+import { apiBaseUrl } from '../../lib/config';
+import {
+  useSettings,
+  useTheme,
+  type LoadUnits,
+  type PoolUnits,
+  type UnitPreference,
+} from '../../state/settings';
 import { THEME_BY_ID } from '../../theme/palette';
+
+/** "Local Verification" → "LV"; one word → its first letter. */
+export function initials(name: string) {
+  const words = name.trim().split(/\s+/).filter(Boolean);
+  return (
+    (words[0]?.[0] ?? '') + (words.length > 1 ? (words.at(-1)?.[0] ?? '') : '')
+  ).toUpperCase();
+}
 
 function Group({ title, children }: { title?: string; children: ReactNode }) {
   const theme = useTheme();
@@ -116,7 +135,22 @@ export default function YouScreen() {
   const tabInset = useTabBarInset();
   const theme = useTheme();
   const { settings, update } = useSettings();
+  const { user } = useUser();
+  const { signOut } = useClerk();
+  const plans = useActivePlans();
+  const [signingOut, setSigningOut] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const themeDef = THEME_BY_ID[theme.themeId];
+  const email = user?.primaryEmailAddress?.emailAddress;
+  const name = user?.fullName || user?.firstName || email?.split('@')[0] || 'Athlete';
+  const switchRow = (value: boolean, onValueChange: (value: boolean) => void) => (
+    <Switch
+      value={value}
+      onValueChange={onValueChange}
+      trackColor={{ true: theme.accent, false: theme.colors.surfaceRaised }}
+      thumbColor="#FFFFFF"
+    />
+  );
 
   return (
     <Screen>
@@ -129,7 +163,11 @@ export default function YouScreen() {
         </View>
 
         <View style={{ paddingHorizontal: 20, marginTop: 18 }}>
-          <View
+          <PressableScale
+            onPress={() => router.push('/account')}
+            accessibilityRole="button"
+            accessibilityLabel="Manage account"
+            scaleTo={0.985}
             style={{
               flexDirection: 'row',
               alignItems: 'center',
@@ -146,19 +184,47 @@ export default function YouScreen() {
                 width: 56,
                 height: 56,
                 borderRadius: 28,
-                backgroundColor: theme.accent,
                 alignItems: 'center',
                 justifyContent: 'center',
+                overflow: 'hidden',
               }}
             >
-              <Ionicons name="person" size={26} color={theme.onAccent} />
+              <AccentFill />
+              <Text variant="heading" style={{ color: theme.onAccent }}>
+                {initials(name)}
+              </Text>
             </View>
             <View style={{ flex: 1 }}>
-              <Text variant="heading">Alpha runner</Text>
-              <Text variant="caption">Autumn Half Marathon · private alpha</Text>
+              <Text variant="heading" numberOfLines={1}>
+                {name}
+              </Text>
+              <Text variant="caption" numberOfLines={1}>
+                {email ?? 'Signed in'}
+              </Text>
+              {plans.data?.length ? (
+                <Text variant="caption" color="muted" numberOfLines={1}>
+                  {plans.data.map((plan) => plan.displayName).join(' · ')}
+                </Text>
+              ) : null}
             </View>
-          </View>
+            <Ionicons name="chevron-forward" size={16} color={theme.colors.textMuted} />
+          </PressableScale>
         </View>
+
+        <Group title="Training">
+          <Row
+            icon="speedometer"
+            label="Performance & zones"
+            onPress={() => router.push('/performance')}
+          />
+          <Row
+            icon="library-outline"
+            label="All plans"
+            value={plans.data ? `${plans.data.length} active` : undefined}
+            onPress={() => router.push('/plans')}
+            last
+          />
+        </Group>
 
         <Group title="Look & feel">
           <Row
@@ -173,43 +239,64 @@ export default function YouScreen() {
                   width: 18,
                   height: 18,
                   borderRadius: 9,
-                  backgroundColor: theme.accent,
+                  overflow: 'hidden',
                   marginRight: 4,
                 }}
-              />
+              >
+                <AccentFill />
+              </View>
             }
+            last
           />
+        </Group>
+
+        <Group title="Units">
           <Row
             icon="resize"
-            label="Units"
-            last
+            label="Distance"
             right={
-              <Segmented<Units>
+              <Segmented<UnitPreference>
                 value={settings.units}
                 onChange={(units) => update({ units })}
-                style={{ width: 112 }}
+                style={{ width: 150 }}
                 options={[
+                  { value: 'plan', label: 'Plan' },
                   { value: 'km', label: 'km' },
                   { value: 'mi', label: 'mi' },
                 ]}
               />
             }
           />
-        </Group>
-
-        <Group title="Training">
           <Row
-            icon="speedometer"
-            label="Pace guides"
-            value={`Threshold ${formatPace(PACE_GUIDES.threshold.max, settings.units)}`}
-            onPress={() => router.push('/pace-guides')}
+            icon="water-outline"
+            label="Pool"
+            right={
+              <Segmented<PoolUnits>
+                value={settings.pool}
+                onChange={(pool) => update({ pool })}
+                style={{ width: 112 }}
+                options={[
+                  { value: 'm', label: 'm' },
+                  { value: 'yd', label: 'yd' },
+                ]}
+              />
+            }
           />
           <Row
-            icon="document-text"
-            label="Plan brief"
-            value="Confirmed"
-            onPress={() => router.push('/lock-review')}
+            icon="barbell-outline"
+            label="Loads"
             last
+            right={
+              <Segmented<LoadUnits>
+                value={settings.load}
+                onChange={(load) => update({ load })}
+                style={{ width: 112 }}
+                options={[
+                  { value: 'kg', label: 'kg' },
+                  { value: 'lb', label: 'lb' },
+                ]}
+              />
+            }
           />
         </Group>
 
@@ -217,36 +304,40 @@ export default function YouScreen() {
           <Row
             icon="hammer"
             label="Show tool activity"
-            right={
-              <Switch
-                value={settings.showActivity}
-                onValueChange={(showActivity) => update({ showActivity })}
-                trackColor={{ true: theme.accent, false: theme.colors.surfaceRaised }}
-                thumbColor="#FFFFFF"
-              />
-            }
+            right={switchRow(settings.showActivity, (showActivity) => update({ showActivity }))}
           />
           <Row
             icon="phone-portrait"
             label="Haptic feedback"
             last
-            right={
-              <Switch
-                value={settings.haptics}
-                onValueChange={(haptics) => update({ haptics })}
-                trackColor={{ true: theme.accent, false: theme.colors.surfaceRaised }}
-                thumbColor="#FFFFFF"
-              />
-            }
+            right={switchRow(settings.haptics, (haptics) => update({ haptics }))}
           />
         </Group>
 
-        <View style={{ paddingHorizontal: 24, marginTop: 28, alignItems: 'center', gap: 4 }}>
+        <View style={{ paddingHorizontal: 20, marginTop: 24, gap: 10 }}>
+          {error ? <ErrorState message={error} /> : null}
+          <Button
+            label="Sign out"
+            icon="log-out-outline"
+            variant="ghost"
+            busy={signingOut}
+            onPress={() => {
+              setSigningOut(true);
+              setError(null);
+              signOut().catch((caught: unknown) => {
+                setSigningOut(false);
+                setError(caught instanceof Error ? caught.message : 'Sign-out failed.');
+              });
+            }}
+          />
+        </View>
+
+        <View style={{ paddingHorizontal: 24, marginTop: 20, alignItems: 'center', gap: 4 }}>
           <Text variant="caption" color="muted">
-            Askesis prototype · v0.1.0
+            Askesis · v0.1.0
           </Text>
           <Text variant="caption" color="muted" style={{ textAlign: 'center' }}>
-            Demo data only — nothing here is synced to the API yet.
+            {apiBaseUrl() ? `API ${apiBaseUrl()}` : 'API on this origin'}
           </Text>
         </View>
       </ScrollView>

@@ -3,6 +3,7 @@ packages:
   - 'packages/*'
   # Expo app is installed with npm (Metro needs a flat node_modules); see apps/mobile/README.md
   - '!apps/mobile'
+  - '!apps/mobile-prototype'
 
 engineStrict: true
 

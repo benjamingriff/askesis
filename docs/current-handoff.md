@@ -1,18 +1,20 @@
 # Current agent handoff
 
 **Updated:** 2026-10-07
-**Current direction:** Continue developing the responsive web app, drawing selected features from the mobile prototype. Native integration is deferred.
+**Current direction:** Continue developing the responsive web app, and bring the Expo app (`apps/mobile`) in line with it against the real API. The original prototype is kept as `apps/mobile-prototype`.
 **Delivery status:** Phases 1–7 are implemented. Phase 7 is merged into `main`; local validation and development account policy are verified. Hosted deployment and release walkthrough have not been verified in this documentation update.
 
 ## Current priorities
 
 The owner will continue improving the web app until happy with it, choosing further features and interactions from the Expo dummy app in separate threads. Some prototype features are already implemented on the web. There is no fixed feature list established here; this thread changes documentation only. Preserve the mobile app as a reference.
 
-The intended friends-and-family experience is the web app, including use in a mobile browser. Native integration has no scheduled next step and is not a prerequisite for sharing the web app with friends. This supersedes the native-first recommendation in earlier delivery records.
+The intended friends-and-family experience is the web app, including use in a mobile browser. The Expo app (`apps/mobile`) now runs against the same API and is being brought in line with the web; it is not a prerequisite for sharing the web app with friends. This supersedes the native-first recommendation in earlier delivery records.
 
 Phase 8 remains the release-readiness checklist for invitations: access restrictions, authorization verification, rate and spending controls, backups, privacy/data-removal procedures, and release smoke testing. These checks are not marked complete by the direction change. Phase 9 remains a post-alpha backlog to prioritize from usage. Markdown export remains removed from the product roadmap.
 
 ## Recent decisions
+
+- 2026-10-08: native work resumed. The prototype moved to `apps/mobile-prototype` (design reference, unchanged); `apps/mobile` is a copy connected to the API with Clerk sign-in, live updates and the web's plan, chat and lifecycle flows. The API now verifies session tokens without an `azp` claim (native apps) without the browser-origin allowlist. See [the mobile README](../apps/mobile/README.md).
 
 - 2026-10-07: plans can train running, cycling, swimming and strength, alone or combined ([ADR 0006](./adr/0006-multisport-plans.md)). `cycle_power` (FTP) and `swim_pace` (CSS) join `run_pace`; strength uses reps in reserve and suggested loads without calibration; the brief holds one baseline per sport. No heart-rate zones for now. Development fixtures add an Olympic triathlon and a Hyrox plan beside Cardiff.
 - 2026-10-07: fitness calibration moved from plan versions to the athlete ([ADR 0005](./adr/0005-athlete-owned-performance.md)). An account has one athlete; every plan is for them. Results form an append-only timeline per system (`run_pace` today, designed for swim/bike/strength systems next), apply from today in every plan, and are recorded on the web Performance page or by the coach from any chat. The athlete's timezone now follows their device. The migration truncated pre-alpha plan and coaching data.

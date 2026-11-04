@@ -3,6 +3,7 @@ import { router } from 'expo-router';
 import { useState } from 'react';
 import { ScrollView, TextInput, View, Platform } from 'react-native';
 import {
+  AccentFill,
   Button,
   IconButton,
   PressableScale,
@@ -12,7 +13,19 @@ import {
   useHaptics,
 } from '../components/ui';
 import { buildTheme, useSettings, type ThemeMode } from '../state/settings';
-import { ACCENTS, isValidHex, normalizeHex, THEMES, type ThemeDefinition } from '../theme/palette';
+import { LinearGradient } from 'expo-linear-gradient';
+import {
+  ACCENT_BY_ID,
+  accentClash,
+  accentStops,
+  EFFORT_META,
+  EFFORTS,
+  isValidHex,
+  normalizeHex,
+  ACCENTS,
+  THEMES,
+  type ThemeDefinition,
+} from '../theme/palette';
 import { useColorScheme } from 'react-native';
 
 /** A little phone-shaped preview that renders with an arbitrary theme + accent. */
@@ -41,7 +54,7 @@ function Preview() {
           }}
         >
           <Text variant="caption" color="accent" style={{ fontWeight: '800', fontSize: 11.5 }}>
-            Week 5 of 12
+            Week 2 of 8
           </Text>
         </View>
       </View>
@@ -54,8 +67,8 @@ function Preview() {
           borderColor: theme.colors.border,
         }}
       >
-        <Text variant="label" style={{ color: '#FBBF24' }}>
-          Tempo
+        <Text variant="label" style={{ color: theme.efforts.threshold }}>
+          Threshold
         </Text>
         <Text variant="subheading" style={{ marginTop: 2 }}>
           2 × 10 min tempo
@@ -77,7 +90,12 @@ function Preview() {
                 height: 30 * h,
                 borderTopLeftRadius: 4,
                 borderTopRightRadius: 4,
-                backgroundColor: h > 0.6 ? '#FBBF24' : h < 0.3 ? '#7DD3FC' : '#34D399',
+                backgroundColor:
+                  h > 0.6
+                    ? theme.efforts.threshold
+                    : h < 0.3
+                      ? theme.efforts.recovery
+                      : theme.efforts.easy,
               }}
             />
           ))}
@@ -119,11 +137,12 @@ function Preview() {
             width: 40,
             height: 40,
             borderRadius: 20,
-            backgroundColor: theme.accent,
             alignItems: 'center',
             justifyContent: 'center',
+            overflow: 'hidden',
           }}
         >
+          <AccentFill />
           <Ionicons name="arrow-up" size={20} color={theme.onAccent} />
         </View>
       </View>
@@ -189,10 +208,9 @@ export default function AppearanceScreen() {
   const buzz = useHaptics();
   const system = useColorScheme() === 'light' ? 'light' : 'dark';
   const [hex, setHex] = useState('');
-  const customActive = !ACCENTS.some(
-    (a) => a.color.toLowerCase() === settings.accent.toLowerCase(),
-  );
+  const customActive = !ACCENT_BY_ID[settings.accent];
   const hexValid = isValidHex(hex);
+  const clash = hexValid ? accentClash(hex) : null;
 
   const pickTheme = (def: ThemeDefinition) => {
     update(
@@ -279,12 +297,13 @@ export default function AppearanceScreen() {
         </Text>
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 14 }}>
           {ACCENTS.map((a) => {
-            const selected = a.color.toLowerCase() === settings.accent.toLowerCase();
+            const selected = a.id === settings.accent;
+            const stops = accentStops(a.id, theme.isDark ? 'dark' : 'light');
             return (
               <PressableScale
                 key={a.id}
                 haptic="select"
-                onPress={() => update({ accent: a.color })}
+                onPress={() => update({ accent: a.id })}
                 accessibilityRole="button"
                 accessibilityLabel={`${a.name} accent`}
                 accessibilityState={{ selected }}
@@ -295,18 +314,27 @@ export default function AppearanceScreen() {
                     width: 52,
                     height: 52,
                     borderRadius: 26,
-                    backgroundColor: a.color,
+                    backgroundColor: stops[0],
                     alignItems: 'center',
                     justifyContent: 'center',
                     borderWidth: 3,
                     borderColor: selected ? theme.colors.text : 'transparent',
+                    overflow: 'hidden',
                   }}
                 >
+                  {stops.length > 1 ? (
+                    <LinearGradient
+                      colors={stops as [string, string]}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 1 }}
+                      style={{ position: 'absolute', inset: 0 }}
+                    />
+                  ) : null}
                   {selected ? (
                     <Ionicons
                       name="checkmark"
                       size={22}
-                      color={buildTheme({ ...settings, accent: a.color }, system).onAccent}
+                      color={buildTheme({ ...settings, accent: a.id }, system).onAccent}
                     />
                   ) : null}
                 </View>
@@ -345,7 +373,7 @@ export default function AppearanceScreen() {
                 backgroundColor: hexValid
                   ? normalizeHex(hex)
                   : customActive
-                    ? settings.accent
+                    ? theme.accent
                     : theme.colors.surfaceRaised,
               }}
             />
@@ -374,6 +402,50 @@ export default function AppearanceScreen() {
               setHex('');
             }}
           />
+        </View>
+        {clash ? (
+          <Text variant="caption" style={{ marginTop: 8, color: theme.warning }}>
+            This is close to the {EFFORT_META[clash].label.toLowerCase()} effort colour, so workouts
+            and controls may be hard to tell apart.
+          </Text>
+        ) : null}
+
+        <Text variant="label" style={{ marginTop: 28, marginBottom: 6 }}>
+          Workout colours
+        </Text>
+        <Text variant="caption" style={{ marginBottom: 12 }}>
+          Colour shows effort, from recovery to max. Icons show the sport. Workout colours stay the
+          same whatever accent you choose.
+        </Text>
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+          {EFFORTS.map((effort) => (
+            <View
+              key={effort}
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: 6,
+                paddingHorizontal: 10,
+                paddingVertical: 6,
+                borderRadius: 14,
+                backgroundColor: theme.colors.surface,
+                borderWidth: 1,
+                borderColor: theme.colors.border,
+              }}
+            >
+              <View
+                style={{
+                  width: 10,
+                  height: 10,
+                  borderRadius: 5,
+                  backgroundColor: theme.efforts[effort],
+                }}
+              />
+              <Text variant="caption" color="text" style={{ fontWeight: '700' }}>
+                {EFFORT_META[effort].label}
+              </Text>
+            </View>
+          ))}
         </View>
       </ScrollView>
     </Screen>

@@ -11,6 +11,7 @@ export default tseslint.config(
       '**/dist/**',
       '**/coverage/**',
       'apps/mobile/**',
+      'apps/mobile-prototype/**',
       'apps/api/src/database/generated.ts',
       'packages/api-client/src/schema.ts',
     ],
