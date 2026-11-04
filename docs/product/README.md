@@ -33,6 +33,7 @@ These guides describe implemented behavior and were reconciled against code on 2
 - [Swim pace zones](./swim-css-v1.md): the critical swim speed test and zone bands.
 - [Mobile app](../../apps/mobile/README.md): the Expo client on the real API.
 - [Mobile reference prototype](../../apps/mobile-prototype/README.md): the dummy app used as a source of feature and interaction ideas.
+- [Waddle app icon](./waddle-app-icon.md): the chosen icon for the Waddle rebrand and the first-round candidates. Not yet used in the app.
 
 ## Explorations
 
