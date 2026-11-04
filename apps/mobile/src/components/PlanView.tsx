@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router, type Href } from 'expo-router';
 import { useMemo, useState, type ReactNode } from 'react';
-import { Pressable, View } from 'react-native';
+import { Pressable, ScrollView, View } from 'react-native';
 import { useCoachWord } from '../data/account';
 import {
   useDeletePlan,
@@ -673,7 +673,12 @@ function PlanActionsSheet({
           </View>
         </>
       ) : (
-        <View style={{ gap: 12 }}>
+        // On short screens the options outgrow the sheet; the destructive ones are last.
+        <ScrollView
+          style={{ flexShrink: 1 }}
+          contentContainerStyle={{ gap: 12 }}
+          showsVerticalScrollIndicator={false}
+        >
           {!archived && plan.draft ? (
             <Button label="Review & lock" icon="lock-closed" onPress={onReview} />
           ) : null}
@@ -760,7 +765,7 @@ function PlanActionsSheet({
             ]}
           />
           {error ? <ErrorState message={error} /> : null}
-        </View>
+        </ScrollView>
       )}
     </BottomSheet>
   );
