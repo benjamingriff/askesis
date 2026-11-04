@@ -304,6 +304,7 @@ export function Field({
   suffix,
   autoFocus,
   secure,
+  autoCapitalize,
   hideLabel,
   style,
 }: {
@@ -315,6 +316,8 @@ export function Field({
   onChangeText: (value: string) => void;
   /** A password: hidden, never autocorrected. */
   secure?: boolean;
+  /** Overrides the keyboard's capitalisation, for example to type a confirmation word. */
+  autoCapitalize?: 'none' | 'sentences' | 'words' | 'characters';
   placeholder?: string;
   multiline?: boolean;
   keyboardType?: KeyboardTypeOptions;
@@ -344,8 +347,8 @@ export function Field({
           maxLength={maxLength}
           autoFocus={autoFocus}
           secureTextEntry={secure}
-          autoCapitalize={secure ? 'none' : undefined}
-          autoCorrect={secure ? false : undefined}
+          autoCapitalize={autoCapitalize ?? (secure ? 'none' : undefined)}
+          autoCorrect={secure || autoCapitalize ? false : undefined}
           accessibilityLabel={label}
           onFocus={() => setFocused(true)}
           onBlur={() => setFocused(false)}

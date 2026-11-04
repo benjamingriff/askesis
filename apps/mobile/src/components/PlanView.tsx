@@ -1,9 +1,15 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router, type Href } from 'expo-router';
 import { useMemo, useState, type ReactNode } from 'react';
-import { Pressable, View } from 'react-native';
+import { Pressable, ScrollView, View } from 'react-native';
 import { useCoachWord } from '../data/account';
-import { useOpenPlanChat, usePlanLifecycle, type LifecycleAction } from '../data/plan-actions';
+import {
+  useDeletePlan,
+  useDeletionImpact,
+  useOpenPlanChat,
+  usePlanLifecycle,
+  type LifecycleAction,
+} from '../data/plan-actions';
 import {
   knownCoverage,
   planVersion,
@@ -87,7 +93,7 @@ export function planProgress(start: string | null, end: string | null, today: st
 export const openWorkout = (workout: Pick<WorkoutSummary, 'id'>) =>
   router.push({ pathname: '/workout/[id]', params: { id: workout.id } });
 
-type Confirm = Exclude<LifecycleAction, 'activate' | 'deactivate'> | 'menu' | null;
+type Confirm = Exclude<LifecycleAction, 'activate' | 'deactivate'> | 'delete' | 'menu' | null;
 
 /**
  * One plan, end to end: state, lifecycle actions, shape, schedule and zones. Inside a chat it is
@@ -132,6 +138,7 @@ export function PlanView({
   const coach = useCoachWord();
   const chat = useOpenPlanChat(plan);
   const lifecycle = usePlanLifecycle(plan);
+  const remove = useDeletePlan(plan);
   const askCoach = onAskCoach ?? ((prompt: string) => chat.mutate(prompt));
   const [confirm, setConfirm] = useState<Confirm>(null);
   const progress = planProgress(version?.startDate ?? null, version?.endDate ?? null, today);
@@ -467,6 +474,16 @@ export function PlanView({
           setConfirm(null);
           router.push(href);
         }}
+        remove={remove}
+        onDeleted={() => {
+          setConfirm(null);
+          // Every screen showing the plan goes; the library offers Undo.
+          if (router.canDismiss()) router.dismissAll();
+          router.push({
+            pathname: '/plans',
+            params: { deleted: plan.id, deletedName: plan.displayName },
+          });
+        }}
       />
     </View>
   );
@@ -592,6 +609,8 @@ function PlanActionsSheet({
   onCoach,
   onReview,
   onOpen,
+  remove,
+  onDeleted,
 }: {
   plan: Plan;
   confirm: Confirm;
@@ -605,27 +624,33 @@ function PlanActionsSheet({
   onCoach: () => void;
   onReview: () => void;
   onOpen: (href: Href) => void;
+  remove: ReturnType<typeof useDeletePlan>;
+  onDeleted: () => void;
 }) {
   const coach = useCoachWord();
   const archived = plan.archived;
-  const copy = confirm && confirm !== 'menu' ? CONFIRM_COPY[confirm] : null;
+  const copy = confirm && confirm !== 'menu' && confirm !== 'delete' ? CONFIRM_COPY[confirm] : null;
   return (
     <BottomSheet
       visible={!!confirm}
-      onClose={onClose}
+      onClose={remove.isPending ? () => undefined : onClose}
       title={
-        confirm === 'unlock'
-          ? `Plan v${plan.locked?.versionNumber ?? ''} is locked`
-          : confirm === 'discard'
-            ? 'Discard this draft?'
-            : confirm === 'archive'
-              ? 'Archive this plan?'
-              : confirm === 'unarchive'
-                ? 'Unarchive this plan?'
-                : plan.displayName
+        confirm === 'delete'
+          ? `Delete “${plan.displayName}”?`
+          : confirm === 'unlock'
+            ? `Plan v${plan.locked?.versionNumber ?? ''} is locked`
+            : confirm === 'discard'
+              ? 'Discard this draft?'
+              : confirm === 'archive'
+                ? 'Archive this plan?'
+                : confirm === 'unarchive'
+                  ? 'Unarchive this plan?'
+                  : plan.displayName
       }
     >
-      {copy && confirm && confirm !== 'menu' ? (
+      {confirm === 'delete' ? (
+        <DeletePlanConfirm plan={plan} remove={remove} onClose={onClose} onDeleted={onDeleted} />
+      ) : copy && confirm && confirm !== 'menu' ? (
         <>
           <Text variant="body" color="dim">
             {copy.body.replace('{coach}', coach)}
@@ -648,7 +673,12 @@ function PlanActionsSheet({
           </View>
         </>
       ) : (
-        <View style={{ gap: 12 }}>
+        // On short screens the options outgrow the sheet; the destructive ones are last.
+        <ScrollView
+          style={{ flexShrink: 1 }}
+          contentContainerStyle={{ gap: 12 }}
+          showsVerticalScrollIndicator={false}
+        >
           {!archived && plan.draft ? (
             <Button label="Review & lock" icon="lock-closed" onPress={onReview} />
           ) : null}
@@ -723,12 +753,90 @@ function PlanActionsSheet({
                 tone: archived ? 'default' : 'danger',
                 onPress: () => onConfirm(archived ? 'unarchive' : 'archive'),
               },
+              {
+                label: 'Delete plan…',
+                icon: 'trash-outline',
+                tone: 'danger',
+                onPress: () => {
+                  remove.reset();
+                  onConfirm('delete');
+                },
+              },
             ]}
           />
           {error ? <ErrorState message={error} /> : null}
-        </View>
+        </ScrollView>
       )}
     </BottomSheet>
+  );
+}
+
+const count = (value: number, one: string, many = `${one}s`) =>
+  `${value} ${value === 1 ? one : many}`;
+
+/** Lists what goes with the plan; it can be restored from Recently deleted until purged. */
+function DeletePlanConfirm({
+  plan,
+  remove,
+  onClose,
+  onDeleted,
+}: {
+  plan: Plan;
+  remove: ReturnType<typeof useDeletePlan>;
+  onClose: () => void;
+  onDeleted: () => void;
+}) {
+  // Live updates refresh `plan` while this is open; delete only the state that was reviewed.
+  const [reviewedStateVersion] = useState(plan.stateVersion);
+  const impact = useDeletionImpact(plan.id, true);
+  const data = impact.data;
+  const removed = data
+    ? [
+        data.versions ? count(data.versions, 'locked version') : null,
+        data.conversations
+          ? `${count(data.conversations, 'coach conversation')} (${count(data.messages, 'message')})`
+          : null,
+        data.workoutLogs ? count(data.workoutLogs, 'logged session') : null,
+        data.checkIns ? count(data.checkIns, 'check-in') : null,
+      ].filter(Boolean)
+    : [];
+  const error = remove.error ?? impact.error;
+  return (
+    <>
+      {impact.isPending ? <LoadingState label="Checking what this plan holds…" /> : null}
+      {data ? (
+        <View style={{ gap: 10 }}>
+          <Text variant="body" color="dim">
+            {removed.length
+              ? `This deletes the plan with its ${removed.join(', ')}.`
+              : 'This deletes the plan and everything in it.'}{' '}
+            Your fitness results stay with you.
+          </Text>
+          <Text variant="body" color="dim">
+            You can restore it from Recently deleted for {data.restoreDays} days. After that it is
+            permanently deleted.
+          </Text>
+        </View>
+      ) : null}
+      {error ? (
+        <ErrorState
+          message={error.message}
+          style={{ marginTop: 14 }}
+          onRetry={impact.error && !remove.error ? () => void impact.refetch() : undefined}
+        />
+      ) : null}
+      <View style={{ gap: 10, marginTop: 20 }}>
+        <Button
+          label="Delete plan"
+          icon="trash"
+          variant="danger"
+          busy={remove.isPending}
+          disabled={remove.isPending || !data}
+          onPress={() => remove.mutate(reviewedStateVersion, { onSuccess: onDeleted })}
+        />
+        <Button label="Cancel" variant="ghost" disabled={remove.isPending} onPress={onClose} />
+      </View>
+    </>
   );
 }
 

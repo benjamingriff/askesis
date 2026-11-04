@@ -4,7 +4,8 @@ The Expo / React Native client for Askesis. It signs in with Clerk and uses the 
 web app: Today, the Plan (weeks, calendar, blocks, zones), workout prescriptions, the coach with
 live activity and Stop, review & lock, unlock, discard, activation, plan details, the brief
 editor, version history and restore, draft inspection, the plan library with new plans,
-Performance with recorded and withdrawn results, and account management. The design comes from the [mobile prototype](../mobile-prototype/README.md), which
+Performance with recorded and withdrawn results, account management, and plan and account
+deletion. The design comes from the [mobile prototype](../mobile-prototype/README.md), which
 stays as the visual reference with its scripted data.
 
 ## Run it in Expo Go
@@ -102,6 +103,21 @@ Today). Every chat entry point opens **Ask your agent** (`src/app/ask-agent.tsx`
 screen copies the same prompt as the web app (`src/lib/coach.ts`) and shows it so it can be pasted.
 Copy says "your agent" (`useCoachWord()` in `src/data/account.ts`). To try it locally, start the
 API with `IN_APP_COACH=hidden pnpm dev`.
+
+## Plan and account deletion
+
+The same flows as the web app, with the same wording ([deletion and retention](../../docs/operations/data-deletion.md)):
+
+- **Delete plan…** in the plan options sheet lists what goes with the plan
+  (`GET /plans/{planId}/deletion-impact`) before `POST /plans/{planId}/delete`. The app then opens
+  All plans with an Undo notice. All plans → **Recently deleted** restores a plan to Archived
+  (`POST /plans/{planId}/undelete`) for 30 days.
+- You → **Your data**: **Download my data** fetches `GET /account/export` and offers the JSON file
+  through the share sheet (`expo-sharing`; a download on Expo web). **Delete account…** asks for
+  `DELETE` to be typed, then `POST /account/deletion` starts the 7-day window.
+- While deletion is pending, `AccountGate` shows the notice instead of the app (the API refuses
+  everything outside `/account`, and the live stream stays off). It offers Keep my account
+  (`DELETE /account/deletion`), Download my data and Sign out.
 
 ## Not yet on mobile
 

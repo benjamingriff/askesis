@@ -5,6 +5,7 @@ import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, type ReactNode } from 'react';
 import { View } from 'react-native';
+import { AccountDeletionPending } from '../components/AccountDeletionPending';
 import { Button, LoadingState, Text } from '../components/ui';
 import { useAccount, useInAppCoach } from '../data/account';
 import { configureAuthTokenProvider } from '../lib/api';
@@ -102,7 +103,8 @@ function AuthenticatedApp() {
 
 /**
  * Features such as the in-app coach come with the account, so signed-in screens wait for it (behind
- * the splash screen) rather than showing the Coach tab and then removing it.
+ * the splash screen) rather than showing the Coach tab and then removing it. A pending deletion
+ * replaces the app; everything else is unavailable until it is cancelled.
  */
 function AccountGate({ children }: { children: ReactNode }) {
   const theme = useTheme();
@@ -111,6 +113,8 @@ function AccountGate({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (settled) void SplashScreen.hideAsync();
   }, [settled]);
+  if (account.data?.deletion)
+    return <AccountDeletionPending purgeAfter={account.data.deletion.purgeAfter} />;
   if (account.data) return children;
   return (
     <View

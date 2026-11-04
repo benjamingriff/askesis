@@ -19,10 +19,10 @@ When an account's `features.inAppCoach` is off, the app hides chat entirely and 
 
 This blocks TestFlight. Apple's App Review Guideline 5.1.1(v) requires any app that lets people create an account to also let them delete it from inside the app. The API already supports it ([deletion and retention](./data-deletion-and-retention.md)); the mobile app has no screens for it yet.
 
-- [ ] Plan deletion: show `GET /plans/{planId}/deletion-impact`, confirm, then `POST /plans/{planId}/delete`, with Undo and a 30-day `undelete` from the library.
-- [ ] Account deletion in Account: `POST /account/deletion` with the 7-day restore window and cancel (`DELETE /account/deletion`), then sign out.
-- [ ] Data export (`GET /account/export`): save or share the file through the share sheet.
-- [ ] Copy matches the web app's retention wording.
+- [x] Plan deletion: show `GET /plans/{planId}/deletion-impact`, confirm, then `POST /plans/{planId}/delete`, with Undo and a 30-day `undelete` from the library.
+- [x] Account deletion in You → Your data, as on the web: `POST /account/deletion` with the 7-day restore window. While it is pending the app shows only the deletion notice, with Keep my account (`DELETE /account/deletion`), Download my data and Sign out.
+- [x] Data export (`GET /account/export`): save or share the file through the share sheet.
+- [x] Copy matches the web app's retention wording.
 
 ## 3. Training log parity
 

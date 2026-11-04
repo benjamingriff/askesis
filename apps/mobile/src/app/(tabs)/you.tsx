@@ -15,7 +15,15 @@ import {
   Divider,
   type IconName,
 } from '../../components/ui';
-import { useInAppCoach } from '../../data/account';
+import { BottomSheet } from '../../components/BottomSheet';
+import { Field } from '../../components/forms';
+import {
+  ACCOUNT_GRACE_DAYS,
+  useAccountDeletion,
+  useCoachWord,
+  useDataExport,
+  useInAppCoach,
+} from '../../data/account';
 import { useActivePlans } from '../../data/plan-data';
 import { apiBaseUrl } from '../../lib/config';
 import {
@@ -62,21 +70,26 @@ function Group({ title, children }: { title?: string; children: ReactNode }) {
 function Row({
   icon,
   label,
+  hint,
   value,
   onPress,
   right,
   last,
   tint,
+  danger,
 }: {
   icon: IconName;
   label: string;
+  hint?: string;
   value?: string;
   onPress?: () => void;
   right?: ReactNode;
   last?: boolean;
   tint?: string;
+  danger?: boolean;
 }) {
   const theme = useTheme();
+  const iconColor = danger ? theme.danger : (tint ?? theme.colors.text);
   const content = (
     <View
       style={{
@@ -84,6 +97,7 @@ function Row({
         alignItems: 'center',
         gap: 14,
         paddingHorizontal: 16,
+        paddingVertical: hint ? 12 : 0,
         minHeight: 56,
       }}
     >
@@ -97,11 +111,21 @@ function Row({
           justifyContent: 'center',
         }}
       >
-        <Ionicons name={icon} size={17} color={tint ?? theme.colors.text} />
+        <Ionicons name={icon} size={17} color={iconColor} />
       </View>
-      <Text variant="subheading" style={{ flex: 1, fontWeight: '500' }}>
-        {label}
-      </Text>
+      <View style={{ flex: 1 }}>
+        <Text
+          variant="subheading"
+          style={{ fontWeight: '500', color: danger ? theme.danger : theme.colors.text }}
+        >
+          {label}
+        </Text>
+        {hint ? (
+          <Text variant="caption" style={{ marginTop: 2 }}>
+            {hint}
+          </Text>
+        ) : null}
+      </View>
       {value ? (
         <Text variant="caption" numeric>
           {value}
@@ -142,6 +166,8 @@ export default function YouScreen() {
   const plans = useActivePlans();
   const [signingOut, setSigningOut] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
+  const download = useDataExport();
   const themeDef = THEME_BY_ID[theme.themeId];
   const email = user?.primaryEmailAddress?.emailAddress;
   const name = user?.fullName || user?.firstName || email?.split('@')[0] || 'Athlete';
@@ -318,6 +344,30 @@ export default function YouScreen() {
           />
         </Group>
 
+        <Group title="Your data">
+          <Row
+            icon="download-outline"
+            label="Download my data"
+            hint="Plans, coach conversations, training log, check-ins and fitness history as one JSON file."
+            value={download.isPending ? 'Preparing…' : undefined}
+            onPress={download.isPending ? undefined : () => download.mutate()}
+          />
+          <Row
+            icon="trash-outline"
+            label="Delete account…"
+            danger
+            hint={`Permanently deletes everything after ${ACCOUNT_GRACE_DAYS} days. You can cancel until then.`}
+            onPress={() => setDeleting(true)}
+            last
+          />
+        </Group>
+        {download.error ? (
+          <ErrorState
+            message={download.error.message}
+            style={{ marginHorizontal: 20, marginTop: 10 }}
+          />
+        ) : null}
+
         <View style={{ paddingHorizontal: 20, marginTop: 24, gap: 10 }}>
           {error ? <ErrorState message={error} /> : null}
           <Button
@@ -345,6 +395,57 @@ export default function YouScreen() {
           </Text>
         </View>
       </ScrollView>
+      {/* Outside the ScrollView: touches follow the React tree, and that ScrollView would take the
+          first tap to dismiss the keyboard instead of pressing Delete. */}
+      <DeleteAccountSheet visible={deleting} onClose={() => setDeleting(false)} />
     </Screen>
+  );
+}
+
+const CONFIRMATION = 'DELETE';
+
+/** Schedules deletion after the grace period; the app is replaced by its countdown. */
+function DeleteAccountSheet({ visible, onClose }: { visible: boolean; onClose: () => void }) {
+  const coach = useCoachWord();
+  const [typed, setTyped] = useState('');
+  const { request } = useAccountDeletion();
+  const close = () => {
+    if (request.isPending) return;
+    setTyped('');
+    request.reset();
+    onClose();
+  };
+  return (
+    <BottomSheet visible={visible} onClose={close} title="Delete your account?">
+      <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ gap: 12 }}>
+        <Text variant="body" color="dim">
+          Every plan, coach conversation, training log entry, check-in and fitness result will be
+          permanently deleted, along with your sign-in. Your {coach} stops straight away.
+        </Text>
+        <Text variant="body" color="dim">
+          You have {ACCOUNT_GRACE_DAYS} days to change your mind by signing in again. After that it
+          can’t be undone. Download your data first if you want a copy.
+        </Text>
+        <Field
+          label={`Type ${CONFIRMATION} to confirm`}
+          value={typed}
+          onChangeText={setTyped}
+          autoCapitalize="characters"
+          disabled={request.isPending}
+        />
+        {request.error ? <ErrorState message={request.error.message} /> : null}
+        <View style={{ gap: 10, marginTop: 8 }}>
+          <Button
+            label="Delete account"
+            icon="trash"
+            variant="danger"
+            busy={request.isPending}
+            disabled={request.isPending || typed.trim() !== CONFIRMATION}
+            onPress={() => request.mutate()}
+          />
+          <Button label="Cancel" variant="ghost" disabled={request.isPending} onPress={close} />
+        </View>
+      </ScrollView>
+    </BottomSheet>
   );
 }
