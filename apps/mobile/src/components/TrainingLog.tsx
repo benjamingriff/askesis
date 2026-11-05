@@ -1,5 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
+import { useQueryClient, type QueryClient } from '@tanstack/react-query';
 import { createContext, useContext, type ReactNode } from 'react';
 import { Pressable, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 import { useCoachWord } from '../data/account';
@@ -14,6 +15,7 @@ import {
   useSaveLog,
   useTrainingLog,
   type LogStatus,
+  type TrainingLog,
   type WorkoutLog,
 } from '../data/training-log';
 import type { WorkoutSummary } from '../lib/api-types';
@@ -63,6 +65,20 @@ export function openLogForm(
   });
 }
 
+/** Puts a saved log into the plan's cached training log, ahead of the refetch. */
+function rememberLog(client: QueryClient, planId: string, log: WorkoutLog) {
+  client.setQueryData<TrainingLog>(['training-log', planId, undefined, undefined], (data) =>
+    data
+      ? {
+          ...data,
+          logs: data.logs.some((l) => l.lineageId === log.lineageId)
+            ? data.logs.map((l) => (l.lineageId === log.lineageId ? log : l))
+            : [...data.logs, log],
+        }
+      : data,
+  );
+}
+
 export function TrainingLogProvider({
   plan,
   children,
@@ -74,6 +90,7 @@ export function TrainingLogProvider({
   style?: StyleProp<ViewStyle>;
 }) {
   const query = useTrainingLog(plan.id);
+  const client = useQueryClient();
   const writable = !!plan.locked && !plan.archived;
   return (
     <LogContext.Provider
@@ -84,6 +101,8 @@ export function TrainingLogProvider({
         lockedVersionId: plan.locked?.id,
         edit: (workout, log, status) => {
           if (plan.archived || (!log && workout.planVersionId !== plan.locked?.id)) return;
+          // The form starts from the cached log, so a just-saved one goes in before it opens.
+          if (log) rememberLog(client, plan.id, log);
           openLogForm(workout, { status });
         },
       }}

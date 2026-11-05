@@ -15,6 +15,8 @@ export type WorkoutLog =
 export type LogInput =
   paths['/api/v1/plans/{planId}/workouts/{lineageId}/log']['put']['requestBody']['content']['application/json'];
 export type LogStatus = LogInput['status'];
+export type TrainingLog =
+  paths['/api/v1/training-log']['get']['responses'][200]['content']['application/json'];
 export type CheckInInput =
   paths['/api/v1/check-ins']['post']['requestBody']['content']['application/json'];
 export type FeedbackReferenceInput =

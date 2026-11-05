@@ -43,7 +43,7 @@ import {
   type WorkoutLog,
 } from '../data/training-log';
 import type { WorkoutSummary } from '../lib/api-types';
-import { METRES_PER_MILE, METRES_PER_YARD, formatLong } from '../lib/format';
+import { METRES_PER_MILE, METRES_PER_YARD, formatLong, type Units } from '../lib/format';
 import { useLocalToday } from '../lib/use-local-today';
 import {
   KIND_META,
@@ -123,9 +123,14 @@ export default function LogWorkoutScreen() {
   const loading =
     plan.isPending || logs.isPending || (!!params.workoutId && detail.isPending && !log);
   const error = plan.error ?? logs.error ?? (!log ? detail.error : null);
+  // Distance is shown in the plan's units, so those are resolved before the form starts.
+  const version = plan.data ? planVersion(plan.data, 'locked') : null;
+  const brief = useBriefState(params.planId ?? '', version);
+  const units = useUnits(brief.data?.brief.unit);
+  const unitsReady = !!plan.data && (!version || !!brief.data || !!brief.error);
 
   // The form starts from the saved log, so it waits for the training log as well as the workout.
-  if (!workout || !plan.data || !logs.data)
+  if (!workout || !plan.data || !logs.data || !unitsReady)
     return (
       <Screen>
         <View style={{ padding: 20, gap: 20 }}>
@@ -160,8 +165,7 @@ export default function LogWorkoutScreen() {
       initialStatus={params.status}
       planName={plan.data.displayName}
       writable={!!plan.data.locked && !plan.data.archived}
-      unit={planVersion(plan.data, 'locked')}
-      planId={plan.data.id}
+      units={units}
     />
   );
 }
@@ -220,23 +224,19 @@ function FeedbackForm({
   initialStatus,
   planName,
   writable,
-  unit,
-  planId,
+  units,
 }: {
   workout: WorkoutSummary;
   log: WorkoutLog | undefined;
   initialStatus: LogStatus | undefined;
   planName: string;
   writable: boolean;
-  unit: ReturnType<typeof planVersion>;
-  planId: string;
+  units: Units;
 }) {
   const theme = useTheme();
   const coach = useCoachWord();
   const inAppCoach = useInAppCoach();
   const today = useLocalToday();
-  const brief = useBriefState(planId, unit);
-  const units = useUnits(brief.data?.brief.unit);
   const { pool } = useSportUnits();
   const swim = workout.discipline === 'swim';
   // Distance is entered in the units the athlete thinks in: km or mi, or the pool's m or yd.
@@ -251,26 +251,36 @@ function FeedbackForm({
           : 1;
   const [status, setStatus] = useState<LogStatus>(initialStatus ?? log?.status ?? 'done');
   const [performed, setPerformed] = useState(log?.performedOn ?? workout.scheduledDate);
-  const [minutes, setMinutes] = useState(() => {
+  // The amounts the form starts from. Their rounded text is only for display: saving untouched
+  // fields keeps these exact values.
+  const [start] = useState(() => {
     const seconds = log
       ? log.actualDurationSeconds
       : status === 'done'
         ? workout.estimatedDurationSeconds
         : null;
-    return seconds == null ? '' : String(Math.round((seconds / 60) * 10) / 10);
-  });
-  const [distance, setDistance] = useState(() => {
     const metres = log
       ? log.actualDistanceMetres
       : status === 'done'
         ? workout.estimatedDistanceMetres
         : null;
-    if (metres == null) return '';
-    const value = metres / metresPer;
-    return String(
-      metresPer === 1 || distanceUnit === 'yd' ? Math.round(value) : Math.round(value * 100) / 100,
-    );
+    const value = metres == null ? null : metres / metresPer;
+    return {
+      seconds,
+      metres,
+      minutes: seconds == null ? '' : String(Math.round((seconds / 60) * 10) / 10),
+      distance:
+        value == null
+          ? ''
+          : String(
+              metresPer === 1 || distanceUnit === 'yd'
+                ? Math.round(value)
+                : Math.round(value * 100) / 100,
+            ),
+    };
   });
+  const [minutes, setMinutes] = useState(start.minutes);
+  const [distance, setDistance] = useState(start.distance);
   // Gym sessions have no distance, unless one was already recorded.
   const [showDistance] = useState(workout.discipline !== 'strength' || distance !== '');
   const [rpe, setRpe] = useState<number | null>(log?.rpe ?? null);
@@ -324,8 +334,18 @@ function FeedbackForm({
   };
   const number = (text: string) => Number(text.trim().replace(',', '.'));
   const payload = (): LogInput => {
-    const secs = minutes.trim() ? Math.round(number(minutes) * 60) : null;
-    const metres = distance.trim() ? Math.round(number(distance) * metresPer * 10) / 10 : null;
+    const secs =
+      minutes === start.minutes
+        ? start.seconds
+        : minutes.trim()
+          ? Math.round(number(minutes) * 60)
+          : null;
+    const metres =
+      distance === start.distance
+        ? start.metres
+        : distance.trim()
+          ? Math.round(number(distance) * metresPer * 10) / 10
+          : null;
     if (
       status !== 'skipped' &&
       ((secs !== null && (!Number.isFinite(secs) || secs <= 0 || secs > 604800)) ||

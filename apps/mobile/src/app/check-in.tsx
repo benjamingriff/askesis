@@ -1,7 +1,14 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState, type ReactNode } from 'react';
 import { View } from 'react-native';
-import { Chips, Field, FormScreen, FormSection, leaveScreen } from '../components/forms';
+import {
+  Chips,
+  Field,
+  FormScreen,
+  FormSection,
+  leaveScreen,
+  useLeaveGuard,
+} from '../components/forms';
 import { Button, ErrorState, LoadingState, Notice, Screen, Text } from '../components/ui';
 import { useCoachWord, useInAppCoach } from '../data/account';
 import { planVersion, usePlan, useWorkouts } from '../data/plan-data';
@@ -86,6 +93,8 @@ function CheckInForm({ plan }: { plan: NonNullable<ReturnType<typeof usePlan>['d
   const create = useCreateCheckIn();
   const discuss = useDiscussFeedback({ id: plan.id, name: plan.displayName });
   const busy = create.isPending || discuss.isPending;
+  // Leaving is blocked while sending, so a late success can't navigate from another screen.
+  const guard = useLeaveGuard(false, { busy });
   const amend = <K extends keyof Details>(name: K, value: Details[K]) => {
     setSaved(null);
     setDetails((prev) => {
@@ -122,13 +131,16 @@ function CheckInForm({ plan }: { plan: NonNullable<ReturnType<typeof usePlan>['d
         reference: { type: 'check_in' as const, checkInId: check.id },
       };
       // Without the in-app coach this shows the prompt for the athlete's own agent.
-      if (!inAppCoach) {
-        leaveScreen();
-        return discuss.mutate(request);
-      }
+      if (!inAppCoach)
+        return guard.exit(() => {
+          leaveScreen();
+          discuss.mutate(request);
+        });
       const id = await discuss.mutateAsync(request);
-      leaveScreen();
-      if (id) openConversation(id);
+      guard.exit(() => {
+        leaveScreen();
+        if (id) openConversation(id);
+      });
     } catch {
       /* The error shows below; a saved check-in is reused on retry. */
     }
@@ -138,6 +150,8 @@ function CheckInForm({ plan }: { plan: NonNullable<ReturnType<typeof usePlan>['d
   return (
     <FormScreen
       title="Not feeling 100%"
+      guard={guard}
+      saving={busy}
       footer={
         <Button
           label={`Ask my ${coach} to adjust`}
