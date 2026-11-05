@@ -107,6 +107,16 @@ it('connects only through the athlete’s own signed state, return address and a
   expect(() =>
     startStravaConnection(owner, 'https://example.com/connections/strava/callback'),
   ).toThrow('return address');
+  // The mobile app returns through its own scheme, to a host the web app is served from.
+  expect(
+    startStravaConnection(owner, 'askesis://localhost/connections/strava/callback').url,
+  ).toContain(encodeURIComponent('askesis://localhost/connections/strava/callback'));
+  for (const other of [
+    'askesis://example.com/connections/strava/callback',
+    'askesis://localhost/somewhere/else',
+    'otherapp://localhost/connections/strava/callback',
+  ])
+    expect(() => startStravaConnection(owner, other)).toThrow('return address');
   const { url } = startStravaConnection(owner, callback, now.getTime());
   const state = new URL(url).searchParams.get('state')!;
   const stranger = (

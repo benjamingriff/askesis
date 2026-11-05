@@ -26,6 +26,7 @@ import {
   TurnView,
   UserMessage,
 } from '../../components/chat/MessageView';
+import { FeedbackCards } from '../../components/chat/FeedbackCards';
 import { PlanView } from '../../components/PlanView';
 import {
   AccentFill,
@@ -434,7 +435,14 @@ function Conversation({
         return (
           <View key={message.id} style={{ gap: 22 }}>
             {message.role === 'user' ? (
-              <UserMessage content={message.content} />
+              <View style={{ gap: 8 }}>
+                {message.references?.length ? (
+                  <View style={{ paddingLeft: 48 }}>
+                    <FeedbackCards references={message.references} />
+                  </View>
+                ) : null}
+                <UserMessage content={message.content} />
+              </View>
             ) : (
               <AssistantMessage content={message.content} testMode={testMode} />
             )}

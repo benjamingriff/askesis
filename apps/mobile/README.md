@@ -4,8 +4,8 @@ The Expo / React Native client for Askesis. It signs in with Clerk and uses the 
 web app: Today, the Plan (weeks, calendar, blocks, zones), workout prescriptions, the coach with
 live activity and Stop, review & lock, unlock, discard, activation, plan details, the brief
 editor, version history and restore, draft inspection, the plan library with new plans,
-Performance with recorded and withdrawn results, account management, and plan and account
-deletion. The design comes from the [mobile prototype](../mobile-prototype/README.md), which
+Performance with recorded and withdrawn results, account management, plan and account
+deletion, workout logs and feedback, check-ins, and Strava activity links. The design comes from the [mobile prototype](../mobile-prototype/README.md), which
 stays as the visual reference with its scripted data.
 
 ## Run it in Expo Go
@@ -79,7 +79,8 @@ Tokens that name an origin must still match it.
 src/app/            Expo Router screens: (tabs)/ Today · Plan · Coach · You, workout/[id],
                     chat/[id] (Chat ↔ Plan pager), ask-agent, lock-review, plans/, plan-details, new-plan,
                     brief, plan-history, revision, draft-content, performance, record-result,
-                    account, appearance, sign-in
+                    log-workout, check-in, training-log, find-activity,
+                    connections/strava/callback, account, appearance, sign-in
 src/components/     UI kit, form fields and date picker, plan view and widgets, workout rows,
                     effort chart, chat pieces
 src/data/           React Query hooks over the API (plans, workouts, chat) and plan actions
@@ -118,6 +119,39 @@ The same flows as the web app, with the same wording ([deletion and retention](.
 - While deletion is pending, `AccountGate` shows the notice instead of the app (the API refuses
   everything outside `/account`, and the live stream stays off). It offers Keep my account
   (`DELETE /account/deletion`), Download my data and Sign out.
+
+## Training log
+
+The same flows as the web app ([workout logs and feedback](../../docs/product/training-log.md)).
+The web's feedback, check-in and history dialogs are screens here.
+
+- **Today** marks logged days in the week strip. Today's workout card holds its log: **Done**,
+  **Changed it** or **Skipped**, then the effort scale, **Edit**, **Undo** and **Add details**.
+  Sessions from the last three days that still need a log are listed below it. **Not feeling
+  100%?** opens the check-in (`check-in.tsx`, `POST /check-ins`). The week card counts done time
+  and sessions from `GET /training-log`.
+- Key sessions, tests, races, placeholders, changed or skipped workouts, and an effort far from the
+  plan open the feedback form (`log-workout.tsx`, `PUT /plans/{planId}/workouts/{lineageId}/log`).
+  **Save** never calls the model; **Save and talk it through** also sends the log to the plan's
+  conversation, or hands a prompt to the athlete's agent when the in-app coach is hidden. Chat shows
+  the saved feedback above the message.
+- **Plan**: the controls sit below the title, with **Training log** (`training-log.tsx`, including
+  logs from earlier versions). Schedule cards show the log, and past workouts offer a quick log.
+- **Placeholder sessions** show their expected effort band instead of a prescription and always
+  open the form, which asks what the session turned out to be.
+
+## Strava
+
+You → **Connections** connects or disconnects Strava. **Find my activity** (on Today's card, the
+workout screen and the log form) lists activities from the week either side; linking is manual.
+The log form's **Show details** reads the linked activity from Strava, above the form. See
+[activity connections](../../docs/operations/activity-connections.md) for the simulator.
+
+Strava returns to `askesis://<host>/connections/strava/callback`, opened with
+`WebBrowser.openAuthSessionAsync`; the web build returns to its own origin. The host is
+`EXPO_PUBLIC_STRAVA_CALLBACK_HOST` (default `localhost`) and must match the Strava app's callback
+domain and a host in the API's `CLERK_AUTHORIZED_PARTIES`. Expo Go opens only `exp://` links, so
+connecting needs a development or release build; the web build and Expo Go can still show links.
 
 ## Not yet on mobile
 

@@ -125,6 +125,16 @@ export function formatDuration(seconds: number | null): string {
   return rest ? `${hours}h ${String(rest).padStart(2, '0')}` : `${hours}h`;
 }
 
+/** "mm:ss" or "hh:mm:ss" → seconds. */
+export function parseClock(value: string): number {
+  if (!/^\d+:\d{2}(?::\d{2})?$/.test(value.trim()))
+    throw new Error('Enter a time as mm:ss or hh:mm:ss.');
+  const parts = value.trim().split(':').map(Number);
+  if (parts.slice(1).some((part) => part >= 60))
+    throw new Error('Seconds and minutes within a time must be below 60.');
+  return parts.reduce((total, part) => total * 60 + part, 0);
+}
+
 export function formatClock(seconds: number): string {
   const rounded = Math.round(seconds);
   const hours = Math.floor(rounded / 3600);

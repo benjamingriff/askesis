@@ -14,7 +14,7 @@ import { ErrorState, Text } from '../components/ui';
 import { usePerformance } from '../data/plan-data';
 import type { components } from '../lib/api-types';
 import { api } from '../lib/api';
-import { localToday, METRES_PER_MILE, METRES_PER_YARD } from '../lib/format';
+import { localToday, METRES_PER_MILE, METRES_PER_YARD, parseClock } from '../lib/format';
 import { useRequestKey } from '../lib/request-key';
 import { result } from '../lib/result';
 import { SYSTEM_META, type System } from '../lib/sports';
@@ -23,16 +23,6 @@ import { useSportUnits, useUnits } from '../state/settings';
 type RecordCalibration = components['schemas']['RecordCalibration'];
 
 const KILOMETRES_PER_MILE = 1.609344;
-
-/** "mm:ss" or "hh:mm:ss" → seconds. */
-export function parseClock(value: string): number {
-  if (!/^\d+:\d{2}(?::\d{2})?$/.test(value.trim()))
-    throw new Error('Enter a time as mm:ss or hh:mm:ss.');
-  const parts = value.trim().split(':').map(Number);
-  if (parts.slice(1).some((part) => part >= 60))
-    throw new Error('Seconds and minutes within a time must be below 60.');
-  return parts.reduce((total, part) => total * 60 + part, 0);
-}
 
 /**
  * Record a result for one system. New zones apply from today in every plan; earlier workouts keep
