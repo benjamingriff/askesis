@@ -31,7 +31,7 @@ A Strava subscription is required to create an API application. New applications
 4. Sign in, open **Settings › Connections**, choose **Connect with Strava** and authorize. Keep "View data about your activities" ticked.
 5. Open a past workout on Today or the Plan. Choose **Find my activity**, pick the activity, then **Add details** or **Edit** to open the log sheet with the panel.
 
-The redirect origin must be one of `CLERK_AUTHORIZED_PARTIES`, or localhost when that is unset. Keep the client secret and encryption key out of commits, screenshots and chat. Changing `INTEGRATION_ENCRYPTION_KEY` makes stored tokens unreadable; disconnect and reconnect afterwards.
+The redirect origin must be one of `CLERK_AUTHORIZED_PARTIES`, or localhost when that is unset. The mobile app returns through its own scheme, `askesis://<host>/connections/strava/callback`, where the host must be the hostname of one of those parties (or localhost when unset); set it with `EXPO_PUBLIC_STRAVA_CALLBACK_HOST` ([mobile README](../../apps/mobile/README.md#strava)). Keep the client secret and encryption key out of commits, screenshots and chat. Changing `INTEGRATION_ENCRYPTION_KEY` makes stored tokens unreadable; disconnect and reconnect afterwards.
 
 ## Local simulator
 

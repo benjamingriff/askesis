@@ -16,6 +16,7 @@ import {
   type IconName,
 } from '../../components/ui';
 import { BottomSheet } from '../../components/BottomSheet';
+import { StravaConnection } from '../../components/Strava';
 import { Field } from '../../components/forms';
 import {
   ACCOUNT_GRACE_DAYS,
@@ -252,6 +253,10 @@ export default function YouScreen() {
             onPress={() => router.push('/plans')}
             last
           />
+        </Group>
+
+        <Group title="Connections">
+          <StravaConnection />
         </Group>
 
         <Group title="Look & feel">

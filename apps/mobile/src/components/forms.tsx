@@ -29,6 +29,9 @@ import { Button, IconButton, Text, useHaptics, type IconName } from './ui';
 
 // ---- Screen chrome ------------------------------------------------------------------------------
 
+/** Back to the previous screen, or to Today when the screen was opened directly (a link). */
+export const leaveScreen = () => (router.canGoBack() ? router.back() : router.replace('/'));
+
 /**
  * A modal form: Cancel on the left, the title, and Save on the right, as in iOS. With a `guard`
  * (see useLeaveGuard), leaving with unsaved changes (Cancel, the back button or a swipe) asks
@@ -75,7 +78,7 @@ export function FormScreen({
         }}
       >
         <Pressable
-          onPress={() => (router.canGoBack() ? router.back() : router.replace('/'))}
+          onPress={leaveScreen}
           disabled={saving}
           hitSlop={10}
           accessibilityRole="button"
@@ -355,6 +358,8 @@ export function Field({
           selectionColor={theme.accent}
           style={{
             flex: 1,
+            // Lets a narrow field shrink below the web input's intrinsic width, keeping its suffix.
+            minWidth: 0,
             color: theme.colors.text,
             fontSize: 16,
             paddingVertical: multiline ? 12 : 0,
@@ -440,6 +445,70 @@ export function ChoiceField<T extends string>({
           );
         })}
       </View>
+    </View>
+  );
+}
+
+/**
+ * Wrapping chips that can be cleared: tap a chosen chip again to unselect it. `selected` decides
+ * which are on, so the same group serves one optional answer or several.
+ */
+export function Chips<T extends string>({
+  label,
+  options,
+  selected,
+  onPress,
+  disabled,
+}: {
+  /** For screen readers; a visible heading usually names the group. */
+  label: string;
+  options: readonly (readonly [T, string])[];
+  selected: (value: T) => boolean;
+  onPress: (value: T) => void;
+  disabled?: boolean;
+}) {
+  const theme = useTheme();
+  const buzz = useHaptics();
+  return (
+    <View
+      accessibilityLabel={label}
+      style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, opacity: disabled ? 0.5 : 1 }}
+    >
+      {options.map(([value, text]) => {
+        const on = selected(value);
+        return (
+          <Pressable
+            key={value}
+            disabled={disabled}
+            onPress={() => {
+              buzz('select');
+              onPress(value);
+            }}
+            accessibilityRole="checkbox"
+            accessibilityLabel={text}
+            accessibilityState={{ checked: on, disabled }}
+            style={{
+              paddingHorizontal: 14,
+              minHeight: 38,
+              justifyContent: 'center',
+              borderRadius: 19,
+              backgroundColor: on ? theme.accentSoft : theme.colors.surfaceRaised,
+              borderWidth: 1.5,
+              borderColor: on ? theme.accent : 'transparent',
+            }}
+          >
+            <Text
+              variant="caption"
+              style={{
+                color: on ? theme.accentText : theme.colors.text,
+                fontWeight: on ? '800' : '600',
+              }}
+            >
+              {text}
+            </Text>
+          </Pressable>
+        );
+      })}
     </View>
   );
 }

@@ -6,6 +6,12 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { IntensityChart } from '../../components/IntensityChart';
 import { StepList } from '../../components/StepList';
 import {
+  TrainingLogProvider,
+  WorkoutLogActions,
+  useLogContext,
+} from '../../components/TrainingLog';
+import { PlaceholderSummary } from '../../components/WorkoutRow';
+import {
   Badge,
   Button,
   Card,
@@ -19,7 +25,9 @@ import {
 import { useCoachWord } from '../../data/account';
 import { useOpenPlanChat } from '../../data/plan-actions';
 import { useBriefState, usePlan, useWorkoutDetail, planVersion } from '../../data/plan-data';
+import type { WorkoutSummary } from '../../lib/api-types';
 import { formatLong } from '../../lib/format';
+import { useLocalToday } from '../../lib/use-local-today';
 import { workoutStats } from '../../lib/presenters';
 import { intensitySegments, RACE_META, workoutLook } from '../../lib/workouts';
 import { effortTint, useSportUnits, useTheme, useUnits } from '../../state/settings';
@@ -69,8 +77,9 @@ export default function WorkoutScreen() {
   const color = effortTint(theme, look.effort);
   const efforts = new Set(intensitySegments(detail.data!.prescription).map((s) => s.effort));
   const archived = plan.data?.archived;
+  const placeholder = workout.placeholder;
 
-  return (
+  const screen = (
     <Screen top={false}>
       <ScrollView
         contentContainerStyle={{ paddingBottom: insets.bottom + 120 }}
@@ -92,6 +101,7 @@ export default function WorkoutScreen() {
             <Text variant="label" style={{ color }}>
               {look.label}
               {workout.racePriority ? ` · ${RACE_META[workout.racePriority].label}` : ''}
+              {placeholder ? ' · Placeholder' : ''}
             </Text>
             {workout.priority === 'high' && !workout.racePriority ? (
               <Text variant="label" color="dim">
@@ -121,6 +131,7 @@ export default function WorkoutScreen() {
         </View>
 
         <View style={{ paddingHorizontal: 20, gap: 16 }}>
+          <LogCard workout={workout} />
           {workout.purpose || workout.description ? (
             <Card style={{ flexDirection: 'row', gap: 12 }}>
               <View
@@ -147,29 +158,38 @@ export default function WorkoutScreen() {
             </Card>
           ) : null}
 
-          <Card>
-            <Text variant="label" style={{ marginBottom: 14 }}>
-              Effort profile
-            </Text>
-            <IntensityChart prescription={detail.data!.prescription} height={96} gap={2} animate />
-            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 14, marginTop: 14 }}>
-              {EFFORTS.filter((effort) => efforts.has(effort)).map((effort) => (
-                <View key={effort} style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                  <View
-                    style={{
-                      width: 10,
-                      height: 10,
-                      borderRadius: 3,
-                      backgroundColor: theme.efforts[effort],
-                    }}
-                  />
-                  <Text variant="caption" style={{ fontSize: 12 }}>
-                    {EFFORT_META[effort].label}
-                  </Text>
-                </View>
-              ))}
-            </View>
-          </Card>
+          {placeholder ? <PlaceholderSummary workout={workout} /> : null}
+
+          {placeholder ? null : (
+            <Card>
+              <Text variant="label" style={{ marginBottom: 14 }}>
+                Effort profile
+              </Text>
+              <IntensityChart
+                prescription={detail.data!.prescription}
+                height={96}
+                gap={2}
+                animate
+              />
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 14, marginTop: 14 }}>
+                {EFFORTS.filter((effort) => efforts.has(effort)).map((effort) => (
+                  <View key={effort} style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                    <View
+                      style={{
+                        width: 10,
+                        height: 10,
+                        borderRadius: 3,
+                        backgroundColor: theme.efforts[effort],
+                      }}
+                    />
+                    <Text variant="caption" style={{ fontSize: 12 }}>
+                      {EFFORT_META[effort].label}
+                    </Text>
+                  </View>
+                ))}
+              </View>
+            </Card>
+          )}
 
           {detail.data!.tags.length ? (
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
@@ -184,16 +204,18 @@ export default function WorkoutScreen() {
             </View>
           ) : null}
 
-          <View>
-            <Text variant="heading" style={{ marginBottom: 14 }}>
-              {look.kind === 'strength' ? 'Exercises' : 'Workout steps'}
-            </Text>
-            <StepList
-              prescription={detail.data!.prescription}
-              units={units}
-              mixed={workout.discipline === 'mixed'}
-            />
-          </View>
+          {placeholder ? null : (
+            <View>
+              <Text variant="heading" style={{ marginBottom: 14 }}>
+                {look.kind === 'strength' ? 'Exercises' : 'Workout steps'}
+              </Text>
+              <StepList
+                prescription={detail.data!.prescription}
+                units={units}
+                mixed={workout.discipline === 'mixed'}
+              />
+            </View>
+          )}
           {chat.error ? (
             <ErrorState
               message={`Couldn’t open your coach conversation: ${chat.error.message}`}
@@ -227,5 +249,19 @@ export default function WorkoutScreen() {
         </View>
       )}
     </Screen>
+  );
+  return plan.data ? <TrainingLogProvider plan={plan.data}>{screen}</TrainingLogProvider> : screen;
+}
+
+/** The workout's log, once it's due: quick log, effort and what was recorded. */
+function LogCard({ workout }: { workout: WorkoutSummary }) {
+  const context = useLogContext();
+  const today = useLocalToday();
+  const logged = context?.logs.some((l) => l.lineageId === workout.lineageId);
+  if (!context?.ready || (!logged && workout.scheduledDate > today)) return null;
+  return (
+    <Card style={{ padding: 18 }}>
+      <WorkoutLogActions workout={workout} variant="detail" />
+    </Card>
   );
 }

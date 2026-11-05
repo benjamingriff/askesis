@@ -51,6 +51,7 @@ import {
   ZoneCards,
   zonesTitle,
 } from './PlanWidgets';
+import { TrainingLogProvider, openTrainingLog } from './TrainingLog';
 import { ChangeBadge, DayRow, WorkoutChangesContext, type DayStatus } from './WorkoutRow';
 import {
   ActionList,
@@ -159,54 +160,84 @@ export function PlanView({
       },
     });
 
-  return (
-    <View>
-      {/* Title row */}
-      <View
-        style={{
-          paddingHorizontal: 20,
-          paddingTop: embedded ? 4 : 12,
-          flexDirection: 'row',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          gap: 8,
-        }}
-      >
-        {headerLeft}
-        {title ? (
-          <Text variant="title" numberOfLines={1} style={{ flexShrink: 1 }}>
-            {title}
+  const controls = (
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flex: 1 }}>
+      <StatusPill
+        plan={plan}
+        onPress={
+          plan.archived
+            ? undefined
+            : plan.draft
+              ? reviewAndLock
+              : () => {
+                  lifecycle.reset();
+                  setConfirm('unlock');
+                }
+        }
+      />
+      {plan.locked ? (
+        <PressableScale
+          onPress={() => openTrainingLog(plan.id)}
+          accessibilityRole="button"
+          accessibilityLabel="Training log"
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 6,
+            height: 32,
+            paddingHorizontal: 12,
+            borderRadius: 16,
+            backgroundColor: theme.colors.surfaceRaised,
+          }}
+        >
+          <Ionicons name="time-outline" size={15} color={theme.colors.text} />
+          <Text variant="caption" color="text" style={{ fontWeight: '700' }}>
+            Training log
           </Text>
-        ) : (
-          <View style={{ flex: 1 }} />
-        )}
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-          {headerRight}
-          <StatusPill
-            plan={plan}
-            onPress={
-              plan.archived
-                ? undefined
-                : plan.draft
-                  ? reviewAndLock
-                  : () => {
-                      lifecycle.reset();
-                      setConfirm('unlock');
-                    }
-            }
-          />
-          <IconButton
-            icon="ellipsis-horizontal"
-            tone="filled"
-            size={18}
-            accessibilityLabel="Plan options"
-            onPress={() => {
-              lifecycle.reset();
-              setConfirm('menu');
-            }}
-          />
+        </PressableScale>
+      ) : null}
+      <View style={{ flex: 1 }} />
+      {headerRight}
+      <IconButton
+        icon="ellipsis-horizontal"
+        tone="filled"
+        size={18}
+        accessibilityLabel="Plan options"
+        onPress={() => {
+          lifecycle.reset();
+          setConfirm('menu');
+        }}
+      />
+    </View>
+  );
+
+  return (
+    <TrainingLogProvider plan={plan}>
+      {/* Title, then the plan's controls below it */}
+      {title ? (
+        <View style={{ paddingHorizontal: 20, paddingTop: embedded ? 4 : 12, gap: 12 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            {headerLeft}
+            <Text variant="title" numberOfLines={1} style={{ flexShrink: 1 }}>
+              {title}
+            </Text>
+          </View>
+          {controls}
         </View>
-      </View>
+      ) : (
+        <View
+          style={{
+            paddingHorizontal: 20,
+            paddingTop: embedded ? 4 : 12,
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 8,
+          }}
+        >
+          {headerLeft}
+          {controls}
+        </View>
+      )}
 
       {plan.draft && plan.locked ? (
         <View style={{ paddingHorizontal: 20, marginTop: 14 }}>
@@ -485,7 +516,7 @@ export function PlanView({
           });
         }}
       />
-    </View>
+    </TrainingLogProvider>
   );
 }
 

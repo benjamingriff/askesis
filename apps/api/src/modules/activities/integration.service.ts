@@ -121,15 +121,27 @@ export async function readIntegrations(athleteId: string): Promise<IntegrationsS
   });
 }
 
+/** The mobile app's URL scheme (`scheme` in apps/mobile/app.json). */
+const NATIVE_SCHEME = 'askesis:';
+
 /**
  * Strava redirects back to the web app, which completes the connection with the athlete's
- * session. Only this deployment's own web origins may receive the code.
+ * session. Only this deployment's own web origins may receive the code. The mobile app returns
+ * through its own scheme instead, as `askesis://<web host>/connections/strava/callback`: Strava
+ * checks the host against the application's callback domain, and the app still needs the
+ * athlete's session and signed state to finish.
  */
 function checkRedirect(redirectUri: string) {
   const url = new URL(redirectUri);
   const parties = getApiConfig().clerkAuthorizedParties;
   const local = ['localhost', '127.0.0.1'].includes(url.hostname);
-  const allowed = parties ? parties.includes(url.origin) : local;
+  const allowed =
+    url.protocol === NATIVE_SCHEME
+      ? parties
+        ? parties.some((party) => new URL(party).hostname === url.hostname)
+        : local
+      : ['http:', 'https:'].includes(url.protocol) &&
+        (parties ? parties.includes(url.origin) : local);
   if (!allowed || url.pathname !== '/connections/strava/callback' || url.search || url.hash)
     throw new IntegrationError('REDIRECT_NOT_ALLOWED', 'This return address is not allowed.', 422);
 }

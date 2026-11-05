@@ -11,6 +11,7 @@ import {
   type Units,
 } from './format';
 import { SPORT_META, type Sport } from './sports';
+import { expectedEffort } from './workouts';
 
 export function workoutMeta(workout: WorkoutSummary, units: Units, pool: PoolUnits = 'm'): string {
   const parts = [];
@@ -21,7 +22,11 @@ export function workoutMeta(workout: WorkoutSummary, units: Units, pool: PoolUni
         : formatDistance(workout.estimatedDistanceMetres, units),
     );
   if (workout.estimatedDurationSeconds !== null)
-    parts.push(formatDuration(workout.estimatedDurationSeconds));
+    parts.push(
+      `${workout.placeholder ? '~' : ''}${formatDuration(workout.estimatedDurationSeconds)}`,
+    );
+  const effort = expectedEffort(workout);
+  if (effort) parts.push(effort);
   return parts.join(' · ') || SPORT_META[workout.discipline as Sport]?.label || workout.discipline;
 }
 
@@ -35,8 +40,18 @@ export function workoutStats(workout: WorkoutSummary, units: Units, pool: PoolUn
         ? { label: 'Distance', value: formatSwimDistance(metres, pool) }
         : { label: 'Distance', value: formatDistance(metres, units, false), unit: units },
     );
-  if (seconds !== null) stats.push({ label: 'Time', value: formatDuration(seconds) });
-  if (metres && seconds) {
+  if (seconds !== null)
+    stats.push({
+      label: 'Time',
+      value: `${workout.placeholder ? '~' : ''}${formatDuration(seconds)}`,
+    });
+  if (workout.expectedRpe)
+    stats.push({
+      label: 'Effort',
+      value: expectedEffort(workout)!.replace('RPE ', ''),
+      unit: 'RPE',
+    });
+  if (metres && seconds && !workout.placeholder) {
     if (workout.discipline === 'run')
       stats.push({
         label: 'Avg pace',

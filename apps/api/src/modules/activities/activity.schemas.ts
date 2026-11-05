@@ -25,7 +25,7 @@ export type IntegrationsState = z.infer<typeof IntegrationsStateSchema>;
 
 export const StartStravaConnectionSchema = z
   .object({
-    /** Where Strava returns: this web origin's `/connections/strava/callback`. */
+    /** Where Strava returns: this web origin's `/connections/strava/callback`, or the app's `askesis://<web host>/connections/strava/callback`. */
     redirectUri: z.string().url().max(500),
   })
   .openapi('StartStravaConnection');
