@@ -27,3 +27,9 @@ For web behavior or appearance changes, use the real local application to verify
 - Any change to the coaching prompt text in `apps/agent/src/prompt.ts` bumps `PROMPT_VERSION` to the next `coach-vN` (for example `coach-v1` → `coach-v2`). Change only the number: keep the `coach-vN` naming and leave earlier versions' entries untouched.
 - Bump once per PR relative to `main`. If the prompt changes again before the PR merges, keep the new name and update its hash.
 - Update the API's copy of the name in `apps/api/src/modules/agent/agent.schemas.ts`, add the name and hash to `apps/agent/prompts.lock.json` (the test failure prints the hash to use) and replace the old name in tests and docs. Workers and the API must be deployed together.
+
+# Mobile builds and updates
+
+- Expo's free plan allows 15 iOS builds a month, and the owner wants to stay on it. Start an EAS build, submit or update (`pnpm release:build`, `pnpm release:update`, or `eas-cli build`, `submit` or `update`) only when the owner asks for one in the current request. The owner says when a merged PR should be built.
+- Verify mobile changes in Expo Go, Expo web or a Limrun simulator.
+- In a mobile PR, say whether the change can reach the installed build as an update or needs a new build. Native packages, native settings in `app.json` and Expo SDK upgrades change the runtime fingerprint and need a build. The process is in the [mobile README](apps/mobile/README.md#testflight-builds-and-updates).

@@ -1,4 +1,4 @@
-import type { paths } from '@askesis/api-client';
+import type { paths } from '@waddle/api-client';
 import { useQuery } from '@tanstack/react-query';
 import {
   ArrowRight,
@@ -110,7 +110,7 @@ export function RunTurn({
         <span className="coach-avatar" aria-hidden="true">
           <Sparkles size={12} />
         </span>
-        Askesis
+        Waddle
         {turn.status === 'failed' && incomplete ? (
           <small>Failed · incomplete</small>
         ) : turn.status === 'cancelled' && incomplete ? (

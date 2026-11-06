@@ -1,13 +1,14 @@
 import { useEffect, useRef, useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Check, Gauge } from 'lucide-react';
-import type { paths } from '@askesis/api-client';
+import type { paths } from '@waddle/api-client';
 import { api } from '../api';
 import { result } from '../lib/result';
 import { useRequestKey } from '../lib/use-request-key';
 import type { LogInput } from '../training-log';
 import { parseClock } from '../routes/performance';
 import { Button, Notice, CheckRow } from './ui';
+import { useCoachWord } from '../coach';
 
 type PreviewInput =
   paths['/api/v1/performance/calibrations/preview']['post']['requestBody']['content']['application/json'];
@@ -26,6 +27,7 @@ export function PerformanceResult({
   onChange: (value: Input | undefined) => void;
   onBusyChange?: (busy: boolean) => void;
 }) {
+  const coach = useCoachWord();
   const system =
     discipline === 'run'
       ? 'run_pace'
@@ -168,12 +170,13 @@ export function PerformanceResult({
     setRecorded(false);
   };
   if (!system)
-    return <p className="fb-hint">Tell your coach about this result in the note below.</p>;
+    return <p className="fb-hint">Tell your {coach} about this result in the note below.</p>;
   return (
     <section className="fb-section">
       <h3>Your result (optional)</h3>
       <p className="fb-hint">
-        Preview and attach a result for your coach. Saving the log alone never changes your fitness.
+        Preview and attach a result for your {coach}. Saving the log alone never changes your
+        fitness.
       </p>
       <label className="field">
         <span>Result type</span>

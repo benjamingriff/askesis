@@ -2,21 +2,22 @@ import { Ionicons } from '@expo/vector-icons';
 import { Tabs } from 'expo-router';
 import type { ColorValue } from 'react-native';
 import { FloatingTabBar } from '../../components/FloatingTabBar';
-import { useChat } from '../../state/chat';
+import { useInAppCoach } from '../../data/account';
 import { useTheme } from '../../state/settings';
 
 type TabIcon = keyof typeof Ionicons.glyphMap;
 
+// FloatingTabBar passes theme colours, which are always strings.
 const icon =
   (active: TabIcon, inactive: TabIcon) =>
   ({ color, focused, size }: { color: ColorValue; focused: boolean; size: number }) => (
-    <Ionicons name={focused ? active : inactive} size={size} color={color} />
+    <Ionicons name={focused ? active : inactive} size={size} color={color as string} />
   );
 
 export default function TabsLayout() {
   const theme = useTheme();
-  const { conversations } = useChat();
-  const unread = conversations.filter((c) => c.unread && !c.archived).length;
+  // Without the in-app coach there are three tabs; links to the Coach tab land on Today.
+  const coach = useInAppCoach();
 
   return (
     <Tabs
@@ -37,14 +38,15 @@ export default function TabsLayout() {
           tabBarIcon: icon('calendar', 'calendar-outline'),
         }}
       />
-      <Tabs.Screen
-        name="coach"
-        options={{
-          title: 'Coach',
-          tabBarIcon: icon('chatbubble-ellipses', 'chatbubble-ellipses-outline'),
-          tabBarBadge: unread > 0 ? unread : undefined,
-        }}
-      />
+      <Tabs.Protected guard={coach}>
+        <Tabs.Screen
+          name="coach"
+          options={{
+            title: 'Coach',
+            tabBarIcon: icon('chatbubble-ellipses', 'chatbubble-ellipses-outline'),
+          }}
+        />
+      </Tabs.Protected>
       <Tabs.Screen
         name="you"
         options={{ title: 'You', tabBarIcon: icon('person-circle', 'person-circle-outline') }}

@@ -3,7 +3,7 @@ import {
   type UsageRole,
   type ModelRequestUsage,
   type UsageLedgerJson,
-} from '@askesis/agent/usage';
+} from '@waddle/agent/usage';
 import {
   estimateRequestCost,
   sumCosts,

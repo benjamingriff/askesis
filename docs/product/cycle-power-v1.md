@@ -1,4 +1,4 @@
-# Askesis cycle-power-v1
+# Waddle cycle-power-v1
 
 Cycling zones are percentages of functional threshold power (FTP), following Andrew Coggan's power levels with a sweet-spot band added between tempo and threshold. The factors below are common field-test conventions, not laboratory measurements.
 

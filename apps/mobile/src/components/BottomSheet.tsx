@@ -1,5 +1,14 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { Animated, Dimensions, Easing, Modal, Pressable, View } from 'react-native';
+import {
+  Animated,
+  Dimensions,
+  Easing,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  Pressable,
+  View,
+} from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../state/settings';
 import { Text } from './ui';
@@ -48,7 +57,11 @@ export function BottomSheet({
       onRequestClose={onClose}
       statusBarTranslucent
     >
-      <View style={{ flex: 1, justifyContent: 'flex-end' }}>
+      {/* The sheet rises above the keyboard, so a focused field and its buttons stay visible. */}
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        style={{ flex: 1, justifyContent: 'flex-end', paddingTop: insets.top }}
+      >
         <Animated.View
           style={{
             position: 'absolute',
@@ -68,6 +81,8 @@ export function BottomSheet({
             paddingHorizontal: 20,
             paddingBottom: Math.max(insets.bottom, 16) + 8,
             maxHeight: Dimensions.get('window').height * 0.85,
+            // With the keyboard up, scrollable content shrinks rather than leaving the screen.
+            flexShrink: 1,
             borderWidth: 1,
             borderBottomWidth: 0,
             borderColor: theme.colors.border,
@@ -93,7 +108,7 @@ export function BottomSheet({
           ) : null}
           {children}
         </Animated.View>
-      </View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }

@@ -1,4 +1,4 @@
-import type { ActivityDetail, ActivitySummary, WorkoutSummary } from '@askesis/api-client';
+import type { ActivityDetail, ActivitySummary, WorkoutSummary } from '@waddle/api-client';
 import {
   Activity as ActivityIcon,
   ExternalLink,
@@ -38,6 +38,7 @@ import { SPORT_META } from '../lib/sports';
 import { useLocalToday } from '../lib/use-local-today';
 import { useSportUnits, useUnits, type Units } from '../settings';
 import { Button, cx, Dialog, ErrorState, IconButton, LoadingState, Notice } from './ui';
+import { useCoachWord } from '../coach';
 
 /** Shown wherever Strava data is: it is displayed for reference, never saved. */
 export const STRAVA_NOTICE =
@@ -499,6 +500,7 @@ export function StravaActivityPanel({
 // ---- Settings ----------------------------------------------------------------------------------
 
 export function StravaConnection() {
+  const coach = useCoachWord();
   const integrations = useIntegrations();
   const connect = useConnectStrava();
   const disconnect = useDisconnectStrava();
@@ -564,15 +566,15 @@ export function StravaConnection() {
       </div>
       {error ? <Notice tone="danger">{error.message}</Notice> : null}
       <p className="muted small">
-        You choose which Strava activity belongs to each workout. Askesis keeps only that link;
+        You choose which Strava activity belongs to each workout. Waddle keeps only that link;
         activity details are fetched from Strava when you open them, shown only to you, and never
-        shared with your coach.
+        shared with your {coach}.
       </p>
       <Dialog
         open={confirming}
         onClose={() => setConfirming(false)}
         title="Disconnect Strava?"
-        description="Askesis revokes its access and deletes the links you made between workouts and Strava activities. Your workout logs stay."
+        description="Waddle revokes its access and deletes the links you made between workouts and Strava activities. Your workout logs stay."
         busy={disconnect.isPending}
         footer={
           <>

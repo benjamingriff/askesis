@@ -1,0 +1,182 @@
+import { useQuery, type QueryClient } from '@tanstack/react-query';
+import type { CalibrationEntry, paths, PerformanceState, WorkoutDetail } from '../lib/api-types';
+import { api } from '../lib/api';
+import { planStructure } from '../lib/blocks';
+import { result } from '../lib/result';
+
+export type Plan =
+  paths['/api/v1/plans/{planId}']['get']['responses'][200]['content']['application/json'];
+export type PlanVersion = NonNullable<Plan['draft']>;
+export type BriefState =
+  paths['/api/v1/plans/{planId}/draft/brief']['get']['responses'][200]['content']['application/json'];
+export type Calibration = CalibrationEntry;
+export type Preview =
+  paths['/api/v1/plans/{planId}/validate']['post']['responses'][200]['content']['application/json'];
+export type PlanView = 'locked' | 'draft';
+
+export function planVersion(plan: Plan, view: PlanView): PlanVersion | null {
+  return view === 'draft' ? (plan.draft ?? plan.locked) : (plan.locked ?? plan.draft);
+}
+
+/**
+ * Query-key segment for one saved state of a version. Draft edits advance `editNumber`, so any
+ * query keyed by it refetches after coach, human or other-session edits.
+ */
+export function versionKey(version: Pick<PlanVersion, 'id' | 'editNumber'> | null | undefined) {
+  return [version?.id, version?.editNumber] as const;
+}
+
+export type DraftChanges =
+  paths['/api/v1/plans/{planId}/draft/changes']['get']['responses'][200]['content']['application/json'];
+
+/** One plan's metadata and current draft/locked identities. Live updates refresh this key. */
+export function usePlan(planId: string | null) {
+  return useQuery({
+    queryKey: ['plans', planId],
+    enabled: !!planId,
+    queryFn: async () =>
+      result(await api.GET('/api/v1/plans/{planId}', { params: { path: { planId: planId! } } })),
+  });
+}
+
+/**
+ * Net differences between the current draft and the locked version. Keyed by the draft's edit,
+ * so a response for an older edit is never shown against a newer schedule.
+ */
+export function useDraftChanges(planId: string, draft: PlanVersion | null) {
+  const changes = useQuery({
+    queryKey: ['plans', planId, 'draft-changes', ...versionKey(draft)],
+    enabled: !!draft,
+    queryFn: async () =>
+      result(
+        await api.GET('/api/v1/plans/{planId}/draft/changes', { params: { path: { planId } } }),
+      ),
+  });
+  const current = changes.data && changes.data.editNumber === draft?.editNumber;
+  return { ...changes, data: current ? changes.data : undefined };
+}
+
+/** The brief and prescribed coverage for one version of a plan. */
+export function useBriefState(planId: string, version: PlanVersion | null) {
+  const draft = version?.state === 'draft';
+  return useQuery({
+    // A draft is locked in place (same id and editNumber) but read from a different endpoint,
+    // so the state is part of the key.
+    queryKey: ['plans', planId, 'brief', version?.state, ...versionKey(version)],
+    enabled: !!version,
+    placeholderData: (previous, query) =>
+      query?.queryKey.at(-2) === version?.id ? previous : undefined,
+    // Locked versions never change, and draft changes advance editNumber (part of the key).
+    refetchOnWindowFocus: false,
+    queryFn: async () =>
+      draft
+        ? result(
+            await api.GET('/api/v1/plans/{planId}/draft/brief', { params: { path: { planId } } }),
+          )
+        : result(
+            await api.GET('/api/v1/plans/{planId}/revisions/{revisionId}/brief', {
+              params: { path: { planId, revisionId: version!.id } },
+            }),
+          ),
+  });
+}
+
+export function useWorkouts(version: Pick<PlanVersion, 'id' | 'editNumber'> | null | undefined) {
+  return useQuery({
+    queryKey: ['plan-workouts', ...versionKey(version)],
+    enabled: !!version,
+    placeholderData: (previous, query) =>
+      query?.queryKey.at(-2) === version?.id ? previous : undefined,
+    queryFn: async () =>
+      result(
+        await api.GET('/api/v1/workouts', { params: { query: { planVersionId: version!.id } } }),
+      ).workouts,
+  });
+}
+
+/**
+ * A version's labelled training blocks (empty when none names a phase) and its stored weeks.
+ * Under 'plan-workouts' so schedule edits refresh it.
+ */
+export function useBlocks(version: Pick<PlanVersion, 'id' | 'editNumber'> | null | undefined) {
+  return useQuery({
+    queryKey: ['plan-workouts', 'blocks', ...versionKey(version)],
+    enabled: !!version,
+    placeholderData: (previous, query) =>
+      query?.queryKey.at(-2) === version?.id ? previous : undefined,
+    queryFn: async () =>
+      result(await api.GET('/api/v1/blocks', { params: { query: { planVersionId: version!.id } } }))
+        .blocks,
+    select: planStructure,
+  });
+}
+
+export function useWorkoutDetail(
+  workoutId: string | null | undefined,
+  version?: Pick<PlanVersion, 'id' | 'editNumber'> | null,
+) {
+  return useQuery<WorkoutDetail>({
+    // Under 'plan-workouts' so coach edits and performance updates invalidate resolved paces.
+    queryKey: ['plan-workouts', 'detail', workoutId, ...versionKey(version)],
+    enabled: !!workoutId,
+    staleTime: 60_000,
+    queryFn: async () =>
+      result(
+        await api.GET('/api/v1/workouts/{workoutId}', {
+          params: { path: { workoutId: workoutId! } },
+        }),
+      ),
+  });
+}
+
+/**
+ * Recorded schedule coverage, or `null` when it is unknown (legacy plans). Once generation has been
+ * attempted, an empty list is known coverage: nothing is fully prescribed yet.
+ */
+export function knownCoverage(
+  state: Pick<BriefState, 'coverage' | 'generations'>,
+): BriefState['coverage'] | null {
+  return state.coverage.length || state.generations?.length ? state.coverage : null;
+}
+
+/**
+ * The athlete's calibration timeline. It belongs to the athlete, not a plan: every plan's pace
+ * guides follow it, and live performance notifications refresh this key.
+ */
+export function usePerformance() {
+  return useQuery<PerformanceState>({
+    queryKey: ['performance'],
+    queryFn: async () => result(await api.GET('/api/v1/performance')),
+  });
+}
+
+export { currentEntry, isEstimate } from '../lib/sports';
+
+export type PlanSummary =
+  paths['/api/v1/plans']['get']['responses'][200]['content']['application/json']['plans'][number];
+export type PlanCollection = NonNullable<
+  NonNullable<paths['/api/v1/plans']['get']['parameters']['query']>['collection']
+>;
+
+/** Plans in one library collection; `active` is what Today and the Plan tab follow. */
+export function usePlans(collection: PlanCollection) {
+  return useQuery({
+    queryKey: ['plans', 'collection', collection],
+    queryFn: async () =>
+      result(await api.GET('/api/v1/plans', { params: { query: { collection } } })).plans,
+  });
+}
+
+export const useActivePlans = () => usePlans('active');
+
+/**
+ * Writes a plan returned by a lifecycle command into every cached read of it, so screens move to
+ * its new draft/locked identities before anything refetches (reads keyed by a draft that no
+ * longer exists would fail with a conflict).
+ */
+export function writePlan(client: QueryClient, updated: Plan) {
+  client.setQueryData(['plans', updated.id], updated);
+  client.setQueriesData<PlanSummary[]>({ queryKey: ['plans', 'collection'] }, (plans) =>
+    plans?.map((plan) => (plan.id === updated.id ? updated : plan)),
+  );
+}

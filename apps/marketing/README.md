@@ -1,13 +1,13 @@
-# Askesis marketing site
+# Waddle marketing site
 
-A static [Astro](https://astro.build) site that introduces Askesis and links to the web app. It
+A static [Astro](https://astro.build) site that introduces Waddle and links to the web app. It
 has no API, database or Clerk dependency.
 
 The structure, motion and visual language follow the
 [T3 Code marketing site](https://github.com/pingdotgg/t3code/tree/main/apps/marketing) (MIT):
 a masked grid hero with drifting marks, a framed product screenshot, a two-row marquee, a bordered
 grid, a two-column feature with an illustration, a two-tile pitch and a closing call to action.
-Askesis-specific choices:
+Waddle-specific choices:
 
 - Midnight + Volt tokens and the effort scale from `apps/web/src/theme/palette.ts`. Colour on
   sessions means effort; sports are told apart by the same Lucide icons the app uses
@@ -20,9 +20,9 @@ Askesis-specific choices:
 
 ```bash
 pnpm dev:marketing                               # printed worktree URL, or MARKETING_PORT
-pnpm --filter @askesis/marketing build           # static output in apps/marketing/dist
-pnpm --filter @askesis/marketing typecheck       # astro check
-pnpm --filter @askesis/marketing test            # motion gating
+pnpm --filter @waddle/marketing build           # static output in apps/marketing/dist
+pnpm --filter @waddle/marketing typecheck       # astro check
+pnpm --filter @waddle/marketing test            # motion gating
 ```
 
 Set `SITE_URL` at build time once the site has a domain; canonical and social-card URLs are

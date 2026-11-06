@@ -11,6 +11,8 @@ Model, reasoning (`AGENT_REASONING`, default medium, mapped to Claude's effort l
 
 ## Local setup
 
+`IN_APP_COACH=hidden` removes the in-app coach from the product; production for the MCP release sets `hidden`.
+
 Set `CHAT_EXECUTION_MODE=agent` and a shared `AGENT_BOOTSTRAP_TOKEN` (at least 32 characters) for the API and worker. Generate the token locally with `openssl rand -hex 32`; do not commit it. Set `AGENT_PROVIDER` and the matching `OPENAI_API_KEY` or `ANTHROPIC_API_KEY` for the worker.
 
 With Compose, put those values in the ignored root `.env`, then run:
@@ -61,7 +63,7 @@ pnpm smoke:agent:live
 AGENT_PROVIDER=anthropic pnpm smoke:agent:live
 ```
 
-Port 55433 is optional. Also set a distinct `COMPOSE_PROJECT_NAME` when another test project is running. Database tests still require the exact disposable Askesis database/user on localhost. The upgrade check compares populated Phase 4 plan/workout/calibration/chat rows before and after migration, allowing only new provenance fields. It never resets the development database.
+Port 55433 is optional. Also set a distinct `COMPOSE_PROJECT_NAME` when another test project is running. Database tests still require the exact disposable Waddle database/user on localhost. The upgrade check compares populated Phase 4 plan/workout/calibration/chat rows before and after migration, allowing only new provenance fields. It never resets the development database.
 
 The disposable smoke uses the actual worker, API and selected runtime with a scripted provider (`SMOKE_AGENT_PROVIDER`, default `openai`; CI runs both). It proves registration, queue claiming, provider attribution, a scoped tool receipt, final reply, and public proxy isolation. It makes no provider request. The live smoke reads `AGENT_PROVIDER` and its key from the shell or ignored root `.env`, and runs the production runtime against the selected model through a bounded streamed tool round trip. It must pass before claiming real-provider acceptance for that provider.
 

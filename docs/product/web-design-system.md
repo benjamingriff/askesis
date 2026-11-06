@@ -2,11 +2,11 @@
 
 ## Status
 
-**Current implementation reviewed 2026-10-06, including Phase 7.** The web UI now follows the Expo mobile prototype (`apps/mobile`), which is the agreed visual reference. That prototype draws on T3 Code for chat and agent-activity patterns and on Runna for training-plan presentation.
+**Current implementation reviewed 2026-10-06, including Phase 7.** The web UI follows the Expo mobile prototype, which was the agreed visual reference; the prototype was deleted on 2026-11-06 and the Expo app (`apps/mobile`) carries the same design. It draws on T3 Code for chat and agent-activity patterns and on Runna for training-plan presentation.
 
 ## Principles
 
-- **One visual language across clients.** `apps/web/src/theme/palette.ts` mirrors `apps/mobile/src/theme/palette.ts`. These are separate source files, not a shared package. Consistency is design guidance; selected mobile features may be adapted independently for web.
+- **One visual language across clients.** `apps/mobile/src/theme/palette.ts` mirrors `apps/web/src/theme/palette.ts`. These are separate source files, not a shared package. Consistency is design guidance; selected mobile features may be adapted independently for web.
 - **State and action are separate.** Labels distinguish lifecycle (Draft/Locked/Unlocked/Archived), source (Draft or locked/history version) and activation independently. Toolbar buttons carry the actions (`Unlock`, `Review & lock`). An icon never means both "is locked" and "lock it".
 - **Human-only decisions stay explicit.** Confirming assumptions, locking, unlocking, discarding, archiving and restoring always go through a dialog. The coach can edit drafts but never performs these actions.
 - **Truthful progress.** Prescribed coverage, unplanned weeks and interrupted generation are always visible. Past workouts are dimmed, not marked complete, because completion is not recorded yet.
@@ -63,4 +63,4 @@ Type scale: title 30/800, heading 20/700, subheading 16/600, body 15, caption 13
 
 CSS variables drive component surfaces/text/accent/overlays; palette code also supplies workout/zone colours. Token use is a design convention, not a claim that every style avoids literal colours or that a full accessibility audit has passed. Custom accent foreground selection uses a readability calculation.
 
-Further improvements to the web experience are chosen in separate feature threads. The Expo app remains a reference; native API integration is deferred.
+Further improvements to the web experience are chosen in separate feature threads. `apps/mobile` brings the same language to the native app on the real API.

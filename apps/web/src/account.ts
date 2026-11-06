@@ -38,7 +38,7 @@ export function useDataExport() {
       const url = URL.createObjectURL(await response.blob());
       const link = document.createElement('a');
       link.href = url;
-      link.download = `askesis-export-${new Date().toISOString().slice(0, 10)}.json`;
+      link.download = `waddle-export-${new Date().toISOString().slice(0, 10)}.json`;
       document.body.append(link);
       link.click();
       link.remove();

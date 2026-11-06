@@ -115,7 +115,7 @@ it('writes structured lifecycle and failure records with severity and worker ide
   });
   expect(JSON.parse(String(errors.mock.calls[0]?.[0]))).toMatchObject({
     time: expect.any(String),
-    service: 'askesis-agent',
+    service: 'waddle-agent',
     level: 'error',
     code: 'REGISTRATION_FAILED',
     workerId: 'worker-1',

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { UsageLedger, type ModelRequestUsage } from '@askesis/agent/usage';
+import { UsageLedger, type ModelRequestUsage } from '@waddle/agent/usage';
 import { evaluatorLedger } from './models.js';
 import { estimateRequestCost } from './pricing.js';
 import { PRICE_TABLE } from './pricing-table.js';

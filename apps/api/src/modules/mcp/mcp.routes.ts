@@ -26,7 +26,7 @@ const text = (value: string, isError = false): CallToolResult => ({
 /** One server per request, bound to the authenticated athlete; nothing is kept between requests. */
 function mcpServer(owner: string) {
   const server = new McpServer(
-    { name: 'askesis', title: 'Askesis', version: '0.1.0' },
+    { name: 'waddle', title: 'Waddle', version: '0.1.0' },
     { instructions: MCP_INSTRUCTIONS },
   );
   for (const name of Object.keys(McpToolSchemas) as McpToolName[]) {
@@ -63,14 +63,14 @@ function mcpServer(owner: string) {
   }
   server.registerPrompt(
     'coach',
-    { title: 'Plan with Askesis', description: 'Coach me using my Askesis plans.' },
+    { title: 'Plan with Waddle', description: 'Coach me using my Waddle plans.' },
     () => ({
       messages: [
         {
           role: 'user',
           content: {
             type: 'text',
-            text: `Coach me using my Askesis training plans. Follow this guidance:\n\n${MCP_INSTRUCTIONS}`,
+            text: `Coach me using my Waddle training plans. Follow this guidance:\n\n${MCP_INSTRUCTIONS}`,
           },
         },
       ],
@@ -116,7 +116,7 @@ export function registerMcpRoutes(app: OpenAPIHono<AppEnvironment>) {
     return handler.fetch(c.req.raw, {
       authInfo: {
         token: credential,
-        clientId: 'askesis-development',
+        clientId: 'waddle-development',
         scopes: [],
         extra: { athleteId: athlete.id },
       },

@@ -1,7 +1,7 @@
 import { mkdir, writeFile, rename, appendFile, unlink } from 'node:fs/promises';
 import { randomUUID } from 'node:crypto';
 import { dirname, resolve } from 'node:path';
-import type { BenchmarkSnapshot } from '@askesis/api/benchmark';
+import type { BenchmarkSnapshot } from '@waddle/api/benchmark';
 import type { Check } from './checks.js';
 import type { Review } from './models.js';
 import { usageMarkdown, type UsageMetrics } from './usage-report.js';

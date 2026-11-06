@@ -2,7 +2,7 @@
 
 Status: exploration, recorded 2026-10-11. Nothing here is scheduled. The first working version of the dashboard (`apps/evals`, see its [README](../../apps/evals/README.md)) ships first so the owner can use it before refinement.
 
-The dashboard reads artifacts written by the local training-plan benchmark (`pnpm bench`, [PR #58](https://github.com/benjamingriff/askesis/pull/58)). Its purpose is to verify that a single coach model's conversations and plans are fit for purpose, and to compare prompts, the change expected to have the biggest impact for now. Model comparisons are secondary.
+The dashboard reads artifacts written by the local training-plan benchmark (`pnpm bench`, [PR #58](https://github.com/benjamingriff/waddle/pull/58)). Its purpose is to verify that a single coach model's conversations and plans are fit for purpose, and to compare prompts, the change expected to have the biggest impact for now. Model comparisons are secondary.
 
 ## Launch panel
 

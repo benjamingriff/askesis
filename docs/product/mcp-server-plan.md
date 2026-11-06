@@ -4,7 +4,7 @@ Recorded: 2026-10-25. Status: accepted direction; Phase 0 spike complete (findin
 
 ## Idea
 
-Expose Askesis as a remote [Model Context Protocol](https://modelcontextprotocol.io) server so athletes can plan with the agent they already use (Claude.ai, Claude Desktop, Claude Code and later ChatGPT). Plans, logs and fitness stay persisted in Askesis; the web app remains the place to review, lock and train. The athlete's own subscription pays for the model, so Askesis can release to friends without hosting or costing a coaching agent. The built-in coach continues as a separate track.
+Expose Waddle (formerly Askesis) as a remote [Model Context Protocol](https://modelcontextprotocol.io) server so athletes can plan with the agent they already use (Claude.ai, Claude Desktop, Claude Code and later ChatGPT). Plans, logs and fitness stay persisted in Askesis; the web app remains the place to review, lock and train. The athlete's own subscription pays for the model, so Askesis can release to friends without hosting or costing a coaching agent. The built-in coach continues as a separate track.
 
 ## Why the current system fits
 
@@ -27,7 +27,7 @@ Expose Askesis as a remote [Model Context Protocol](https://modelcontextprotocol
 
 - **Latency.** An external agent writes the same workout trees through the same tools, so a plan is not necessarily faster to build; the athlete pays for and is used to their own client's pace.
 - **ChatGPT.** Write access for custom MCP connectors may be limited to some plans and require developer mode. Claude clients are the dependable first target.
-- **One direction.** MCP calls originate from the agent. Askesis cannot push a prompt to the athlete's agent; the agent sees new logs and check-ins when it reads.
+- **One direction.** MCP calls originate from the agent. Waddle cannot push a prompt to the athlete's agent; the agent sees new logs and check-ins when it reads.
 - **Quality visibility.** The benchmark evaluates the built-in coach. External coaching is visible only through what gets saved.
 - **Attribution.** Logs and calibrations recorded externally need their own provenance rather than appearing as athlete or coach entries.
 
@@ -62,7 +62,7 @@ Questions the spike should answer:
 ### Try it locally
 
 1. `pnpm dev:setup`, then `pnpm dev:mcp` (add `--email you@example.com` to act as your own Clerk development account instead of the verification account). It writes `MCP_DEV_TOKEN` and `MCP_DEV_CLERK_USER_ID` to the worktree `.env` and prints a `claude mcp add` command containing the token. Treat that token as a password.
-2. `pnpm dev` (restart it if it was already running), then run the printed command and start `claude`. `/mcp` lists the Askesis server; the `coach` prompt is available as a slash command.
+2. `pnpm dev` (restart it if it was already running), then run the printed command and start `claude`. `/mcp` lists the Waddle server; the `coach` prompt is available as a slash command.
 3. Watch the plan appear in the web app. Ctrl+C stops the servers; delete the two `MCP_DEV_*` lines from `.env` to turn the endpoint off.
 
 ## Spike findings

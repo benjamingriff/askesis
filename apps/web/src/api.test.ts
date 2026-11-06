@@ -9,7 +9,7 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-describe('Askesis API client authentication', () => {
+describe('Waddle API client authentication', () => {
   it('attaches the current Clerk session token', async () => {
     const fetchMock = vi.fn(async (request: Request) => {
       expect(request.headers.get('authorization')).toBe('Bearer session-token');
@@ -20,7 +20,7 @@ describe('Askesis API client authentication', () => {
     });
     vi.stubGlobal('fetch', fetchMock);
     configureAuthTokenProvider(async () => 'session-token');
-    const client = createAuthenticatedApiClient('http://askesis.test');
+    const client = createAuthenticatedApiClient('http://waddle.test');
 
     const result = await client.GET('/api/v1/workouts', {
       params: { query: { planVersionId: '00000000-0000-0000-0000-000000000050' } },
@@ -38,8 +38,8 @@ describe('Askesis API client authentication', () => {
       vi.fn(async (input: Request | string, init?: RequestInit) => {
         seen.push(
           input instanceof Request
-            ? input.headers.get('x-askesis-timezone')
-            : new Headers(init?.headers).get('x-askesis-timezone'),
+            ? input.headers.get('x-waddle-timezone')
+            : new Headers(init?.headers).get('x-waddle-timezone'),
         );
         return new Response('{"workouts":[]}', {
           status: 200,
@@ -48,7 +48,7 @@ describe('Askesis API client authentication', () => {
       }),
     );
     configureAuthTokenProvider(async () => 'session-token');
-    await createAuthenticatedApiClient('http://askesis.test').GET('/api/v1/workouts', {
+    await createAuthenticatedApiClient('http://waddle.test').GET('/api/v1/workouts', {
       params: { query: { planVersionId: '00000000-0000-0000-0000-000000000050' } },
     });
     await authenticatedFetch('/api/v1/live/bootstrap');

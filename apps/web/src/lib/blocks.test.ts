@@ -1,4 +1,4 @@
-import type { TrainingBlock } from '@askesis/api-client';
+import type { TrainingBlock } from '@waddle/api-client';
 import { expect, it } from 'vitest';
 import { phaseColor } from '../theme/palette';
 import {

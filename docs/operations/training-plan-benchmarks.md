@@ -4,7 +4,7 @@ The benchmark starts a dedicated local PostgreSQL database, the current API and 
 
 ## Run a scenario
 
-Scenarios come from the [versioned athlete datasets](../../apps/bench/datasets/README.md): eight authored cases across running, cycling, swimming, strength, gym, hybrid and triathlon athletes, grouped in the `pilot-v1` suite. Validate their authoring data without starting services or making provider calls with `pnpm --filter @askesis/bench datasets:validate`. The retired `running-poc` scenario is replaced by `running-improver`, the same athlete in the dataset format; older `running-poc` runs remain readable in the dashboard but cannot be regraded.
+Scenarios come from the [versioned athlete datasets](../../apps/bench/datasets/README.md): eight authored cases across running, cycling, swimming, strength, gym, hybrid and triathlon athletes, grouped in the `pilot-v1` suite. Validate their authoring data without starting services or making provider calls with `pnpm --filter @waddle/bench datasets:validate`. The retired `running-poc` scenario is replaced by `running-improver`, the same athlete in the dataset format; older `running-poc` runs remain readable in the dashboard but cannot be regraded.
 
 Requirements: Node 24, the repository's pnpm version, Docker with a local daemon, development Clerk keys and a valid OpenAI API key. Model requests use the provider and incur its normal charges. PostgreSQL, API and worker run locally.
 
@@ -211,7 +211,7 @@ The project/volume name is derived from the worktree path. API and database port
 
 ```sh
 pnpm bench run --suite pilot-v1 --scripted
-pnpm --filter @askesis/bench test
+pnpm --filter @waddle/bench test
 ```
 
 The scripted mode exercises the same worker, authenticated tools, migrations and persisted plan exports with an SDK model fixture. It requires development Clerk configuration, but no provider key. Its report explicitly states that it evaluates harness wiring and does not grade real model quality. All reviewer criteria are `uncertain`, so its overall verdict is `needs_revision` even when every deterministic check passes.

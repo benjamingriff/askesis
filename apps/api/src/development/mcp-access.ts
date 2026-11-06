@@ -55,8 +55,8 @@ async function main() {
   console.log(
     [
       `Development MCP access now acts as ${email}. Restart pnpm dev so the API reads it.`,
-      'Connect Claude Code (replaces any earlier askesis server):',
-      `  claude mcp remove askesis 2>/dev/null; claude mcp add --transport http askesis http://127.0.0.1:${port}/mcp --header "Authorization: Bearer ${token}"`,
+      'Connect Claude Code (replaces any earlier waddle server):',
+      `  claude mcp remove waddle 2>/dev/null; claude mcp add --transport http waddle http://127.0.0.1:${port}/mcp --header "Authorization: Bearer ${token}"`,
     ].join('\n'),
   );
 }

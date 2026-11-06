@@ -1,7 +1,7 @@
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { createMemoryRouter, RouterProvider } from 'react-router';
-import type { ActivityLink, WorkoutSummary } from '@askesis/api-client';
+import type { ActivityLink, WorkoutSummary } from '@waddle/api-client';
 import { AccountQueryProvider } from '../query-provider';
 import { TrainingLogProvider, WorkoutLogActions } from './TrainingLog';
 import type { WorkoutLog } from '../training-log';

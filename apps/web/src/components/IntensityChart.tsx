@@ -1,4 +1,4 @@
-import type { WorkoutStep } from '@askesis/api-client';
+import type { WorkoutStep } from '@waddle/api-client';
 import { useMemo } from 'react';
 import { intensitySegments } from '../lib/workouts';
 

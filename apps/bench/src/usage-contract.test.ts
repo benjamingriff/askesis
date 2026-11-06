@@ -1,6 +1,6 @@
 import { expect, it } from 'vitest';
-import { UsageLedgerSchema } from '@askesis/api/benchmark';
-import { UsageLedger, readUsageLedger } from '@askesis/agent/usage';
+import { UsageLedgerSchema } from '@waddle/api/benchmark';
+import { UsageLedger, readUsageLedger } from '@waddle/agent/usage';
 import { evaluatorLedger } from './models.js';
 it('parses provider, missing, failure and zero evaluator ledgers through the real exported API schema', () => {
   const ledger = evaluatorLedger('gpt-6.1-sol', 'reviewer');

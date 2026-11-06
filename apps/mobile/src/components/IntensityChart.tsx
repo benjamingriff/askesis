@@ -1,22 +1,21 @@
 import { useEffect, useMemo, useRef } from 'react';
 import { Animated, Easing, View } from 'react-native';
-import type { Step } from '../data/types';
-import { flattenSegments, ZONE_INTENSITY } from '../lib/metrics';
+import type { WorkoutStep } from '../lib/api-types';
+import { intensitySegments } from '../lib/workouts';
 import { useTheme } from '../state/settings';
-import { KIND_COLORS, ZONE_COLORS } from '../theme/palette';
 
 /**
- * Runna-style effort profile: bar width is time, bar height is intensity, colour is the pace zone.
+ * Runna-style effort profile: bar width is time, bar height is intensity, colour is effort.
  * Built from plain Views so it renders identically in Expo Go and on web.
  */
 export function IntensityChart({
-  steps,
+  prescription,
   height = 64,
   gap = 2,
   animate = false,
   dimmed = false,
 }: {
-  steps: Step[];
+  prescription: WorkoutStep;
   height?: number;
   gap?: number;
   animate?: boolean;
@@ -35,12 +34,24 @@ export function IntensityChart({
   }, [animate, rise]);
 
   const segments = useMemo(() => {
-    const flat = flattenSegments(steps);
+    // Back-to-back efforts at the same level read as one block (a jog between two easy steps).
+    const flat = intensitySegments(prescription).reduce<ReturnType<typeof intensitySegments>>(
+      (merged, s) => {
+        const last = merged.at(-1);
+        if (last && last.effort === s.effort && last.level === s.level) last.seconds += s.seconds;
+        else merged.push({ ...s });
+        return merged;
+      },
+      [],
+    );
     const total = flat.reduce((sum, s) => sum + s.seconds, 0) || 1;
-    // Keep very short efforts (strides, sprints) visible next to hour-long easy blocks.
-    const floor = total * 0.012;
+    // Short efforts (strides, sets, hill reps) stay readable as blocks beside long easy running:
+    // none narrower than about half an even share.
+    const floor = Math.max(total * 0.012, (total / flat.length) * 0.55);
     return flat.map((s) => ({ ...s, weight: Math.max(s.seconds, floor) }));
-  }, [steps]);
+  }, [prescription]);
+  const barGap = segments.length > 24 ? Math.min(gap, 1.5) : gap;
+  const radius = Math.min(segments.length > 24 ? 3 : 5, height / 6);
 
   return (
     <View
@@ -48,13 +59,13 @@ export function IntensityChart({
         height,
         flexDirection: 'row',
         alignItems: 'flex-end',
-        gap,
+        gap: barGap,
         opacity: dimmed ? 0.55 : 1,
       }}
     >
       {segments.map((s, i) => {
-        const intensity = s.zone ? ZONE_INTENSITY[s.zone] : 0.5;
-        const color = s.zone ? ZONE_COLORS[s.zone] : KIND_COLORS.strength;
+        // Same scale as the web chart: easy efforts are low blocks, not slivers.
+        const intensity = Math.min(1, 0.22 + s.level * 0.156);
         return (
           <Animated.View
             key={i}
@@ -62,11 +73,11 @@ export function IntensityChart({
               flex: s.weight,
               minWidth: 2,
               height: Math.max(4, height * intensity),
-              borderTopLeftRadius: Math.min(5, height / 6),
-              borderTopRightRadius: Math.min(5, height / 6),
+              borderTopLeftRadius: radius,
+              borderTopRightRadius: radius,
               borderBottomLeftRadius: 1.5,
               borderBottomRightRadius: 1.5,
-              backgroundColor: color,
+              backgroundColor: theme.efforts[s.effort],
               transform: [
                 { scaleY: rise },
                 {

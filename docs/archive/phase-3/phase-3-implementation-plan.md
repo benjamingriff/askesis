@@ -62,7 +62,7 @@ Before schema work fixes output assumptions, write a short versioned calculator 
 - Define E/M/T/I/R targets and proportional faster/slower bounds.
 - Define supported numerical domains, error handling, precision, and display rounding.
 - Record why slower guides have wider ranges and faster guides narrower ranges.
-- Use neutral Askesis product language and avoid an official-compatibility claim.
+- Use neutral Waddle product language and avoid an official-compatibility claim.
 
 Use Daniels and Gilbert's published [Oxygen Power](https://www.vivamarathon.com/oxygenpower.pdf) as the race-performance source and the official [V.O2 running calculator](https://vdoto2.com/calculator/) only for manual comparison. Record the exact edition, equations, coefficients, and interpretation in the versioned specification so implementation does not depend on an unrecorded web result.
 
@@ -76,7 +76,7 @@ Create golden cases covering at least:
 
 Compare representative race-derived outputs manually with the official V.O2 calculator and record expected tolerances. Tests use checked-in expected values and never call an external service.
 
-This stage is a review checkpoint. If the published equations cannot reproduce defensible E/M/T/I/R guidance without copying proprietary tables or relying on an undocumented service, retain the accepted input/output contract but replace the coefficient derivation with a separately reviewed, documented Askesis approximation before proceeding.
+This stage is a review checkpoint. If the published equations cannot reproduce defensible E/M/T/I/R guidance without copying proprietary tables or relying on an undocumented service, retain the accepted input/output contract but replace the coefficient derivation with a separately reviewed, documented Waddle approximation before proceeding.
 
 ### Stage 2: destructive schema cutover and fixture
 

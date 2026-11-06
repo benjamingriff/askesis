@@ -1,4 +1,4 @@
-/** Askesis cycle-power-v1. See docs/product/cycle-power-v1.md for the protocol factors and zones. */
+/** Waddle cycle-power-v1. See docs/product/cycle-power-v1.md for the protocol factors and zones. */
 export const CYCLE_CALCULATOR_VERSION = 'cycle-power-v1';
 export type PowerInput =
   | { method: 'ftp'; watts: number }

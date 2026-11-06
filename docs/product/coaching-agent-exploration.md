@@ -12,40 +12,40 @@ My first product slice would combine image/PDF attachments, references to specif
 
 The feature ideas below are captured as GitHub issues with `enhancement`, `state:inbox` and `approval:human`. Priorities are unassigned. Issues are authoritative for scope, decisions, dependencies and delivery state; this document retains the research and architectural rationale. Inbox issues need bounded acceptance criteria and validation before promotion to ready.
 
-| Idea                                                                      | Issue                                                     |
-| ------------------------------------------------------------------------- | --------------------------------------------------------- |
-| Share images and PDFs with the coaching agent                             | [#37](https://github.com/benjamingriff/askesis/issues/37) |
-| Reference workouts and weeks directly in coaching messages                | [#38](https://github.com/benjamingriff/askesis/issues/38) |
-| Answer coaching clarifications through structured question cards          | [#39](https://github.com/benjamingriff/askesis/issues/39) |
-| Queue editable coaching follow-ups while a run is active                  | [#40](https://github.com/benjamingriff/askesis/issues/40) |
-| Steer an active coaching run at a safe execution boundary                 | [#41](https://github.com/benjamingriff/askesis/issues/41) |
-| Evaluate cheaper parallel specialist agents for workout generation        | [#42](https://github.com/benjamingriff/askesis/issues/42) |
-| Review generated plans with deterministic checks and a focused specialist | [#43](https://github.com/benjamingriff/askesis/issues/43) |
-| Remember editable athlete coaching preferences across conversations       | [#44](https://github.com/benjamingriff/askesis/issues/44) |
-| Record workout completion and perceived-effort feedback for coaching      | [#45](https://github.com/benjamingriff/askesis/issues/45) |
-| Deliver evidence-based weekly coaching reviews with optional recurrence   | [#46](https://github.com/benjamingriff/askesis/issues/46) |
-| Compare alternative training schedules before applying one                | [#47](https://github.com/benjamingriff/askesis/issues/47) |
-| Restore a plan draft to before a coaching turn                            | [#48](https://github.com/benjamingriff/askesis/issues/48) |
-| Show typed visual and interactive coaching cards in chat                  | [#49](https://github.com/benjamingriff/askesis/issues/49) |
-| Dictate editable coaching messages and post-workout notes on mobile web   | [#50](https://github.com/benjamingriff/askesis/issues/50) |
-| Configure versioned coaching methodologies and communication preferences  | [#51](https://github.com/benjamingriff/askesis/issues/51) |
-| Offer a discussion mode with no plan mutation tools                       | [#52](https://github.com/benjamingriff/askesis/issues/52) |
-| Route coaching tasks to appropriate model and reasoning settings          | [#53](https://github.com/benjamingriff/askesis/issues/53) |
-| Connect activity data to prescribed workouts for coaching                 | [#54](https://github.com/benjamingriff/askesis/issues/54) |
-| Look up event information and coaching evidence with source links         | [#55](https://github.com/benjamingriff/askesis/issues/55) |
-| Account for coaching run and specialist-task costs                        | [#56](https://github.com/benjamingriff/askesis/issues/56) |
+| Idea                                                                      | Issue                                                    |
+| ------------------------------------------------------------------------- | -------------------------------------------------------- |
+| Share images and PDFs with the coaching agent                             | [#37](https://github.com/benjamingriff/waddle/issues/37) |
+| Reference workouts and weeks directly in coaching messages                | [#38](https://github.com/benjamingriff/waddle/issues/38) |
+| Answer coaching clarifications through structured question cards          | [#39](https://github.com/benjamingriff/waddle/issues/39) |
+| Queue editable coaching follow-ups while a run is active                  | [#40](https://github.com/benjamingriff/waddle/issues/40) |
+| Steer an active coaching run at a safe execution boundary                 | [#41](https://github.com/benjamingriff/waddle/issues/41) |
+| Evaluate cheaper parallel specialist agents for workout generation        | [#42](https://github.com/benjamingriff/waddle/issues/42) |
+| Review generated plans with deterministic checks and a focused specialist | [#43](https://github.com/benjamingriff/waddle/issues/43) |
+| Remember editable athlete coaching preferences across conversations       | [#44](https://github.com/benjamingriff/waddle/issues/44) |
+| Record workout completion and perceived-effort feedback for coaching      | [#45](https://github.com/benjamingriff/waddle/issues/45) |
+| Deliver evidence-based weekly coaching reviews with optional recurrence   | [#46](https://github.com/benjamingriff/waddle/issues/46) |
+| Compare alternative training schedules before applying one                | [#47](https://github.com/benjamingriff/waddle/issues/47) |
+| Restore a plan draft to before a coaching turn                            | [#48](https://github.com/benjamingriff/waddle/issues/48) |
+| Show typed visual and interactive coaching cards in chat                  | [#49](https://github.com/benjamingriff/waddle/issues/49) |
+| Dictate editable coaching messages and post-workout notes on mobile web   | [#50](https://github.com/benjamingriff/waddle/issues/50) |
+| Configure versioned coaching methodologies and communication preferences  | [#51](https://github.com/benjamingriff/waddle/issues/51) |
+| Offer a discussion mode with no plan mutation tools                       | [#52](https://github.com/benjamingriff/waddle/issues/52) |
+| Route coaching tasks to appropriate model and reasoning settings          | [#53](https://github.com/benjamingriff/waddle/issues/53) |
+| Connect activity data to prescribed workouts for coaching                 | [#54](https://github.com/benjamingriff/waddle/issues/54) |
+| Look up event information and coaching evidence with source links         | [#55](https://github.com/benjamingriff/waddle/issues/55) |
+| Account for coaching run and specialist-task costs                        | [#56](https://github.com/benjamingriff/waddle/issues/56) |
 
 Grouped sections below may map to several independently scoped issues. The parallel-generation issue begins with a comparison of architectures; it does not assume that sub-agents improve latency or cost.
 
 ## What was inspected
 
-Askesis source: the web composer/transcript/run activity and change cards; the worker prompt, runtime, configuration and execution loop; API conversation acceptance, context assembly, tools, authorization and schedule writes; current product guidance and post-alpha backlog.
+Waddle source: the web composer/transcript/run activity and change cards; the worker prompt, runtime, configuration and execution loop; API conversation acceptance, context assembly, tools, authorization and schedule writes; current product guidance and post-alpha backlog.
 
 External research: T3 Code public source and documentation at revision `43f8a8de17a7ac1baa7a3cf36d681856de2d8add`; official Cursor, Claude, OpenAI, TrainerRoad and Strava documentation. T3 capabilities vary by provider and client; these observations describe its documented/source behavior, not a compatibility guarantee for every installation. The pinned OpenAI Agents SDK core package, version 0.18.0, was also inspected to confirm that `Agent.asTool()` exists.
 
 This is source/documentation research. No application behavior was changed, no live coaching quality or latency benchmark was run, and no savings figures are established.
 
-## Askesis already has useful foundations
+## Waddle already has useful foundations
 
 - Durable conversations and runs, authenticated live updates, streamed text that survives reload, cancellation, and saved partial results.
 - Expandable activity, schedule-generation coverage, per-turn saved-change cards and workout change badges.
@@ -60,7 +60,7 @@ Evidence: [composer](../../apps/web/src/components/chat/Composer.tsx), [run disp
 
 ## Capability comparison
 
-| Pattern and reference                   | Askesis today                                             | Useful coaching adaptation                                    | Main work                                                       |
+| Pattern and reference                   | Waddle today                                              | Useful coaching adaptation                                    | Main work                                                       |
 | --------------------------------------- | --------------------------------------------------------- | ------------------------------------------------------------- | --------------------------------------------------------------- |
 | T3 attachments                          | Text-only messages                                        | Share a training screenshot, event guide or spreadsheet       | Upload storage, message parts, extraction and multimodal inputs |
 | T3 context chips and quotations         | Conversation can be linked to a plan                      | Attach a workout/week or quote a reply                        | Composer references and authorized context reads                |
@@ -83,7 +83,7 @@ T3 references: [composer](https://github.com/pingdotgg/t3code/blob/43f8a8de17a7a
 
 Start with images and PDFs. Add CSV training logs next. FIT/GPX/TCX ingestion is a separate structured-data feature; accepting a binary activity file does not mean the model understands its contents.
 
-The valuable interaction is an extraction card: “I found a 10 km result of 47:32. Was this an all-out effort, and what date was it?” It should link back to the source image or page. This works with Askesis's existing performance preview/recording tools, including their distinction between measured results and estimates.
+The valuable interaction is an extraction card: “I found a 10 km result of 47:32. Was this an all-out effort, and what date was it?” It should link back to the source image or page. This works with Waddle's existing performance preview/recording tools, including their distinction between measured results and estimates.
 
 **Build:** Authenticated uploads; private object storage; attachment records linked to owner and message; upload retry/removal; thumbnail/document preview; a content-parts message contract; worker retrieval and modality-aware provider inputs. Store durable application attachment IDs rather than expiring URLs in history. Include extraction status and source provenance. Reuse extracted facts on subsequent turns instead of repeatedly sending an entire document.
 
@@ -115,7 +115,7 @@ This reduces ambiguity and typing, especially on a phone. It makes the current p
 
 Cursor distinguishes queued follow-ups from steering the active turn. [Cursor agent overview](https://cursor.com/docs/agent/overview).
 
-Askesis currently rejects a second message with `RUN_ACTIVE`. Its queued _execution_ state is not a queue of follow-up messages.
+Waddle currently rejects a second message with `RUN_ACTIVE`. Its queued _execution_ state is not a queue of follow-up messages.
 
 **Build:** Start with a durable per-conversation follow-up queue. Resolve the plan version/context when a queued message actually starts, so it does not use a stale acceptance-time draft. Handle failed runs, archive, Stop and uncertain network responses explicitly.
 
@@ -184,7 +184,7 @@ Keep objective checks deterministic: dates, calibration, session counts, tree va
 
 Claude's memory provides a useful control pattern: users can inspect and edit remembered context. [Claude memory documentation](https://support.claude.com/en/articles/11817273-use-claude-s-chat-search-and-memory-to-build-on-previous-context).
 
-Askesis already persists performance across plans and assumptions within a plan brief. What is missing is durable general preference/context memory and access to other conversations. The API currently includes at most 60 messages within a 100,000-character budget; older discussion is omitted, with a truncation flag.
+Waddle already persists performance across plans and assumptions within a plan brief. What is missing is durable general preference/context memory and access to other conversations. The API currently includes at most 60 messages within a 100,000-character budget; older discussion is omitted, with a truncation flag.
 
 **Build:** Keep athlete preferences, plan assumptions, performance evidence and transient conversation summaries as distinct records. Give preferences provenance, last-confirmed dates and optional expiry: “travelling next week” should not become permanent unavailability. Retrieve only relevant prior context. Current explicit instructions take precedence over remembered preferences. A user-visible memory panel should exist from the first version.
 
@@ -210,7 +210,7 @@ A recurring Sunday review can then use those records. Claude recurring tasks are
 
 Cursor's checkpoints demonstrate restoration as a normal part of agent work. [Cursor checkpoints](https://cursor.com/docs/agent/overview).
 
-Askesis already has locked-revision restore and aggregate change summaries. It does not have arbitrary draft checkpoints or full field-level before/after comparisons.
+Waddle already has locked-revision restore and aggregate change summaries. It does not have arbitrary draft checkpoints or full field-level before/after comparisons.
 
 **Build:** Read-only alternatives first, presented as typed proposals. True branches need isolated draft snapshots and lineage; another conversation attached to the same draft is not isolation. Restore must check for later edits and account for every affected resource. In particular, reverting a plan should not silently retract athlete-wide performance evidence created during the same conversation.
 
@@ -222,21 +222,21 @@ Askesis already has locked-revision restore and aggregate change summaries. It d
 
 T3 visual replies are a precedent for delivering more than text in a conversation. [T3 visual replies](https://github.com/pingdotgg/t3code/blob/43f8a8de17a7ac1baa7a3cf36d681856de2d8add/docs/user/html-renders.md).
 
-For Askesis, begin with typed artifact payloads rendered by existing React/chart components: a load comparison, weekly review and proposed schedule. Derive numerical values from API data rather than model-authored totals. Cards stay versioned and can say when the underlying plan has changed. Actions go through ordinary application endpoints.
+For Waddle, begin with typed artifact payloads rendered by existing React/chart components: a load comparison, weekly review and proposed schedule. Derive numerical values from API data rather than model-authored totals. Cards stay versioned and can say when the underlying plan has changed. Actions go through ordinary application endpoints.
 
 **Scope:** Medium per artifact type. A general HTML execution system is unnecessary for the initial coaching cards.
 
 ## 11. Voice notes, reusable approaches and capability controls
 
-**Voice:** Dictate a post-workout note, review the transcript, then send. This suits the mobile web direction. Start with transcription into the ordinary composer and evaluate device/browser support. T3's documented voice implementation is specific to supported iOS devices, so copying that implementation would not give Askesis web voice. Full real-time spoken coaching is a separate, more demanding product.
+**Voice:** Dictate a post-workout note, review the transcript, then send. This suits the mobile web direction. Start with transcription into the ordinary composer and evaluate device/browser support. T3's documented voice implementation is specific to supported iOS devices, so copying that implementation would not give Waddle web voice. Full real-time spoken coaching is a separate, more demanding product.
 
-**Approaches:** Versioned, curated instructions for training methodologies and communication preferences. The user already has conversational influence over methodology; the new capability is persistent, discoverable configuration. Askesis's existing post-alpha backlog already includes prompt customization and curated sport skills, so this is a refinement of an existing idea.
+**Approaches:** Versioned, curated instructions for training methodologies and communication preferences. The user already has conversational influence over methodology; the new capability is persistent, discoverable configuration. Waddle's existing post-alpha backlog already includes prompt customization and curated sport skills, so this is a refinement of an existing idea.
 
 **Controls:** A lightweight “Discuss” mode can deliberately remove mutation tools, while ordinary coaching can edit drafts within the existing permissions. A task-specific “Quick answer” versus “Detailed review” option could follow automatic routing if users need it. Keep model selection primarily an operator concern until real user demand emerges.
 
 ## 12. Connected training context and evidence lookup
 
-**Activity connections:** Ingest actual workouts and reconcile them with prescriptions. Strava documents OAuth authorization and activity resources; this establishes a technical API surface, not that Askesis has production approval or permission for every proposed data/model use. Provider terms, permitted uses and access must be verified before selecting an integration. [Strava authentication](https://developers.strava.com/docs/authentication/), [activity API](https://developers.strava.com/docs/reference/#api-Activities).
+**Activity connections:** Ingest actual workouts and reconcile them with prescriptions. Strava documents OAuth authorization and activity resources; this establishes a technical API surface, not that Waddle has production approval or permission for every proposed data/model use. Provider terms, permitted uses and access must be verified before selecting an integration. [Strava authentication](https://developers.strava.com/docs/authentication/), [activity API](https://developers.strava.com/docs/reference/#api-Activities).
 
 Start from the manual completion model in idea 8. An import should attach an activity to a prescription rather than mutate historical instructions. Calendar availability could later constrain planning without giving the coach arbitrary access to the user's calendar.
 
@@ -255,6 +255,6 @@ Start from the manual completion model in idea 8. An import should attach an act
 | 4                   | Typed weekly reviews, focused plan review and optional recurring delivery | Uses accumulated evidence to give actionable ongoing coaching                |
 | Later               | True alternatives/undo, wearable ingestion and deeper integrations        | Valuable, but require larger domain and lifecycle additions                  |
 
-Model/task cost accounting should accompany any orchestration experiment. Askesis stores run input/output token totals and timing measurements, but has no monetary cost calculation or per-user spending limits. T3's usage views provide a precedent for showing model breakdowns and estimates. [T3 usage documentation](https://github.com/pingdotgg/t3code/blob/43f8a8de17a7ac1baa7a3cf36d681856de2d8add/docs/user/usage.md), [Askesis observability](../operations/observability.md).
+Model/task cost accounting should accompany any orchestration experiment. Waddle stores run input/output token totals and timing measurements, but has no monetary cost calculation or per-user spending limits. T3's usage views provide a precedent for showing model breakdowns and estimates. [T3 usage documentation](https://github.com/pingdotgg/t3code/blob/43f8a8de17a7ac1baa7a3cf36d681856de2d8add/docs/user/usage.md), [Waddle observability](../operations/observability.md).
 
 The first decisions are product emphasis—easier planning versus ongoing adaptive coaching—and which generation architecture wins a representative benchmark. None of these ideas requires replacing the API-owned plan lifecycle or moving authorization into model prompts.

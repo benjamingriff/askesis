@@ -1,6 +1,6 @@
 # Web application
 
-This directory contains the responsive Askesis training-plan and coaching interface. Phase 7 implementation is complete; the [closeout](../../docs/archive/phase-7/phase-7-closeout.md) records management changes, validation and remaining release checks.
+This directory contains the responsive Waddle training-plan and coaching interface. Phase 7 implementation is complete; the [closeout](../../docs/archive/phase-7/phase-7-closeout.md) records management changes, validation and remaining release checks.
 
 ## Responsibility
 

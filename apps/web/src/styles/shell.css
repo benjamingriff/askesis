@@ -248,7 +248,7 @@
     --tab-swipe: 0;
     position: relative;
     display: grid;
-    grid-template-columns: repeat(3, var(--tab-width));
+    grid-template-columns: repeat(var(--tab-count, 3), var(--tab-width));
     justify-content: center;
     height: 100%;
   }
@@ -278,7 +278,7 @@
   /* A short pill under the active tab that follows a swipe in progress. */
   .top-tab-indicator {
     position: absolute;
-    left: calc(50% - var(--tab-width) * 1.5);
+    left: calc(50% - var(--tab-width) * var(--tab-count, 3) / 2);
     bottom: 7px;
     width: var(--tab-width);
     height: 3px;

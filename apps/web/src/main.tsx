@@ -39,8 +39,8 @@ function AuthenticatedRouter() {
   if (!isLoaded) {
     return (
       <div className="auth-loading">
-        <span className="brand-mark">A</span>
-        <p>Loading Askesis…</p>
+        <span className="brand-mark">W</span>
+        <p>Loading Waddle…</p>
       </div>
     );
   }

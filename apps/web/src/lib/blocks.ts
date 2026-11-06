@@ -1,4 +1,4 @@
-import type { BlockPhase, TrainingBlock, TrainingWeek } from '@askesis/api-client';
+import type { BlockPhase, TrainingBlock, TrainingWeek } from '@waddle/api-client';
 import { phaseColor } from '../theme/palette';
 import { addDays, daysBetween } from './format';
 

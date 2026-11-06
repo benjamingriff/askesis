@@ -4,17 +4,38 @@
     "appVersionSource": "remote"
   },
   "build": {
+    "base": {
+      "node": "24.18.0",
+      "pnpm": "11.18.0"
+    },
     "development": {
+      "extends": "base",
       "developmentClient": true,
       "distribution": "internal"
     },
     "preview": {
+      "extends": "base",
       "distribution": "internal",
-      "android": { "buildType": "apk" },
-      "ios": { "simulator": false }
+      "android": {
+        "buildType": "apk"
+      },
+      "ios": {
+        "simulator": false
+      },
+      "channel": "preview"
     },
     "production": {
-      "autoIncrement": true
+      "extends": "base",
+      "autoIncrement": true,
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://askesis.up.railway.app",
+        "EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY": "pk_test_dml0YWwtc2VydmFsLTI1LmNsZXJrLmFjY291bnRzLmRldiQ",
+        "EXPO_PUBLIC_STRAVA_CALLBACK_HOST": "askesis.up.railway.app"
+      },
+      "channel": "production"
     }
+  },
+  "submit": {
+    "production": {}
   }
 }

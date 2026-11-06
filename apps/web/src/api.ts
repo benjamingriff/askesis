@@ -1,4 +1,4 @@
-import { createAskesisClient } from '@askesis/api-client';
+import { createWaddleClient } from '@waddle/api-client';
 
 type TokenProvider = () => Promise<string | null>;
 
@@ -10,7 +10,7 @@ let tokenProvider: TokenProvider | null = null;
  */
 function setDeviceTimezone(headers: Headers) {
   const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-  if (timezone) headers.set('X-Askesis-Timezone', timezone);
+  if (timezone) headers.set('X-Waddle-Timezone', timezone);
 }
 
 export function configureAuthTokenProvider(provider: TokenProvider): void {
@@ -18,7 +18,7 @@ export function configureAuthTokenProvider(provider: TokenProvider): void {
 }
 
 export function createAuthenticatedApiClient(baseUrl: string) {
-  const client = createAskesisClient(baseUrl);
+  const client = createWaddleClient(baseUrl);
   client.use({
     async onRequest({ request }) {
       const token = await tokenProvider?.();

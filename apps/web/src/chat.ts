@@ -1,5 +1,5 @@
 import { useInfiniteQuery } from '@tanstack/react-query';
-import type { paths } from '@askesis/api-client';
+import type { paths } from '@waddle/api-client';
 import { api } from './api';
 
 export type Conversation =
@@ -25,9 +25,10 @@ export function chatResult<T>(response: { data?: T; error?: unknown; response: R
 }
 export const isActive = (run: Run | null | undefined) =>
   !!run && ['queued', 'running', 'cancelling'].includes(run.status);
-export function useConversations(archived = false) {
+export function useConversations(archived = false, enabled = true) {
   return useInfiniteQuery({
     queryKey: ['chat', 'list', archived],
+    enabled,
     initialPageParam: undefined as string | undefined,
     queryFn: async ({ pageParam }) =>
       chatResult(

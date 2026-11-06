@@ -35,7 +35,7 @@ The first calibration covers the plan from its start. Later updates apply from t
 
 ## Local processes
 
-Detached tmux sessions: `askesis-phase3-api` (3001) and `askesis-phase3-web` (5174). Database: `askesis_phase3` in the development PostgreSQL container. Logs: `/tmp/askesis-phase3-api.log` and `/tmp/askesis-phase3-web.log`. API readiness is <http://localhost:3001/api/ready>. These are local processes, so a machine restart stops them.
+Detached tmux sessions: `waddle-phase3-api` (3001) and `waddle-phase3-web` (5174). Database: `askesis_phase3` in the development PostgreSQL container. Logs: `/tmp/waddle-phase3-api.log` and `/tmp/waddle-phase3-web.log`. API readiness is <http://localhost:3001/api/ready>. These are local processes, so a machine restart stops them.
 
 ## Implementation notes
 

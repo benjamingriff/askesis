@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft, CircleAlert, ClipboardList, History, Lock, TriangleAlert } from 'lucide-react';
 import { useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router';
-import type { paths } from '@askesis/api-client';
+import type { paths } from '@waddle/api-client';
 import { api } from '../api';
 import { Schedule } from '../components/Schedule';
 import {

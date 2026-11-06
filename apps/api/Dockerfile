@@ -13,7 +13,7 @@ COPY packages/api-client/package.json packages/api-client/package.json
 RUN pnpm install --frozen-lockfile
 
 COPY apps/api apps/api
-RUN pnpm --filter @askesis/api build
+RUN pnpm --filter @waddle/api build
 
 FROM pnpm AS runtime
 ENV NODE_ENV=production
@@ -23,7 +23,7 @@ COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY apps/api/package.json apps/api/package.json
 COPY apps/web/package.json apps/web/package.json
 COPY packages/api-client/package.json packages/api-client/package.json
-RUN pnpm install --frozen-lockfile --prod --filter @askesis/api...
+RUN pnpm install --frozen-lockfile --prod --filter @waddle/api...
 
 COPY --from=atlas /atlas /usr/local/bin/atlas
 COPY --from=build /app/apps/api/dist apps/api/dist
@@ -32,4 +32,4 @@ COPY database/migrations database/migrations
 
 USER node
 EXPOSE 3000
-CMD ["pnpm", "--filter", "@askesis/api", "start"]
+CMD ["pnpm", "--filter", "@waddle/api", "start"]

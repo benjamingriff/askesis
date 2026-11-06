@@ -137,7 +137,7 @@ registerActivityRoutes(app);
 app.doc('/api/openapi.json', {
   openapi: '3.1.0',
   info: {
-    title: 'Askesis API',
+    title: 'Waddle API',
     version: '0.1.0',
     description: 'Domain API for structured training plans.',
   },

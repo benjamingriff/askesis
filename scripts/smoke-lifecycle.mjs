@@ -7,7 +7,7 @@ import { randomUUID } from 'node:crypto';
 // Pipe a short-lived Clerk session-token JSON object on stdin. Never print/store it.
 const origin = process.argv[2];
 if (!['http://localhost:5173', 'https://askesis.up.railway.app'].includes(origin)) {
-  throw new Error('Choose the explicit local or Askesis production smoke target.');
+  throw new Error('Choose the explicit local or Waddle production smoke target.');
 }
 let input = '';
 for await (const chunk of process.stdin) input += chunk;

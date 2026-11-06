@@ -11,7 +11,7 @@ interface Props {
 }
 
 const {
-  title = 'Askesis · Structured training, coached in conversation',
+  title = 'Waddle · Structured training, coached in conversation',
   description = 'Plan running, cycling, swimming, strength and Hyrox in one place. Talk to the coach, review every change, and lock the version you train on.',
 } = Astro.props;
 
@@ -26,7 +26,7 @@ const socialImage = await getImage({
 });
 const socialImageUrl = new URL(socialImage.src, Astro.site);
 const socialImageAlt =
-  'Askesis: structured training, coached in conversation, with the training plan view behind the headline.';
+  'Waddle: structured training, coached in conversation, with the training plan view behind the headline.';
 const canonicalUrl = new URL(Astro.url.pathname, Astro.site);
 ---
 
@@ -38,7 +38,7 @@ const canonicalUrl = new URL(Astro.url.pathname, Astro.site);
     <meta name="theme-color" content="#0a0a0b" />
     <link rel="canonical" href={canonicalUrl} />
     <meta property="og:type" content="website" />
-    <meta property="og:site_name" content="Askesis" />
+    <meta property="og:site_name" content="Waddle" />
     <meta property="og:url" content={canonicalUrl} />
     <meta property="og:title" content={title} />
     <meta property="og:description" content={description} />
@@ -59,9 +59,9 @@ const canonicalUrl = new URL(Astro.url.pathname, Astro.site);
     <div class="page">
       <nav class="nav">
         <div class="nav-inner">
-          <a href="/" class="nav-brand" aria-label="Askesis home">
-            <span class="brand-mark" aria-hidden="true">A</span>
-            <span class="nav-brand-name">Askesis</span>
+          <a href="/" class="nav-brand" aria-label="Waddle home">
+            <span class="brand-mark" aria-hidden="true">W</span>
+            <span class="nav-brand-name">Waddle</span>
           </a>
           <div class="nav-right">
             <a class="nav-link" href={SIGN_IN_URL}>Sign in</a>
@@ -80,8 +80,8 @@ const canonicalUrl = new URL(Astro.url.pathname, Astro.site);
       <footer class="footer">
         <div class="footer-inner">
           <div class="footer-brand">
-            <span class="brand-mark brand-mark--sm" aria-hidden="true">A</span>
-            <span>&copy; {new Date().getFullYear()} Askesis · Private alpha</span>
+            <span class="brand-mark brand-mark--sm" aria-hidden="true">W</span>
+            <span>&copy; {new Date().getFullYear()} Waddle · Private alpha</span>
           </div>
           <div class="footer-links">
             <a href={APP_URL}>Open app</a>

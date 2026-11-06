@@ -1,6 +1,6 @@
 import { act, cleanup, renderHook } from '@testing-library/react';
 import { afterEach, expect, it } from 'vitest';
-import type { WorkoutSummary } from '@askesis/api-client';
+import type { WorkoutSummary } from '@waddle/api-client';
 import { useWorkoutSelection } from './use-workout-selection';
 
 const workout: WorkoutSummary = {

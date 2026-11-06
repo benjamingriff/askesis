@@ -107,6 +107,16 @@ it('connects only through the athlete’s own signed state, return address and a
   expect(() =>
     startStravaConnection(owner, 'https://example.com/connections/strava/callback'),
   ).toThrow('return address');
+  // The mobile app returns through its own scheme, to a host the web app is served from.
+  expect(
+    startStravaConnection(owner, 'waddle://localhost/connections/strava/callback').url,
+  ).toContain(encodeURIComponent('waddle://localhost/connections/strava/callback'));
+  for (const other of [
+    'waddle://example.com/connections/strava/callback',
+    'waddle://localhost/somewhere/else',
+    'otherapp://localhost/connections/strava/callback',
+  ])
+    expect(() => startStravaConnection(owner, other)).toThrow('return address');
   const { url } = startStravaConnection(owner, callback, now.getTime());
   const state = new URL(url).searchParams.get('state')!;
   const stranger = (
@@ -127,7 +137,7 @@ it('connects only through the athlete’s own signed state, return address and a
     available: true,
     connection: { status: 'active', displayName: 'Test Runner' },
   });
-  // The same Strava account can't be claimed by a second Askesis athlete.
+  // The same Strava account can't be claimed by a second Waddle athlete.
   await expect(connect(stranger)).rejects.toMatchObject({ code: 'STRAVA_ACCOUNT_IN_USE' });
   const stored = await db
     .selectFrom('integration_connections')

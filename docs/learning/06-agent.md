@@ -6,7 +6,7 @@
 
 ## The model proposes; the API authorizes · 15 minutes
 
-The API persists conversations and runs. A private worker claims a run and orchestrates model responses and tool calls with the configured provider: the OpenAI Agents SDK, or the Anthropic SDK's Messages API with Askesis's own loop (`AGENT_PROVIDER`). Tools are HTTP requests to the API; domain writes are not made by the model or worker's direct SQL access.
+The API persists conversations and runs. A private worker claims a run and orchestrates model responses and tool calls with the configured provider: the OpenAI Agents SDK, or the Anthropic SDK's Messages API with Waddle's own loop (`AGENT_PROVIDER`). Tools are HTTP requests to the API; domain writes are not made by the model or worker's direct SQL access.
 
 ```mermaid
 sequenceDiagram

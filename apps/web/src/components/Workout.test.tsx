@@ -1,5 +1,5 @@
 import { cleanup, render, screen, within } from '@testing-library/react';
-import type { StepTarget, WorkoutStep } from '@askesis/api-client';
+import type { StepTarget, WorkoutStep } from '@waddle/api-client';
 import { afterEach, beforeEach, expect, it } from 'vitest';
 import { DEFAULT_SETTINGS, SettingsProvider } from '../settings';
 import { StepList } from './Workout';

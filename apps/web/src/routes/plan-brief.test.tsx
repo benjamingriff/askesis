@@ -1,7 +1,7 @@
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { createMemoryRouter, RouterProvider } from 'react-router';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
-import type { paths, PerformanceState } from '@askesis/api-client';
+import type { paths, PerformanceState } from '@waddle/api-client';
 import { AccountQueryProvider } from '../query-provider';
 import { api } from '../api';
 import { PlanBriefPage } from './plan-brief';

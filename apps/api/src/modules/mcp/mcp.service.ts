@@ -52,7 +52,7 @@ async function draft(
   if (version.state !== 'draft')
     throw new PlanError(
       'DRAFT_REQUIRED',
-      'The plan is locked. Ask the athlete to unlock it in Askesis before editing.',
+      'The plan is locked. Ask the athlete to unlock it in Waddle before editing.',
     );
   const row = await db
     .selectFrom('plan_versions')

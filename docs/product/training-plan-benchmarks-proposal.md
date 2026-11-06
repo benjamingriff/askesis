@@ -8,7 +8,7 @@ Build a headless evaluation workflow around the existing coaching runtime and au
 
 The central question is: **Can this configuration reliably discover what an athlete needs, save a useful plan, and adapt it when their circumstances change?** Model, prompt and reasoning settings are experimental variables; the tools, environment, scenarios and grading criteria are controlled variables.
 
-The user's suggested architecture fits: a model can play the athlete, the real Askesis agent coaches them, and separate model calls assess the result. Deterministic checks should handle exact constraints. Model judges should handle coaching judgments that cannot be reduced to those checks.
+The user's suggested architecture fits: a model can play the athlete, the real Waddle agent coaches them, and separate model calls assess the result. Deterministic checks should handle exact constraints. Model judges should handle coaching judgments that cannot be reduced to those checks.
 
 ## Agreed proof-of-concept scope and local execution
 
@@ -70,7 +70,7 @@ The important boundary to preserve is API ownership of plan state. Removing the 
 flowchart TD
     S[Versioned scenario and experiment configuration] --> H[Headless runner]
     H --> U[Scripted responses or athlete simulator]
-    U --> C[Existing Askesis coaching runtime]
+    U --> C[Existing Waddle coaching runtime]
     C --> T[Existing API tools and isolated PostgreSQL]
     C --> U
     T --> P[Persisted plan and performance snapshots]
@@ -158,9 +158,9 @@ Use a dedicated disposable benchmark Compose project/database with migrations ap
 
 The scenario's date must be authoritative in context, calibration reads/writes and date-sensitive validation. Performance services already accept a `now` argument in several places, but agent handlers currently use the default clock. Thread a scenario clock through those domain operations; keep lease heartbeats and execution deadlines on real elapsed time. Merely rewriting `performance.today` in the prompt would leave inconsistent behavior.
 
-Initially keep production history truncation, batching, tool errors and limits. They affect whether a model can create plans in Askesis. Later experiments can vary them explicitly, with their own recorded configuration.
+Initially keep production history truncation, batching, tool errors and limits. They affect whether a model can create plans in Waddle. Later experiments can vary them explicitly, with their own recorded configuration.
 
-Start comparisons with models supported by the coaching runtimes. OpenAI and Claude coaches are selected with `AGENT_PROVIDER` ([ADR 0007](../adr/0007-claude-coaching-runtime.md)); Gemini or other providers need another adapter, and changing `AGENT_MODEL` alone does not supply that support. Use the existing SDK model-override seam where suitable, and verify tool-call/schema handling, streaming, cancellation, usage reporting and supported reasoning settings before scoring. Unsupported settings should fail configuration or be explicitly omitted and reported. The resulting benchmark compares model-plus-Askesis-runtime configurations, not an intrinsic universal ranking of models.
+Start comparisons with models supported by the coaching runtimes. OpenAI and Claude coaches are selected with `AGENT_PROVIDER` ([ADR 0007](../adr/0007-claude-coaching-runtime.md)); Gemini or other providers need another adapter, and changing `AGENT_MODEL` alone does not supply that support. Use the existing SDK model-override seam where suitable, and verify tool-call/schema handling, streaming, cancellation, usage reporting and supported reasoning settings before scoring. Unsupported settings should fail configuration or be explicitly omitted and reported. The resulting benchmark compares model-plus-Waddle-runtime configurations, not an intrinsic universal ranking of models.
 
 ## What to grade
 
@@ -231,7 +231,7 @@ Allow regrading saved artifacts without regenerating plans. Do not automatically
 
 ## Build versus adopt
 
-My recommendation is an Askesis-owned scenario/environment adapter with an adoption spike for Promptfoo's experiment shell. Its TypeScript custom providers and simulated-user support are a good fit, but its documented defaults require deliberate integration: hidden test variables can reach custom providers, the simulator sends chat-format histories, and simulated-user generation is hosted by default.
+My recommendation is an Waddle-owned scenario/environment adapter with an adoption spike for Promptfoo's experiment shell. Its TypeScript custom providers and simulated-user support are a good fit, but its documented defaults require deliberate integration: hidden test variables can reach custom providers, the simulator sends chat-format histories, and simulated-user generation is hosted by default.
 
 The spike must prove unique trial state, correct conversation delta handling, no duplicate message submission, private-fact isolation, saved-state grading, explicit simulator/judge versions and useful artifact export. Pass only an opaque trial identifier into the target adapter; never forward the complete persona/rubric as coach input. Configure model access and storage explicitly.
 

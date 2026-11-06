@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import type { BenchmarkSnapshot } from '@askesis/api/benchmark';
+import type { BenchmarkSnapshot } from '@waddle/api/benchmark';
 import type { Review } from './models.js';
 import {
   BenchDisplay,

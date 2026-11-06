@@ -68,7 +68,7 @@ async function worker() {
     provider: 'openai',
     model: 'gpt-6.1-sol',
     reasoning: 'medium',
-    promptVersion: 'coach-v2',
+    promptVersion: 'coach-v3',
     promptHash: 'a'.repeat(64),
     ready: true,
   });
@@ -404,7 +404,7 @@ it('registers a Claude worker over the private API, attributes its run and recor
         provider,
         model: 'claude-opus-5-5',
         reasoning: 'medium',
-        promptVersion: 'coach-v2',
+        promptVersion: 'coach-v3',
         promptHash: 'a'.repeat(64),
         ready: true,
       }),
@@ -1443,7 +1443,7 @@ it('requires the current prompt contract before a worker contributes readiness o
     provider: 'openai',
     model: 'gpt-6.1-sol',
     reasoning: 'medium',
-    promptVersion: 'coach-v2',
+    promptVersion: 'coach-v3',
     promptHash: 'a'.repeat(64),
     ready: true,
   });

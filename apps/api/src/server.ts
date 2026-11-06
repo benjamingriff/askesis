@@ -20,7 +20,7 @@ const server = serve(
     port: config.PORT,
   },
   (info) => {
-    logger.info({ port: info.port }, 'Askesis API started');
+    logger.info({ port: info.port }, 'Waddle API started');
   },
 );
 
@@ -29,7 +29,7 @@ let shuttingDown = false;
 async function shutdown(signal: string): Promise<void> {
   if (shuttingDown) return;
   shuttingDown = true;
-  logger.info({ signal }, 'Shutting down Askesis API');
+  logger.info({ signal }, 'Shutting down Waddle API');
 
   const forcedExit = setTimeout(() => {
     logger.error({ signal }, 'Graceful shutdown timed out');
@@ -45,12 +45,12 @@ async function shutdown(signal: string): Promise<void> {
   await stopRetentionSweeper();
   await closeDatabase();
   clearTimeout(forcedExit);
-  logger.info({ signal }, 'Askesis API stopped');
+  logger.info({ signal }, 'Waddle API stopped');
 }
 
 function requestShutdown(signal: string): void {
   void shutdown(signal).catch((error: unknown) => {
-    logger.fatal({ error, signal }, 'Askesis API shutdown failed');
+    logger.fatal({ error, signal }, 'Waddle API shutdown failed');
     process.exit(1);
   });
 }

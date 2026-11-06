@@ -18,7 +18,7 @@ const matrix = [
   ['agent', 'pnpm dev:agent', 'Worker; running API/provider required; apps/agent/.env'],
   ['marketing', 'pnpm dev:marketing', 'Astro; no Docker or auth'],
   ['evals', 'pnpm dev:evals', 'Artifact viewer; no Docker or auth'],
-  ['mobile', 'pnpm dev:mobile', 'Expo/npm; npm ci --prefix apps/mobile first'],
+  ['mobile', 'pnpm dev:mobile', 'Expo; running API required; root .env'],
   ['exec', 'pnpm dev:exec -- COMMAND [ARGS]', 'One-off command + temporary PostgreSQL'],
 ];
 
@@ -97,10 +97,7 @@ export async function developmentDoctor(app = 'local') {
   } catch {
     check(false, 'pnpm unavailable');
   }
-  check(
-    existsSync(resolve(root, app === 'mobile' ? 'apps/mobile/node_modules' : 'node_modules')),
-    'Dependencies installed',
-  );
+  check(existsSync(resolve(root, 'node_modules')), 'Dependencies installed');
   const environment = localEnvironment();
   if (['local', 'api', 'exec'].includes(app)) {
     check(
@@ -344,7 +341,7 @@ export function developmentInventory(json = false) {
         `  ${w.path}${w.exists ? '' : ' [missing]'}\n    ${w.project}; API ${w.ports.PORT}, web ${w.ports.WEB_PORT}, DB ${w.ports.POSTGRES_PORT}; sessions: ${w.sessions.map((s) => `${s.app}:${s.status}`).join(', ') || 'none'}`,
       );
     for (const kind of ['containers', 'volumes', 'networks']) {
-      console.log(`\nAskesis ${kind}:`);
+      console.log(`\nWaddle ${kind}:`);
       for (const resource of report[kind])
         console.log(
           `  ${resource.name}: ${resource.status ?? resource.subnets?.join(', ') ?? 'retained data'} · ${resource.ownership}${resource.path ? ` · ${resource.path}` : ''}`,

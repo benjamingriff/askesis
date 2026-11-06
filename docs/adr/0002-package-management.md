@@ -4,11 +4,11 @@
 
 Accepted for the v1 prototype.
 
-**Scope clarification, 2026-10-06:** This decision governs the root pnpm workspace, CI and production services. The separate [Expo reference prototype](../../apps/mobile/README.md) is explicitly excluded from that workspace and uses npm with its own lockfile. The sole-lockfile statement below applies to the pnpm-managed workspaces.
+**Scope update, 2026-11-06:** The Expo app ([`apps/mobile`](../../apps/mobile/README.md)) is now a workspace package. From 2026-10-06 it was excluded and installed with npm, because Metro once needed a flat `node_modules`; Expo has supported pnpm's isolated installs since SDK 54. The npm prototype that shared that exclusion was deleted. `pnpm-lock.yaml` is now the repository's only lockfile.
 
 ## Context
 
-Askesis is a TypeScript monorepo with API, web, generated client, and agent workspaces. npm workspaces were functional, but package-management conventions needed to be settled before CI and Railway deployment.
+Waddle is a TypeScript monorepo with API, web, generated client, and agent workspaces. npm workspaces were functional, but package-management conventions needed to be settled before CI and Railway deployment.
 
 ## Decision
 

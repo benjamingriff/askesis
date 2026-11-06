@@ -41,6 +41,7 @@ import {
   type AccentOption,
   type ThemeDefinition,
 } from '../theme/palette';
+import { useCoachWord } from '../coach';
 
 function Row({ label, hint, children }: { label: string; hint?: string; children: ReactNode }) {
   return (
@@ -126,6 +127,7 @@ const CONFIRMATION = 'DELETE';
 
 /** Schedules deletion after the grace period; the app is replaced by its countdown. */
 function DeleteAccountDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const coach = useCoachWord();
   const [typed, setTyped] = useState('');
   const { request } = useAccountDeletion();
   const close = () => {
@@ -160,7 +162,7 @@ function DeleteAccountDialog({ open, onClose }: { open: boolean; onClose: () => 
     >
       <p>
         Every plan, coach conversation, training log entry, check-in and fitness result will be
-        permanently deleted, along with your sign-in. Your coach stops straight away.
+        permanently deleted, along with your sign-in. Your {coach} stops straight away.
       </p>
       <p>
         You have {ACCOUNT_GRACE_DAYS} days to change your mind by signing in again. After that it
@@ -186,6 +188,7 @@ function DeleteAccountDialog({ open, onClose }: { open: boolean; onClose: () => 
 
 /** "You": account, appearance and display preferences. */
 export function SettingsPage() {
+  const coach = useCoachWord();
   const { user } = useUser();
   const clerk = useClerk();
   const { settings, theme, update, reset } = useSettings();
@@ -209,7 +212,7 @@ export function SettingsPage() {
   const clash = accentClash(hex);
   const [deleting, setDeleting] = useState(false);
   const download = useDataExport();
-  const displayName = user?.fullName ?? user?.firstName ?? 'Askesis athlete';
+  const displayName = user?.fullName ?? user?.firstName ?? 'Waddle athlete';
   const email = user?.primaryEmailAddress?.emailAddress ?? '';
   const solids = ACCENTS.filter((accent) => accent.stops.length === 1);
   const blends = ACCENTS.filter((accent) => accent.stops.length > 1);
@@ -439,17 +442,22 @@ export function SettingsPage() {
               ]}
             />
           </Row>
-          <Row label="Show coach activity" hint="List the steps your coach took during each reply.">
-            <label className="switch">
-              <input
-                type="checkbox"
-                checked={settings.showActivity}
-                onChange={(event) => update({ showActivity: event.target.checked })}
-              />
-              <span aria-hidden="true" />
-              <span className="sr-only">Show coach activity</span>
-            </label>
-          </Row>
+          {coach === 'coach' ? (
+            <Row
+              label="Show coach activity"
+              hint="List the steps your coach took during each reply."
+            >
+              <label className="switch">
+                <input
+                  type="checkbox"
+                  checked={settings.showActivity}
+                  onChange={(event) => update({ showActivity: event.target.checked })}
+                />
+                <span aria-hidden="true" />
+                <span className="sr-only">Show coach activity</span>
+              </label>
+            </Row>
+          ) : null}
         </Card>
       </section>
 

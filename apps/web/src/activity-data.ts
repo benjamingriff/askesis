@@ -1,12 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import type { ActivityLink, IntegrationsState } from '@askesis/api-client';
+import type { ActivityLink, IntegrationsState } from '@waddle/api-client';
 import { api } from './api';
 import { result } from './lib/result';
 
 /** Strava returns here; the API only accepts this path on the app's own origins. */
 export const STRAVA_CALLBACK_PATH = '/connections/strava/callback';
 /**
- * Activity details come live from Strava each time and are never stored by Askesis. The
+ * Activity details come live from Strava each time and are never stored by Waddle. The
  * browser keeps them only while they're on screen and for a few minutes afterwards.
  */
 const STRAVA_STALE_MS = 5 * 60 * 1000;

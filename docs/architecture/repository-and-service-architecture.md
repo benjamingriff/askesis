@@ -8,7 +8,7 @@ Verified against the workspace, Compose, Dockerfiles and API/worker/web entry po
 apps/api       Hono API, authorization, domain services and Kysely persistence
 apps/web       React/Vite responsive web app and nginx production proxy
 apps/agent     private OpenAI Agents SDK coaching worker
-apps/mobile    separate Expo dummy/reference app (npm; excluded from pnpm)
+apps/mobile    Expo app using the public API with Clerk
 packages/api-client  generated public OpenAPI contract and browser client
  database      Atlas migrations, local synthetic fixtures and SQL invariants
  scripts       generation, checks and disposable integration/smoke harnesses
@@ -25,7 +25,7 @@ flowchart LR
   Worker[Private agent worker] -->|Bootstrap / run credentials; internal API| API
   API --> DB[(PostgreSQL)]
   Worker --> Model[OpenAI Responses API]
-  Mobile[Expo reference prototype]
+  Mobile[Expo app]
 ```
 
 Only the API holds PostgreSQL credentials in application services. Migration, seed, backup and test operator jobs also connect to the database. The worker has provider credentials, an API URL and bootstrap token; it receives no Clerk secret or database URL. Browser credentials cannot authorize internal worker routes.
@@ -50,7 +50,7 @@ Runtime configuration currently accepts OpenAI only. Model/reasoning are configu
 
 React Router provides routes. Account-scoped TanStack Query provides server-state caching and mutations. A fetch-based authenticated SSE connection per signed-in tab reads owner-scoped journal notifications and invalidates affected HTTP projections. Visible model text is recovered from durable output reads, not embedded in journal notifications. Reconnection never restarts model execution.
 
-The responsive web app is the development and intended friends-and-family surface. Expo remains a reference; native API/auth integration is deferred. The production web build is static assets served by nginx, not an SSR server.
+The responsive web app is the development and intended friends-and-family surface. The Expo app (`apps/mobile`) calls the same public API with Clerk session tokens; native tokens carry no `azp`, so the API checks authorized parties only for tokens that name an origin. The production web build is static assets served by nginx, not an SSR server.
 
 ## Deployment and evolution
 

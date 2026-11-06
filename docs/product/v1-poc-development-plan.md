@@ -2,7 +2,7 @@
 
 ## Status
 
-**Verified against the repository on 2026-10-06.** Phases 1–7 are implemented. The owner is continuing responsive web development, choosing features from the Expo dummy app in separate threads. Native integration is deferred. Phase 8 is unfinished release readiness; Phase 9 is an unimplemented backlog.
+**Verified against the repository on 2026-10-06.** Phases 1–7 are implemented. The owner is continuing responsive web development, choosing features from the Expo dummy app in separate threads. On 2026-10-08 the Expo app was connected to the API (`apps/mobile`). Phase 8 is unfinished release readiness; Phase 9 is an unimplemented backlog.
 
 Historical local/provider/hosted acceptance records are in the [archive](../archive/README.md), with current priorities in the [handoff](../current-handoff.md). Recorded test counts and deployment settings are checkpoints, not fresh verification of hosted state.
 

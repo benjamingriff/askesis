@@ -1,10 +1,10 @@
-import { UsageLedger, coachRequestDefaults } from '@askesis/agent/usage';
+import { UsageLedger, coachRequestDefaults } from '@waddle/agent/usage';
 import { spawn } from 'node:child_process';
 import { mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import type { BenchmarkSnapshot } from '@askesis/api/benchmark';
+import type { BenchmarkSnapshot } from '@waddle/api/benchmark';
 import {
   addDays,
   buildScenario,
@@ -561,7 +561,7 @@ describe('local isolation and portable evidence', () => {
     }
   });
   it('isolates saved-run writer locks and releases them for retry', async () => {
-    const root = await mkdtemp(resolve(tmpdir(), 'askesis-review-lock-'));
+    const root = await mkdtemp(resolve(tmpdir(), 'waddle-review-lock-'));
     const directories = [resolve(root, 'first'), resolve(root, 'second')];
     try {
       await Promise.all(directories.map((directory) => new Artifacts(directory).init()));
@@ -581,7 +581,7 @@ describe('local isolation and portable evidence', () => {
     }
   });
   it('publishes concurrent JSON writes without sharing temporary files', async () => {
-    const directory = await mkdtemp(resolve(tmpdir(), 'askesis-artifacts-'));
+    const directory = await mkdtemp(resolve(tmpdir(), 'waddle-artifacts-'));
     try {
       const values = Array.from({ length: 20 }, (_, id) => ({
         id,
@@ -621,10 +621,10 @@ describe('coach provider selection', () => {
   it.each(['openai', 'anthropic'] as const)(
     'replays the offline scripted coach through the %s runtime',
     async (provider) => {
-      const { parseAgentConfig } = await import('@askesis/agent/config');
-      const { createRuntime } = await import('@askesis/agent/runtime');
-      const { scriptedOverrides } = await import('@askesis/agent/testing');
-      const { AgentApi } = await import('@askesis/agent/api');
+      const { parseAgentConfig } = await import('@waddle/agent/config');
+      const { createRuntime } = await import('@waddle/agent/runtime');
+      const { scriptedOverrides } = await import('@waddle/agent/testing');
+      const { AgentApi } = await import('@waddle/agent/api');
       const { scriptedCoach } = await import('./scripted.js');
       const config = parseAgentConfig({
         AGENT_PROVIDER: provider,

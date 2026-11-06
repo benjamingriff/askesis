@@ -47,7 +47,7 @@ export class OpenAIRuntime extends ModelRuntime {
     // Records each request's raw usage and its timing; requests and events pass through unchanged.
     const measuredModel = observeOpenAIModel(delegate, ledger, (ms) => progress.recordModel(ms));
     const agent = new Agent({
-      name: 'Askesis coach',
+      name: 'Waddle coach',
       instructions: COACHING_PROMPT,
       model: measuredModel,
       tools: context.tools.map((definition) =>

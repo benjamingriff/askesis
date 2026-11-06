@@ -11,7 +11,7 @@ export function AccountDeletionPending({ purgeAfter }: { purgeAfter: string }) {
   const download = useDataExport();
   return (
     <main className="account-pending">
-      <span className="brand-mark">A</span>
+      <span className="brand-mark">W</span>
       <span className="label">Account deletion scheduled</span>
       <h1>Your account will be deleted on {formatInstantLong(purgeAfter)}</h1>
       <p className="muted">

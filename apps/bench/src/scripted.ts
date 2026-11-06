@@ -1,8 +1,8 @@
 /** Offline integration fixture. This verifies the harness, never real coaching quality. */
-import type { ScriptedTurn } from '@askesis/agent/testing';
+import type { ScriptedTurn } from '@waddle/agent/testing';
 import type { Scenario } from './scenario.js';
 import { addDays } from './scenario.js';
-import type { BenchmarkSnapshot } from '@askesis/api/benchmark';
+import type { BenchmarkSnapshot } from '@waddle/api/benchmark';
 import type { Review } from './models.js';
 import { criteria } from './models.js';
 

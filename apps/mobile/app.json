@@ -1,18 +1,21 @@
 {
   "expo": {
-    "name": "Askesis",
-    "slug": "askesis-mobile",
+    "name": "Waddle",
+    "slug": "waddle",
     "version": "0.1.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "askesis",
+    "scheme": "waddle",
     "userInterfaceStyle": "automatic",
     "ios": {
-      "bundleIdentifier": "app.askesis.mobile",
-      "supportsTablet": false
+      "bundleIdentifier": "app.waddle.mobile",
+      "supportsTablet": false,
+      "config": {
+        "usesNonExemptEncryption": false
+      }
     },
     "android": {
-      "package": "app.askesis.mobile",
+      "package": "app.waddle.mobile",
       "adaptiveIcon": {
         "backgroundColor": "#0A0A0B",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
@@ -34,7 +37,22 @@
           "image": "./assets/images/splash-icon.png",
           "imageWidth": 76
         }
-      ]
-    ]
+      ],
+      "@clerk/expo",
+      "expo-secure-store",
+      "expo-web-browser"
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "90556e7b-de48-41e7-8eab-58f6d4d450f2"
+      }
+    },
+    "owner": "ben-jamin-griff",
+    "runtimeVersion": {
+      "policy": "fingerprint"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/90556e7b-de48-41e7-8eab-58f6d4d450f2"
+    }
   }
 }

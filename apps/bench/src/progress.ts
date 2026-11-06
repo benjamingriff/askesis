@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import type { BenchmarkSnapshot } from '@askesis/api/benchmark';
+import type { BenchmarkSnapshot } from '@waddle/api/benchmark';
 import type { Scenario } from './scenario.js';
 import type { Check } from './checks.js';
 import type { Review } from './models.js';

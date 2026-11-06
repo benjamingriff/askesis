@@ -15,7 +15,7 @@ import {
   ProvenanceSchema,
   SwimInputSchema,
 } from '../performance/performance.schemas.js';
-export const PROMPT_VERSION = 'coach-v2';
+export const PROMPT_VERSION = 'coach-v3';
 
 const usageCount = z.number().int().min(0).max(100000000);
 const usageIdentifier = z.string().regex(/^[\w.:@/-]{1,200}$/);

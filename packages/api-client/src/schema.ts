@@ -27,6 +27,9 @@ export interface paths {
                     };
                     content: {
                         "application/json": {
+                            features: {
+                                inAppCoach: boolean;
+                            };
                             deletion: {
                                 requestedAt: string;
                                 purgeAfter: string;
@@ -88,6 +91,9 @@ export interface paths {
                     };
                     content: {
                         "application/json": {
+                            features: {
+                                inAppCoach: boolean;
+                            };
                             deletion: {
                                 requestedAt: string;
                                 purgeAfter: string;
@@ -132,6 +138,9 @@ export interface paths {
                     };
                     content: {
                         "application/json": {
+                            features: {
+                                inAppCoach: boolean;
+                            };
                             deletion: {
                                 requestedAt: string;
                                 purgeAfter: string;
@@ -3906,6 +3915,15 @@ export interface paths {
                         "application/json": components["schemas"]["Error"];
                     };
                 };
+                /** @description COACH_NOT_OFFERED: the in-app coach is hidden. */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
                 /** @description Request rejected. */
                 404: {
                     headers: {
@@ -4458,6 +4476,15 @@ export interface paths {
                         "application/json": components["schemas"]["Error"];
                     };
                 };
+                /** @description COACH_NOT_OFFERED: the in-app coach is hidden. */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
                 /** @description Request rejected. */
                 404: {
                     headers: {
@@ -4710,6 +4737,15 @@ export interface paths {
                 };
                 /** @description Request rejected. */
                 401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description COACH_NOT_OFFERED: the in-app coach is hidden. */
+                403: {
                     headers: {
                         [name: string]: unknown;
                     };

@@ -10,7 +10,7 @@ How to run the Strava connection locally, with your own Strava account or the bu
 - **Show details** in the log sheet opens a panel beside the form (above it on a phone). It shows the activity's numbers, laps and heart rate, read from Strava when the panel opens. You fill in the form yourself; nothing is copied into it.
 - **Change** or **Unlink** replaces or removes the link.
 
-Askesis stores only the link: which Strava activity id belongs to which workout. The coach never sees links or Strava data.
+Waddle stores only the link: which Strava activity id belongs to which workout. The coach never sees links or Strava data.
 
 The API enables Strava only when `STRAVA_CLIENT_ID`, `STRAVA_CLIENT_SECRET` and `INTEGRATION_ENCRYPTION_KEY` are all set. Otherwise Settings says "Not configured on this server".
 
@@ -31,7 +31,7 @@ A Strava subscription is required to create an API application. New applications
 4. Sign in, open **Settings › Connections**, choose **Connect with Strava** and authorize. Keep "View data about your activities" ticked.
 5. Open a past workout on Today or the Plan. Choose **Find my activity**, pick the activity, then **Add details** or **Edit** to open the log sheet with the panel.
 
-The redirect origin must be one of `CLERK_AUTHORIZED_PARTIES`, or localhost when that is unset. Keep the client secret and encryption key out of commits, screenshots and chat. Changing `INTEGRATION_ENCRYPTION_KEY` makes stored tokens unreadable; disconnect and reconnect afterwards.
+The redirect origin must be one of `CLERK_AUTHORIZED_PARTIES`, or localhost when that is unset. The mobile app returns through its own scheme, `waddle://<host>/connections/strava/callback`, where the host must be the hostname of one of those parties (or localhost when unset); set it with `EXPO_PUBLIC_STRAVA_CALLBACK_HOST` ([mobile README](../../apps/mobile/README.md#strava)). Keep the client secret and encryption key out of commits, screenshots and chat. Changing `INTEGRATION_ENCRYPTION_KEY` makes stored tokens unreadable; disconnect and reconnect afterwards.
 
 ## Local simulator
 
