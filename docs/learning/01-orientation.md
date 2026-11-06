@@ -16,7 +16,7 @@ Askesis is a monorepo: several applications share a Git repository and some tool
 | [`packages/api-client`](../../packages/api-client/README.md) | Public HTTP client and types            | Imported by web; generated contract, not a running service                    |
 | [`database`](../../database/README.md)                       | Migration history and fixtures          | Atlas/SQL; schema authority                                                   |
 | [`apps/marketing`](../../apps/marketing/README.md)           | Marketing site                          | Static Astro site; no API/database dependency                                 |
-| [`apps/mobile`](../../apps/mobile/README.md)                 | Expo reference prototype                | Separate npm installation, dummy data, deferred native integration            |
+| [`apps/mobile`](../../apps/mobile/README.md)                 | Expo iOS app                            | React Native; same API and Clerk sign-in as web                               |
 
 For a data engineer: PostgreSQL is the operational source of truth, the API is the authorized domain/projection layer, and the browser caches projections. The agent is another API consumer with scoped permissions. It is not an ETL job that writes tables directly.
 

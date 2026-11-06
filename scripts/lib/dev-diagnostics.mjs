@@ -18,7 +18,7 @@ const matrix = [
   ['agent', 'pnpm dev:agent', 'Worker; running API/provider required; apps/agent/.env'],
   ['marketing', 'pnpm dev:marketing', 'Astro; no Docker or auth'],
   ['evals', 'pnpm dev:evals', 'Artifact viewer; no Docker or auth'],
-  ['mobile', 'pnpm dev:mobile', 'Expo/npm; npm ci --prefix apps/mobile first'],
+  ['mobile', 'pnpm dev:mobile', 'Expo; running API required; root .env'],
   ['exec', 'pnpm dev:exec -- COMMAND [ARGS]', 'One-off command + temporary PostgreSQL'],
 ];
 
@@ -97,10 +97,7 @@ export async function developmentDoctor(app = 'local') {
   } catch {
     check(false, 'pnpm unavailable');
   }
-  check(
-    existsSync(resolve(root, app === 'mobile' ? 'apps/mobile/node_modules' : 'node_modules')),
-    'Dependencies installed',
-  );
+  check(existsSync(resolve(root, 'node_modules')), 'Dependencies installed');
   const environment = localEnvironment();
   if (['local', 'api', 'exec'].includes(app)) {
     check(

@@ -4,7 +4,7 @@ Askesis is an early-stage platform for creating, storing, validating, and adapti
 
 ## Current vertical slice
 
-Phases 1–7 are implemented, and Phase 7 is merged into `main`. Development continues on the responsive web app, drawing selected features from the mobile reference prototype; native integration is deferred. See the [current handoff](./docs/current-handoff.md) for priorities and the [Phase 7 closeout](./docs/archive/phase-7/phase-7-closeout.md) for verification evidence.
+Phases 1–7 are implemented, and Phase 7 is merged into `main`. Development continues on the responsive web app, and the Expo app (`apps/mobile`) is being brought in line with it on the same API. See the [current handoff](./docs/current-handoff.md) for priorities and the [Phase 7 closeout](./docs/archive/phase-7/phase-7-closeout.md) for verification evidence.
 
 The application reads and changes authoritative training data through:
 
@@ -93,8 +93,7 @@ apps/
   agent/        Private coaching worker using the OpenAI Agents SDK
   web/          React, Vite, and React Router
   marketing/    Static Astro marketing site
-  mobile/       Expo app (npm; API, Clerk, live updates)
-  mobile-prototype/  Expo design reference with scripted data
+  mobile/       Expo app (API, Clerk, live updates)
 packages/
   api-client/   Generated OpenAPI types and client factory
 database/

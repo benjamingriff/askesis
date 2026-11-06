@@ -47,20 +47,21 @@ The app runs only against a local API today. To get it on a phone without a lapt
 - [ ] Clerk production instance: allow native sign-in for bundle ID `app.askesis.mobile`, plus the redirect for Google sign-in.
 - [ ] Strava: set `EXPO_PUBLIC_STRAVA_CALLBACK_HOST` to the web host in the Strava app's callback domain (that host must also be in `CLERK_AUTHORIZED_PARTIES`), then connect from a release build.
 - [ ] App icon, splash and display name checked on a device; App Store Connect record; then TestFlight.
+- [x] Install the app with pnpm as a workspace package, so EAS installs it from the root lockfile. The build profiles pin Node 24.18.0 and pnpm 11.18.0, which the root `engines` require.
 - [ ] Decide on over-the-air updates (EAS Update), so text-only fixes skip App Review.
 - [ ] Android is out of scope until decided otherwise; the config builds, but nothing has been checked.
 
 ## 6. Guardrails
 
-Nothing in CI checks the mobile app yet: `.github/workflows/ci.yml` never installs `apps/mobile`, and the root ESLint config ignores it. So an API change can break the app without anyone noticing.
+Since the app joined the pnpm workspace, CI installs it and the root `pnpm typecheck` covers it. The root ESLint config still ignores it.
 
-- [ ] CI job: `npm ci` in `apps/mobile`, then `npm run typecheck` (it type-checks against the shared API schema, so it catches contract drift).
+- [x] CI typecheck: the root `pnpm typecheck` runs the app's `tsc --noEmit` against the shared API schema, so it catches contract drift.
 - [ ] Lint: `expo lint`, or extend the root config to cover `apps/mobile`.
 - [ ] Unit tests for the pure code: `parseClock`, the date and pace helpers in `src/lib/format.ts`, step formatting in `StepList`, and `accountPortalUrl`.
 - [ ] Optional later: a Maestro smoke flow (sign in, open Today, open a workout) run on Limrun before releases only.
 
 ## 7. Housekeeping
 
-- [ ] Delete `apps/mobile-prototype`. The real app has replaced it as the design reference, and it is still on SDK 57, so it no longer opens in Expo Go.
+- [x] Delete `apps/mobile-prototype`. The real app has replaced it as the design reference, and it was still on SDK 57, so it no longer opened in Expo Go.
 - [ ] Cheaper Limrun checks: build one reusable development app per native change (`expo-dev-client`), then reload JavaScript over the tunnel instead of rebuilding. Always stop the tunnel afterwards, because it keeps the paid simulator alive.
-- [ ] A one-step `npm run limrun` in `apps/mobile` that starts Expo on 8081, opens the tunnel and prints the stop command.
+- [ ] A one-step `pnpm limrun` in `apps/mobile` that starts Expo on 8081, opens the tunnel and prints the stop command.

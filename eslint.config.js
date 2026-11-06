@@ -12,7 +12,6 @@ export default tseslint.config(
       '**/coverage/**',
       'apps/marketing/.astro/**',
       'apps/mobile/**',
-      'apps/mobile-prototype/**',
       'apps/api/src/database/generated.ts',
       'packages/api-client/src/schema.ts',
     ],

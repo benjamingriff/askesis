@@ -1,15 +1,9 @@
 // Learn more https://docs.expo.dev/guides/customizing-metro
 const { getDefaultConfig } = require('expo/metro-config');
-const { FileStore } = require('metro-cache');
 const http = require('node:http');
-const path = require('node:path');
 const root = require('./scripts/root-env');
 
 const config = getDefaultConfig(__dirname);
-
-// Metro's default cache is shared by every project on the machine, and web bundles inline the app
-// config, so running the prototype alongside could serve its config here. Keep a cache per app.
-config.cacheStores = [new FileStore({ root: path.join(__dirname, 'node_modules/.cache/metro') })];
 
 /**
  * In development the app calls the API through Metro (`<metro host>/api/...`), so a phone only

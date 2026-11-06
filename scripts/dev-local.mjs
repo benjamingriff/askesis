@@ -82,16 +82,14 @@ async function main() {
             readEnvironment(resolve(root, 'apps/agent/.env')).AGENT_API_URL ??
             `http://127.0.0.1:${environment.PORT}`;
       }
+      // The mobile app's `dev` script opens a tunnel; locally it starts Expo on this network.
+      const script = name === 'mobile' ? 'start' : 'dev';
       tasks.push(
-        name === 'mobile'
-          ? session.start('npm', ['--prefix', 'apps/mobile', 'run', 'start', '--', ...args], {
-              env: childEnvironment,
-            })
-          : session.start(
-              'pnpm',
-              ['--filter', `@askesis/${name}`, '--fail-if-no-match', 'dev', ...args],
-              { env: childEnvironment },
-            ),
+        session.start(
+          'pnpm',
+          ['--filter', `@askesis/${name}`, '--fail-if-no-match', script, ...args],
+          { env: childEnvironment },
+        ),
       );
     }
     if (app === 'local' || app === 'api') {
