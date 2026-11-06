@@ -46,7 +46,7 @@ Spend 15 minutes on connection and identity discovery.
 **Preferred: local seeded database.** Read the ignored root `.env` privately and use this worktree's `DATABASE_URL`/PostgreSQL host port in your database client. Compose's database host is for containers; a desktop client needs localhost and the published port. Do not paste a connection URL into notes. An alternative that avoids copying credentials is:
 
 ```bash
-docker compose exec postgres psql -U waddle -d waddle
+docker compose exec postgres psql -U askesis -d askesis
 ```
 
 **Hosted alternative:** choose the intended Railway project/environment and PostgreSQL service. Use its query console if offered, or copy its externally reachable connection settings privately into your SQL client. A Railway private hostname may only work inside its network; use the service's supplied public connection/TLS settings for a desktop client. Inspect the environment and database name before querying. Do not run the local setup, seed, reset or migration commands against this connection. This course's hosted exercises are reads only.

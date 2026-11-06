@@ -22,7 +22,7 @@ Back up the Docker Compose development database in PostgreSQL custom format:
 ```bash
 mkdir -p "$HOME/askesis-backups"
 docker compose exec -T postgres \
-  pg_dump -U waddle -d waddle --format=custom --no-owner --no-acl \
+  pg_dump -U askesis -d askesis --format=custom --no-owner --no-acl \
   > "$HOME/askesis-backups/askesis-$(date +%Y%m%d-%H%M%S).dump"
 ```
 

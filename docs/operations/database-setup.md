@@ -12,10 +12,10 @@ docker compose ps -a
 docker compose logs migrate seed publish-fixture api web
 ```
 
-PostgreSQL is version 17. Migrate should exit successfully before API/web start. Historical seed/publication jobs are optional in the `fixtures` profile; account-owned examples use [manual seeding](./example-plan.md). Defaults are localhost:5432, database/user/password `waddle`; override them for local use with the Compose environment variables. Atlas and `psql` run in containers.
+PostgreSQL is version 17. Migrate should exit successfully before API/web start. Historical seed/publication jobs are optional in the `fixtures` profile; account-owned examples use [manual seeding](./example-plan.md). Defaults are localhost:5432, database/user/password `askesis`; override them for local use with the Compose environment variables. Atlas and `psql` run in containers.
 
 ```bash
-docker compose exec postgres psql -U waddle -d waddle
+docker compose exec postgres psql -U askesis -d askesis
 ```
 
 Examples assume default database/user names; adjust commands when overriding them. Full application setup is in [local development](./local-development.md).
@@ -66,7 +66,7 @@ Use `docker compose down` alone to retain the database.
 ## Verify the setup
 
 ```bash
-docker compose exec -T postgres psql -U waddle -d waddle \
+docker compose exec -T postgres psql -U askesis -d askesis \
   -c "SELECT week_number, workout_count, estimated_run_distance_metres / 1000 AS estimated_km FROM weekly_plan_summary WHERE plan_version_id = '00000000-0000-0000-0000-000000000050' ORDER BY week_number;"
 ```
 
