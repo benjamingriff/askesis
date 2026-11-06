@@ -307,8 +307,8 @@ const server = createServer((request, response) => {
 <title>Simulated Strava</title>
 <body style="font-family:system-ui;max-width:28rem;margin:4rem auto;padding:0 1rem">
 <p style="color:#FC5200;font-weight:700">Simulated Strava (local development)</p>
-<h1>Authorize Askesis?</h1>
-<p>Askesis would like to view data about your activities, including private ones.</p>
+<h1>Authorize Waddle?</h1>
+<p>Waddle would like to view data about your activities, including private ones.</p>
 <p><small>History simulated from “${escape(title)}”.</small></p>
 <p><a href="${escape(allow.toString())}">Authorize</a> · <a href="${escape(deny.toString())}">Cancel</a></p></body>`);
       return;

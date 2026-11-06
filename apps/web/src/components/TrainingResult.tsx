@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Check, Gauge } from 'lucide-react';
-import type { paths } from '@askesis/api-client';
+import type { paths } from '@waddle/api-client';
 import { api } from '../api';
 import { result } from '../lib/result';
 import { useRequestKey } from '../lib/use-request-key';

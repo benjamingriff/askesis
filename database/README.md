@@ -1,6 +1,6 @@
 # Database
 
-PostgreSQL is the source of truth for Askesis plan data. Atlas owns the versioned database schema.
+PostgreSQL is the source of truth for Waddle plan data. Atlas owns the versioned database schema.
 
 ## Contents
 

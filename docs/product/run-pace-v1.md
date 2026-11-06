@@ -1,6 +1,6 @@
-# Askesis run-pace-v1
+# Waddle run-pace-v1
 
-This calculator uses the Daniels-Gilbert race-performance regressions from [Oxygen Power, 1979](https://www.vivamarathon.com/oxygenpower.pdf). Training targets and tolerance bands below are an explicit Askesis approximation, not a reproduction of proprietary V.O2 training tables.
+This calculator uses the Daniels-Gilbert race-performance regressions from [Oxygen Power, 1979](https://www.vivamarathon.com/oxygenpower.pdf). Training targets and tolerance bands below are an explicit Waddle approximation, not a reproduction of proprietary V.O2 training tables.
 
 For velocity `v` in metres/minute and race duration `t` in minutes:
 

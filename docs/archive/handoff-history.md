@@ -259,7 +259,7 @@ Organization is now implemented: rename, multiple active plans, deactivate, arch
 and owner-scoped library/active/archive filters. Archived plans retain content and become
 read-only; unarchive leaves them inactive. `/plans/archive` lists archived plans. `/plan` uses
 account-scoped browser preferences for selection, always issuing explicit version-ID requests.
-Local servers run in detached tmux sessions `askesis-phase2-api` and `askesis-phase2-web`.
+Local servers run in detached tmux sessions `waddle-phase2-api` and `waddle-phase2-web`.
 
 History/restore is implemented. Plan details embed immutable revision history, and
 `/plans/:planId/versions/:revisionId` shows saved metadata, validation, summaries, semantic
@@ -339,9 +339,9 @@ Known non-secret deployment addresses:
 
 ```text
 Public web origin: https://askesis.up.railway.app
-API private host:  askesisapi.railway.internal
+API private host:  waddleapi.railway.internal
 API private port:  3000
-Expected upstream:  http://askesisapi.railway.internal:3000
+Expected upstream:  http://waddleapi.railway.internal:3000
 ```
 
 ## Deployment progress
@@ -402,7 +402,7 @@ Loading the React page and signing into Clerk do not prove API connectivity beca
 The expected web service variable is:
 
 ```text
-API_UPSTREAM=http://askesisapi.railway.internal:3000
+API_UPSTREAM=http://waddleapi.railway.internal:3000
 ```
 
 Requirements:
@@ -418,7 +418,7 @@ Requirements:
 
 Perform these before changing application architecture.
 
-1. Confirm the latest API deployment contains commit `bed0bf7` and logs `Askesis API started`.
+1. Confirm the latest API deployment contains commit `bed0bf7` and logs `Waddle API started`.
 2. Confirm the web and API services are in the same Railway project environment.
 3. Disable Railway Serverless/app sleeping for the private API during prototype validation.
 4. Confirm the web service's resolved `API_UPSTREAM` is exactly the expected value above.
@@ -504,26 +504,26 @@ The Clerk publishable key is public and embedded at Vite build time. `DATABASE_U
 Run from a local machine through the public web origin:
 
 ```bash
-export ASKESIS_URL='https://askesis.up.railway.app'
+export WADDLE_URL='https://askesis.up.railway.app'
 
 curl -fsS --connect-timeout 5 --max-time 15 \
-  "$ASKESIS_URL/api/health"
+  "$WADDLE_URL/api/health"
 
 curl -fsS --connect-timeout 5 --max-time 15 \
-  "$ASKESIS_URL/api/ready"
+  "$WADDLE_URL/api/ready"
 
 curl -sS --connect-timeout 5 --max-time 15 \
-  -o /tmp/askesis-response.json \
+  -o /tmp/waddle-response.json \
   -w '%{http_code}\n' \
-  "$ASKESIS_URL/api/v1/workouts"
+  "$WADDLE_URL/api/v1/workouts"
 
-cat /tmp/askesis-response.json
-
-curl -sS -o /dev/null -w '%{http_code}\n' \
-  "$ASKESIS_URL/api/docs"
+cat /tmp/waddle-response.json
 
 curl -sS -o /dev/null -w '%{http_code}\n' \
-  "$ASKESIS_URL/api/openapi.json"
+  "$WADDLE_URL/api/docs"
+
+curl -sS -o /dev/null -w '%{http_code}\n' \
+  "$WADDLE_URL/api/openapi.json"
 ```
 
 Expected results:
@@ -550,8 +550,8 @@ Then verify manually in the browser:
 Phase 1 created two Sentry projects:
 
 ```text
-askesis-api — Node.js
-askesis-web — React
+waddle-api — Node.js
+waddle-web — React
 ```
 
 Configure the API service:

@@ -1,7 +1,7 @@
 import { spawn } from 'node:child_process';
 
 const root = new URL('..', import.meta.url);
-const build = spawn('pnpm', ['--filter', '@askesis/bench...', 'build'], {
+const build = spawn('pnpm', ['--filter', '@waddle/bench...', 'build'], {
   cwd: root,
   stdio: 'inherit',
 });

@@ -45,10 +45,10 @@ it('defaults to the in-app coach before an account has loaded', () => {
 
 it('names the plan so the agent can use an explicit planId', () => {
   expect(agentPrompt('Plan the remaining weeks', { id: 'p1', name: 'Spring 10K' })).toBe(
-    'Using Askesis, for my plan “Spring 10K” (planId p1):\nPlan the remaining weeks',
+    'Using Waddle, for my plan “Spring 10K” (planId p1):\nPlan the remaining weeks',
   );
   expect(agentPrompt('Read my log.', { id: 'p1' })).toBe(
-    'Using Askesis, for my plan (planId p1):\nRead my log.',
+    'Using Waddle, for my plan (planId p1):\nRead my log.',
   );
-  expect(agentPrompt('Help me start.')).toBe('Using Askesis: Help me start.');
+  expect(agentPrompt('Help me start.')).toBe('Using Waddle: Help me start.');
 });

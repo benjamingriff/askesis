@@ -86,10 +86,10 @@ try {
   }
   const session = new LocalSession('setup');
   try {
-    await session.run('pnpm', ['--filter', '@askesis/api', 'verification:check']);
+    await session.run('pnpm', ['--filter', '@waddle/api', 'verification:check']);
     await session.database();
     await session.compose(['run', '--rm', '--no-deps', 'migrate']);
-    await session.run('pnpm', ['--filter', '@askesis/api', 'verification:prepare']);
+    await session.run('pnpm', ['--filter', '@waddle/api', 'verification:prepare']);
   } finally {
     await session.close();
   }

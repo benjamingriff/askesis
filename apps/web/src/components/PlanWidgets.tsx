@@ -1,4 +1,4 @@
-import type { WorkoutSummary } from '@askesis/api-client';
+import type { WorkoutSummary } from '@waddle/api-client';
 import type { CSSProperties } from 'react';
 import {
   Archive,

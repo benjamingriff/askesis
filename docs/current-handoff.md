@@ -1,7 +1,7 @@
 # Current agent handoff
 
 **Updated:** 2026-10-07
-**Current direction:** Continue developing the responsive web app, and bring the Expo app (`apps/mobile`) in line with it against the real API. The original prototype is kept as `apps/mobile-prototype`.
+**Current direction:** Continue developing the responsive web app, and bring the Expo app (`apps/mobile`) in line with it against the real API. The original prototype (`apps/mobile-prototype`) was deleted on 2026-11-06; the app replaced it as the design reference.
 **Delivery status:** Phases 1–7 are implemented. Phase 7 is merged into `main`; local validation and development account policy are verified. Hosted deployment and release walkthrough have not been verified in this documentation update.
 
 ## Current priorities

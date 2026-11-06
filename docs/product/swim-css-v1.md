@@ -1,4 +1,4 @@
-# Askesis swim-css-v1
+# Waddle swim-css-v1
 
 Swim zones derive from critical swim speed (CSS), the sustainable threshold speed popularised by Swim Smooth.
 

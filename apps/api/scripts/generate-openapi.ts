@@ -10,7 +10,7 @@ const outputPath = resolve(scriptDirectory, '../../../packages/api-client/openap
 const document = app.getOpenAPIDocument({
   openapi: '3.1.0',
   info: {
-    title: 'Askesis API',
+    title: 'Waddle API',
     version: '0.1.0',
     description: 'Domain API for structured training plans.',
   },

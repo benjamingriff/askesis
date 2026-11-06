@@ -15,7 +15,7 @@ export function useAskAgent() {
 }
 
 /**
- * Askesis cannot message the athlete's agent, so asking copies a prompt for them to paste. The
+ * Waddle cannot message the athlete's agent, so asking copies a prompt for them to paste. The
  * prompt stays visible, because the clipboard can refuse a write that follows a slow save.
  */
 export function AskAgentProvider({ children }: { children: ReactNode }) {
@@ -48,7 +48,7 @@ export function AskAgentProvider({ children }: { children: ReactNode }) {
         size="md"
         className="ask-agent"
         title="Ask your agent"
-        description="Paste this into Claude or the agent you connected to Askesis. Changes it saves appear here for you to review."
+        description="Paste this into Claude or the agent you connected to Waddle. Changes it saves appear here for you to review."
         footer={
           <>
             <Button

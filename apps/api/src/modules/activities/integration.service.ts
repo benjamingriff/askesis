@@ -122,12 +122,12 @@ export async function readIntegrations(athleteId: string): Promise<IntegrationsS
 }
 
 /** The mobile app's URL scheme (`scheme` in apps/mobile/app.json). */
-const NATIVE_SCHEME = 'askesis:';
+const NATIVE_SCHEME = 'waddle:';
 
 /**
  * Strava redirects back to the web app, which completes the connection with the athlete's
  * session. Only this deployment's own web origins may receive the code. The mobile app returns
- * through its own scheme instead, as `askesis://<web host>/connections/strava/callback`: Strava
+ * through its own scheme instead, as `waddle://<web host>/connections/strava/callback`: Strava
  * checks the host against the application's callback domain, and the app still needs the
  * athlete's session and signed state to finish.
  */
@@ -180,7 +180,7 @@ export async function completeStravaConnection(
     await client.revoke(token.refresh_token).catch(() => undefined);
     throw new IntegrationError(
       'ACTIVITY_SCOPE_REQUIRED',
-      'Askesis needs permission to view your activities. Connect again and keep that box ticked.',
+      'Waddle needs permission to view your activities. Connect again and keep that box ticked.',
       422,
     );
   }
@@ -198,11 +198,11 @@ export async function completeStravaConnection(
         .where('provider_athlete_id', '=', providerAthleteId)
         .executeTakeFirst();
       // Strava grants one authorization per account, so revoking here would also cut off the
-      // other Askesis account. Refuse instead.
+      // other Waddle account. Refuse instead.
       if (owner && owner.athlete_id !== athleteId)
         throw new IntegrationError(
           'STRAVA_ACCOUNT_IN_USE',
-          'This Strava account is already connected to another Askesis account.',
+          'This Strava account is already connected to another Waddle account.',
           409,
         );
       // Connecting a different Strava account replaces the old one and its links.
@@ -346,7 +346,7 @@ export async function verifyStravaActivity(
   });
 }
 
-/** Revoke Askesis at Strava and delete the connection and every link made with it. */
+/** Revoke Waddle at Strava and delete the connection and every link made with it. */
 export async function disconnectStrava(athleteId: string) {
   const connection = await connectionFor(athleteId);
   if (!connection) return readIntegrations(athleteId);

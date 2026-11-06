@@ -4,7 +4,7 @@ Verified against migrations, generated database types and API services on 2026-1
 
 ## Ownership and identity
 
-`athletes` supplies the internal UUID and the athlete's timezone. `athlete_identities` maps a Clerk identity to that UUID. Authenticated requests lazily create a missing mapping, update its last-seen time and store the device timezone reported in `X-Askesis-Timezone`. Clerk profile changes are not continuously synchronized into the athlete row.
+`athletes` supplies the internal UUID and the athlete's timezone. `athlete_identities` maps a Clerk identity to that UUID. Authenticated requests lazily create a missing mapping, update its last-seen time and store the device timezone reported in `X-Waddle-Timezone`. Clerk profile changes are not continuously synchronized into the athlete row.
 
 An account has exactly one athlete, and every plan is for that athlete. A plan has one `owner_id`. Public reads and commands derive the athlete from the authenticated session. Alpha has no membership table, sharing roles, demographic training profile or separate identity for another runner.
 

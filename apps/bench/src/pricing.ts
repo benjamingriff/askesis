@@ -1,4 +1,4 @@
-import type { ModelRequestUsage } from '@askesis/agent/usage';
+import type { ModelRequestUsage } from '@waddle/agent/usage';
 import {
   PRICE_TABLE,
   PRICING_VERSION,

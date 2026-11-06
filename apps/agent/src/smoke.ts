@@ -16,7 +16,7 @@ const worker = new Worker(
   config,
   new AgentApi(config.AGENT_API_URL),
   createRuntime(config, overrides),
-  (code) => console.log(JSON.stringify({ service: 'askesis-agent-smoke', code })),
+  (code) => console.log(JSON.stringify({ service: 'waddle-agent-smoke', code })),
 );
 process.once('SIGTERM', () => worker.stop());
 process.once('SIGINT', () => worker.stop());

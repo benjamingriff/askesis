@@ -214,7 +214,7 @@ export function Transcript({
                       <span className="coach-avatar" aria-hidden="true">
                         <Sparkles size={12} />
                       </span>
-                      Askesis
+                      Waddle
                       {testMode ? <small>test reply</small> : null}
                     </span>
                     <ChatMarkdown content={message.content} />

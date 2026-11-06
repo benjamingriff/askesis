@@ -1,5 +1,5 @@
 import { HeartPulse, MessageSquare } from 'lucide-react';
-import type { paths } from '@askesis/api-client';
+import type { paths } from '@waddle/api-client';
 import { LogChip } from '../TrainingLog';
 import { LOG_LABELS, REASON_LABELS, effortFlag } from '../../training-log';
 import { formatDuration, formatLong } from '../../lib/format';

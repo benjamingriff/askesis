@@ -1,5 +1,5 @@
 import { createContext, useContext } from 'react';
-import type { paths } from '@askesis/api-client';
+import type { paths } from '@waddle/api-client';
 import { formatShort } from '../lib/format';
 import { Card } from './ui';
 import { useCoachWord } from '../coach';

@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import type { CalibrationEntry, paths, PerformanceState, WorkoutDetail } from '@askesis/api-client';
+import type { CalibrationEntry, paths, PerformanceState, WorkoutDetail } from '@waddle/api-client';
 import { api } from './api';
 import { planStructure } from './lib/blocks';
 import { result } from './lib/result';

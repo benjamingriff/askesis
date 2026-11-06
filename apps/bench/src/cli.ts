@@ -4,10 +4,10 @@ import { resolve } from 'node:path';
 import { parseArgs } from 'node:util';
 import { writeFile, unlink, open } from 'node:fs/promises';
 import { setTimeout as delay } from 'node:timers/promises';
-import { parseAgentConfig } from '@askesis/agent/config';
-import { COACHING_PROMPT, PROMPT_HASH, PROMPT_VERSION } from '@askesis/agent/prompt';
-import type * as BenchmarkOperator from '@askesis/api/benchmark';
-import type { BenchmarkSnapshot } from '@askesis/api/benchmark';
+import { parseAgentConfig } from '@waddle/agent/config';
+import { COACHING_PROMPT, PROMPT_HASH, PROMPT_VERSION } from '@waddle/agent/prompt';
+import type * as BenchmarkOperator from '@waddle/api/benchmark';
+import type { BenchmarkSnapshot } from '@waddle/api/benchmark';
 import {
   BenchDisplay,
   ProgressSchema,
@@ -376,7 +376,7 @@ async function run() {
       options.values.verbose ? undefined : outputLog.fd,
     );
     configureApi(environment, credentials.secret, credentials.publishable);
-    operator = await import('@askesis/api/benchmark');
+    operator = await import('@waddle/api/benchmark');
     // The coach's behaviour depends on its tool definitions as much as its prompt text.
     const tools = operator.benchmarkToolDefinitions();
     await artifacts.json('prompts/tools.json', tools);

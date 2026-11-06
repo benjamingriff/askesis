@@ -1,4 +1,4 @@
-/* Askesis web styles. Colours come from theme tokens set by settings.tsx (mirrors the mobile app). */
+/* Waddle web styles. Colours come from theme tokens set by settings.tsx (mirrors the mobile app). */
 @import './base.css';
 @import './components.css';
 @import './shell.css';

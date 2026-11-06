@@ -15,7 +15,7 @@ import {
   Frown,
   BatteryLow,
 } from 'lucide-react';
-import type { WorkoutSummary } from '@askesis/api-client';
+import type { WorkoutSummary } from '@waddle/api-client';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../api';
 import { result } from '../lib/result';

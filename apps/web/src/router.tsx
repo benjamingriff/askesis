@@ -38,15 +38,15 @@ export function RequireAuthentication() {
   if (account.isPending)
     return (
       <div className="auth-loading">
-        <span className="brand-mark">A</span>
-        <p>Loading Askesis…</p>
+        <span className="brand-mark">W</span>
+        <p>Loading Waddle…</p>
       </div>
     );
   // Features such as the in-app coach come with the account, so pages wait for it.
   if (!account.data)
     return (
       <div className="auth-loading" role="alert">
-        <span className="brand-mark">A</span>
+        <span className="brand-mark">W</span>
         <p>Couldn’t load your account.</p>
         <Button size="sm" onClick={() => void account.refetch()}>
           Retry
@@ -72,7 +72,7 @@ function ErrorPage() {
 
   return (
     <main className="error-page">
-      <span className="label">Askesis</span>
+      <span className="label">Waddle</span>
       <h1>Something went wrong</h1>
       <p className="muted">{message}</p>
       <button

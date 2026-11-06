@@ -1,6 +1,6 @@
 # Waddle app icon
 
-As of 2026-11-04. The app is being rebranded as Waddle, after waddling geese and ducks. The rebrand hasn't started: the icon below is chosen but not yet wired into `apps/mobile`.
+As of 2026-11-06. The product was renamed from Askesis to Waddle, after waddling geese and ducks. The icon below is the iOS app icon (`apps/mobile/assets/images/icon.png`).
 
 ## Final icon
 
@@ -29,6 +29,6 @@ The second and third passes were local colour corrections to the image, so the s
 
 ## Using it in the app
 
-Each file is a 1024×1024 square, opaque RGB PNG with no alpha channel, which is the single master size Xcode and Expo expect. Don't add rounded corners: iOS applies its own mask. When the rebrand starts, copy `final-matte.png` over `apps/mobile/assets/images/icon.png`, or point `ios.icon` in `apps/mobile/app.json` at it. Android's adaptive icon needs separate foreground and background layers, which haven't been made yet.
+Each file is a 1024×1024 square, opaque RGB PNG with no alpha channel, which is the single master size Xcode and Expo expect. Don't add rounded corners: iOS applies its own mask. `final-matte.png` is copied to `apps/mobile/assets/images/icon.png`. Android's adaptive icon needs separate foreground and background layers, which haven't been made yet.
 
 Replacing these images adds a new copy to git history each time, so commit icon changes only once they're agreed.

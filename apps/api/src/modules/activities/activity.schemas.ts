@@ -25,7 +25,7 @@ export type IntegrationsState = z.infer<typeof IntegrationsStateSchema>;
 
 export const StartStravaConnectionSchema = z
   .object({
-    /** Where Strava returns: this web origin's `/connections/strava/callback`, or the app's `askesis://<web host>/connections/strava/callback`. */
+    /** Where Strava returns: this web origin's `/connections/strava/callback`, or the app's `waddle://<web host>/connections/strava/callback`. */
     redirectUri: z.string().url().max(500),
   })
   .openapi('StartStravaConnection');
@@ -43,7 +43,7 @@ export const CompleteStravaConnectionSchema = z
 export const ProviderActivityIdSchema = z.string().regex(/^\d{1,20}$/);
 
 /**
- * An activity read live from Strava for display only. Askesis doesn't store these; the
+ * An activity read live from Strava for display only. Waddle doesn't store these; the
  * response exists for this request and the athlete's browser session.
  */
 export const ActivitySummarySchema = z

@@ -43,7 +43,7 @@ async function main() {
     onBehalfOf: { userId },
     permissions: '*',
     agentName: 'askesis-local-verification',
-    taskDescription: 'Verify local Askesis UI and capture screenshots/video.',
+    taskDescription: 'Verify local Waddle UI and capture screenshots/video.',
     redirectUrl: `${config.webOrigin}/plan`,
     sessionMaxDurationInSeconds: 1800,
   });

@@ -2,7 +2,7 @@ import { z } from 'zod';
 
 /**
  * A minimal Strava API client: OAuth token exchange, refresh and revocation, the athlete's
- * activity list and one activity's detail. Responses are parsed to the fields Askesis shows.
+ * activity list and one activity's detail. Responses are parsed to the fields Waddle shows.
  * https://developers.strava.com/docs/reference/
  */
 export type StravaEndpoints = {

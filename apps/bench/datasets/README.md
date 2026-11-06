@@ -5,10 +5,10 @@ The first dataset edition is `v1`: seven synthetic personas, eight conversation-
 These files are inputs for the [athlete evaluation proposal](../../../docs/product/athlete-scenario-evaluation-proposal.md), not saved workout plans or training recommendations. Every authored scenario runs with `pnpm bench run --scenario <id>`, and `pnpm bench run --suite pilot-v1` runs the pilot in order; see the [benchmark guide](../../../docs/operations/training-plan-benchmarks.md). No provider calls or application mutations are made by the dataset commands below.
 
 ```sh
-pnpm --filter @askesis/bench datasets:validate
-pnpm --filter @askesis/bench datasets:list
-pnpm --filter @askesis/bench datasets:coverage
-pnpm --filter @askesis/bench datasets:coverage:update
+pnpm --filter @waddle/bench datasets:validate
+pnpm --filter @waddle/bench datasets:list
+pnpm --filter @waddle/bench datasets:coverage
+pnpm --filter @waddle/bench datasets:coverage:update
 ```
 
 `datasets:list` shows authored/planned status and runner support separately. `datasets:coverage` prints the tracker; `datasets:coverage:update` writes it. Validation is also exercised by the benchmark package's tests.

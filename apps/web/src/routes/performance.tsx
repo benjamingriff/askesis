@@ -2,7 +2,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Bot, Gauge, MessagesSquare, Plus, Undo2 } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
 import { Link } from 'react-router';
-import type { RecordCalibration } from '@askesis/api-client';
+import type { RecordCalibration } from '@waddle/api-client';
 import { api } from '../api';
 import { useAskAgent } from '../components/AskAgent';
 import { CalibrationSource, ZoneGuides } from '../components/PlanWidgets';

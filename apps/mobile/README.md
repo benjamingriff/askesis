@@ -1,12 +1,12 @@
-# Askesis mobile
+# Waddle mobile
 
-The Expo / React Native client for Askesis. It signs in with Clerk and uses the same API as the
+The Expo / React Native client for Waddle. It signs in with Clerk and uses the same API as the
 web app: Today, the Plan (weeks, calendar, blocks, zones), workout prescriptions, the coach with
 live activity and Stop, review & lock, unlock, discard, activation, plan details, the brief
 editor, version history and restore, draft inspection, the plan library with new plans,
 Performance with recorded and withdrawn results, account management, plan and account
-deletion, workout logs and feedback, check-ins, and Strava activity links. The design comes from the [mobile prototype](../mobile-prototype/README.md), which
-stays as the visual reference with its scripted data.
+deletion, workout logs and feedback, check-ins, and Strava activity links. It is the design
+reference for the web app's visual language.
 
 ## Run it in Expo Go
 
@@ -22,9 +22,9 @@ pnpm dev:local          # API + web; leave it running
 Then, in another terminal:
 
 ```bash
-cd apps/mobile
-npm install
-npm run dev             # expo start --tunnel (npm run dev:lan for the same network)
+pnpm dev:mobile         # Expo on this network (pnpm dev:mobile:web for the browser)
+# or, for a phone on another network:
+pnpm --filter @waddle/mobile dev   # expo start --tunnel
 ```
 
 Scan the QR code with Expo Go (iOS: Camera app; Android: Expo Go's scanner). Sign in with the
@@ -41,13 +41,18 @@ development build is needed.
 To point the app at a deployed API instead, set `EXPO_PUBLIC_API_URL` (and the matching
 `EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY`) in `apps/mobile/.env.local` and run `npx expo start`.
 
-> This app is installed with **npm**, not pnpm, and is excluded from the root pnpm workspace
-> (`!apps/mobile` in `pnpm-workspace.yaml`). Metro works best with a flat `node_modules`.
+This app is a package in the root pnpm workspace (`@waddle/mobile`), installed by the root
+`pnpm install` with pnpm's default isolated `node_modules`, which Expo supports since SDK 54. Add
+dependencies with `npx expo install <package>` from `apps/mobile` so versions match the SDK, and
+check the result with `npx expo-doctor`. Only import packages the app lists in `package.json`:
+with isolated installs, anything else fails to resolve.
 
 ### Run it on a Limrun cloud simulator
 
 `npx lim run --ios-id <simulator id>` from `apps/mobile` builds the app remotely and launches it
-on a Limrun iOS simulator. The cloud build sees only `apps/mobile`, so `apps/mobile/.env` (ignored)
+on a Limrun iOS simulator. This hasn't been re-run since the app joined the pnpm workspace; if the
+cloud build can't install dependencies from the app's folder alone, build from the repository root
+with `lim xcode build . --expo-app-dir apps/mobile`. The cloud build sees only `apps/mobile`, so `apps/mobile/.env` (ignored)
 holds `LIM_API_KEY` and `EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY`; put the Limrun key in the main
 checkout's `.env` and `pnpm dev:setup` writes both into new worktrees. The build has no Metro
 behind it and calls `localhost:8081`, so to reach the local API run `npx expo start --port 8081`
@@ -56,7 +61,7 @@ and `npx lim ios tunnel --selector localhost:8081 --detach --id <simulator id>`.
 ### Signing in without a password (local verification)
 
 ```bash
-npm run dev:login       # prints one-time sign-in links for the verification account
+pnpm --filter @waddle/mobile dev:login   # one-time sign-in links for the verification account
 ```
 
 Open the `expoGo` link on the phone (or the `web` link in a browser after `npx expo start --web`)
@@ -90,8 +95,8 @@ src/state/          settings (persisted), live updates, plan selection, account 
 src/theme/          themes, accents and effort colours, mirroring apps/web/src/theme
 ```
 
-API types come from `packages/api-client/src/schema.ts` as type-only imports, so the generated
-contract is shared without adding the pnpm package to this npm app. Live updates follow the same
+API types come from `packages/api-client/src/schema.ts` as type-only imports by relative path.
+Babel removes them from the bundle, so the app has no runtime dependency on the workspace package. Live updates follow the same
 event stream as the web (`/api/v1/live/events`) through `expo/fetch`, falling back to polling
 while disconnected.
 
@@ -147,7 +152,7 @@ workout screen and the log form) lists activities from the week either side; lin
 The log form's **Show details** reads the linked activity from Strava, above the form. See
 [activity connections](../../docs/operations/activity-connections.md) for the simulator.
 
-Strava returns to `askesis://<host>/connections/strava/callback`, opened with
+Strava returns to `waddle://<host>/connections/strava/callback`, opened with
 `WebBrowser.openAuthSessionAsync`; the web build returns to its own origin. The host is
 `EXPO_PUBLIC_STRAVA_CALLBACK_HOST` (default `localhost`) and must match the Strava app's callback
 domain and a host in the API's `CLERK_AUTHORIZED_PARTIES`. Expo Go opens only `exp://` links, so
@@ -161,16 +166,69 @@ it with the coach instead), plan renaming and sign-up. Use the web app for these
 ## Checks
 
 ```bash
-npx tsc --noEmit
+pnpm typecheck          # from apps/mobile; the root `pnpm typecheck` in CI includes it
+npx expo-doctor         # SDK version and config checks
 ```
 
-## Preview builds
+## TestFlight builds and updates
+
+Release builds are made by Expo's cloud build service (EAS Build) and installed through TestFlight.
+Expo's free plan allows **15 iOS builds a month**, so only build when the owner asks for one.
+Merging a PR doesn't call for a build. For changes that are only JavaScript, publish an update
+instead (below).
+
+### One-time setup (done 2026-11-06)
+
+- Apple Developer Program (individual) and an Expo account (`ben-jamin-griff`).
+- `npx eas-cli init` linked the Expo project `@ben-jamin-griff/waddle`; its ID is in `app.json`.
+- The first build registered the bundle ID `app.waddle.mobile` and created the distribution
+  certificate and App Store provisioning profile. Expo stores them;
+  `npx eas-cli credentials` shows or replaces them.
+- The first submit created the App Store Connect app and an App Store Connect API key, so later
+  submits need no Apple sign-in.
+- TestFlight: an internal testing group with automatic distribution, and Automatic Updates turned
+  on in the TestFlight app, so each processed build installs on its own.
+
+### Make a build
 
 ```bash
-npx eas-cli@latest login
-npx eas-cli@latest init
-npx eas-cli@latest build --profile preview --platform android
+cd apps/mobile
+pnpm release:build      # npx eas-cli build --platform ios --profile production --auto-submit
 ```
 
-Builds need `EXPO_PUBLIC_API_URL` and `EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY` set for the build
-profile. Profiles live in `eas.json`.
+The build runs on Expo's macOS machines. It uploads the files git tracks, installs from the root
+lockfile with the Node and pnpm versions pinned in `eas.json`, generates the Xcode project with
+`expo prebuild`, signs it and uploads it to App Store Connect. The `production` profile in `eas.json` holds
+the release settings: the Railway API URL, the Clerk publishable key, the Strava callback host and
+the `production` update channel. Ignored files such as `.env` aren't uploaded. The build number
+goes up automatically; `version` in `app.json` stays at `0.1.0` while the app is only on
+TestFlight. Once Apple finishes processing (10–30 minutes), TestFlight installs it. Builds expire
+after 90 days.
+
+Follow a build at expo.dev, or with `npx eas-cli build:list`. If a submit fails, the finished
+build can be sent again with `npx eas-cli submit -p ios --id <build id>`.
+
+### Publish an update (no build)
+
+Installed builds check for an update each time the app opens and apply it on the next launch.
+Use updates for JavaScript, text and image changes:
+
+```bash
+cd apps/mobile
+pnpm release:update "What changed"
+```
+
+`scripts/release-update.mjs` runs `eas update` on the `production` channel with the production
+values from `eas.json`, which `eas update` doesn't read itself. Updates are free up to 1,000
+monthly active users.
+
+An update only reaches builds with the same **runtime version**. `runtimeVersion` uses the
+`fingerprint` policy, a hash of the app's native dependencies and native config, so an update
+never lands on a build whose native code doesn't match. Adding or upgrading a package with native
+code, changing `app.json`'s native settings (icon, scheme, plugins, bundle ID) or upgrading the
+Expo SDK changes the fingerprint. Those changes need a new build. To see whether a change still
+fits the installed build, compare `npx expo-updates fingerprint:generate --platform ios` before
+and after it.
+
+Pull a bad update with `npx eas-cli update:republish` (republish an earlier one) or
+`npx eas-cli update:roll-back-to-embedded`.

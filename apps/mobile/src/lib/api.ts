@@ -27,7 +27,7 @@ async function authHeaders(headers: Headers) {
   const token = await tokenProvider?.();
   if (token) headers.set('Authorization', `Bearer ${token}`);
   const timezone = deviceTimezone();
-  if (timezone) headers.set('X-Askesis-Timezone', timezone);
+  if (timezone) headers.set('X-Waddle-Timezone', timezone);
 }
 
 export const api = createClient<paths>({ baseUrl: apiBaseUrl() });

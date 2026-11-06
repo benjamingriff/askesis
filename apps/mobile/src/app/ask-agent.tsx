@@ -6,7 +6,7 @@ import { FormScreen, useFieldStyle } from '../components/forms';
 import { Button, Text } from '../components/ui';
 
 /**
- * Askesis cannot message the athlete's agent, so asking copies a prompt for them to paste. The
+ * Waddle cannot message the athlete's agent, so asking copies a prompt for them to paste. The
  * prompt stays visible, because the clipboard can refuse a write (Expo web after a slow save).
  */
 export default function AskAgentScreen() {
@@ -38,7 +38,7 @@ export default function AskAgentScreen() {
       }
     >
       <Text variant="body" color="dim">
-        Paste this into Claude or the agent you connected to Askesis. Changes it saves appear here
+        Paste this into Claude or the agent you connected to Waddle. Changes it saves appear here
         for you to review.
       </Text>
       <View style={[field, { paddingVertical: 12 }]}>

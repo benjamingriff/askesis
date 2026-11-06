@@ -17,7 +17,7 @@ export type ActivityDetail = components['schemas']['ActivityDetail'];
 /** Strava returns here; the API only accepts this path. */
 export const STRAVA_CALLBACK_PATH = '/connections/strava/callback';
 /**
- * Activity details come live from Strava each time and are never stored by Askesis. The app
+ * Activity details come live from Strava each time and are never stored by Waddle. The app
  * keeps them only while they're on screen and for a few minutes afterwards.
  */
 const STRAVA_STALE_MS = 5 * 60 * 1000;
@@ -31,7 +31,7 @@ const STRAVA_STALE_MS = 5 * 60 * 1000;
  */
 export function stravaRedirectUri(): string {
   if (Platform.OS === 'web') return `${window.location.origin}${STRAVA_CALLBACK_PATH}`;
-  const scheme = (Constants.expoConfig?.scheme as string | undefined) ?? 'askesis';
+  const scheme = (Constants.expoConfig?.scheme as string | undefined) ?? 'waddle';
   const host = process.env.EXPO_PUBLIC_STRAVA_CALLBACK_HOST || 'localhost';
   return `${scheme}://${host}${STRAVA_CALLBACK_PATH}`;
 }

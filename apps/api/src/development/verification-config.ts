@@ -39,7 +39,7 @@ export function verificationConfig(environment: NodeJS.ProcessEnv) {
     database.username !== 'askesis'
   )
     throw new LocalVerificationError(
-      'Local verification requires a loopback Askesis development database.',
+      'Local verification requires a loopback Waddle development database.',
     );
   // pg gives connection-string query options precedence over the URL authority.
   // Allow only the TLS mode used by local setup so the checked target cannot change.

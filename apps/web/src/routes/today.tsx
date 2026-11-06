@@ -6,7 +6,7 @@ import {
   useLogContext,
 } from '../components/TrainingLog';
 import { useTrainingLog } from '../training-log';
-import type { WorkoutSummary } from '@askesis/api-client';
+import type { WorkoutSummary } from '@waddle/api-client';
 import { ArrowRight, CalendarDays, Library, MessageSquare, Moon, Sparkles } from 'lucide-react';
 import { useMemo, type CSSProperties, type ReactNode } from 'react';
 import { Link, useNavigate } from 'react-router';

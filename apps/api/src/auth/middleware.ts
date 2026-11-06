@@ -6,7 +6,9 @@ import { ensureAthlete, syncAthleteTimezone } from './athlete-provisioning.js';
 import type { AppEnvironment } from './types.js';
 
 /** Clients report the device's IANA timezone on every request. */
-export const TIMEZONE_HEADER = 'X-Askesis-Timezone';
+export const TIMEZONE_HEADER = 'X-Waddle-Timezone';
+/** The header's name before the Waddle rebrand, still sent by web pages loaded before it. */
+const LEGACY_TIMEZONE_HEADER = 'X-Askesis-Timezone';
 
 /**
  * A native app's session token: a bearer token whose claims name no origin (`azp`). Browsers
@@ -82,7 +84,10 @@ export const requireAuthentication: MiddlewareHandler<AppEnvironment> = async (c
       );
     throw error;
   }
-  const athlete = await syncAthleteTimezone(provisioned, context.req.header(TIMEZONE_HEADER));
+  const athlete = await syncAthleteTimezone(
+    provisioned,
+    context.req.header(TIMEZONE_HEADER) ?? context.req.header(LEGACY_TIMEZONE_HEADER),
+  );
   context.set('athlete', athlete);
   // During the grace period the athlete can only review, export or cancel the deletion.
   if (athlete.deletionPending && !context.req.path.startsWith('/api/v1/account')) {

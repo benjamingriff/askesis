@@ -1,4 +1,4 @@
-import type { CalibrationEntry, PerformanceState } from '@askesis/api-client';
+import type { CalibrationEntry, PerformanceState } from '@waddle/api-client';
 import {
   Bike,
   Dumbbell,

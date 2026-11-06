@@ -1,4 +1,4 @@
-import type { CalibrationEntry } from '@askesis/api-client';
+import type { CalibrationEntry } from '@waddle/api-client';
 import { describe, expect, it } from 'vitest';
 import { describeEvidence, formatZoneValue, planSports, systemsForSports } from './sports';
 import { formatLoad, formatSwimDistance, formatSwimPace } from './format';

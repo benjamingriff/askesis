@@ -1,7 +1,7 @@
 import { LogChip, WorkoutLogActions, useLogContext } from './TrainingLog';
 import { useLocalToday } from '../lib/use-local-today';
 import { effortFlag } from '../training-log';
-import type { StepTarget, WorkoutStep, WorkoutSummary } from '@askesis/api-client';
+import type { StepTarget, WorkoutStep, WorkoutSummary } from '@waddle/api-client';
 import { CalendarOff, ChevronRight, MessageSquare, Moon, Repeat } from 'lucide-react';
 import type { CSSProperties } from 'react';
 import {

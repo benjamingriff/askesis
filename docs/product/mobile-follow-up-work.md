@@ -33,7 +33,7 @@ Athletes can record what they did on mobile. See [workout logs and feedback](./t
 - [x] Placeholder sessions: show them in the schedule and let athletes log them.
 - [x] Today hero: one rounded card holding the training log, without the View workout button.
 - [x] Plan view tidy-ups from `main`: controls below the title, and no wellbeing check-in.
-- [x] Strava: connect and disconnect through the browser, then link activities to workouts (`/integrations/strava/*`). Native builds return through `askesis://<host>/connections/strava/callback`, which the API now accepts. Checked against the Strava simulator on Expo web; a real Strava account is untested.
+- [x] Strava: connect and disconnect through the browser, then link activities to workouts (`/integrations/strava/*`). Native builds return through `waddle://<host>/connections/strava/callback`, which the API now accepts. Checked against the Strava simulator on Expo web; a real Strava account is untested.
 
 ## 4. Navigation (decided)
 
@@ -43,24 +43,27 @@ Decided 2026-11-05: keep the floating bottom tab bar on native. The web app move
 
 The app runs only against a local API today. To get it on a phone without a laptop nearby, it needs a deployed API and a signed build. `apps/mobile/eas.json` already has development, preview and production profiles.
 
-- [ ] Per-profile environment: `EXPO_PUBLIC_API_URL` for the deployed API and the matching Clerk publishable key (production keys for production).
-- [ ] Clerk production instance: allow native sign-in for bundle ID `app.askesis.mobile`, plus the redirect for Google sign-in.
-- [ ] Strava: set `EXPO_PUBLIC_STRAVA_CALLBACK_HOST` to the web host in the Strava app's callback domain (that host must also be in `CLERK_AUTHORIZED_PARTIES`), then connect from a release build.
-- [ ] App icon, splash and display name checked on a device; App Store Connect record; then TestFlight.
-- [ ] Decide on over-the-air updates (EAS Update), so text-only fixes skip App Review.
+- [x] Production environment in `eas.json`: the Railway web origin (`https://askesis.up.railway.app`, whose nginx forwards `/api`), the publishable key of the Clerk instance that deployment uses (still the development instance), and the Strava callback host.
+- [ ] Clerk production instance, when the deployment moves to one: allow native sign-in for bundle ID `app.waddle.mobile`, plus the redirect for Google sign-in.
+- [ ] Strava: connect from a release build. `EXPO_PUBLIC_STRAVA_CALLBACK_HOST` is set to the web host, which must be the Strava app's callback domain and in `CLERK_AUTHORIZED_PARTIES`.
+- [ ] App icon, splash and display name checked on a device.
+- [x] Waddle identity: display name, bundle ID `app.waddle.mobile`, scheme `waddle://`, Expo slug `waddle`, the goose icon, and no export-compliance prompt (`usesNonExemptEncryption: false`).
+- [x] Install the app with pnpm as a workspace package, so EAS installs it from the root lockfile. The build profiles pin Node 24.18.0 and pnpm 11.18.0, which the root `engines` require.
+- [x] Over-the-air updates: EAS Update on the `production` channel with the `fingerprint` runtime policy (`pnpm release:update`). It reaches installed apps after the next build that includes `expo-updates`.
+- [x] First TestFlight build and submit (2026-11-06). The process and the free plan's 15-builds-a-month budget are in [the mobile README](../../apps/mobile/README.md#testflight-builds-and-updates).
 - [ ] Android is out of scope until decided otherwise; the config builds, but nothing has been checked.
 
 ## 6. Guardrails
 
-Nothing in CI checks the mobile app yet: `.github/workflows/ci.yml` never installs `apps/mobile`, and the root ESLint config ignores it. So an API change can break the app without anyone noticing.
+Since the app joined the pnpm workspace, CI installs it and the root `pnpm typecheck` covers it. The root ESLint config still ignores it.
 
-- [ ] CI job: `npm ci` in `apps/mobile`, then `npm run typecheck` (it type-checks against the shared API schema, so it catches contract drift).
+- [x] CI typecheck: the root `pnpm typecheck` runs the app's `tsc --noEmit` against the shared API schema, so it catches contract drift.
 - [ ] Lint: `expo lint`, or extend the root config to cover `apps/mobile`.
 - [ ] Unit tests for the pure code: `parseClock`, the date and pace helpers in `src/lib/format.ts`, step formatting in `StepList`, and `accountPortalUrl`.
 - [ ] Optional later: a Maestro smoke flow (sign in, open Today, open a workout) run on Limrun before releases only.
 
 ## 7. Housekeeping
 
-- [ ] Delete `apps/mobile-prototype`. The real app has replaced it as the design reference, and it is still on SDK 57, so it no longer opens in Expo Go.
+- [x] Delete `apps/mobile-prototype`. The real app has replaced it as the design reference, and it was still on SDK 57, so it no longer opened in Expo Go.
 - [ ] Cheaper Limrun checks: build one reusable development app per native change (`expo-dev-client`), then reload JavaScript over the tunnel instead of rebuilding. Always stop the tunnel afterwards, because it keeps the paid simulator alive.
-- [ ] A one-step `npm run limrun` in `apps/mobile` that starts Expo on 8081, opens the tunnel and prints the stop command.
+- [ ] A one-step `pnpm limrun` in `apps/mobile` that starts Expo on 8081, opens the tunnel and prints the stop command.

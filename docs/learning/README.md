@@ -1,6 +1,6 @@
-# Understand Askesis in one day
+# Understand Waddle in one day
 
-An eight-hour guided tour for a data engineer who helped build Askesis and now wants to navigate it confidently. You already understand SQL, services and package managers; this course explains the TypeScript and frontend ideas as they appear in this repository.
+An eight-hour guided tour for a data engineer who helped build Waddle and now wants to navigate it confidently. You already understand SQL, services and package managers; this course explains the TypeScript and frontend ideas as they appear in this repository.
 
 The goal is to find and explain a feature's path through the system. You do not need to understand every function, finish a frontend course or read every migration. At the end, you should be able to point to the code that fetches a workout, the rows behind its prescription, the coach's prompt and tools, and the files and hosted settings that control deployment.
 

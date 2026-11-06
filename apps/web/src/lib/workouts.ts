@@ -1,4 +1,4 @@
-import type { RacePriority, WorkoutStep, WorkoutSummary } from '@askesis/api-client';
+import type { RacePriority, WorkoutStep, WorkoutSummary } from '@waddle/api-client';
 import { Activity, Moon, PersonStanding, Trophy, type LucideIcon } from 'lucide-react';
 import { effortColor, zoneEffort, type Effort } from '../theme/palette';
 import { METRES_PER_MILE, addDays, daysBetween, startOfWeek } from './format';

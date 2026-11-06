@@ -27,7 +27,7 @@ pnpm retention:run
 pnpm retention:run -- --as-of 2026-12-01T00:00:00Z
 
 # Re-apply deletions recorded after a backup was taken (see below).
-pnpm --filter @askesis/api retention:replay /path/to/api-logs.jsonl [--through <sequence>] [--allow-gaps]
+pnpm --filter @waddle/api retention:replay /path/to/api-logs.jsonl [--through <sequence>] [--allow-gaps]
 ```
 
 The root `retention:run` runs inside this worktree's development environment. Against Railway, run the API package commands with the service's environment.

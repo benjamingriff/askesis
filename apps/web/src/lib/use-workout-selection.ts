@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import type { WorkoutSummary } from '@askesis/api-client';
+import type { WorkoutSummary } from '@waddle/api-client';
 
 export type WorkoutSelection = ReturnType<typeof useWorkoutSelection>;
 

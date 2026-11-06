@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { app } from './app.js';
 
-describe('Askesis API', () => {
+describe('Waddle API', () => {
   it.each([
     '/api/v1/plans',
     '/api/v1/plans/00000000-0000-4000-8000-000000000010/draft',

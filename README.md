@@ -1,10 +1,12 @@
-# Askesis
+# Waddle
 
-Askesis is an early-stage platform for creating, storing, validating, and adapting structured training plans.
+Waddle (formerly Askesis) is an early-stage platform for creating, storing, validating, and adapting structured training plans.
+
+Identifiers that name stored data or existing resources keep the old name: the Strava token key labels, the `askesis.purge` database setting, local Postgres users and Compose projects, browser and device storage keys, the verification account and the Railway domain.
 
 ## Current vertical slice
 
-Phases 1–7 are implemented, and Phase 7 is merged into `main`. Development continues on the responsive web app, drawing selected features from the mobile reference prototype; native integration is deferred. See the [current handoff](./docs/current-handoff.md) for priorities and the [Phase 7 closeout](./docs/archive/phase-7/phase-7-closeout.md) for verification evidence.
+Phases 1–7 are implemented, and Phase 7 is merged into `main`. Development continues on the responsive web app, and the Expo app (`apps/mobile`) is being brought in line with it on the same API. See the [current handoff](./docs/current-handoff.md) for priorities and the [Phase 7 closeout](./docs/archive/phase-7/phase-7-closeout.md) for verification evidence.
 
 The application reads and changes authoritative training data through:
 
@@ -83,7 +85,7 @@ See [`docs/operations/local-development.md`](./docs/operations/local-development
 
 See [`docs/README.md`](./docs/README.md) for architecture decisions, the data model, and the implementation roadmap.
 
-For a guided introduction, follow [Understand Askesis in one day](./docs/learning/README.md): an eight-hour walkthrough with a checklist, code links and hands-on data/API exercises.
+For a guided introduction, follow [Understand Waddle in one day](./docs/learning/README.md): an eight-hour walkthrough with a checklist, code links and hands-on data/API exercises.
 
 ## Repository structure
 
@@ -93,8 +95,7 @@ apps/
   agent/        Private coaching worker using the OpenAI Agents SDK
   web/          React, Vite, and React Router
   marketing/    Static Astro marketing site
-  mobile/       Expo app (npm; API, Clerk, live updates)
-  mobile-prototype/  Expo design reference with scripted data
+  mobile/       Expo app (API, Clerk, live updates)
 packages/
   api-client/   Generated OpenAPI types and client factory
 database/

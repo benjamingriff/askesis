@@ -4,7 +4,7 @@
 
 ## Context
 
-The owner wants to see what they recorded next to what was planned, starting with Strava. An earlier prototype ([#71](https://github.com/benjamingriff/askesis/pull/71)) synced activities into a seven-day cache and matched them to workouts automatically. Strava's [API Agreement](https://www.strava.com/legal/api) and [API Policy](https://www.strava.com/legal/api_policy) (effective 2026-06-01) shaped the next step:
+The owner wants to see what they recorded next to what was planned, starting with Strava. An earlier prototype ([#71](https://github.com/benjamingriff/waddle/pull/71)) synced activities into a seven-day cache and matched them to workouts automatically. Strava's [API Agreement](https://www.strava.com/legal/api) and [API Policy](https://www.strava.com/legal/api_policy) (effective 2026-06-01) shaped the next step:
 
 - Strava data, including information derived from it, may not be used in AI applications or supplied to a model's context (§5.3).
 - Cached Strava data may be kept for at most seven days (§6.2).
@@ -19,7 +19,7 @@ The owner chose a narrower design: no automatic matching. The athlete finds the 
 - **The athlete is the only path from Strava to the log.** Nothing is pre-filled. The panel says: "Strava details are displayed temporarily for reference. Information you enter in your review is saved separately."
 - **The coach is excluded.** Activity routes are user-only; no `/internal/agent` route, prompt or feedback snapshot includes a link or Strava value.
 - **Links follow workout lineage**, like workout logs, so they survive unlock and relock. An activity belongs to at most one workout per plan. Deleted plans hide their links until restored; plan purge removes links and account purge also removes encrypted credentials. Data exports include metadata and links without credentials.
-- **Disconnecting revokes the grant and cascades** to every link. A Strava account connects to one Askesis athlete. Tokens are encrypted with AES-256-GCM; refreshes take a row lock because Strava rotates refresh tokens.
+- **Disconnecting revokes the grant and cascades** to every link. A Strava account connects to one Waddle athlete. Tokens are encrypted with AES-256-GCM; refreshes take a row lock because Strava rotates refresh tokens.
 
 ## Alternatives
 

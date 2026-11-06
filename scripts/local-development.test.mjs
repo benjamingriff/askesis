@@ -526,10 +526,10 @@ test(
     await writeFile(envPath, old);
     for (const [file, args] of [
       ['scripts/dev-setup.mjs', []],
-      ['scripts/dev-local.mjs', ['exec', '--', 'pnpm', '--filter', '@askesis/api', 'example:seed']],
+      ['scripts/dev-local.mjs', ['exec', '--', 'pnpm', '--filter', '@waddle/api', 'example:seed']],
       [
         'scripts/dev-local.mjs',
-        ['exec', '--', 'pnpm', '--filter', '@askesis/api', 'generate:db-types'],
+        ['exec', '--', 'pnpm', '--filter', '@waddle/api', 'generate:db-types'],
       ],
     ]) {
       const child = f.start(file, args);

@@ -4,9 +4,9 @@
 
 ## Why
 
-The first release to friends uses MCP: athletes plan with Claude or another agent they already pay for. Askesis does not host a coaching agent for them. The web app stays the place to review, lock and train. The in-app coach keeps being developed, but it should not appear in that release.
+The first release to friends uses MCP: athletes plan with Claude or another agent they already pay for. Waddle does not host a coaching agent for them. The web app stays the place to review, lock and train. The in-app coach keeps being developed, but it should not appear in that release.
 
-Askesis stays one app with one codebase. The chat code, its tests and the coaching worker stay in place. A server setting decides whether athletes see the coach. While it is hidden, every place that opens a chat today offers **Ask your agent** instead. The athlete gets the same "talk this through" action, aimed at the MCP-connected agent.
+Waddle stays one app with one codebase. The chat code, its tests and the coaching worker stay in place. A server setting decides whether athletes see the coach. While it is hidden, every place that opens a chat today offers **Ask your agent** instead. The athlete gets the same "talk this through" action, aimed at the MCP-connected agent.
 
 ## Current behavior
 
@@ -73,13 +73,13 @@ Coach-only text (live generation, interrupted output) only appears when an in-ap
 
 ### 5. Ask your agent
 
-Askesis cannot send a message into the athlete's Claude session. The action instead saves what the athlete entered and hands them a prompt that their agent can act on with the MCP tools:
+Waddle cannot send a message into the athlete's Claude session. The action instead saves what the athlete entered and hands them a prompt that their agent can act on with the MCP tools:
 
 1. Save first, as today: the log, check-in or nothing extra.
 2. Build a short prompt. It names the plan, its `planId` and the record the athlete just saved, so the agent can read it with the tools.
 3. Open the **Ask your agent** dialog. It tries to copy the prompt straight away and shows the text, so the athlete can check it or copy it by hand. The clipboard can refuse a write that follows a slow save, so a toast alone would not be enough. **Copy prompt** retries the copy.
 
-Every prompt starts with `Using Askesis, for my plan “{name}” (planId {id}):` on its own line, followed by the request the in-app coach would have received:
+Every prompt starts with `Using Waddle, for my plan “{name}” (planId {id}):` on its own line, followed by the request the in-app coach would have received:
 
 | Entry point                                     | Request                                                                                                                             |
 | ----------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
@@ -94,9 +94,9 @@ Every prompt starts with `Using Askesis, for my plan “{name}” (planId {id}):
 
 Two hooks are the switch points, so every caller changes at once: `useOpenPlanChat` and `useDiscussFeedback`. While hidden, they call `useAskAgent()` instead of the conversation routes, and resolve to `null` instead of a conversation. Only a real conversation navigates to `/chat`. The provider sits in the app shell. A dialog that closes beneath it (the check-in sheet) no longer takes focus back from it.
 
-When the agent saves a change, the database triggers already send live events, so the open page refreshes. The athlete sees the change appear and then reviews and locks it in Askesis, as with the in-app coach.
+When the agent saves a change, the database triggers already send live events, so the open page refreshes. The athlete sees the change appear and then reviews and locks it in Waddle, as with the in-app coach.
 
-The prompts include only what the athlete just entered and plan identifiers. No tokens or Askesis URLs go to the clipboard.
+The prompts include only what the athlete just entered and plan identifiers. No tokens or Waddle URLs go to the clipboard.
 
 ### 6. Mobile
 
@@ -127,5 +127,5 @@ Recorded 2026-10-31.
 2. **No per-user override.** The owner's account uses the same setting; the in-app coach is on hold for a few weeks. The `features` field leaves room for an override later.
 3. **History is hidden.** Existing conversations are not shown while the coach is hidden. They stay in the data export and deletion; this can be refined later.
 4. **Naming.** "Your agent" for now.
-5. **Agent inbox: try in the future.** Instead of copying a prompt, the app would record an open request ("athlete asked to adjust after a check-in"), and the MCP server would surface it in `read_plan_context` or an MCP prompt, so the athlete could just say "check Askesis". This fits after MCP Phase 2.
+5. **Agent inbox: try in the future.** Instead of copying a prompt, the app would record an open request ("athlete asked to adjust after a check-in"), and the MCP server would surface it in `read_plan_context` or an MCP prompt, so the athlete could just say "check Waddle". This fits after MCP Phase 2.
 6. **Attribution** for MCP writes ("Recorded by your coach" needs an external-agent label) stays with MCP Phase 4.

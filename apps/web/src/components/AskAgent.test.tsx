@@ -47,7 +47,7 @@ it('copies a starting prompt for the athlete’s agent when the coach is hidden'
   fireEvent.click(screen.getByRole('button', { name: 'Ask your agent' }));
   const dialog = screen.getByRole('dialog', { name: 'Ask your agent' });
   const prompt = within(dialog).getByLabelText('Prompt for your agent') as HTMLTextAreaElement;
-  expect(prompt.value).toMatch(/^Using Askesis: Help me build a training plan\./);
+  expect(prompt.value).toMatch(/^Using Waddle: Help me build a training plan\./);
   await waitFor(() => expect(writeText).toHaveBeenCalledWith(prompt.value));
   expect(within(dialog).getByRole('button', { name: 'Copied' })).toBeInTheDocument();
   fireEvent.click(within(dialog).getByRole('button', { name: 'Done' }));

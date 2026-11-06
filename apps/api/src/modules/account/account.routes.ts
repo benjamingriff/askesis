@@ -67,7 +67,7 @@ export function registerAccountRoutes(app: OpenAPIHono<AppEnvironment>): void {
     }),
     async (c) => {
       const data = await exportAccount(c.get('athlete').id);
-      c.header('Content-Disposition', 'attachment; filename="askesis-export.json"');
+      c.header('Content-Disposition', 'attachment; filename="waddle-export.json"');
       c.header('Cache-Control', 'no-store');
       return c.json(data as Record<string, unknown>, 200);
     },
