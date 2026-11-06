@@ -54,7 +54,7 @@ and ancestry; UI tests verify the preview and confirmation gates.
    in the other. Expect a conflict and an explicit refresh, not silent overwriting.
 
 No production deployment or additional local data reset was needed for this slice. The API and
-web run in detached tmux sessions `askesis-phase2-api` and `askesis-phase2-web` so they survive
+web run in detached tmux sessions `waddle-phase2-api` and `waddle-phase2-web` so they survive
 the agent turn ending. The main schedule supports active plans; version-history pages also
 allow historical schedule inspection, including for archived plans.
 

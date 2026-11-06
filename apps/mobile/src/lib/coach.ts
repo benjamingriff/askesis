@@ -1,12 +1,12 @@
 /**
- * A prompt for the athlete's agent. It names the plan so the agent can call the Askesis tools with
+ * A prompt for the athlete's agent. It names the plan so the agent can call the Waddle tools with
  * an explicit planId; the request may end open (for example `About “Tempo” on …: `). Matches the
  * web app's `agentPrompt()` (apps/web/src/coach.tsx).
  */
 export function agentPrompt(request: string, plan?: { id: string; name?: string | undefined }) {
-  if (!plan) return `Using Askesis: ${request}`;
+  if (!plan) return `Using Waddle: ${request}`;
   const name = plan.name ? ` “${plan.name}”` : '';
-  return `Using Askesis, for my plan${name} (planId ${plan.id}):\n${request}`;
+  return `Using Waddle, for my plan${name} (planId ${plan.id}):\n${request}`;
 }
 
 /** The request behind every "start a plan" action when there is no plan to name yet. */

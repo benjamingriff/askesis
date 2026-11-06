@@ -1,8 +1,8 @@
 import { readFile, readdir } from 'node:fs/promises';
 import { basename, resolve } from 'node:path';
 import { z } from 'zod';
-import type { BenchmarkSnapshot } from '@askesis/api/benchmark';
-import { safeIdentifier } from '@askesis/agent/usage';
+import type { BenchmarkSnapshot } from '@waddle/api/benchmark';
+import { safeIdentifier } from '@waddle/agent/usage';
 import { Artifacts, reportMarkdown } from './artifacts.js';
 import { checkPlan, overallVerdict, CHECKS_VERSION } from './checks.js';
 import {

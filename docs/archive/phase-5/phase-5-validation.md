@@ -59,7 +59,7 @@ extension took 105 seconds. Short discussion replies took 5–19 seconds.
 
 ## Follow-ups
 
-- Fixed the hard-coded **Askesis · test reply** label to **Askesis**, rebuilt the
+- Fixed the hard-coded **Waddle · test reply** label to **Waddle**, rebuilt the
   local web container, and verified the corrected label in the browser.
 - Fixed the offline notice to use `executionAvailable` rather than the configured
   mode. Agent mode remains configured when a worker is offline. A regression test

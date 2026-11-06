@@ -101,7 +101,7 @@ export function createWorkerReporter(context: WorkerLogContext): WorkerReporter 
     const level = code === 'failed' || code.includes('FAILED') ? 'error' : 'info';
     const line = JSON.stringify({
       time: new Date().toISOString(),
-      service: 'askesis-agent',
+      service: 'waddle-agent',
       level,
       code,
       ...context,

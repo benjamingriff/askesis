@@ -6,17 +6,17 @@
 
 ## Context
 
-Askesis needs long-running conversational coaching that can create and change plan drafts, survive browser disconnection and keep plan authorization and transactions in the core API. The initial stack named Pi as the future worker runtime; Phase 5 reassessed that choice before implementing real coaching.
+Waddle needs long-running conversational coaching that can create and change plan drafts, survive browser disconnection and keep plan authorization and transactions in the core API. The initial stack named Pi as the future worker runtime; Phase 5 reassessed that choice before implementing real coaching.
 
 ## Decision
 
-Run an independently deployed private TypeScript worker using the OpenAI Agents SDK. The SDK owns the model/tool loop; Askesis owns durable conversations, runs, claims, leases, cancellation and domain state. Model and reasoning settings remain worker configuration; the current provider setting accepts OpenAI only.
+Run an independently deployed private TypeScript worker using the OpenAI Agents SDK. The SDK owns the model/tool loop; Waddle owns durable conversations, runs, claims, leases, cancellation and domain state. Model and reasoning settings remain worker configuration; the current provider setting accepts OpenAI only.
 
 Expose narrowly defined domain tools through the core API. The API derives ownership from the claimed run, enforces draft and concurrency rules, and commits tool receipts with accepted changes. The worker receives scoped machine credentials and provider credentials, never PostgreSQL or Clerk secret credentials. Human confirmation, locking and unlocking remain application actions outside agent permissions.
 
 ## Alternatives considered
 
-The [Phase 5 design](../product/phase-5-design.md#runtime-framework-reconsideration) assessed Pi, the OpenAI Agents SDK, Claude Agent SDK and Codex SDK/app-server. The accepted choice uses an embedded model/tool loop while keeping application state, approval rules and deployment under Askesis control. Coding-agent runtimes were not needed for the domain-tool workflow.
+The [Phase 5 design](../product/phase-5-design.md#runtime-framework-reconsideration) assessed Pi, the OpenAI Agents SDK, Claude Agent SDK and Codex SDK/app-server. The accepted choice uses an embedded model/tool loop while keeping application state, approval rules and deployment under Waddle control. Coding-agent runtimes were not needed for the domain-tool workflow.
 
 Direct database access was excluded by the established API ownership boundary, which this decision preserves.
 

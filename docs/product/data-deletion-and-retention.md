@@ -4,7 +4,7 @@
 
 ## Why
 
-Askesis stores personal data and health data. Chats mention injuries, illness and races; `athlete_check_ins` records `ill` and `pain`; workout logs record effort and how a session felt. UK GDPR expects storage limitation and erasure on request (without undue delay, within one month). Health data is special category data. Clearing the owner of a plan does not anonymise free-text chats, so "unlinking" a deleted plan would keep all the obligations and break the athlete's expectation. Deletion therefore means removing the rows. Anonymous aggregates without identifiers or free text may be kept.
+Waddle stores personal data and health data. Chats mention injuries, illness and races; `athlete_check_ins` records `ill` and `pain`; workout logs record effort and how a session felt. UK GDPR expects storage limitation and erasure on request (without undue delay, within one month). Health data is special category data. Clearing the owner of a plan does not anonymise free-text chats, so "unlinking" a deleted plan would keep all the obligations and break the athlete's expectation. Deletion therefore means removing the rows. Anonymous aggregates without identifiers or free text may be kept.
 
 ## Owner decisions
 
@@ -75,7 +75,7 @@ A retention sweeper runs in every execution mode, every 15 minutes, with `FOR UP
 3. Prunes idempotency records older than 7 days.
 4. Prunes live-journal events older than 7 days. The journal trigger only prunes busy accounts. (F7)
 
-`pnpm --filter @askesis/api retention:run [--as-of <ISO time>]` runs one pass on demand. `--as-of` is refused in production; it lets local testing fast-forward.
+`pnpm --filter @waddle/api retention:run [--as-of <ISO time>]` runs one pass on demand. `--as-of` is refused in production; it lets local testing fast-forward.
 
 ### Data export
 

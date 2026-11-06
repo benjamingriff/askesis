@@ -161,7 +161,7 @@ describe('requireAuthentication', () => {
     });
 
     const response = await testApp().request('/protected', {
-      headers: { 'X-Askesis-Timezone': 'Europe/London' },
+      headers: { 'X-Waddle-Timezone': 'Europe/London' },
     });
 
     await expect(response.json()).resolves.toEqual({
@@ -171,6 +171,13 @@ describe('requireAuthentication', () => {
     expect(syncAthleteTimezone).toHaveBeenCalledWith(
       expect.objectContaining({ id: 'athlete-id' }),
       'Europe/London',
+    );
+
+    // Pages loaded before the rebrand still send the old header name.
+    await testApp().request('/protected', { headers: { 'X-Askesis-Timezone': 'Asia/Tokyo' } });
+    expect(syncAthleteTimezone).toHaveBeenLastCalledWith(
+      expect.objectContaining({ id: 'athlete-id' }),
+      'Asia/Tokyo',
     );
   });
 

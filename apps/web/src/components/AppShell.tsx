@@ -68,7 +68,7 @@ export function AppShell() {
     count: tabs.length,
     onCommit: (index) => void navigate(tabs[index]!.to, { flushSync: true }),
   });
-  const displayName = user?.fullName ?? user?.firstName ?? 'Askesis athlete';
+  const displayName = user?.fullName ?? user?.firstName ?? 'Waddle athlete';
   const email = user?.primaryEmailAddress?.emailAddress ?? '';
   const toggle = () =>
     setCollapsed((value) => {
@@ -80,9 +80,9 @@ export function AppShell() {
     <div className={cx('app-shell', collapsed && 'sidebar-collapsed', onChat && 'on-chat')}>
       <aside className="sidebar" aria-label="Sidebar">
         <div className="sidebar-brand">
-          <Link to="/today" className="brand" aria-label="Askesis home">
-            <span className="brand-mark">A</span>
-            <strong>Askesis</strong>
+          <Link to="/today" className="brand" aria-label="Waddle home">
+            <span className="brand-mark">W</span>
+            <strong>Waddle</strong>
           </Link>
           <button
             type="button"

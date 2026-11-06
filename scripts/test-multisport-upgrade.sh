@@ -9,7 +9,7 @@ test_compose exec -T postgres-test createdb -U askesis_test askesis_multisport_u
 check() {
   NODE_ENV=test CLERK_SECRET_KEY=sk_test_fixture CLERK_PUBLISHABLE_KEY=pk_test_fixture \
     DATABASE_URL="postgres://askesis_test:askesis_test@127.0.0.1:${TEST_DATABASE_PORT}/askesis_multisport_upgrade" \
-    pnpm --silent --filter @askesis/api exec tsx scripts/multisport-upgrade-check.ts "$1"
+    pnpm --silent --filter @waddle/api exec tsx scripts/multisport-upgrade-check.ts "$1"
 }
 run_sql() { test_compose exec -T postgres-test psql -U askesis_test -d askesis_multisport_upgrade --set ON_ERROR_STOP=1 --quiet; }
 for migration in database/migrations/*.sql; do

@@ -15,7 +15,7 @@ import {
   type ReviewEvidence,
 } from './models.js';
 import type { CalibrationFixture, FixtureLabels } from './fixtures.js';
-import type { UsageLedger } from '@askesis/agent/usage';
+import type { UsageLedger } from '@waddle/agent/usage';
 import {
   ledgerRecord,
   attributeRequests,

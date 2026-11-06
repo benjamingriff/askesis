@@ -1,4 +1,4 @@
-import type { WorkoutSummary } from '@askesis/api-client';
+import type { WorkoutSummary } from '@waddle/api-client';
 import {
   CalendarDays,
   ChevronLeft,
@@ -31,7 +31,7 @@ import {
   type CoverageRange,
 } from '../lib/workouts';
 import { coveringRange, isCutback as cutbackIn, type PlanBlock } from '../lib/blocks';
-import type { TrainingWeek } from '@askesis/api-client';
+import type { TrainingWeek } from '@waddle/api-client';
 import type { Units } from '../settings';
 import { readStorage, writeStorage } from '../lib/storage';
 import type { PlanVersion } from '../plan-data';

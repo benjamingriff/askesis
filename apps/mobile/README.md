@@ -1,6 +1,6 @@
-# Askesis mobile
+# Waddle mobile
 
-The Expo / React Native client for Askesis. It signs in with Clerk and uses the same API as the
+The Expo / React Native client for Waddle. It signs in with Clerk and uses the same API as the
 web app: Today, the Plan (weeks, calendar, blocks, zones), workout prescriptions, the coach with
 live activity and Stop, review & lock, unlock, discard, activation, plan details, the brief
 editor, version history and restore, draft inspection, the plan library with new plans,
@@ -24,7 +24,7 @@ Then, in another terminal:
 ```bash
 pnpm dev:mobile         # Expo on this network (pnpm dev:mobile:web for the browser)
 # or, for a phone on another network:
-pnpm --filter @askesis/mobile dev   # expo start --tunnel
+pnpm --filter @waddle/mobile dev   # expo start --tunnel
 ```
 
 Scan the QR code with Expo Go (iOS: Camera app; Android: Expo Go's scanner). Sign in with the
@@ -41,7 +41,7 @@ development build is needed.
 To point the app at a deployed API instead, set `EXPO_PUBLIC_API_URL` (and the matching
 `EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY`) in `apps/mobile/.env.local` and run `npx expo start`.
 
-This app is a package in the root pnpm workspace (`@askesis/mobile`), installed by the root
+This app is a package in the root pnpm workspace (`@waddle/mobile`), installed by the root
 `pnpm install` with pnpm's default isolated `node_modules`, which Expo supports since SDK 54. Add
 dependencies with `npx expo install <package>` from `apps/mobile` so versions match the SDK, and
 check the result with `npx expo-doctor`. Only import packages the app lists in `package.json`:
@@ -61,7 +61,7 @@ and `npx lim ios tunnel --selector localhost:8081 --detach --id <simulator id>`.
 ### Signing in without a password (local verification)
 
 ```bash
-pnpm --filter @askesis/mobile dev:login   # one-time sign-in links for the verification account
+pnpm --filter @waddle/mobile dev:login   # one-time sign-in links for the verification account
 ```
 
 Open the `expoGo` link on the phone (or the `web` link in a browser after `npx expo start --web`)
@@ -152,7 +152,7 @@ workout screen and the log form) lists activities from the week either side; lin
 The log form's **Show details** reads the linked activity from Strava, above the form. See
 [activity connections](../../docs/operations/activity-connections.md) for the simulator.
 
-Strava returns to `askesis://<host>/connections/strava/callback`, opened with
+Strava returns to `waddle://<host>/connections/strava/callback`, opened with
 `WebBrowser.openAuthSessionAsync`; the web build returns to its own origin. The host is
 `EXPO_PUBLIC_STRAVA_CALLBACK_HOST` (default `localhost`) and must match the Strava app's callback
 domain and a host in the API's `CLERK_AUTHORIZED_PARTIES`. Expo Go opens only `exp://` links, so

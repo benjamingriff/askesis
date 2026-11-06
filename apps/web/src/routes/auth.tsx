@@ -8,8 +8,8 @@ export function SignInPage() {
   return (
     <main className="auth-page">
       <div className="auth-brand">
-        <span className="brand-mark">A</span>
-        <strong>Askesis</strong>
+        <span className="brand-mark">W</span>
+        <strong>Waddle</strong>
       </div>
       <SignIn routing="path" path="/sign-in" signUpUrl="/sign-up" forceRedirectUrl="/today" />
       <p>Structured training, adapted around you.</p>
@@ -24,11 +24,11 @@ export function SignUpPage() {
   return (
     <main className="auth-page">
       <div className="auth-brand">
-        <span className="brand-mark">A</span>
-        <strong>Askesis</strong>
+        <span className="brand-mark">W</span>
+        <strong>Waddle</strong>
       </div>
       <SignUp routing="path" path="/sign-up" signInUrl="/sign-in" forceRedirectUrl="/today" />
-      <p>Create your Askesis athlete profile.</p>
+      <p>Create your Waddle athlete profile.</p>
     </main>
   );
 }

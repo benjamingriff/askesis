@@ -8,7 +8,7 @@ Checked means the data file exists and passes authoring validation. It does not 
 
 Every authored scenario runs with `pnpm bench run --scenario <id>`, and `pnpm bench run --suite pilot-v1` runs the pilot in order. Planned cases still need authoring.
 
-Regenerate with `pnpm --filter @askesis/bench datasets:coverage:update`. Validate with `pnpm --filter @askesis/bench datasets:validate`.
+Regenerate with `pnpm --filter @waddle/bench datasets:coverage:update`. Validate with `pnpm --filter @waddle/bench datasets:validate`.
 
 ## Persona combinations
 

@@ -567,7 +567,7 @@ export function StravaConnection() {
       ) : null}
       {error ? <Notice tone="danger">{error.message}</Notice> : null}
       <Text variant="caption" color="muted">
-        You choose which Strava activity belongs to each workout. Askesis keeps only that link;
+        You choose which Strava activity belongs to each workout. Waddle keeps only that link;
         activity details are fetched from Strava when you open them, shown only to you, and never
         shared with your {coach}.
       </Text>
@@ -577,7 +577,7 @@ export function StravaConnection() {
         title="Disconnect Strava?"
       >
         <Text variant="body" color="dim">
-          Askesis revokes its access and deletes the links you made between workouts and Strava
+          Waddle revokes its access and deletes the links you made between workouts and Strava
           activities. Your workout logs stay.
         </Text>
         {disconnect.error ? (

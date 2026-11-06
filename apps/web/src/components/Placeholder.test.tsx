@@ -1,4 +1,4 @@
-import type { WorkoutSummary } from '@askesis/api-client';
+import type { WorkoutSummary } from '@waddle/api-client';
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { AccountQueryProvider } from '../query-provider';

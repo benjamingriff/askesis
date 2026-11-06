@@ -6,7 +6,7 @@
 
 ## Know which code is running
 
-Askesis is a monorepo: several applications share a Git repository and some tooling. A directory under `apps/` is not necessarily a deployed service or part of the browser bundle.
+Waddle is a monorepo: several applications share a Git repository and some tooling. A directory under `apps/` is not necessarily a deployed service or part of the browser bundle.
 
 | Location                                                     | Role                                    | Runtime / authority                                                           |
 | ------------------------------------------------------------ | --------------------------------------- | ----------------------------------------------------------------------------- |

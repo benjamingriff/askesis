@@ -87,7 +87,7 @@ async function main() {
       tasks.push(
         session.start(
           'pnpm',
-          ['--filter', `@askesis/${name}`, '--fail-if-no-match', script, ...args],
+          ['--filter', `@waddle/${name}`, '--fail-if-no-match', script, ...args],
           { env: childEnvironment },
         ),
       );

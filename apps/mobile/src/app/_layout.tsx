@@ -147,7 +147,7 @@ function AccountGate({ children }: { children: ReactNode }) {
           />
         </>
       ) : (
-        <LoadingState label="Loading Askesis…" />
+        <LoadingState label="Loading Waddle…" />
       )}
     </View>
   );
@@ -160,7 +160,7 @@ function MissingConfiguration() {
     <View
       style={{ flex: 1, backgroundColor: theme.colors.bg, justifyContent: 'center', padding: 28 }}
     >
-      <Text variant="title">Askesis</Text>
+      <Text variant="title">Waddle</Text>
       <Text variant="body" color="dim" style={{ marginTop: 10 }}>
         No Clerk publishable key. Run `pnpm dev:setup` at the repository root (it writes the key to
         .env), or set EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY, then restart Expo.

@@ -28,7 +28,7 @@ http.Server.prototype.emit = function (event, req, ...rest) {
 };
 
 const target =
-  process.env.ASKESIS_API_PROXY_TARGET ||
+  process.env.WADDLE_API_PROXY_TARGET ||
   (process.env.EXPO_PUBLIC_API_URL ? null : `http://127.0.0.1:${root.PORT || 3000}`);
 if (target) {
   const upstream = new URL(target);
@@ -56,7 +56,7 @@ if (target) {
         if (!res.headersSent) res.writeHead(502, { 'content-type': 'application/json' });
         res.end(
           JSON.stringify({
-            error: { code: 'API_UNAVAILABLE', message: 'The Askesis API is not reachable.' },
+            error: { code: 'API_UNAVAILABLE', message: 'The Waddle API is not reachable.' },
           }),
         );
       });

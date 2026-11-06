@@ -1,4 +1,4 @@
-import type { BenchmarkSnapshot } from '@askesis/api/benchmark';
+import type { BenchmarkSnapshot } from '@waddle/api/benchmark';
 import type { Scenario } from './scenario.js';
 import { addDays } from './scenario.js';
 import type { Review } from './models.js';

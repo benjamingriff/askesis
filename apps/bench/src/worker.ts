@@ -2,11 +2,11 @@
 import { appendFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { z } from 'zod';
-import { AgentApi, type Claim } from '@askesis/agent/api';
-import { parseAgentConfig } from '@askesis/agent/config';
-import { createRuntime } from '@askesis/agent/runtime';
-import { scriptedOverrides } from '@askesis/agent/testing';
-import { Worker } from '@askesis/agent/worker';
+import { AgentApi, type Claim } from '@waddle/agent/api';
+import { parseAgentConfig } from '@waddle/agent/config';
+import { createRuntime } from '@waddle/agent/runtime';
+import { scriptedOverrides } from '@waddle/agent/testing';
+import { Worker } from '@waddle/agent/worker';
 import { Artifacts, redact } from './artifacts.js';
 import { scriptedCoach } from './scripted.js';
 import { providerFailure } from './models.js';

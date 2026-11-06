@@ -39,7 +39,7 @@
       .join('');
     return `<div class="app-shell">
       <aside class="sidebar" aria-label="Sidebar">
-        <div class="sidebar-brand"><a class="brand" href="#"><span class="brand-mark">A</span><strong>Askesis</strong></a>
+        <div class="sidebar-brand"><a class="brand" href="#"><span class="brand-mark">A</span><strong>Waddle</strong></a>
           <button type="button" class="icon-btn icon-btn-plain">${svg('panel-left-close')}</button></div>
         <a class="sidebar-new-chat" href="#">${svg('message-square-plus', 17)}<span>New chat</span></a>
         <nav class="sidebar-nav">${links}</nav>

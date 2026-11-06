@@ -172,7 +172,7 @@ describe('calibration comparisons', () => {
 describe('calibration execution', () => {
   it('preserves rejected reviews with a specific reason and usage, without counting them as judgments', async () => {
     const { fixtures } = await loadFixtures('all', ['missing-plan']);
-    const directory = await mkdtemp(resolve(tmpdir(), 'askesis-calibration-'));
+    const directory = await mkdtemp(resolve(tmpdir(), 'waddle-calibration-'));
     try {
       const result = await runCalibration({
         directory,
@@ -219,7 +219,7 @@ describe('calibration execution', () => {
   });
   it('withholds labels and exposes the defects missed by a permissive stand-in', async () => {
     const { fixtures } = await loadFixtures('all');
-    const directory = await mkdtemp(resolve(tmpdir(), 'askesis-calibration-'));
+    const directory = await mkdtemp(resolve(tmpdir(), 'waddle-calibration-'));
     try {
       let calls = 0;
       const result = await runCalibration({
@@ -264,7 +264,7 @@ describe('calibration execution', () => {
   });
   it('retains successes and stops after provider failure without scoring the error', async () => {
     const { fixtures } = await loadFixtures('all', ['distance-control']);
-    const directory = await mkdtemp(resolve(tmpdir(), 'askesis-calibration-'));
+    const directory = await mkdtemp(resolve(tmpdir(), 'waddle-calibration-'));
     try {
       let calls = 0;
       const result = await runCalibration({
@@ -298,7 +298,7 @@ describe('calibration execution', () => {
   });
   it('saves an interrupted run with pending cases and no fabricated judgments', async () => {
     const { fixtures } = await loadFixtures('all', ['distance-control']);
-    const directory = await mkdtemp(resolve(tmpdir(), 'askesis-calibration-'));
+    const directory = await mkdtemp(resolve(tmpdir(), 'waddle-calibration-'));
     const abort = new AbortController();
     try {
       const result = await runCalibration({

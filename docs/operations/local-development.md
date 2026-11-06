@@ -21,13 +21,13 @@ pnpm dev:setup
 pnpm dev
 ```
 
-`dev:setup` reads only the Clerk development keys from the main checkout's ignored `.env`, writes a private ignored worktree `.env`, and chooses worktree-specific API/web/database ports and a Compose project. It does not copy provider credentials. If the keys live elsewhere, use `pnpm dev:setup /absolute/path/to/.env`. Existing worktree configuration is retained; occupied initial ports fail with a diagnostic. An existing `.env` without an explicit `COMPOSE_PROJECT_NAME` keeps the legacy `askesis` project and `askesis_postgres_data` volume, with Compose-compatible API/web/database port defaults. New setup files explicitly store an isolated project and ports; the same `.env` selects the same database for managed commands and direct Compose. Multiple legacy worktrees can share that project: inventory marks ambiguous ownership and automatic data deletion refuses it. Change the corresponding ports, URLs and authorized origins together when overriding them.
+`dev:setup` reads only the Clerk development keys from the main checkout's ignored `.env`, writes a private ignored worktree `.env`, and chooses worktree-specific API/web/database ports and a Compose project. It does not copy provider credentials. If the keys live elsewhere, use `pnpm dev:setup /absolute/path/to/.env`. Existing worktree configuration is retained; occupied initial ports fail with a diagnostic. An existing `.env` without an explicit `COMPOSE_PROJECT_NAME` keeps the legacy `waddle` project and `askesis_postgres_data` volume, with Compose-compatible API/web/database port defaults. New setup files explicitly store an isolated project and ports; the same `.env` selects the same database for managed commands and direct Compose. Multiple legacy worktrees can share that project: inventory marks ambiguous ownership and automatic data deletion refuses it. Change the corresponding ports, URLs and authorized origins together when overriding them.
 
 Setup temporarily starts PostgreSQL, applies migrations and creates or reuses
 `askesis-verification+clerk_test@example.com` in the configured Clerk development
 instance using normal athlete provisioning. Fresh databases start empty so onboarding
 can be tested. Existing identities and data are preserved. Local verification still
-refuses production/Railway, live Clerk keys and remote/non-Askesis database URLs.
+refuses production/Railway, live Clerk keys and remote/non-Waddle database URLs.
 Database URL query parameters are restricted to `sslmode`. Setup removes its own temporary PostgreSQL container and empty network on success, failure, or cancellation, retaining the named database volume. An already running database is reused and preserved. `example:seed` and database codegen also run with a temporary database when needed, so they work after setup has stopped.
 
 When populated screens are needed, seed manually after setup:
@@ -93,7 +93,7 @@ For agents in T3 Code:
 
 A hidden tab (`visible: false`) can still support automation and screenshots; that flag alone does not mean the browser is unavailable. If preview tools fail, first verify the local endpoints above, then call `preview_open` and retry navigation/inspection with the correct tab and configured URL. Opening the thread's Preview panel may help if automation still fails. Browser-tool failures are separate from application/authentication failures; do not claim browser validation until the page and interactions have actually been inspected. A normal browser on the same machine can also open the generated login URL.
 
-Stop the managed preview with Ctrl+C or `pnpm dev:stop local`. Its database volume is retained. Configuration diagnostics are available with `pnpm --filter @askesis/api verification:check`.
+Stop the managed preview with Ctrl+C or `pnpm dev:stop local`. Its database volume is retained. Configuration diagnostics are available with `pnpm --filter @waddle/api verification:check`.
 
 ## Run the complete stack with Docker
 
@@ -133,7 +133,7 @@ Use root commands from any worktree. `pnpm dev` is the normal main-app entry poi
 | `pnpm dev:agent`                          | Worker; requires a running API and provider credentials | Separate `apps/agent/.env`; API URL derived from the worktree unless explicitly overridden |
 | `pnpm dev:mobile` / `pnpm dev:mobile:web` | Expo app; calls this worktree's API through Metro       | Root `.env`; start the API with `pnpm dev`                                                 |
 
-Marketing explicitly disables Astro’s agent-triggered backgrounding with `--ignore-lock`; the root supervisor handles its session lock. All these commands stay in the foreground and stop their owned process groups on Ctrl+C or `pnpm dev:stop [app]`. App-level `pnpm --filter @askesis/<app> dev` commands remain available when manually coordinating processes.
+Marketing explicitly disables Astro’s agent-triggered backgrounding with `--ignore-lock`; the root supervisor handles its session lock. All these commands stay in the foreground and stop their owned process groups on Ctrl+C or `pnpm dev:stop [app]`. App-level `pnpm --filter @waddle/<app> dev` commands remain available when manually coordinating processes.
 
 Worktree defaults provide separate API/web/database/marketing/evals ports. Generated `.env` stores them; existing configuration is retained. Overrides in the shell take precedence. Browser servers refuse occupied configured ports instead of silently switching to a different URL. Marketing/evals can start in a fresh worktree without `dev:setup`; they receive only their relevant root variables. Worker startup does not copy root Clerk/database/provider credentials into its separate environment.
 
@@ -142,7 +142,7 @@ API and web dev scripts, and the web build, read root `.env`; Vite also loads no
 To run a one-off command with this worktree's database and automatic cleanup:
 
 ```bash
-pnpm dev:exec -- pnpm --filter @askesis/api verification:check
+pnpm dev:exec -- pnpm --filter @waddle/api verification:check
 pnpm example:seed --email askesis-verification+clerk_test@example.com
 ```
 

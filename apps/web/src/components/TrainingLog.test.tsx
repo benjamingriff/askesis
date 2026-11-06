@@ -5,7 +5,7 @@ import { AccountQueryProvider } from '../query-provider';
 import { AskAgentProvider } from './AskAgent';
 import { TrainingLogProvider, WorkoutLogActions, TrainingHistory } from './TrainingLog';
 import type { WorkoutLog } from '../training-log';
-import type { WorkoutSummary } from '@askesis/api-client';
+import type { WorkoutSummary } from '@waddle/api-client';
 import type { Plan } from '../plan-data';
 import type * as Live from '../live';
 import type * as Coach from '../coach';

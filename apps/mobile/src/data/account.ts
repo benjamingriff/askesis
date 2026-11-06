@@ -51,7 +51,7 @@ export function useDataExport() {
       const response = await authenticatedFetch('/api/v1/account/export');
       if (!response.ok) throw new Error('Couldn’t prepare your data. Try again.');
       const text = await response.text();
-      const name = `askesis-export-${new Date().toISOString().slice(0, 10)}.json`;
+      const name = `waddle-export-${new Date().toISOString().slice(0, 10)}.json`;
       if (Platform.OS === 'web') {
         const url = URL.createObjectURL(new Blob([text], { type: 'application/json' }));
         const link = document.createElement('a');
@@ -73,7 +73,7 @@ export function useDataExport() {
         await Sharing.shareAsync(file.uri, {
           mimeType: 'application/json',
           UTI: 'public.json',
-          dialogTitle: 'Your Askesis data',
+          dialogTitle: 'Your Waddle data',
         });
       } finally {
         // iOS resolves once the share sheet has finished with the file, so the cache keeps no

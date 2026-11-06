@@ -23,6 +23,6 @@ export type ActivityDetail = components['schemas']['ActivityDetail'];
 export type ActivityLap = components['schemas']['ActivityLap'];
 export type ActivityLink = components['schemas']['ActivityLink'];
 
-export function createAskesisClient(baseUrl = '') {
+export function createWaddleClient(baseUrl = '') {
   return createClient<paths>({ baseUrl });
 }

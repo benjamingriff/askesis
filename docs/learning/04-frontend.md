@@ -29,8 +29,8 @@ Open these in order; read only the named path:
 3. [active-plans.tsx](../../apps/web/src/routes/active-plans.tsx): `useActivePlans` fetches the active collection; preferences and local state select the plan/view.
 4. [PlanView.tsx](../../apps/web/src/components/PlanView.tsx): chooses draft or locked version, loads brief/workouts/blocks and passes them into `Schedule`.
 5. [plan-data.ts](../../apps/web/src/plan-data.ts): `useWorkouts`, `useBlocks` and `useWorkoutDetail` wrap HTTP reads in queries. Version ID and `editNumber` in keys prevent an old draft projection from masquerading as a new one.
-6. [api.ts](../../apps/web/src/api.ts): `createAuthenticatedApiClient` attaches `Authorization: Bearer …` and `X-Askesis-Timezone`; relative calls use the current web origin unless a base URL is configured.
-7. [api-client/index.ts](../../packages/api-client/src/index.ts): `createAskesisClient` creates an `openapi-fetch` client bound to generated `paths`.
+6. [api.ts](../../apps/web/src/api.ts): `createAuthenticatedApiClient` attaches `Authorization: Bearer …` and `X-Waddle-Timezone`; relative calls use the current web origin unless a base URL is configured.
+7. [api-client/index.ts](../../packages/api-client/src/index.ts): `createWaddleClient` creates an `openapi-fetch` client bound to generated `paths`.
 8. [workout.routes.ts](../../apps/api/src/modules/workouts/workout.routes.ts): validated inputs and the authenticated athlete are passed to reads.
 9. [workout.repository.ts](../../apps/api/src/modules/workouts/workout.repository.ts): `listWorkouts` builds summaries; `getWorkoutDetail` assembles steps/targets/tags and resolves zones.
 10. [Schedule.tsx](../../apps/web/src/components/Schedule.tsx) and [Workout.tsx](../../apps/web/src/components/Workout.tsx): schedule/card interactions open `WorkoutDialog`; `StepList`/`StepItem` render the recursive prescription and format targets.

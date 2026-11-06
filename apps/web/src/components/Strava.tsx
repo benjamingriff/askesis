@@ -1,4 +1,4 @@
-import type { ActivityDetail, ActivitySummary, WorkoutSummary } from '@askesis/api-client';
+import type { ActivityDetail, ActivitySummary, WorkoutSummary } from '@waddle/api-client';
 import {
   Activity as ActivityIcon,
   ExternalLink,
@@ -566,7 +566,7 @@ export function StravaConnection() {
       </div>
       {error ? <Notice tone="danger">{error.message}</Notice> : null}
       <p className="muted small">
-        You choose which Strava activity belongs to each workout. Askesis keeps only that link;
+        You choose which Strava activity belongs to each workout. Waddle keeps only that link;
         activity details are fetched from Strava when you open them, shown only to you, and never
         shared with your {coach}.
       </p>
@@ -574,7 +574,7 @@ export function StravaConnection() {
         open={confirming}
         onClose={() => setConfirming(false)}
         title="Disconnect Strava?"
-        description="Askesis revokes its access and deletes the links you made between workouts and Strava activities. Your workout logs stay."
+        description="Waddle revokes its access and deletes the links you made between workouts and Strava activities. Your workout logs stay."
         busy={disconnect.isPending}
         footer={
           <>

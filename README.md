@@ -1,6 +1,8 @@
-# Askesis
+# Waddle
 
-Askesis is an early-stage platform for creating, storing, validating, and adapting structured training plans.
+Waddle (formerly Askesis) is an early-stage platform for creating, storing, validating, and adapting structured training plans.
+
+Identifiers that name stored data or existing resources keep the old name: the Strava token key labels, the `askesis.purge` database setting, local Postgres users and Compose projects, browser and device storage keys, the verification account and the Railway domain.
 
 ## Current vertical slice
 
@@ -83,7 +85,7 @@ See [`docs/operations/local-development.md`](./docs/operations/local-development
 
 See [`docs/README.md`](./docs/README.md) for architecture decisions, the data model, and the implementation roadmap.
 
-For a guided introduction, follow [Understand Askesis in one day](./docs/learning/README.md): an eight-hour walkthrough with a checklist, code links and hands-on data/API exercises.
+For a guided introduction, follow [Understand Waddle in one day](./docs/learning/README.md): an eight-hour walkthrough with a checklist, code links and hands-on data/API exercises.
 
 ## Repository structure
 

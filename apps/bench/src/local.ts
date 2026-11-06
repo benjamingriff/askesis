@@ -1,4 +1,4 @@
-import type { AgentConfig } from '@askesis/agent/config';
+import type { AgentConfig } from '@waddle/agent/config';
 import type { Scenario } from './scenario.js';
 import { createHash, randomBytes } from 'node:crypto';
 import { spawn, fork, execFileSync } from 'node:child_process';

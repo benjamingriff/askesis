@@ -1,6 +1,6 @@
 # Core API
 
-The Askesis API is a Hono application running on Node.js. It is the only application allowed to access PostgreSQL.
+The Waddle API is a Hono application running on Node.js. It is the only application allowed to access PostgreSQL.
 
 ## Current behavior
 

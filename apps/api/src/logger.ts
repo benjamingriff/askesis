@@ -18,7 +18,7 @@ const transport =
 export const logger = pino(
   {
     level: config.LOG_LEVEL,
-    base: { service: 'askesis-api', environment: config.NODE_ENV },
+    base: { service: 'waddle-api', environment: config.NODE_ENV },
     redact: {
       paths: [
         'authorization',

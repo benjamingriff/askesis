@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import type { paths } from '@askesis/api-client';
+import type { paths } from '@waddle/api-client';
 import { api } from './api';
 import { agentPrompt, useInAppCoach } from './coach';
 import { useAskAgent } from './components/AskAgent';

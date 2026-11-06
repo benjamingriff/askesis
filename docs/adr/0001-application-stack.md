@@ -7,7 +7,7 @@
 
 ## Context
 
-Askesis needs an interactive web interface, a typed HTTP API, PostgreSQL access, and eventually a TypeScript Pi agent worker. The first implementation should remain understandable to someone learning React and TypeScript, preserve a public API boundary for the agent, and avoid introducing full-stack framework or client-cache complexity before it is needed.
+Waddle needs an interactive web interface, a typed HTTP API, PostgreSQL access, and eventually a TypeScript Pi agent worker. The first implementation should remain understandable to someone learning React and TypeScript, preserve a public API boundary for the agent, and avoid introducing full-stack framework or client-cache complexity before it is needed.
 
 The database schema is already managed independently through Atlas.
 
@@ -101,7 +101,7 @@ The project will not initially use tRPC. A public OpenAPI contract better suppor
 
 ## Agent implications
 
-The future agent worker will use Pi's TypeScript SDK and generated Askesis API client. Pi custom tools will wrap domain endpoints such as reading plan context, replacing workouts, updating calibration, and validating a plan.
+The future agent worker will use Pi's TypeScript SDK and generated Waddle API client. Pi custom tools will wrap domain endpoints such as reading plan context, replacing workouts, updating calibration, and validating a plan.
 
 A Pi skill may describe the coaching workflow, but skills will not replace typed tools, API authorization, or server-side validation. The agent will not receive database credentials or generic coding tools in production.
 

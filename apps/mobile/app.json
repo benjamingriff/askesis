@@ -1,18 +1,21 @@
 {
   "expo": {
-    "name": "Askesis",
-    "slug": "askesis-mobile",
+    "name": "Waddle",
+    "slug": "waddle",
     "version": "0.1.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "askesis",
+    "scheme": "waddle",
     "userInterfaceStyle": "automatic",
     "ios": {
-      "bundleIdentifier": "app.askesis.mobile",
-      "supportsTablet": false
+      "bundleIdentifier": "app.waddle.mobile",
+      "supportsTablet": false,
+      "config": {
+        "usesNonExemptEncryption": false
+      }
     },
     "android": {
-      "package": "app.askesis.mobile",
+      "package": "app.waddle.mobile",
       "adaptiveIcon": {
         "backgroundColor": "#0A0A0B",
         "foregroundImage": "./assets/images/android-icon-foreground.png",

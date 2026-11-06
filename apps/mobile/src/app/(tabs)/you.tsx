@@ -393,7 +393,7 @@ export default function YouScreen() {
 
         <View style={{ paddingHorizontal: 24, marginTop: 20, alignItems: 'center', gap: 4 }}>
           <Text variant="caption" color="muted">
-            Askesis · v0.1.0
+            Waddle · v0.1.0
           </Text>
           <Text variant="caption" color="muted" style={{ textAlign: 'center' }}>
             {apiBaseUrl() ? `API ${apiBaseUrl()}` : 'API on this origin'}

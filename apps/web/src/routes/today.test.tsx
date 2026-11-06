@@ -3,7 +3,7 @@ import { createMemoryRouter, RouterProvider } from 'react-router';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { AccountQueryProvider } from '../query-provider';
 import { TodayPage } from './today';
-import type { WorkoutSummary } from '@askesis/api-client';
+import type { WorkoutSummary } from '@waddle/api-client';
 import { focusManager } from '@tanstack/react-query';
 
 const mocks = vi.hoisted(() => ({ get: vi.fn(), post: vi.fn() }));

@@ -24,7 +24,7 @@ Semantic brief/date changes invalidate confirmation. Unit-only changes increment
 
 ## Athlete timezone
 
-`athletes.timezone` (default `UTC`) is the IANA zone of the device the athlete last used. Clients send `X-Askesis-Timezone` on every request; authentication validates it with `Intl.DateTimeFormat` and stores a change. Invalid or missing headers keep the stored value. Request handling uses the updated value; background work (the coaching worker) uses the stored one. "Today" for calibration and coaching context is the calendar date in this zone.
+`athletes.timezone` (default `UTC`) is the IANA zone of the device the athlete last used. Clients send `X-Waddle-Timezone` on every request; authentication validates it with `Intl.DateTimeFormat` and stores a change. Invalid or missing headers keep the stored value. Request handling uses the updated value; background work (the coaching worker) uses the stored one. "Today" for calibration and coaching context is the calendar date in this zone.
 
 ## Athlete calibration timeline
 

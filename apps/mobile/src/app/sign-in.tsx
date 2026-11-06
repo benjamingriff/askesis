@@ -182,7 +182,7 @@ export default function SignInScreen() {
             </Text>
           </View>
           <Text variant="display" style={{ marginTop: 22 }}>
-            Askesis
+            Waddle
           </Text>
           <Text variant="body" color="dim" style={{ marginTop: 6 }}>
             {step === 'code' || step === 'second-factor' || step === 'sign-up-code'
@@ -386,7 +386,7 @@ export default function SignInScreen() {
 
           {step === 'email' || step === 'password' ? (
             <Text variant="caption" color="muted" style={{ marginTop: 28, textAlign: 'center' }}>
-              New to Askesis?{' '}
+              New to Waddle?{' '}
               <Text
                 variant="caption"
                 color="accent"

@@ -90,4 +90,4 @@ SQL
 private_status=$(curl --silent --output /dev/null --write-out '%{http_code}' http://127.0.0.1:${SMOKE_WEB_PORT}/internal/agent/claim)
 [ "$private_status" = '404' ] || { echo 'Private worker API reached the public proxy.' >&2; exit 1; }
 
-echo "Askesis disposable API/web/worker smoke test passed (${SMOKE_AGENT_PROVIDER:-openai} runtime)."
+echo "Waddle disposable API/web/worker smoke test passed (${SMOKE_AGENT_PROVIDER:-openai} runtime)."

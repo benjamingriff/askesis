@@ -1,4 +1,4 @@
-/** Askesis swim-css-v1. See docs/product/swim-css-v1.md for the test and zone bands. */
+/** Waddle swim-css-v1. See docs/product/swim-css-v1.md for the test and zone bands. */
 export const SWIM_CALCULATOR_VERSION = 'swim-css-v1';
 export type SwimInput =
   | { method: 'css_test'; t400Seconds: number; t200Seconds: number }

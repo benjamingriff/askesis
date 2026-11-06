@@ -341,7 +341,7 @@ export function developmentInventory(json = false) {
         `  ${w.path}${w.exists ? '' : ' [missing]'}\n    ${w.project}; API ${w.ports.PORT}, web ${w.ports.WEB_PORT}, DB ${w.ports.POSTGRES_PORT}; sessions: ${w.sessions.map((s) => `${s.app}:${s.status}`).join(', ') || 'none'}`,
       );
     for (const kind of ['containers', 'volumes', 'networks']) {
-      console.log(`\nAskesis ${kind}:`);
+      console.log(`\nWaddle ${kind}:`);
       for (const resource of report[kind])
         console.log(
           `  ${resource.name}: ${resource.status ?? resource.subnets?.join(', ') ?? 'retained data'} · ${resource.ownership}${resource.path ? ` · ${resource.path}` : ''}`,

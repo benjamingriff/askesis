@@ -8,7 +8,7 @@ Accepted for the v1 prototype.
 
 ## Context
 
-Askesis is a TypeScript monorepo with API, web, generated client, and agent workspaces. npm workspaces were functional, but package-management conventions needed to be settled before CI and Railway deployment.
+Waddle is a TypeScript monorepo with API, web, generated client, and agent workspaces. npm workspaces were functional, but package-management conventions needed to be settled before CI and Railway deployment.
 
 ## Decision
 

@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os';
 import { resolve } from 'node:path';
 import type OpenAI from 'openai';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import type { BenchmarkSnapshot } from '@askesis/api/benchmark';
+import type { BenchmarkSnapshot } from '@waddle/api/benchmark';
 import { Artifacts } from './artifacts.js';
 import { loadFixtures, scriptedCalibrationReview } from './fixtures.js';
 import { EvaluationModels } from './models.js';

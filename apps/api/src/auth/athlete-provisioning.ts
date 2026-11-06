@@ -45,7 +45,7 @@ function profileDisplayName(user: Awaited<ReturnType<ClerkClient['users']['getUs
   const primaryEmail = user.emailAddresses.find(
     ({ id }) => id === user.primaryEmailAddressId,
   )?.emailAddress;
-  return primaryEmail ?? 'Askesis athlete';
+  return primaryEmail ?? 'Waddle athlete';
 }
 
 export async function ensureAthlete(

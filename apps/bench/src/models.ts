@@ -8,11 +8,11 @@ import {
   type ModelRequest,
 } from '@openai/agents';
 import OpenAI from 'openai';
-import { UsageLedger, observeStream, type UsageRole } from '@askesis/agent/usage';
+import { UsageLedger, observeStream, type UsageRole } from '@waddle/agent/usage';
 import { z } from 'zod';
-import { DEFAULT_MODELS } from '@askesis/agent/config';
+import { DEFAULT_MODELS } from '@waddle/agent/config';
 import type { Scenario, AthleteAction, ScenarioVoice } from './scenario.js';
-import type { BenchmarkSnapshot } from '@askesis/api/benchmark';
+import type { BenchmarkSnapshot } from '@waddle/api/benchmark';
 import { VOICE_PROMPT } from './voice.js';
 
 setTracingDisabled(true);

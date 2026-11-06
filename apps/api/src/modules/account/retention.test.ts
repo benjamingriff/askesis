@@ -11,7 +11,7 @@ it('reads journal entries from pino JSON lines in sequence order, once each', ()
       deletion: { sequence, event, subjectId, at: '2026-10-19T09:00:00.000Z' },
     });
   const log = [
-    JSON.stringify({ level: 30, msg: 'Askesis API started', port: 3000 }),
+    JSON.stringify({ level: 30, msg: 'Waddle API started', port: 3000 }),
     entry(2, 'account.deletion_cancelled', athleteId),
     'not json "deletion"',
     JSON.stringify({ level: 30, deletion: { sequence: 3, event: 'plan.deleted', subjectId: 'x' } }),

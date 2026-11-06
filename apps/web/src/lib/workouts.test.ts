@@ -1,4 +1,4 @@
-import type { WorkoutStep, WorkoutSummary } from '@askesis/api-client';
+import type { WorkoutStep, WorkoutSummary } from '@waddle/api-client';
 import { describe, expect, it } from 'vitest';
 import { METRES_PER_MILE, formatDistance, formatPace, formatRange, startOfWeek } from './format';
 import {

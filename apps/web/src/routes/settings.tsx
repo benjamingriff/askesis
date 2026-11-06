@@ -212,7 +212,7 @@ export function SettingsPage() {
   const clash = accentClash(hex);
   const [deleting, setDeleting] = useState(false);
   const download = useDataExport();
-  const displayName = user?.fullName ?? user?.firstName ?? 'Askesis athlete';
+  const displayName = user?.fullName ?? user?.firstName ?? 'Waddle athlete';
   const email = user?.primaryEmailAddress?.emailAddress ?? '';
   const solids = ACCENTS.filter((accent) => accent.stops.length === 1);
   const blends = ACCENTS.filter((accent) => accent.stops.length > 1);

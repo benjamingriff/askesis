@@ -1,7 +1,7 @@
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { createMemoryRouter, RouterProvider } from 'react-router';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
-import type { CalibrationEntry, PerformanceState } from '@askesis/api-client';
+import type { CalibrationEntry, PerformanceState } from '@waddle/api-client';
 import { AccountQueryProvider } from '../query-provider';
 import { api } from '../api';
 import { DEFAULT_SETTINGS, SettingsProvider } from '../settings';
