@@ -21,7 +21,8 @@
       },
       "ios": {
         "simulator": false
-      }
+      },
+      "channel": "preview"
     },
     "production": {
       "extends": "base",
@@ -30,7 +31,8 @@
         "EXPO_PUBLIC_API_URL": "https://askesis.up.railway.app",
         "EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY": "pk_test_dml0YWwtc2VydmFsLTI1LmNsZXJrLmFjY291bnRzLmRldiQ",
         "EXPO_PUBLIC_STRAVA_CALLBACK_HOST": "askesis.up.railway.app"
-      }
+      },
+      "channel": "production"
     }
   },
   "submit": {

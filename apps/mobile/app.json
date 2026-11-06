@@ -47,6 +47,12 @@
         "projectId": "90556e7b-de48-41e7-8eab-58f6d4d450f2"
       }
     },
-    "owner": "ben-jamin-griff"
+    "owner": "ben-jamin-griff",
+    "runtimeVersion": {
+      "policy": "fingerprint"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/90556e7b-de48-41e7-8eab-58f6d4d450f2"
+    }
   }
 }

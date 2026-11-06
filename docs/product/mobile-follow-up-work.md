@@ -46,10 +46,11 @@ The app runs only against a local API today. To get it on a phone without a lapt
 - [x] Production environment in `eas.json`: the Railway web origin (`https://askesis.up.railway.app`, whose nginx forwards `/api`), the publishable key of the Clerk instance that deployment uses (still the development instance), and the Strava callback host.
 - [ ] Clerk production instance, when the deployment moves to one: allow native sign-in for bundle ID `app.waddle.mobile`, plus the redirect for Google sign-in.
 - [ ] Strava: connect from a release build. `EXPO_PUBLIC_STRAVA_CALLBACK_HOST` is set to the web host, which must be the Strava app's callback domain and in `CLERK_AUTHORIZED_PARTIES`.
-- [ ] App icon, splash and display name checked on a device; App Store Connect record; then TestFlight.
+- [ ] App icon, splash and display name checked on a device.
 - [x] Waddle identity: display name, bundle ID `app.waddle.mobile`, scheme `waddle://`, Expo slug `waddle`, the goose icon, and no export-compliance prompt (`usesNonExemptEncryption: false`).
 - [x] Install the app with pnpm as a workspace package, so EAS installs it from the root lockfile. The build profiles pin Node 24.18.0 and pnpm 11.18.0, which the root `engines` require.
-- [ ] Decide on over-the-air updates (EAS Update), so text-only fixes skip App Review.
+- [x] Over-the-air updates: EAS Update on the `production` channel with the `fingerprint` runtime policy (`pnpm release:update`). It reaches installed apps after the next build that includes `expo-updates`.
+- [x] First TestFlight build and submit (2026-11-06). The process and the free plan's 15-builds-a-month budget are in [the mobile README](../../apps/mobile/README.md#testflight-builds-and-updates).
 - [ ] Android is out of scope until decided otherwise; the config builds, but nothing has been checked.
 
 ## 6. Guardrails

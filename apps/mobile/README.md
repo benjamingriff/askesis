@@ -166,16 +166,69 @@ it with the coach instead), plan renaming and sign-up. Use the web app for these
 ## Checks
 
 ```bash
-npx tsc --noEmit
+pnpm typecheck          # from apps/mobile; the root `pnpm typecheck` in CI includes it
+npx expo-doctor         # SDK version and config checks
 ```
 
-## Preview builds
+## TestFlight builds and updates
+
+Release builds are made by Expo's cloud build service (EAS Build) and installed through TestFlight.
+Expo's free plan allows **15 iOS builds a month**, so only build when the owner asks for one.
+Merging a PR doesn't call for a build. For changes that are only JavaScript, publish an update
+instead (below).
+
+### One-time setup (done 2026-11-06)
+
+- Apple Developer Program (individual) and an Expo account (`ben-jamin-griff`).
+- `npx eas-cli init` linked the Expo project `@ben-jamin-griff/waddle`; its ID is in `app.json`.
+- The first build registered the bundle ID `app.waddle.mobile` and created the distribution
+  certificate and App Store provisioning profile. Expo stores them;
+  `npx eas-cli credentials` shows or replaces them.
+- The first submit created the App Store Connect app and an App Store Connect API key, so later
+  submits need no Apple sign-in.
+- TestFlight: an internal testing group with automatic distribution, and Automatic Updates turned
+  on in the TestFlight app, so each processed build installs on its own.
+
+### Make a build
 
 ```bash
-npx eas-cli@latest login
-npx eas-cli@latest init
-npx eas-cli@latest build --profile preview --platform android
+cd apps/mobile
+pnpm release:build      # npx eas-cli build --platform ios --profile production --auto-submit
 ```
 
-Builds need `EXPO_PUBLIC_API_URL` and `EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY` set for the build
-profile. Profiles live in `eas.json`.
+The build runs on Expo's macOS machines. It uploads the files git tracks, installs from the root
+lockfile with the Node and pnpm versions pinned in `eas.json`, generates the Xcode project with
+`expo prebuild`, signs it and uploads it to App Store Connect. The `production` profile in `eas.json` holds
+the release settings: the Railway API URL, the Clerk publishable key, the Strava callback host and
+the `production` update channel. Ignored files such as `.env` aren't uploaded. The build number
+goes up automatically; `version` in `app.json` stays at `0.1.0` while the app is only on
+TestFlight. Once Apple finishes processing (10–30 minutes), TestFlight installs it. Builds expire
+after 90 days.
+
+Follow a build at expo.dev, or with `npx eas-cli build:list`. If a submit fails, the finished
+build can be sent again with `npx eas-cli submit -p ios --id <build id>`.
+
+### Publish an update (no build)
+
+Installed builds check for an update each time the app opens and apply it on the next launch.
+Use updates for JavaScript, text and image changes:
+
+```bash
+cd apps/mobile
+pnpm release:update "What changed"
+```
+
+`scripts/release-update.mjs` runs `eas update` on the `production` channel with the production
+values from `eas.json`, which `eas update` doesn't read itself. Updates are free up to 1,000
+monthly active users.
+
+An update only reaches builds with the same **runtime version**. `runtimeVersion` uses the
+`fingerprint` policy, a hash of the app's native dependencies and native config, so an update
+never lands on a build whose native code doesn't match. Adding or upgrading a package with native
+code, changing `app.json`'s native settings (icon, scheme, plugins, bundle ID) or upgrading the
+Expo SDK changes the fingerprint. Those changes need a new build. To see whether a change still
+fits the installed build, compare `npx expo-updates fingerprint:generate --platform ios` before
+and after it.
+
+Pull a bad update with `npx eas-cli update:republish` (republish an earlier one) or
+`npx eas-cli update:roll-back-to-embedded`.
