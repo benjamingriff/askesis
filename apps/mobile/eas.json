@@ -32,5 +32,8 @@
         "EXPO_PUBLIC_STRAVA_CALLBACK_HOST": "askesis.up.railway.app"
       }
     }
+  },
+  "submit": {
+    "production": {}
   }
 }
