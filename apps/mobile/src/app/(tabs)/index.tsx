@@ -3,13 +3,14 @@ import { useQueryClient } from '@tanstack/react-query';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
-import { RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
+import { Pressable, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 import { useTabBarInset } from '../../components/FloatingTabBar';
 import { IntensityChart } from '../../components/IntensityChart';
 import { ZoneCards, zonesTitle } from '../../components/PlanWidgets';
 import { openWorkout, planProgress } from '../../components/PlanView';
 import {
   CheckInButton,
+  LogChip,
   LogMark,
   TrainingLogProvider,
   WorkoutLogActions,
@@ -23,6 +24,7 @@ import {
   Card,
   EmptyState,
   ErrorState,
+  IconButton,
   KindIcon,
   LoadingState,
   PressableScale,
@@ -33,7 +35,7 @@ import {
   Text,
 } from '../../components/ui';
 import { StartPlanButton } from '../../components/StartPlanButton';
-import { useCoachWord } from '../../data/account';
+import { useAskIcon, useCoachWord } from '../../data/account';
 import { useOpenPlanChat } from '../../data/plan-actions';
 import {
   currentEntry,
@@ -52,6 +54,7 @@ import {
   addDays,
   dayNumber,
   daysBetween,
+  formatDay,
   formatDistance,
   formatDuration,
   formatLong,
@@ -60,7 +63,7 @@ import {
   WEEKDAYS_SHORT,
   type Units,
 } from '../../lib/format';
-import { useTrainingLog } from '../../data/training-log';
+import { useClearLog, useTrainingLog, type WorkoutLog } from '../../data/training-log';
 import { countdown, workoutStats } from '../../lib/presenters';
 import { planSports, systemsForSports } from '../../lib/sports';
 import { useLocalToday } from '../../lib/use-local-today';
@@ -150,6 +153,7 @@ function TodayForPlan({ plan, today }: { plan: Plan; today: string }) {
   const brief = useBriefState(plan.id, version);
   const units = useUnits(brief.data?.brief.unit);
   const coach = useCoachWord();
+  const askIcon = useAskIcon();
   const chat = useOpenPlanChat(plan);
   const [selected, setSelected] = useState(today);
   useEffect(() => setSelected(today), [today]);
@@ -161,9 +165,16 @@ function TodayForPlan({ plan, today }: { plan: Plan; today: string }) {
   const logContext = useLogContext();
   const logs = logContext?.logs ?? [];
   const logged = (w: WorkoutSummary) => logs.find((l) => l.lineageId === w.lineageId);
-  // The last few days' sessions still waiting for a log, above today's.
+  // Sessions still waiting for a log: this week's so far, and always the last three days. Ones
+  // logged from this list stay on it (with Undo) until Today is next opened.
+  const since = addDays(today, -3) < days[0]! ? addDays(today, -3) : days[0]!;
+  const [quickLogged, setQuickLogged] = useState<string[]>([]);
+  const [showAllRecent, setShowAllRecent] = useState(false);
   const recent = all.filter(
-    (w) => w.scheduledDate < today && w.scheduledDate >= addDays(today, -3) && !logged(w),
+    (w) =>
+      w.scheduledDate < today &&
+      w.scheduledDate >= since &&
+      (!logged(w) || quickLogged.includes(w.lineageId)),
   );
   const weekLog = useTrainingLog(plan.id, days[0], days[6]);
   const week = all.filter((w) => w.scheduledDate >= days[0]! && w.scheduledDate <= days[6]!);
@@ -184,6 +195,22 @@ function TodayForPlan({ plan, today }: { plan: Plan; today: string }) {
     1,
   );
   const selectedWorkouts = workoutsOn(all, selected);
+  const nextWorkout = all.find((w) => w.scheduledDate > selected);
+  // Where the week's unlogged sessions sit, so its count matches "Still to log" without sums.
+  const pastUnlogged = week.filter((w) => w.scheduledDate < today && !logged(w)).length;
+  const todayUnlogged = week.filter((w) => w.scheduledDate === today && !logged(w)).length;
+  const upcoming = week.filter((w) => w.scheduledDate > today).length;
+  const weekBreakdown =
+    [
+      pastUnlogged ? `${pastUnlogged} to log` : null,
+      todayUnlogged ? 'today pending' : null,
+      upcoming ? `${upcoming} upcoming` : null,
+    ]
+      .filter(Boolean)
+      .join(' · ') || 'All logged';
+  // Logged sessions without a recorded amount (time, or distance for running) must not read as
+  // zero training.
+  const untimed = sessionsDone > 0 && completedAmount === 0;
   const end = version?.endDate;
   const progress = planProgress(version?.startDate ?? null, end ?? null, today);
   const daysToEnd = end ? daysBetween(today, end) : null;
@@ -221,7 +248,7 @@ function TodayForPlan({ plan, today }: { plan: Plan; today: string }) {
           {goal
             ? `${countdown(daysBetween(today, goal.scheduledDate))} · ${goal.title}`
             : daysToEnd !== null && daysToEnd >= 0
-              ? `${daysToEnd} days to go · ${plan.displayName}`
+              ? `${daysToEnd} days to go`
               : plan.displayName}
         </Text>
       </PressableScale>
@@ -232,13 +259,14 @@ function TodayForPlan({ plan, today }: { plan: Plan; today: string }) {
           const items = workoutsOn(all, d);
           const active = d === selected;
           const isToday = d === today;
-          const dot = items[0]
-            ? effortTint(theme, workoutLook(items[0]).effort)
-            : theme.colors.border;
-          const mark =
+          const dot = items[0] ? effortTint(theme, workoutLook(items[0]).effort) : 'transparent';
+          // Past days show their log mark; today keeps its solid session dot until it is logged,
+          // so hollow means only "past and still to log", as in the calendar and the week card.
+          const status =
             items.length && d <= today && logContext?.ready
               ? logStatusFor(logs.filter((l) => items.some((w) => w.lineageId === l.lineageId)))
               : null;
+          const mark = status === 'unlogged' && d === today ? null : status;
           return (
             <PressableScale
               key={d}
@@ -293,7 +321,14 @@ function TodayForPlan({ plan, today }: { plan: Plan; today: string }) {
                     width: 6,
                     height: 6,
                     borderRadius: 3,
-                    backgroundColor: active ? theme.onAccent : dot,
+                    // A rest day keeps the space but shows no dot.
+                    backgroundColor: !items.length
+                      ? 'transparent'
+                      : active
+                        ? theme.onAccent
+                        : d > today
+                          ? alpha(dot, theme.isDark ? 0.6 : 0.65)
+                          : dot,
                   }}
                 />
               )}
@@ -304,7 +339,7 @@ function TodayForPlan({ plan, today }: { plan: Plan; today: string }) {
 
       {/* Selected day's workouts */}
       <View style={{ paddingHorizontal: 20, marginTop: 20, gap: 12 }}>
-        <Text variant="caption" style={{ fontWeight: '700' }}>
+        <Text variant="heading">
           {selected === today ? 'Today’s workout' : formatLong(selected)}
         </Text>
         {chat.error ? (
@@ -332,7 +367,7 @@ function TodayForPlan({ plan, today }: { plan: Plan; today: string }) {
               unplanned && !plan.archived ? (
                 <Button
                   label={`Plan it with your ${coach}`}
-                  icon="chatbubble-ellipses"
+                  icon={askIcon}
                   size="md"
                   busy={chat.isPending}
                   onPress={() => chat.mutate('Plan the remaining weeks')}
@@ -346,29 +381,71 @@ function TodayForPlan({ plan, today }: { plan: Plan; today: string }) {
           </EmptyState>
         ) : null}
         {workouts.data && brief.data && !selectedWorkouts.length && !unplanned && !outsidePlan ? (
-          <Card style={{ alignItems: 'center', paddingVertical: 28 }}>
-            <View
-              style={{
-                width: 52,
-                height: 52,
-                borderRadius: 26,
-                backgroundColor: theme.colors.surfaceRaised,
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              <Ionicons name="moon" size={24} color={theme.colors.textDim} />
+          <Card style={{ gap: 12 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+              <View
+                style={{
+                  width: 40,
+                  height: 40,
+                  borderRadius: 20,
+                  backgroundColor: theme.colors.surfaceRaised,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <Ionicons name="moon" size={18} color={theme.colors.textDim} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text variant="subheading" style={{ fontWeight: '800' }}>
+                  Rest day
+                </Text>
+                <Text variant="caption">Easy walking, mobility work and good sleep.</Text>
+              </View>
             </View>
-            <Text variant="heading" style={{ marginTop: 14 }}>
-              Rest day
-            </Text>
-            <Text
-              variant="body"
-              color="dim"
-              style={{ textAlign: 'center', marginTop: 6, maxWidth: 280 }}
-            >
-              Nothing is scheduled. Easy walking, mobility work and good sleep.
-            </Text>
+            {nextWorkout ? (
+              <PressableScale
+                onPress={() => openWorkout(nextWorkout)}
+                scaleTo={0.99}
+                accessibilityRole="button"
+                accessibilityLabel={`Next: ${nextWorkout.title}, ${formatLong(nextWorkout.scheduledDate)}`}
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: 10,
+                  paddingTop: 12,
+                  borderTopWidth: StyleSheet.hairlineWidth,
+                  borderTopColor: theme.colors.border,
+                }}
+              >
+                <KindIcon
+                  icon={workoutLook(nextWorkout).icon}
+                  color={effortTint(theme, workoutLook(nextWorkout).effort)}
+                  size={32}
+                />
+                <View style={{ flex: 1 }}>
+                  <Text variant="caption" color="muted" style={{ fontSize: 12 }}>
+                    Next ·{' '}
+                    {nextWorkout.scheduledDate === addDays(selected, 1)
+                      ? 'Tomorrow'
+                      : formatLong(nextWorkout.scheduledDate)}
+                  </Text>
+                  <Text
+                    variant="caption"
+                    color="text"
+                    numberOfLines={1}
+                    style={{ fontWeight: '700' }}
+                  >
+                    {nextWorkout.title}
+                    {nextWorkout.estimatedDurationSeconds ? (
+                      <Text variant="caption" color="muted" numeric>
+                        {` · ${formatDuration(nextWorkout.estimatedDurationSeconds)}`}
+                      </Text>
+                    ) : null}
+                  </Text>
+                </View>
+                <Ionicons name="chevron-forward" size={16} color={theme.colors.textMuted} />
+              </PressableScale>
+            ) : null}
           </Card>
         ) : null}
         {selectedWorkouts.map((workout) => (
@@ -378,46 +455,34 @@ function TodayForPlan({ plan, today }: { plan: Plan; today: string }) {
           <Card style={{ gap: 4, paddingVertical: 12 }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 4 }}>
               <Ionicons name="time-outline" size={14} color={theme.colors.textMuted} />
-              <Text variant="label">Still to log</Text>
+              <Text variant="label" style={{ flex: 1 }}>
+                Still to log
+              </Text>
+              <Text variant="caption" color="muted" numeric>
+                {recent.filter((w) => !logged(w)).length || ''}
+              </Text>
             </View>
-            {recent.map((workout) => {
-              const look = workoutLook(workout);
-              return (
-                <View
-                  key={workout.id}
-                  style={{
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    gap: 12,
-                    paddingVertical: 6,
-                  }}
-                >
-                  <PressableScale
-                    onPress={() => openWorkout(workout)}
-                    scaleTo={0.99}
-                    accessibilityRole="button"
-                    accessibilityLabel={`${workout.title}, ${formatLong(workout.scheduledDate)}`}
-                    style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 10 }}
-                  >
-                    <KindIcon icon={look.icon} color={effortTint(theme, look.effort)} size={32} />
-                    <View style={{ flex: 1 }}>
-                      <Text variant="caption" color="muted" style={{ fontSize: 12 }}>
-                        {formatLong(workout.scheduledDate)}
-                      </Text>
-                      <Text
-                        variant="caption"
-                        color="text"
-                        numberOfLines={1}
-                        style={{ fontWeight: '700' }}
-                      >
-                        {workout.title}
-                      </Text>
-                    </View>
-                  </PressableScale>
-                  <WorkoutLogActions workout={workout} variant="inline" />
-                </View>
-              );
-            })}
+            {(showAllRecent ? recent : recent.slice(0, 2)).map((workout) => (
+              <CatchUpRow
+                key={workout.id}
+                workout={workout}
+                log={logged(workout)}
+                onLogged={() => setQuickLogged((ids) => [...ids, workout.lineageId])}
+              />
+            ))}
+            {recent.length > 2 && !showAllRecent ? (
+              <Pressable
+                onPress={() => setShowAllRecent(true)}
+                accessibilityRole="button"
+                hitSlop={8}
+                style={{ flexDirection: 'row', alignItems: 'center', gap: 4, paddingTop: 6 }}
+              >
+                <Text variant="caption" color="accent" style={{ fontWeight: '800' }}>
+                  {`${recent.length - 2} more to log`}
+                </Text>
+                <Ionicons name="chevron-down" size={14} color={theme.accentText} />
+              </Pressable>
+            ) : null}
           </Card>
         ) : null}
         <CheckInButton plan={plan} />
@@ -467,49 +532,83 @@ function TodayForPlan({ plan, today }: { plan: Plan; today: string }) {
       <SectionHeader title="This week" action="See plan" onAction={() => router.push('/plan')} />
       <View style={{ paddingHorizontal: 20 }}>
         <Card>
+          {/* Labels share a top line. Without recorded time, sessions lead and time is a note. */}
           <View
             style={{
               flexDirection: 'row',
-              alignItems: 'flex-end',
+              alignItems: 'flex-start',
               justifyContent: 'space-between',
             }}
           >
-            <View>
-              <Text variant="label">{measure === 'time' ? 'Done time' : 'Done distance'}</Text>
-              <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 6, marginTop: 4 }}>
-                <Text variant="title" numeric>
-                  {formatAmount(completedAmount, false)}
+            {untimed ? (
+              <View>
+                <Text variant="label">Sessions logged</Text>
+                <Text variant="title" numeric style={{ marginTop: 4 }}>
+                  {sessionsDone} of {week.length}
                 </Text>
-                {measure === 'distance' ? (
-                  <Text variant="body" color="dim" numeric>
-                    {units}
-                  </Text>
-                ) : null}
+                <Text variant="caption" color="muted">
+                  {formatAmount(weekAmount)} planned · no {measure === 'time' ? 'time' : 'distance'}{' '}
+                  logged yet
+                </Text>
               </View>
-              <Text variant="caption" color="muted">
-                of {formatAmount(weekAmount)} planned
-              </Text>
-            </View>
-            <View style={{ alignItems: 'flex-end' }}>
-              <Text variant="label">Sessions</Text>
-              <Text variant="heading" numeric style={{ marginTop: 4 }}>
-                {sessionsDone} / {week.length}
-              </Text>
-              <Text variant="caption" color="muted">
-                {weekLog.data?.summary.unlogged ?? 0} to log
-              </Text>
-            </View>
+            ) : (
+              <View>
+                <Text variant="label">{measure === 'time' ? 'Done time' : 'Done distance'}</Text>
+                <View
+                  style={{ flexDirection: 'row', alignItems: 'baseline', gap: 6, marginTop: 4 }}
+                >
+                  <Text variant="title" numeric>
+                    {formatAmount(completedAmount, false)}
+                  </Text>
+                  {measure === 'distance' ? (
+                    <Text variant="body" color="dim" numeric>
+                      {units}
+                    </Text>
+                  ) : null}
+                </View>
+                <Text variant="caption" color="muted">
+                  of {formatAmount(weekAmount)} planned
+                </Text>
+              </View>
+            )}
+            {untimed ? null : (
+              <View style={{ alignItems: 'flex-end' }}>
+                <Text variant="label">Sessions</Text>
+                <Text variant="heading" numeric style={{ marginTop: 4 }}>
+                  {`${sessionsDone} / ${week.length}`}
+                </Text>
+              </View>
+            )}
           </View>
+          {/* Full width under the headline, so the breakdown can wrap rather than overflow. */}
+          <Text variant="caption" color="text" numeric style={{ marginTop: 6 }}>
+            {weekBreakdown}
+          </Text>
           <View style={{ marginTop: 14 }}>
-            <ProgressBar value={weekAmount ? Math.min(1, completedAmount / weekAmount) : 0} />
+            {/* Without recorded time, progress follows sessions logged. */}
+            <ProgressBar
+              value={
+                untimed
+                  ? sessionsDone / Math.max(1, week.length)
+                  : weekAmount
+                    ? Math.min(1, completedAmount / weekAmount)
+                    : 0
+              }
+            />
           </View>
+          <Text variant="label" style={{ marginTop: 18, fontSize: 9.5 }}>
+            {measure === 'time' ? 'Planned minutes per day' : `Planned ${units} per day`}
+          </Text>
+          <Text variant="caption" color="muted" style={{ fontSize: 12 }}>
+            Faded: upcoming · Ring: to log · Outlined: today
+          </Text>
           <View
             style={{
               flexDirection: 'row',
               alignItems: 'flex-end',
               gap: 8,
               height: 64,
-              marginTop: 18,
+              marginTop: 6,
             }}
           >
             {days.map((d, i) => {
@@ -518,23 +617,27 @@ function TodayForPlan({ plan, today }: { plan: Plan; today: string }) {
               const color = items[0]
                 ? effortTint(theme, workoutLook(items[0]).effort)
                 : theme.colors.border;
-              // Logged days stay bright; past days without a log fade.
-              const done = items.some((w) => {
-                const log = logged(w);
-                return !!log && log.status !== 'skipped';
-              });
+              // As the calendar: logged and today solid, upcoming faded, past unlogged hollow.
+              // "To log" means no log at all; a skipped session is logged.
+              const hollow = items.length > 0 && d < today && !items.some((w) => logged(w));
               return (
                 <View key={d} style={{ flex: 1, alignItems: 'center', gap: 6 }}>
                   <View style={{ flex: 1, justifyContent: 'flex-end', width: '100%' }}>
                     <View
                       style={{
-                        width: '100%',
-                        height: value ? Math.max(8, (value / maxDay) * 40) : 4,
+                        width: items.length ? '100%' : 6,
+                        alignSelf: 'center',
+                        height: items.length ? Math.max(8, (value / maxDay) * 40) : 6,
                         borderRadius: 6,
-                        backgroundColor: color,
-                        opacity: d < today && !done ? 0.35 : 1,
-                        borderWidth: d === today ? 2 : 0,
-                        borderColor: theme.colors.text,
+                        // A rest day is a short visible stub, not an empty gap.
+                        backgroundColor: hollow
+                          ? 'transparent'
+                          : items.length
+                            ? color
+                            : theme.colors.textMuted,
+                        opacity: items.length && d > today ? (theme.isDark ? 0.6 : 0.65) : 1,
+                        borderWidth: d === today ? 2 : hollow ? 1.5 : 0,
+                        borderColor: d === today ? theme.colors.text : color,
                       }}
                     />
                   </View>
@@ -628,7 +731,7 @@ function HeroWorkout({
               flexWrap: 'wrap',
               columnGap: 28,
               rowGap: 12,
-              marginTop: 18,
+              marginTop: 14,
             }}
           >
             {workoutStats(workout, units, pool).map((stat) => (
@@ -636,12 +739,12 @@ function HeroWorkout({
             ))}
           </View>
           {workout.placeholder ? (
-            <View style={{ marginTop: 20 }}>
+            <View style={{ marginTop: 12 }}>
               <PlaceholderBand workout={workout} />
             </View>
           ) : detail.data ? (
-            <View style={{ marginTop: 20 }}>
-              <IntensityChart prescription={detail.data.prescription} height={56} animate />
+            <View style={{ marginTop: 12 }}>
+              <IntensityChart prescription={detail.data.prescription} height={32} animate />
             </View>
           ) : null}
         </View>
@@ -657,6 +760,70 @@ function HeroWorkout({
           <WorkoutLogActions workout={workout} />
         </View>
       ) : null}
+    </View>
+  );
+}
+
+/**
+ * A recent session in "Still to log": its name across the row, then its date and length beside
+ * Done or Skip. Once logged it shows the result with Undo, so a mistaken tap is easy to take back.
+ */
+function CatchUpRow({
+  workout,
+  log,
+  onLogged,
+}: {
+  workout: WorkoutSummary;
+  log: WorkoutLog | undefined;
+  onLogged: () => void;
+}) {
+  const theme = useTheme();
+  const look = workoutLook(workout);
+  const clear = useClearLog(workout.planId, workout.lineageId);
+  return (
+    <View style={{ gap: 8, paddingVertical: 6 }}>
+      <PressableScale
+        onPress={() => openWorkout(workout)}
+        scaleTo={0.99}
+        accessibilityRole="button"
+        accessibilityLabel={`${workout.title}, ${formatLong(workout.scheduledDate)}`}
+        style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}
+      >
+        <KindIcon icon={look.icon} color={effortTint(theme, look.effort)} size={32} />
+        <Text
+          variant="caption"
+          color="text"
+          numberOfLines={2}
+          style={{ flex: 1, fontWeight: '700' }}
+        >
+          {workout.title}
+        </Text>
+        <Ionicons name="chevron-forward" size={16} color={theme.colors.textMuted} />
+      </PressableScale>
+      {/* When and how long on the left, the log on the right: one line, as on the Plan tab. */}
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingLeft: 42 }}>
+        <Text variant="caption" color="muted" numeric style={{ flex: 1, fontSize: 12 }}>
+          {formatDay(workout.scheduledDate)}
+          {workout.estimatedDurationSeconds
+            ? ` · ${formatDuration(workout.estimatedDurationSeconds)}`
+            : ''}
+        </Text>
+        {log ? (
+          <>
+            <LogChip log={log} />
+            <IconButton
+              icon="arrow-undo"
+              size={16}
+              tone="filled"
+              accessibilityLabel={`Undo log for ${workout.title}`}
+              onPress={clear.isPending ? undefined : () => clear.mutate()}
+            />
+          </>
+        ) : (
+          <WorkoutLogActions workout={workout} variant="row" onLogged={onLogged} />
+        )}
+      </View>
+      {clear.error ? <ErrorState message={clear.error.message} /> : null}
     </View>
   );
 }

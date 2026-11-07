@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 import {
   Chips,
   DateField,
@@ -26,7 +26,7 @@ import {
   Text,
   type IconName,
 } from '../components/ui';
-import { useCoachWord, useInAppCoach } from '../data/account';
+import { useAskIcon, useCoachWord, useInAppCoach } from '../data/account';
 import { useActivityLink } from '../data/activities';
 import { planVersion, useBriefState, usePlan, useWorkoutDetail } from '../data/plan-data';
 import {
@@ -85,10 +85,12 @@ const FEEL: { label: string; icon: IconName }[] = [
   { label: 'Drained', icon: 'battery-dead-outline' },
 ];
 
-const STATUS_ICON: Record<LogStatus, IconName> = {
-  done: 'checkmark-circle',
-  changed: 'create',
-  skipped: 'close-circle',
+// Filled when chosen, outlined otherwise, so an unchosen answer never looks ticked. The pencil
+// matches "Changed it" everywhere else in the app.
+const STATUS_ICON: Record<LogStatus, [IconName, IconName]> = {
+  done: ['checkmark-circle', 'checkmark-circle-outline'],
+  changed: ['pencil', 'pencil-outline'],
+  skipped: ['close-circle', 'close-circle-outline'],
 };
 
 const PAIN_AREAS = [
@@ -196,6 +198,41 @@ function Question({
   );
 }
 
+/** Opens a folded set of optional questions: one quiet style for every fold in the form. */
+function Disclosure({
+  label,
+  hint,
+  onPress,
+}: {
+  label: string;
+  hint?: string;
+  onPress: () => void;
+}) {
+  const theme = useTheme();
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={`Add ${label.toLowerCase()}`}
+      accessibilityState={{ expanded: false }}
+      hitSlop={6}
+      style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}
+    >
+      <View style={{ flex: 1 }}>
+        <Text variant="caption" color="text" style={{ fontWeight: '800' }}>
+          {label}
+        </Text>
+        {hint ? (
+          <Text variant="caption" color="muted" style={{ fontSize: 12 }}>
+            {hint}
+          </Text>
+        ) : null}
+      </View>
+      <Ionicons name="add" size={18} color={theme.accentText} />
+    </Pressable>
+  );
+}
+
 /** One optional answer: tap again to clear it. */
 function Options<T extends string>({
   label,
@@ -236,6 +273,7 @@ function FeedbackForm({
   const theme = useTheme();
   const coach = useCoachWord();
   const inAppCoach = useInAppCoach();
+  const askIcon = useAskIcon();
   const today = useLocalToday();
   const { pool } = useSportUnits();
   const swim = workout.discipline === 'swim';
@@ -288,6 +326,12 @@ function FeedbackForm({
   const [reasons, setReasons] = useState<Reason[]>(log?.reasons ?? []);
   const [note, setNote] = useState(log?.note ?? '');
   const [answers, setAnswers] = useState<Answers>(log?.answers ?? {});
+  // The optional questions fold away until asked for, unless a saved log already answers them.
+  const [factorsOpen, setFactorsOpen] = useState(false);
+  const [sessionOpen, setSessionOpen] = useState(false);
+  const [moreOpen, setMoreOpen] = useState(
+    () => log?.feel != null || Object.keys(log?.answers ?? {}).length > 0,
+  );
   const placeholder = !!(log?.placeholder ?? workout.placeholder);
   const [actualType, setActualType] = useState<ActualType | undefined>(
     log?.actualSessionType ?? undefined,
@@ -411,37 +455,65 @@ function FeedbackForm({
       setLocalError(error instanceof Error ? error.message : 'Couldn’t save feedback.');
     }
   };
+  const aboutSession =
+    status !== 'skipped' &&
+    ['intervals', 'tempo', 'speed', 'long', 'strength', 'brick', 'race', 'test'].includes(kind);
   const showReasons =
     status !== 'done' ||
     (rpe != null && planned != null && (rpe - planned >= 2 || planned - rpe >= 3)) ||
     reasons.length > 0;
+  // Body feel shows for a changed or off-effort session; its factors and the session questions
+  // still fold away until asked for, unless already answered.
+  const detailShown = moreOpen || showReasons;
+  const sessionShown = aboutSession && (moreOpen || sessionOpen);
+  const factorsShown = showReasons && (factorsOpen || reasons.length > 0);
   const safety =
     reasons.includes('pain') && answers.painSeverity && answers.painSeverity !== 'mild';
   const active = status !== 'skipped';
+  const notesLabel = placeholder
+    ? 'What did you do?'
+    : status === 'changed'
+      ? 'What changed?'
+      : 'Notes';
+  const notesSection = (
+    <FormSection>
+      <Question title={notesLabel} hint="Optional · a sentence is plenty">
+        <Field
+          label={notesLabel}
+          hideLabel
+          value={note}
+          multiline
+          rows={3}
+          maxLength={2000}
+          onChangeText={(value) => {
+            setNote(value);
+            changed();
+          }}
+          placeholder={
+            placeholder
+              ? `The session, such as 6 × 800 m off 90 s, and anything else for your ${coach}…`
+              : status === 'changed'
+                ? 'How it differed from the plan, and why'
+                : 'How it went, what helped, anything worth remembering…'
+          }
+        />
+      </Question>
+    </FormSection>
+  );
 
   return (
     <FormScreen
       title={log ? 'Edit log' : 'Log workout'}
       subtitle={formatLong(workout.scheduledDate)}
       guard={guard}
-      saveLabel="Save"
-      saving={save.isPending && !discuss.isPending}
-      canSave={!busy}
-      onSave={() => void persist(false)}
       footer={
-        <View style={{ gap: 10 }}>
-          <Button
-            label="Save and talk it through"
-            icon="chatbubble-ellipses"
-            busy={discuss.isPending}
-            disabled={busy}
-            onPress={() => void persist(true)}
-          />
-          <Text variant="caption" color="muted" style={{ textAlign: 'center', fontSize: 12 }}>
-            Saving feedback never changes your plan. Your {coach} helps only when you choose to
-            talk.
-          </Text>
-        </View>
+        <Button
+          label="Save"
+          icon="checkmark"
+          busy={save.isPending && !discuss.isPending}
+          disabled={busy}
+          onPress={() => void persist(false)}
+        />
       }
     >
       {/* The workout */}
@@ -478,7 +550,7 @@ function FeedbackForm({
       <StravaConnectHint />
 
       <FormSection>
-        <Question title="Did you do it?">
+        <Question title="Did you do it?" hint="Pick one">
           <View accessibilityRole="radiogroup" style={{ flexDirection: 'row', gap: 8 }}>
             {(['done', 'changed', 'skipped'] as const).map((s) => {
               const on = status === s;
@@ -495,24 +567,37 @@ function FeedbackForm({
                   accessibilityLabel={LOG_LABELS[s]}
                   accessibilityState={{ selected: on }}
                   style={{
-                    flex: 1,
+                    // "Changed it" is the longest label, so it gets a wider share of the row.
+                    flex: s === 'changed' ? 1.3 : 1,
+                    flexDirection: 'row',
                     alignItems: 'center',
-                    gap: 6,
-                    paddingVertical: 14,
-                    borderRadius: 16,
-                    backgroundColor: on ? alpha(tint, 0.16) : theme.colors.surfaceRaised,
+                    justifyContent: 'center',
+                    gap: 4,
+                    // Grows rather than clips when a larger text size wraps a label.
+                    minHeight: 44,
+                    paddingHorizontal: 6,
+                    paddingVertical: 4,
+                    borderRadius: 14,
+                    backgroundColor: on
+                      ? alpha(tint, theme.isDark ? 0.16 : 0.26)
+                      : theme.colors.surfaceRaised,
                     borderWidth: 1.5,
                     borderColor: on ? tint : 'transparent',
                   }}
                 >
                   <Ionicons
-                    name={STATUS_ICON[s]}
-                    size={22}
+                    name={STATUS_ICON[s][on ? 0 : 1]}
+                    size={16}
                     color={on ? tint : theme.colors.textMuted}
                   />
                   <Text
                     variant="caption"
-                    style={{ fontWeight: '800', color: on ? tint : theme.colors.text }}
+                    style={{
+                      flexShrink: 1,
+                      textAlign: 'center',
+                      fontWeight: '800',
+                      color: on ? tint : theme.colors.text,
+                    }}
                   >
                     {LOG_LABELS[s]}
                   </Text>
@@ -543,51 +628,57 @@ function FeedbackForm({
         ) : null}
       </FormSection>
 
-      <FormSection
-        title={active ? 'What you did' : 'When'}
-        description={
-          active
-            ? `Done starts with the ${placeholder ? 'expected' : 'planned'} amounts as estimates. Correct them or leave them blank if unknown.`
-            : undefined
-        }
-      >
-        <DateField
-          label={active ? 'Performed on' : 'Date'}
-          value={performed}
-          max={today}
-          onChange={(value) => {
-            setPerformed(value);
-            setAnswer('result', undefined);
-          }}
-        />
-        {active ? (
-          <View style={{ flexDirection: 'row', gap: 12 }}>
-            <Field
-              style={{ flex: 1 }}
-              label="Time"
-              value={minutes}
-              onChangeText={(value) => {
-                setMinutes(value);
-                changed();
-              }}
-              keyboardType="decimal-pad"
-              suffix="min"
-            />
-            {showDistance ? (
+      <FormSection>
+        <Question
+          title={active ? 'What you did' : 'When'}
+          hint={
+            active
+              ? start.minutes || start.distance
+                ? `${placeholder ? 'Expected' : 'Planned'} amounts, as estimates. Correct or clear them.`
+                : 'Optional · leave blank if unsure'
+              : undefined
+          }
+        >
+          <DateField
+            label={active ? 'Performed on' : 'Date'}
+            value={performed}
+            max={today}
+            onChange={(value) => {
+              setPerformed(value);
+              setAnswer('result', undefined);
+            }}
+          />
+          {active ? (
+            <View style={{ flexDirection: 'row', gap: 12 }}>
               <Field
                 style={{ flex: 1 }}
-                label="Distance"
-                value={distance}
+                label="Time"
+                value={minutes}
                 onChangeText={(value) => {
-                  setDistance(value);
+                  setMinutes(value);
                   changed();
                 }}
                 keyboardType="decimal-pad"
-                suffix={distanceUnit}
+                placeholder="e.g. 45"
+                suffix="min"
               />
-            ) : null}
-          </View>
-        ) : null}
+              {showDistance ? (
+                <Field
+                  style={{ flex: 1 }}
+                  label="Distance"
+                  value={distance}
+                  onChangeText={(value) => {
+                    setDistance(value);
+                    changed();
+                  }}
+                  keyboardType="decimal-pad"
+                  placeholder="e.g. 30"
+                  suffix={distanceUnit}
+                />
+              ) : null}
+            </View>
+          ) : null}
+        </Question>
       </FormSection>
 
       {active ? (
@@ -597,7 +688,7 @@ function FeedbackForm({
             hint={`Optional · ${
               placeholder && workout.expectedRpe
                 ? `expected ${expectedEffort(workout)}`
-                : `planned ${planned == null ? 'effort not set' : `~${planned}/10`}`
+                : `whole session planned ${planned == null ? 'effort not set' : `~${Math.round(planned)}/10`}`
             }`}
           >
             <RpeScale
@@ -613,13 +704,146 @@ function FeedbackForm({
         </FormSection>
       ) : null}
 
-      {active &&
-      (
-        ['intervals', 'tempo', 'speed', 'long', 'strength', 'brick', 'race', 'test'] as string[]
-      ).includes(kind) ? (
+      {/* For a changed session, what changed follows the quick effort rating. */}
+      {status === 'changed' ? notesSection : null}
+
+      {detailShown ? (
+        <FormSection>
+          <Question title="How did your body feel?" hint="Optional · pick the closest">
+            <View accessibilityRole="radiogroup" style={{ flexDirection: 'row', gap: 6 }}>
+              {FEEL.map(({ label, icon }, i) => {
+                const on = feel === i + 1;
+                return (
+                  <PressableScale
+                    key={label}
+                    haptic="select"
+                    onPress={() => {
+                      setFeel(on ? null : i + 1);
+                      changed();
+                    }}
+                    accessibilityRole="radio"
+                    accessibilityLabel={label}
+                    accessibilityState={{ selected: on }}
+                    style={{
+                      flex: 1,
+                      alignItems: 'center',
+                      gap: 6,
+                      paddingVertical: 12,
+                      borderRadius: 14,
+                      backgroundColor: on ? theme.accentSoft : theme.colors.surfaceRaised,
+                      borderWidth: 1.5,
+                      borderColor: on ? theme.accent : 'transparent',
+                    }}
+                  >
+                    <Ionicons
+                      name={icon}
+                      size={22}
+                      color={on ? theme.accentText : theme.colors.textDim}
+                    />
+                    <Text
+                      variant="caption"
+                      style={{
+                        fontSize: 11.5,
+                        fontWeight: on ? '800' : '600',
+                        color: on ? theme.accentText : theme.colors.text,
+                      }}
+                    >
+                      {label}
+                    </Text>
+                  </PressableScale>
+                );
+              })}
+            </View>
+          </Question>
+          {factorsShown ? (
+            <Question title="What affected it?" hint="Choose any · optional">
+              <Chips
+                label="Contributing factors"
+                options={(Object.keys(REASON_LABELS) as Reason[]).map(
+                  (reason) => [reason, REASON_LABELS[reason]] as const,
+                )}
+                selected={(reason) => reasons.includes(reason)}
+                onPress={(reason) => {
+                  setReasons((r) =>
+                    r.includes(reason) ? r.filter((x) => x !== reason) : [...r, reason],
+                  );
+                  changed();
+                }}
+              />
+            </Question>
+          ) : null}
+          {reasons.includes('pain') ? (
+            <>
+              <Question title="Where is the pain?">
+                <Options
+                  label="Pain area"
+                  value={answers.painArea}
+                  values={PAIN_AREAS}
+                  onChange={(v) => setAnswer('painArea', v)}
+                />
+              </Question>
+              <Question title="How bad was it?">
+                <Options
+                  label="Pain severity"
+                  value={answers.painSeverity}
+                  values={PAIN_SEVERITY}
+                  onChange={(v) => setAnswer('painSeverity', v)}
+                />
+              </Question>
+            </>
+          ) : null}
+          {safety ? (
+            <Notice tone="warning">
+              {`Rest and seek professional advice for pain that changes how you move. Your ${coach} won’t prescribe training through it.`}
+            </Notice>
+          ) : null}
+        </FormSection>
+      ) : null}
+
+      {/* The folds share their own card, after the body questions, so neither card's title
+          misdescribes the other's contents. */}
+      {detailShown && (!factorsShown || (aboutSession && !sessionShown)) ? (
+        <FormSection>
+          {factorsShown ? null : (
+            <Disclosure
+              label="What affected it"
+              hint="Sleep, fuel, pain, time"
+              onPress={() => {
+                if (showReasons) setFactorsOpen(true);
+                else {
+                  setReasons(['other']);
+                  changed();
+                }
+              }}
+            />
+          )}
+          {!factorsShown && aboutSession && !sessionShown ? (
+            <View
+              style={{ height: StyleSheet.hairlineWidth, backgroundColor: theme.colors.border }}
+            />
+          ) : null}
+          {aboutSession && !sessionShown ? (
+            <Disclosure
+              label={
+                ['intervals', 'tempo', 'speed'].includes(kind)
+                  ? 'Interval feedback'
+                  : 'Session feedback'
+              }
+              hint={
+                ['intervals', 'tempo', 'speed'].includes(kind)
+                  ? 'How the reps went'
+                  : 'How the session went'
+              }
+              onPress={() => setSessionOpen(true)}
+            />
+          ) : null}
+        </FormSection>
+      ) : null}
+
+      {sessionShown ? (
         <FormSection title="About the session">
           {['intervals', 'tempo', 'speed'].includes(kind) ? (
-            <Question title="How did the intervals go?">
+            <Question title="How did the intervals go?" hint="Optional">
               <Options
                 label="Interval feedback"
                 value={answers.intervals}
@@ -731,140 +955,60 @@ function FeedbackForm({
         </FormSection>
       ) : null}
 
-      <FormSection>
-        <Question title="How did your body feel?">
-          <View accessibilityRole="radiogroup" style={{ flexDirection: 'row', gap: 6 }}>
-            {FEEL.map(({ label, icon }, i) => {
-              const on = feel === i + 1;
-              return (
-                <PressableScale
-                  key={label}
-                  haptic="select"
-                  onPress={() => {
-                    setFeel(on ? null : i + 1);
-                    changed();
-                  }}
-                  accessibilityRole="radio"
-                  accessibilityLabel={label}
-                  accessibilityState={{ selected: on }}
-                  style={{
-                    flex: 1,
-                    alignItems: 'center',
-                    gap: 6,
-                    paddingVertical: 12,
-                    borderRadius: 14,
-                    backgroundColor: on ? theme.accentSoft : theme.colors.surfaceRaised,
-                    borderWidth: 1.5,
-                    borderColor: on ? theme.accent : 'transparent',
-                  }}
-                >
-                  <Ionicons
-                    name={icon}
-                    size={22}
-                    color={on ? theme.accentText : theme.colors.textDim}
-                  />
-                  <Text
-                    variant="caption"
-                    style={{
-                      fontSize: 11.5,
-                      fontWeight: on ? '800' : '600',
-                      color: on ? theme.accentText : theme.colors.text,
-                    }}
-                  >
-                    {label}
-                  </Text>
-                </PressableScale>
-              );
-            })}
-          </View>
-        </Question>
-        {showReasons ? (
-          <Question title="What affected it?" hint="Choose any · optional">
-            <Chips
-              label="Contributing factors"
-              options={(Object.keys(REASON_LABELS) as Reason[]).map(
-                (reason) => [reason, REASON_LABELS[reason]] as const,
-              )}
-              selected={(reason) => reasons.includes(reason)}
-              onPress={(reason) => {
-                setReasons((r) =>
-                  r.includes(reason) ? r.filter((x) => x !== reason) : [...r, reason],
-                );
-                changed();
-              }}
-            />
-          </Question>
-        ) : (
-          <Button
-            size="sm"
-            variant="ghost"
-            icon="add"
-            label="Add contributing factors"
-            style={{ alignSelf: 'flex-start' }}
-            onPress={() => {
-              setReasons(['other']);
-              changed();
-            }}
+      {/* Folds sit in a card, like the one inside the body questions, so every fold lines up. */}
+      {!detailShown ? (
+        <FormSection>
+          <Disclosure
+            label="More detail"
+            hint="How your body felt, and how the session went"
+            onPress={() => setMoreOpen(true)}
           />
-        )}
-        {reasons.includes('pain') ? (
-          <>
-            <Question title="Where is the pain?">
-              <Options
-                label="Pain area"
-                value={answers.painArea}
-                values={PAIN_AREAS}
-                onChange={(v) => setAnswer('painArea', v)}
-              />
-            </Question>
-            <Question title="How bad was it?">
-              <Options
-                label="Pain severity"
-                value={answers.painSeverity}
-                values={PAIN_SEVERITY}
-                onChange={(v) => setAnswer('painSeverity', v)}
-              />
-            </Question>
-          </>
-        ) : null}
-        {safety ? (
-          <Notice tone="warning">
-            {`Rest and seek professional advice for pain that changes how you move. Your ${coach} won’t prescribe training through it.`}
-          </Notice>
-        ) : null}
-      </FormSection>
+        </FormSection>
+      ) : null}
 
-      <FormSection>
-        <Field
-          label={placeholder ? 'What did you do?' : `Anything else for your ${coach}?`}
-          value={note}
-          multiline
-          maxLength={2000}
-          onChangeText={(value) => {
-            setNote(value);
-            changed();
-          }}
-          placeholder={
-            placeholder
-              ? `The session, such as 6 × 800 m off 90 s, and anything else for your ${coach}…`
-              : 'How it went, what helped, or anything you want to talk through…'
-          }
+      {status === 'changed' ? null : notesSection}
+
+      {/* Talking it through is the second choice, so it sits below the form, not in the footer. */}
+      <View style={{ gap: 8 }}>
+        <Button
+          label={inAppCoach ? 'Save and talk it through' : 'Save and ask your agent'}
+          icon={askIcon}
+          variant="ghost"
+          busy={discuss.isPending}
+          disabled={busy}
+          onPress={() => void persist(true)}
         />
-      </FormSection>
-
+        <Text variant="caption" color="muted" style={{ textAlign: 'center', fontSize: 12 }}>
+          Saving feedback never changes your plan.
+        </Text>
+      </View>
       {log ? (
         <View style={{ gap: 10 }}>
-          <Button
-            variant="danger"
-            size="md"
-            icon="trash-outline"
-            label="Clear this log"
-            busy={clear.isPending}
-            disabled={busy}
-            onPress={() =>
-              clear.mutate(undefined, { onSuccess: () => guard.exit(() => leaveScreen()) })
+          {/* A quiet text action at the very end: clearing is rare and can't be undone. */}
+          <Pressable
+            onPress={
+              busy || clear.isPending
+                ? undefined
+                : () =>
+                    clear.mutate(undefined, { onSuccess: () => guard.exit(() => leaveScreen()) })
             }
-          />
+            accessibilityRole="button"
+            accessibilityState={{ disabled: busy, busy: clear.isPending }}
+            hitSlop={8}
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 6,
+              paddingVertical: 8,
+              opacity: busy ? 0.5 : 1,
+            }}
+          >
+            <Ionicons name="trash-outline" size={14} color={theme.danger} />
+            <Text variant="caption" style={{ color: theme.danger, fontWeight: '700' }}>
+              {clear.isPending ? 'Clearing…' : 'Clear this log'}
+            </Text>
+          </Pressable>
           {clear.error ? <ErrorState message={clear.error.message} /> : null}
         </View>
       ) : null}

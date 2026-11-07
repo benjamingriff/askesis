@@ -50,9 +50,9 @@ export function AccountDeletionPending({ purgeAfter }: { purgeAfter: string }) {
         Your account will be deleted on {formatInstantLong(purgeAfter)}
       </Text>
       <Text variant="body" color="dim" style={{ marginTop: 12 }}>
-        Your plans, coach conversations, training log and fitness history will be permanently
-        deleted then, along with your sign-in. Until then you can change your mind, or download a
-        copy of your data first.
+        Your plans, conversations, training log and fitness history will be permanently deleted
+        then, along with your sign-in. Until then you can change your mind, or download a copy of
+        your data first.
       </Text>
       <View style={{ gap: 10, marginTop: 28 }}>
         <Button

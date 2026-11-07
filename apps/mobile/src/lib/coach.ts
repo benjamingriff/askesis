@@ -9,6 +9,17 @@ export function agentPrompt(request: string, plan?: { id: string; name?: string 
   return `Using Waddle, for my plan${name} (planId ${plan.id}):\n${request}`;
 }
 
+/**
+ * A prompt with the athlete's question added. An open request (ending in a colon) is finished by
+ * the question, or closed with a full stop when there is none; otherwise the question follows.
+ */
+export function withQuestion(prompt: string, question: string) {
+  const asked = question.trim();
+  if (/:\s*$/.test(prompt))
+    return asked ? `${prompt.trimEnd()} ${asked}` : `${prompt.replace(/:\s*$/, '')}.`;
+  return asked ? `${prompt}\n\n${asked}` : prompt;
+}
+
 /** The request behind every "start a plan" action when there is no plan to name yet. */
 export const START_PLAN_REQUEST =
   'Help me build a training plan. List my plans first, then ask me about my goal, my dates and the training I do now.';

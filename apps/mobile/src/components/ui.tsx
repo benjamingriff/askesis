@@ -248,7 +248,8 @@ export function Button({
   label: string;
   onPress?: () => void;
   icon?: IconName;
-  variant?: 'primary' | 'secondary' | 'ghost' | 'danger';
+  /** `tonal`: an accent tint and edge, for a main action that shouldn't be a solid lime slab. */
+  variant?: 'primary' | 'secondary' | 'tonal' | 'ghost' | 'danger';
   disabled?: boolean;
   busy?: boolean;
   style?: StyleProp<ViewStyle>;
@@ -260,13 +261,17 @@ export function Button({
       ? theme.accent
       : variant === 'secondary'
         ? theme.colors.surfaceRaised
-        : 'transparent';
+        : variant === 'tonal'
+          ? theme.accentSoft
+          : 'transparent';
   const fg =
     variant === 'primary'
       ? theme.onAccent
       : variant === 'danger'
         ? theme.danger
-        : theme.colors.text;
+        : variant === 'tonal' && theme.isDark
+          ? theme.accentText
+          : theme.colors.text;
   return (
     <PressableScale
       onPress={disabled || busy ? undefined : onPress}
@@ -286,7 +291,15 @@ export function Button({
           opacity: disabled ? 0.4 : 1,
           overflow: 'hidden',
         },
-        variant === 'ghost' && { borderWidth: 1, borderColor: theme.colors.border },
+        variant === 'ghost' && {
+          borderWidth: 1,
+          borderColor: theme.isDark ? theme.colors.border : theme.colors.textMuted,
+        },
+        variant === 'tonal' && { borderWidth: 1, borderColor: theme.accentBorder },
+        variant === 'secondary' && {
+          borderWidth: theme.isDark ? StyleSheet.hairlineWidth : 1,
+          borderColor: theme.colors.border,
+        },
         variant === 'danger' && { borderWidth: 1, borderColor: alphaHex(theme.danger, 0.4) },
         style,
       ]}
@@ -521,7 +534,7 @@ export function ProgressBar({
         style={{
           height,
           borderRadius: height / 2,
-          backgroundColor: color ?? theme.accent,
+          backgroundColor: color ?? (theme.isDark ? theme.accent : theme.accentText),
           width: anim.interpolate({ inputRange: [0, 1], outputRange: ['0%', '100%'] }),
         }}
       />
@@ -582,14 +595,25 @@ export function Segmented<T extends string>({
           top: 3,
           bottom: 3,
           left: 3,
-          width: Animated.divide(Animated.subtract(widthAnim, 6), options.length),
+          // The track's inner width: less its padding and its hairline border, so the thumb sits
+          // evenly in the first and last slots.
+          width: Animated.divide(
+            Animated.subtract(widthAnim, 6 + 2 * StyleSheet.hairlineWidth),
+            options.length,
+          ),
           borderRadius: 11,
           backgroundColor: theme.colors.surfaceRaised,
+          // An outline keeps the selected segment visible where surface and raised are close.
+          borderWidth: StyleSheet.hairlineWidth,
+          borderColor: theme.colors.textMuted,
           transform: [
             {
               translateX: Animated.multiply(
                 x,
-                Animated.divide(Animated.subtract(widthAnim, 6), options.length),
+                Animated.divide(
+                  Animated.subtract(widthAnim, 6 + 2 * StyleSheet.hairlineWidth),
+                  options.length,
+                ),
               ),
             },
           ],
@@ -731,7 +755,10 @@ export function ActionList({
       style={[
         {
           borderRadius: 18,
-          backgroundColor: theme.colors.surfaceRaised,
+          // The same surface as cards, so grouped lists and cards read as one family.
+          backgroundColor: theme.colors.surface,
+          borderWidth: StyleSheet.hairlineWidth,
+          borderColor: theme.colors.border,
           overflow: 'hidden',
         },
         style,
@@ -768,8 +795,7 @@ export function ActionList({
                   borderRadius: 9,
                   alignItems: 'center',
                   justifyContent: 'center',
-                  backgroundColor:
-                    action.tone === 'danger' ? theme.dangerSoft : theme.colors.surface,
+                  backgroundColor: theme.colors.surfaceRaised,
                 }}
               >
                 <Ionicons name={action.icon} size={16} color={tint} />
@@ -975,14 +1001,21 @@ export function ScreenHeader({
   onBack: () => void;
   right?: ReactNode;
 }) {
+  const theme = useTheme();
   return (
     <View
       style={{
         flexDirection: 'row',
         alignItems: 'center',
-        paddingHorizontal: 12,
+        // The back arrow is a bare icon, so it sits closer to the edge; filled actions on the
+        // right line up with the page's 20pt gutter.
+        paddingLeft: 12,
+        paddingRight: 20,
         paddingVertical: 6,
         gap: 4,
+        backgroundColor: theme.colors.bg,
+        borderBottomWidth: StyleSheet.hairlineWidth,
+        borderBottomColor: theme.colors.border,
       }}
     >
       <IconButton icon="chevron-back" accessibilityLabel="Back" onPress={onBack} />

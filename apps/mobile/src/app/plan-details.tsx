@@ -1,3 +1,4 @@
+import { Ionicons } from '@expo/vector-icons';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
@@ -6,6 +7,7 @@ import { DateField, Field, FormScreen, FormSection, useLeaveGuard } from '../com
 import { Button, ErrorState, LoadingState, Notice, Text } from '../components/ui';
 import { usePlan, writePlan, type Plan } from '../data/plan-data';
 import { api } from '../lib/api';
+import { formatRange } from '../lib/format';
 import { result } from '../lib/result';
 import { useTheme } from '../state/settings';
 
@@ -98,67 +100,110 @@ function DetailsForm({ plan }: { plan: Plan }) {
     : !baseline.draft && contentDirty
       ? 'There is no editable draft any more. Copy your edits, then unlock the plan to save them.'
       : null;
+  const lengthSuffix = name.match(/ · \d+ (?:weeks?|days?)$/)?.[0] ?? '';
   const datesInvalid = !!startDate && !!endDate && endDate < startDate;
   const canSave =
-    !busy && !unsavable && !datesInvalid && !!name.trim() && (nameDirty || contentDirty);
+    !busy &&
+    !unsavable &&
+    !datesInvalid &&
+    !!name.slice(0, name.length - lengthSuffix.length).trim() &&
+    (nameDirty || contentDirty);
   const draftLocked = !baseline.draft || busy;
   const guard = useLeaveGuard(nameDirty || contentDirty, { busy: save.isPending });
   return (
     <FormScreen
       title="Plan details"
-      subtitle={plan.displayName}
       guard={guard}
       saveLabel="Save"
       canSave={canSave}
       saving={save.isPending}
       onSave={() => save.mutate()}
     >
-      <Text variant="caption" color="muted">
-        The name is not versioned. Dates and description belong to the draft.
-      </Text>
       <FormSection>
         <Field
           label="Plan name"
-          value={name}
-          onChangeText={setName}
+          // The app shows names without a trailing "· 12 weeks" (the dates give the length), so
+          // the field edits that same name and keeps the stored suffix out of sight.
+          value={name.slice(0, name.length - lengthSuffix.length)}
+          onChangeText={(value) => setName(value + lengthSuffix)}
           maxLength={200}
           disabled={busy}
         />
       </FormSection>
-      <FormSection title="Draft">
+      <FormSection
+        title="Dates and description"
+        description={
+          baseline.draft
+            ? 'These change the draft. Lock the plan to start following them.'
+            : undefined
+        }
+      >
         {!baseline.draft ? (
-          <Notice icon="lock-closed" tone="locked">
-            Unlock the plan to change its dates or description.
-          </Notice>
+          // A plain note, not a box inside the card.
+          <View style={{ flexDirection: 'row', gap: 8 }}>
+            <Ionicons
+              name="lock-closed"
+              size={14}
+              color={theme.colors.textMuted}
+              style={{ marginTop: 2 }}
+            />
+            <Text variant="caption" color="muted" style={{ flex: 1 }}>
+              Fixed while the plan is locked. Unlock it from the plan’s options to change them.
+            </Text>
+          </View>
         ) : null}
-        <Field
-          label="Description"
-          value={description}
-          onChangeText={setDescription}
-          multiline
-          maxLength={20000}
-          disabled={draftLocked}
-        />
-        <View style={{ flexDirection: 'row', gap: 12 }}>
-          <DateField
-            label="Start date"
-            value={startDate}
-            onChange={setStartDate}
-            max={endDate || undefined}
-            disabled={draftLocked}
-            clearable
-            style={{ flex: 1 }}
-          />
-          <DateField
-            label="End date"
-            value={endDate}
-            onChange={setEndDate}
-            min={startDate || undefined}
-            disabled={draftLocked}
-            clearable
-            style={{ flex: 1 }}
-          />
-        </View>
+        {/* Locked content reads as text, not as faded inputs that look empty. */}
+        {baseline.draft ? (
+          <>
+            <Field
+              label="Description"
+              value={description}
+              onChangeText={setDescription}
+              multiline
+              maxLength={20000}
+              disabled={draftLocked}
+            />
+            <View style={{ flexDirection: 'row', gap: 12 }}>
+              <DateField
+                label="Start date"
+                value={startDate}
+                onChange={setStartDate}
+                max={endDate || undefined}
+                disabled={draftLocked}
+                clearable
+                style={{ flex: 1 }}
+              />
+              <DateField
+                label="End date"
+                value={endDate}
+                onChange={setEndDate}
+                min={startDate || undefined}
+                disabled={draftLocked}
+                clearable
+                style={{ flex: 1 }}
+              />
+            </View>
+          </>
+        ) : (
+          <View style={{ gap: 12 }}>
+            <View style={{ gap: 4 }}>
+              <Text variant="caption" color="text" style={{ fontWeight: '700' }}>
+                Dates
+              </Text>
+              <Text variant="body" numeric>
+                {formatRange(version?.startDate ?? null, version?.endDate ?? null)}
+              </Text>
+            </View>
+            <View style={{ gap: 4 }}>
+              <Text variant="caption" color="text" style={{ fontWeight: '700' }}>
+                Description
+              </Text>
+              <Text variant="body" color={version?.description ? 'text' : 'muted'}>
+                {version?.description || 'No description'}
+              </Text>
+            </View>
+          </View>
+        )}
         {datesInvalid ? (
           <Text variant="caption" color={theme.danger}>
             The end date must be on or after the start date.

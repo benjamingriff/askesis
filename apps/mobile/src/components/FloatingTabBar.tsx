@@ -33,7 +33,8 @@ export function FloatingTabBar({ state, descriptors, emitter, navigateToTab }: T
       {/* Soft fade so scrolling content doesn't collide with the pill */}
       <LinearGradient
         pointerEvents="none"
-        colors={[alpha(theme.colors.bg, 0), alpha(theme.colors.bg, 0.92)]}
+        colors={[alpha(theme.colors.bg, 0), theme.colors.bg]}
+        locations={[0, 0.45]}
         style={{
           position: 'absolute',
           left: 0,
@@ -50,7 +51,7 @@ export function FloatingTabBar({ state, descriptors, emitter, navigateToTab }: T
           borderRadius: TAB_BAR_HEIGHT / 2,
           padding: 5,
           flexDirection: 'row',
-          backgroundColor: alpha(theme.colors.surface, 0.97),
+          backgroundColor: theme.colors.surface,
           borderWidth: StyleSheet.hairlineWidth,
           borderColor: theme.colors.border,
           shadowColor: '#000',

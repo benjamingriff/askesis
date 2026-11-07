@@ -109,7 +109,11 @@ export function DayRow({
               padding: 14,
               borderWidth: 1,
               borderStyle: 'dashed',
-              borderColor: isToday ? theme.accentBorder : theme.colors.border,
+              borderColor: isToday
+                ? theme.accentBorder
+                : theme.isDark
+                  ? theme.colors.border
+                  : theme.colors.textMuted,
               flexDirection: 'row',
               alignItems: 'center',
               gap: 10,
@@ -136,7 +140,6 @@ export function DayRow({
               units={units}
               version={version}
               highlight={isToday}
-              past={past}
               onOpen={onOpen}
             />
           ))
@@ -151,14 +154,12 @@ export function WorkoutCard({
   units,
   version,
   highlight,
-  past,
   onOpen,
 }: {
   workout: WorkoutSummary;
   units: Units;
   version?: Pick<PlanVersion, 'id' | 'editNumber'> | null;
   highlight?: boolean;
-  past?: boolean;
   onOpen: (workout: WorkoutSummary) => void;
 }) {
   const theme = useTheme();
@@ -178,7 +179,7 @@ export function WorkoutCard({
     !!logContext?.ready &&
     logContext.writable &&
     workout.planVersionId === logContext.lockedVersionId &&
-    workout.scheduledDate < today;
+    workout.scheduledDate <= today;
   // The quick log sits beside the card's pressable, not inside it: buttons don't nest.
   return (
     <View
@@ -200,8 +201,7 @@ export function WorkoutCard({
         onPress={() => onOpen(workout)}
         accessibilityRole="button"
         accessibilityLabel={`${workout.title}, ${look.label}`}
-        // Logged sessions stay at full strength: they're the record of what happened.
-        style={{ padding: 14, opacity: past && !log ? 0.78 : 1 }}
+        style={{ padding: 14 }}
       >
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
           <View style={{ opacity: skipped ? 0.5 : 1 }}>
@@ -213,13 +213,23 @@ export function WorkoutCard({
                 {look.label}
               </Text>
               {workout.racePriority ? (
-                <Text variant="label" style={{ color: theme.accentText }}>
-                  {RACE_META[workout.racePriority].label}
-                </Text>
+                <>
+                  <Text variant="label" color="muted">
+                    ·
+                  </Text>
+                  <Text variant="label" style={{ color: theme.accentText }}>
+                    {RACE_META[workout.racePriority].label}
+                  </Text>
+                </>
               ) : workout.priority === 'high' ? (
-                <Text variant="label" color="dim">
-                  Key session
-                </Text>
+                <>
+                  <Text variant="label" color="muted">
+                    ·
+                  </Text>
+                  <Text variant="label" color="dim">
+                    Key session
+                  </Text>
+                </>
               ) : null}
               {workout.placeholder ? (
                 <Badge
@@ -250,34 +260,44 @@ export function WorkoutCard({
           </View>
           <Ionicons name="chevron-forward" size={18} color={theme.colors.textMuted} />
         </View>
-        <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 14, marginTop: 12 }}>
-          <Text variant="caption" numeric style={{ width: 124 }}>
-            {workoutMeta(workout, units, pool)}
-          </Text>
-          <View style={{ flex: 1 }}>
-            {workout.placeholder ? (
-              <PlaceholderBand workout={workout} compact />
-            ) : detail.data ? (
-              <IntensityChart
-                prescription={detail.data.prescription}
-                height={26}
-                gap={1.5}
-                dimmed={past && !log}
-              />
-            ) : null}
+        {quickLog ? null : (
+          <View
+            style={{
+              flexDirection: 'row',
+              // A result chip centres on the duration; an effort profile sits on its baseline.
+              alignItems: log ? 'center' : 'flex-end',
+              gap: 14,
+              marginTop: 12,
+            }}
+          >
+            <Text variant="caption" numeric style={{ width: 124 }}>
+              {log ? 'Planned ' : ''}
+              {workoutMeta(workout, units, pool)}
+            </Text>
+            <View style={{ flex: 1 }}>
+              {/* A logged session shows its result here, so every card keeps two rows. */}
+              {log ? (
+                <View style={{ flexDirection: 'row', justifyContent: 'flex-end' }}>
+                  <LogChip log={log} />
+                </View>
+              ) : workout.placeholder ? (
+                <PlaceholderBand workout={workout} compact />
+              ) : detail.data ? (
+                <IntensityChart prescription={detail.data.prescription} height={26} gap={1.5} />
+              ) : null}
+            </View>
           </View>
-        </View>
-        {log ? (
+        )}
+        {log && (log.actualSessionType || flag) ? (
           <View
             style={{
               flexDirection: 'row',
               flexWrap: 'wrap',
               alignItems: 'center',
               gap: 8,
-              marginTop: 12,
+              marginTop: 8,
             }}
           >
-            <LogChip log={log} />
             {log.actualSessionType ? (
               <Text variant="caption" color="muted">
                 Was {KIND_META[log.actualSessionType].label.toLowerCase()}
@@ -297,14 +317,21 @@ export function WorkoutCard({
         ) : null}
       </PressableScale>
       {quickLog ? (
+        // Beside the card's pressable, not inside it: buttons don't nest. The details take the
+        // room the actions leave and wrap, in place of the effort profile.
         <View
           style={{
-            marginHorizontal: 14,
-            paddingVertical: 12,
-            borderTopWidth: StyleSheet.hairlineWidth,
-            borderTopColor: theme.colors.border,
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 10,
+            paddingHorizontal: 14,
+            paddingBottom: 14,
+            marginTop: -2,
           }}
         >
+          <Text variant="caption" numeric style={{ flex: 1 }}>
+            {workoutMeta(workout, units, pool)}
+          </Text>
           <WorkoutLogActions workout={workout} variant="compact" />
         </View>
       ) : null}

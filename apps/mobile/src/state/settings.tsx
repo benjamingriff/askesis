@@ -106,8 +106,10 @@ export function buildTheme(settings: Settings, systemScheme: 'light' | 'dark'): 
     accentStops: stops,
     onAccent: onFill(stops),
     accentText: readableOn(accent, def.colors.bg),
-    accentSoft: alpha(accent, dark ? 0.14 : 0.16),
-    accentBorder: alpha(accent, dark ? 0.35 : 0.5),
+    // On light backgrounds a bright accent washes out, so its tint is stronger and its outlines
+    // use the readable (darker) accent.
+    accentSoft: alpha(accent, dark ? 0.14 : 0.3),
+    accentBorder: dark ? alpha(accent, 0.35) : alpha(readableOn(accent, def.colors.bg), 0.7),
     efforts: Object.fromEntries(
       EFFORTS.map((effort) => [effort, EFFORT_META[effort][dark ? 'dark' : 'light']]),
     ) as Record<Effort, string>,

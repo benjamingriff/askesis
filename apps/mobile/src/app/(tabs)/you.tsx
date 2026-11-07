@@ -3,7 +3,7 @@ import { useTabBarInset } from '../../components/FloatingTabBar';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useState, type ReactNode } from 'react';
-import { ScrollView, Switch, View } from 'react-native';
+import { Platform, ScrollView, Switch, View } from 'react-native';
 import {
   AccentFill,
   Button,
@@ -25,8 +25,10 @@ import {
   useDataExport,
   useInAppCoach,
 } from '../../data/account';
+import { useIntegrations } from '../../data/activities';
 import { useActivePlans } from '../../data/plan-data';
 import { apiBaseUrl } from '../../lib/config';
+import { shortEmail } from '../../lib/format';
 import {
   useSettings,
   useTheme,
@@ -44,7 +46,8 @@ export function initials(name: string) {
   ).toUpperCase();
 }
 
-function Group({ title, children }: { title?: string; children: ReactNode }) {
+/** A settings card. `note` is a caption beneath it that explains one of its rows. */
+function Group({ title, note, children }: { title?: string; note?: string; children: ReactNode }) {
   const theme = useTheme();
   return (
     <View style={{ marginTop: 24, paddingHorizontal: 20 }}>
@@ -64,6 +67,11 @@ function Group({ title, children }: { title?: string; children: ReactNode }) {
       >
         {children}
       </View>
+      {note ? (
+        <Text variant="caption" color="muted" style={{ marginTop: 8, marginHorizontal: 4 }}>
+          {note}
+        </Text>
+      ) : null}
     </View>
   );
 }
@@ -114,10 +122,11 @@ function Row({
       >
         <Ionicons name={icon} size={17} color={iconColor} />
       </View>
-      <View style={{ flex: 1 }}>
+      <View style={{ flex: 1, minWidth: 72 }}>
         <Text
           variant="subheading"
-          style={{ fontWeight: '500', color: danger ? theme.danger : theme.colors.text }}
+          numberOfLines={1}
+          style={{ fontWeight: '600', color: danger ? theme.danger : theme.colors.text }}
         >
           {label}
         </Text>
@@ -165,6 +174,7 @@ export default function YouScreen() {
   const { user } = useUser();
   const { signOut } = useClerk();
   const plans = useActivePlans();
+  const integrations = useIntegrations();
   const [signingOut, setSigningOut] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
@@ -176,8 +186,13 @@ export default function YouScreen() {
     <Switch
       value={value}
       onValueChange={onValueChange}
-      trackColor={{ true: theme.accent, false: theme.colors.surfaceRaised }}
+      trackColor={{
+        true: theme.isDark ? theme.accent : theme.accentText,
+        false: theme.colors.surfaceRaised,
+      }}
       thumbColor="#FFFFFF"
+      // react-native-web colours the "on" thumb teal unless told otherwise.
+      {...(Platform.OS === 'web' ? { activeThumbColor: '#FFFFFF' } : {})}
     />
   );
 
@@ -228,13 +243,8 @@ export default function YouScreen() {
                 {name}
               </Text>
               <Text variant="caption" numberOfLines={1}>
-                {email ?? 'Signed in'}
+                {email ? shortEmail(email) : 'Signed in'}
               </Text>
-              {plans.data?.length ? (
-                <Text variant="caption" color="muted" numberOfLines={1}>
-                  {plans.data.map((plan) => plan.displayName).join(' · ')}
-                </Text>
-              ) : null}
             </View>
             <Ionicons name="chevron-forward" size={16} color={theme.colors.textMuted} />
           </PressableScale>
@@ -255,9 +265,14 @@ export default function YouScreen() {
           />
         </Group>
 
-        <Group title="Connections">
-          <StravaConnection />
-        </Group>
+        {/* Strava only appears where this server can connect it (or a connection remains). */}
+        {integrations.data &&
+        !integrations.data.strava.available &&
+        !integrations.data.strava.connection ? null : (
+          <Group title="Connections">
+            <StravaConnection />
+          </Group>
+        )}
 
         <Group title="Look & feel">
           <Row
@@ -283,7 +298,7 @@ export default function YouScreen() {
           />
         </Group>
 
-        <Group title="Units">
+        <Group title="Units" note="Distance “Plan” shows each plan in the unit it was written in.">
           <Row
             icon="resize"
             label="Distance"
@@ -291,7 +306,7 @@ export default function YouScreen() {
               <Segmented<UnitPreference>
                 value={settings.units}
                 onChange={(units) => update({ units })}
-                style={{ width: 150 }}
+                style={{ width: 190 }}
                 options={[
                   { value: 'plan', label: 'Plan' },
                   { value: 'km', label: 'km' },
@@ -307,7 +322,7 @@ export default function YouScreen() {
               <Segmented<PoolUnits>
                 value={settings.pool}
                 onChange={(pool) => update({ pool })}
-                style={{ width: 112 }}
+                style={{ width: 190 }}
                 options={[
                   { value: 'm', label: 'm' },
                   { value: 'yd', label: 'yd' },
@@ -323,7 +338,7 @@ export default function YouScreen() {
               <Segmented<LoadUnits>
                 value={settings.load}
                 onChange={(load) => update({ load })}
-                style={{ width: 112 }}
+                style={{ width: 190 }}
                 options={[
                   { value: 'kg', label: 'kg' },
                   { value: 'lb', label: 'lb' },
@@ -353,7 +368,11 @@ export default function YouScreen() {
           <Row
             icon="download-outline"
             label="Download my data"
-            hint="Plans, coach conversations, training log, check-ins and fitness history as one JSON file."
+            hint={
+              coach
+                ? 'Plans, coach conversations, training log, check-ins and fitness history as one JSON file.'
+                : 'Plans, training log, check-ins and fitness history as one JSON file.'
+            }
             value={download.isPending ? 'Preparing…' : undefined}
             onPress={download.isPending ? undefined : () => download.mutate()}
           />
@@ -395,9 +414,11 @@ export default function YouScreen() {
           <Text variant="caption" color="muted">
             Waddle · v0.1.0
           </Text>
-          <Text variant="caption" color="muted" style={{ textAlign: 'center' }}>
-            {apiBaseUrl() ? `API ${apiBaseUrl()}` : 'API on this origin'}
-          </Text>
+          {apiBaseUrl() ? (
+            <Text variant="caption" color="muted" style={{ textAlign: 'center' }}>
+              {`API ${apiBaseUrl()}`}
+            </Text>
+          ) : null}
         </View>
       </ScrollView>
       {/* Outside the ScrollView: touches follow the React tree, and that ScrollView would take the

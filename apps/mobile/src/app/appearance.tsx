@@ -1,9 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { ScrollView, TextInput, View, Platform } from 'react-native';
+import { Platform, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import {
-  AccentFill,
   Button,
   IconButton,
   PressableScale,
@@ -54,7 +53,7 @@ function Preview() {
           }}
         >
           <Text variant="caption" color="accent" style={{ fontWeight: '800', fontSize: 11.5 }}>
-            Week 2 of 8
+            Week 2
           </Text>
         </View>
       </View>
@@ -71,7 +70,7 @@ function Preview() {
           Threshold
         </Text>
         <Text variant="subheading" style={{ marginTop: 2 }}>
-          2 × 10 min tempo
+          2 × 10 min threshold
         </Text>
         <View
           style={{
@@ -101,50 +100,52 @@ function Preview() {
           ))}
         </View>
       </View>
-      <View
-        style={{
-          alignSelf: 'flex-end',
-          borderRadius: 18,
-          borderBottomRightRadius: 6,
-          paddingHorizontal: 14,
-          paddingVertical: 8,
-          backgroundColor: theme.colors.surfaceRaised,
-        }}
-      >
-        <Text variant="body" style={{ fontSize: 14 }}>
-          Make Thursday easier
-        </Text>
-      </View>
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-        <View
-          style={{
-            flex: 1,
-            height: 40,
-            borderRadius: 20,
-            backgroundColor: theme.colors.surface,
-            borderWidth: 1,
-            borderColor: theme.colors.border,
-            justifyContent: 'center',
-            paddingHorizontal: 14,
-          }}
-        >
-          <Text variant="caption" color="muted">
-            Ask your coach…
-          </Text>
-        </View>
-        <View
-          style={{
-            width: 40,
-            height: 40,
-            borderRadius: 20,
-            alignItems: 'center',
-            justifyContent: 'center',
-            overflow: 'hidden',
-          }}
-        >
-          <AccentFill />
-          <Ionicons name="arrow-up" size={20} color={theme.onAccent} />
-        </View>
+      {/* The log buttons on Today's card: Done filled with the accent, Changed it and Skip neutral. */}
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+        {(
+          [
+            ['checkmark', 'Done', true],
+            ['pencil', 'Changed it', false],
+            ['close', 'Skip', false],
+          ] as const
+        ).map(([icon, label, main]) => (
+          <View
+            key={label}
+            style={{
+              flex: 1,
+              height: 36,
+              borderRadius: 12,
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 4,
+              overflow: 'hidden',
+              backgroundColor: main ? theme.accent : theme.colors.surfaceRaised,
+            }}
+          >
+            {main && theme.accentStops.length > 1 ? (
+              <LinearGradient
+                pointerEvents="none"
+                colors={theme.accentStops as [string, string]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={StyleSheet.absoluteFill}
+              />
+            ) : null}
+            <Ionicons name={icon} size={13} color={main ? theme.onAccent : theme.colors.textDim} />
+            <Text
+              variant="caption"
+              numberOfLines={1}
+              style={{
+                fontWeight: '800',
+                fontSize: 12,
+                color: main ? theme.onAccent : theme.colors.text,
+              }}
+            >
+              {label}
+            </Text>
+          </View>
+        ))}
       </View>
     </View>
   );
@@ -167,7 +168,7 @@ function ThemeSwatch({
       accessibilityRole="button"
       accessibilityLabel={`${def.name} theme`}
       accessibilityState={{ selected }}
-      style={{ width: '30%' }}
+      style={{ width: '47.5%' }}
     >
       <View
         style={{
@@ -175,7 +176,7 @@ function ThemeSwatch({
           borderRadius: 18,
           backgroundColor: def.colors.bg,
           borderWidth: selected ? 2 : 1,
-          borderColor: selected ? theme.accent : def.colors.border,
+          borderColor: selected ? theme.accentText : def.colors.border,
           padding: 10,
           justifyContent: 'space-between',
         }}
@@ -185,7 +186,14 @@ function ThemeSwatch({
             style={{ flex: 1, height: 22, borderRadius: 7, backgroundColor: def.colors.surface }}
           />
           <View
-            style={{ width: 22, height: 22, borderRadius: 11, backgroundColor: theme.accent }}
+            style={{
+              width: 22,
+              height: 22,
+              borderRadius: 11,
+              backgroundColor: theme.accent,
+              borderWidth: def.mode === 'light' ? 1 : 0,
+              borderColor: 'rgba(0,0,0,0.25)',
+            }}
           />
         </View>
         <View
@@ -274,28 +282,44 @@ export default function AppearanceScreen() {
           </Text>
         ) : null}
 
-        <Text variant="label" style={{ marginTop: 28, marginBottom: 12 }}>
-          Theme
-        </Text>
-        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10, rowGap: 14 }}>
-          {THEMES.map((def) => (
-            <ThemeSwatch
-              key={def.id}
-              def={def}
-              selected={
-                settings.mode === 'system'
-                  ? def.id === settings.darkTheme || def.id === settings.lightTheme
-                  : def.id === theme.themeId
-              }
-              onPress={() => pickTheme(def)}
-            />
-          ))}
-        </View>
+        {/* Grouped by mode: picking a theme also picks its mode, unless Mode follows the system. */}
+        {(['dark', 'light'] as const).map((mode) => (
+          <View key={mode}>
+            <Text
+              variant="label"
+              style={{ marginTop: mode === 'dark' ? 28 : 18, marginBottom: 12 }}
+            >
+              {mode === 'dark' ? 'Dark themes' : 'Light themes'}
+            </Text>
+            <View
+              style={{
+                flexDirection: 'row',
+                flexWrap: 'wrap',
+                justifyContent: 'space-between',
+                rowGap: 14,
+              }}
+            >
+              {THEMES.filter((def) => def.mode === mode).map((def) => (
+                <ThemeSwatch
+                  key={def.id}
+                  def={def}
+                  selected={
+                    settings.mode === 'system'
+                      ? def.id === settings.darkTheme || def.id === settings.lightTheme
+                      : def.id === theme.themeId
+                  }
+                  onPress={() => pickTheme(def)}
+                />
+              ))}
+            </View>
+          </View>
+        ))}
 
         <Text variant="label" style={{ marginTop: 28, marginBottom: 12 }}>
           Accent colour
         </Text>
-        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 14 }}>
+        {/* Four equal columns, so the two rows line up. */}
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', rowGap: 14 }}>
           {ACCENTS.map((a) => {
             const selected = a.id === settings.accent;
             const stops = accentStops(a.id, theme.isDark ? 'dark' : 'light');
@@ -307,7 +331,7 @@ export default function AppearanceScreen() {
                 accessibilityRole="button"
                 accessibilityLabel={`${a.name} accent`}
                 accessibilityState={{ selected }}
-                style={{ alignItems: 'center', gap: 6, width: 64 }}
+                style={{ alignItems: 'center', gap: 6, width: '25%' }}
               >
                 <View
                   style={{
@@ -396,6 +420,8 @@ export default function AppearanceScreen() {
           <Button
             label="Apply"
             size="md"
+            // Neutral until a valid colour is typed: a pale accent fill looks enabled.
+            variant={hexValid ? 'primary' : 'secondary'}
             disabled={!hexValid}
             onPress={() => {
               update({ accent: normalizeHex(hex) });
@@ -417,7 +443,7 @@ export default function AppearanceScreen() {
           Colour shows effort, from recovery to max. Icons show the sport. Workout colours stay the
           same whatever accent you choose.
         </Text>
-        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', rowGap: 4 }}>
           {EFFORTS.map((effort) => (
             <View
               key={effort}
@@ -425,12 +451,8 @@ export default function AppearanceScreen() {
                 flexDirection: 'row',
                 alignItems: 'center',
                 gap: 6,
-                paddingHorizontal: 10,
-                paddingVertical: 6,
-                borderRadius: 14,
-                backgroundColor: theme.colors.surface,
-                borderWidth: 1,
-                borderColor: theme.colors.border,
+                paddingVertical: 4,
+                width: '33.3%',
               }}
             >
               <View

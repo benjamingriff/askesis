@@ -16,7 +16,13 @@ import {
 } from '../components/ui';
 import { planVersion, useBriefState, usePlan, useWorkouts } from '../data/plan-data';
 import { effortFlag, loggedWorkout, useTrainingLog } from '../data/training-log';
-import { formatDistance, formatDuration, formatLong, formatSwimDistance } from '../lib/format';
+import {
+  formatDistance,
+  formatDuration,
+  formatLong,
+  formatSwimDistance,
+  planName,
+} from '../lib/format';
 import { KIND_META, workoutLook } from '../lib/workouts';
 import { effortTint, useSportUnits, useTheme, useUnits } from '../state/settings';
 
@@ -41,7 +47,7 @@ export default function TrainingLogScreen() {
     <Screen>
       <ScreenHeader
         title="Training log"
-        subtitle={plan.data?.displayName}
+        subtitle={plan.data ? planName(plan.data.displayName) : undefined}
         onBack={() => router.back()}
       />
       <ScrollView
@@ -62,10 +68,26 @@ export default function TrainingLogScreen() {
           <ErrorState message={query.error.message} onRetry={() => void query.refetch()} />
         ) : null}
         {summary && logs.length ? (
-          <Card style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-            <Stat label="Done" value={String(summary.done + summary.changed)} size={22} />
-            <Stat label="Skipped" value={String(summary.skipped)} size={22} />
-            <Stat label="Time" value={formatDuration(totalSeconds)} size={22} />
+          // Three equal, left-aligned columns.
+          <Card style={{ flexDirection: 'row' }}>
+            <View style={{ flex: 1 }}>
+              <Stat label="Logged" value={String(summary.done + summary.changed)} size={22} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Stat label="Skipped" value={String(summary.skipped)} size={22} />
+            </View>
+            <View style={{ flex: 1 }}>
+              {/* No recorded time is unknown, not zero training. */}
+              <Stat
+                label="Time"
+                value={
+                  totalSeconds || !logs.some((log) => log.status !== 'skipped')
+                    ? formatDuration(totalSeconds)
+                    : '—'
+                }
+                size={22}
+              />
+            </View>
           </Card>
         ) : null}
         {query.data && !logs.length ? (
@@ -81,7 +103,7 @@ export default function TrainingLogScreen() {
           const flag = effortFlag(log);
           return (
             <Card key={log.id} style={{ gap: 10 }}>
-              <View style={{ flexDirection: 'row', gap: 12, alignItems: 'center' }}>
+              <View style={{ flexDirection: 'row', gap: 12, alignItems: 'flex-start' }}>
                 <KindIcon icon={look.icon} color={color} />
                 <View style={{ flex: 1 }}>
                   <Text variant="subheading" numberOfLines={2}>
@@ -90,12 +112,17 @@ export default function TrainingLogScreen() {
                   <Text variant="caption" color="muted">
                     {formatLong(log.performedOn)}
                   </Text>
+                  <View style={{ marginTop: 6 }}>
+                    <LogChip log={log} />
+                  </View>
                 </View>
-                <LogChip log={log} />
               </View>
               <Text variant="caption">
+                {log.plannedDurationSeconds != null
+                  ? `Planned ${formatDuration(log.plannedDurationSeconds)} · `
+                  : ''}
                 {log.actualDurationSeconds == null
-                  ? 'Time not recorded'
+                  ? 'time not recorded'
                   : formatDuration(log.actualDurationSeconds)}
                 {log.actualDistanceMetres == null
                   ? ''
@@ -118,7 +145,7 @@ export default function TrainingLogScreen() {
               {writable ? (
                 <Button
                   size="sm"
-                  variant="ghost"
+                  variant="secondary"
                   icon="pencil"
                   label="Edit log"
                   style={{ alignSelf: 'flex-start' }}

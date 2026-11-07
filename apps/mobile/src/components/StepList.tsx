@@ -142,7 +142,7 @@ function EffortRow({
             flexDirection: 'row',
             justifyContent: 'space-between',
             alignItems: 'baseline',
-            gap: 8,
+            gap: 16,
           }}
         >
           <Text variant="subheading" style={{ flex: 1 }}>
@@ -150,7 +150,7 @@ function EffortRow({
           </Text>
           {completion ? (
             step.completion?.value != null ? (
-              <Text variant="subheading" numeric style={{ fontWeight: '800' }}>
+              <Text variant="subheading" numeric style={{ fontWeight: '800', flexShrink: 0 }}>
                 {completion}
               </Text>
             ) : (
@@ -219,8 +219,9 @@ function Steps({
                 <Badge
                   label={`Repeat ${step.repeatCount ?? 1}×`}
                   caps
-                  color={theme.onAccent}
-                  background={theme.accent}
+                  color={theme.accentText}
+                  background={theme.accentSoft}
+                  border={theme.accentBorder}
                 />
                 {step.label ? (
                   <Text variant="caption" color="text" style={{ flex: 1, fontWeight: '700' }}>

@@ -12,7 +12,7 @@ export function StartPlanButton({ coachLabel }: { coachLabel: string }) {
   ) : (
     <Button
       label="Ask your agent"
-      icon="chatbubble-ellipses"
+      icon="paper-plane-outline"
       onPress={() => askAgent(agentPrompt(START_PLAN_REQUEST))}
     />
   );
