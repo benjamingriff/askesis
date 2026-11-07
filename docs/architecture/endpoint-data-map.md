@@ -10,6 +10,8 @@ The browser uses `/api/v1/*` with Clerk authorization; the API derives its inter
 
 The model's `apply_schedule_changes` is a **tool name inside a request body**, not an HTTP route. Every model tool goes through the same `POST /internal/agent/runs/:runId/tools` endpoint, carrying an operation ID and the run's expected version/edit. There is no public `POST /api/v1/workouts` or generic endpoint accepting a list of unrelated HTTP calls.
 
+A development-only third surface, `/mcp`, serves the athlete's own agent over the Model Context Protocol ([plan](../product/mcp-server-plan.md)). A bearer token from `MCP_DEV_TOKEN` acts as the athlete whose Clerk user is `MCP_DEV_CLERK_USER_ID`; production refuses the configuration. Its tools mirror the worker's but name their plan, and plan writes name the draft and edit they build on instead of a run. They call the same plan, schedule, log and performance services.
+
 ```mermaid
 flowchart TB
     browser["Browser / API client<br/>Clerk session"]

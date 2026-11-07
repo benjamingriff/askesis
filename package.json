@@ -21,6 +21,7 @@
     "dev:setup": "node scripts/dev-setup.mjs",
     "dev:local": "node scripts/dev-local.mjs",
     "dev:login": "pnpm --filter @waddle/api verification:login",
+    "dev:mcp": "node scripts/dev-local.mjs exec -- pnpm --filter @waddle/api mcp:access",
     "example:seed": "node scripts/dev-local.mjs exec -- pnpm --filter @waddle/api example:seed",
     "strava:simulate": "node scripts/dev-local.mjs exec -- pnpm --filter @waddle/api strava:simulate",
     "retention:run": "node scripts/dev-local.mjs exec -- pnpm --filter @waddle/api retention:run",
