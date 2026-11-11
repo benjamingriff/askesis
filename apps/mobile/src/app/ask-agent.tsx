@@ -127,12 +127,7 @@ export default function AskAgentScreen() {
         {showPrompt ? (
           <View style={[field, { paddingVertical: 12 }]}>
             {/* Selectable, so it can be copied by hand when the clipboard refuses. */}
-            <Text
-              variant="caption"
-              color="dim"
-              selectable
-              accessibilityLabel={`Prompt for your agent: ${text}`}
-            >
+            <Text variant="caption" color="dim" selectable>
               {text}
             </Text>
           </View>

@@ -70,6 +70,8 @@ export function shortEmail(email: string, max = 30) {
   if (at < 1) return `${email.slice(0, max - 1)}…`;
   const domain = email.slice(at);
   const keep = Math.max(4, max - domain.length - 1);
+  // A name part too short to shorten stays whole; the caller truncates the line.
+  if (at <= keep) return email;
   return `${email.slice(0, keep)}…${domain}`;
 }
 

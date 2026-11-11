@@ -466,7 +466,7 @@ function FeedbackForm({
   // still fold away until asked for, unless already answered.
   const detailShown = moreOpen || showReasons;
   const sessionShown = aboutSession && (moreOpen || sessionOpen);
-  const factorsShown = showReasons && (factorsOpen || reasons.length > 0);
+  const factorsShown = detailShown && (factorsOpen || reasons.length > 0);
   const safety =
     reasons.includes('pain') && answers.painSeverity && answers.painSeverity !== 'mild';
   const active = status !== 'skipped';
@@ -808,13 +808,7 @@ function FeedbackForm({
             <Disclosure
               label="What affected it"
               hint="Sleep, fuel, pain, time"
-              onPress={() => {
-                if (showReasons) setFactorsOpen(true);
-                else {
-                  setReasons(['other']);
-                  changed();
-                }
-              }}
+              onPress={() => setFactorsOpen(true)}
             />
           )}
           {!factorsShown && aboutSession && !sessionShown ? (

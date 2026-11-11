@@ -197,8 +197,14 @@ function TodayForPlan({ plan, today }: { plan: Plan; today: string }) {
   const selectedWorkouts = workoutsOn(all, selected);
   const nextWorkout = all.find((w) => w.scheduledDate > selected);
   // Where the week's unlogged sessions sit, so its count matches "Still to log" without sums.
-  const pastUnlogged = week.filter((w) => w.scheduledDate < today && !logged(w)).length;
-  const todayUnlogged = week.filter((w) => w.scheduledDate === today && !logged(w)).length;
+  // Until the log loads (or if it fails) nothing counts as unlogged, as in the strip and list.
+  const logsReady = !!logContext?.ready;
+  const pastUnlogged = logsReady
+    ? week.filter((w) => w.scheduledDate < today && !logged(w)).length
+    : 0;
+  const todayUnlogged = logsReady
+    ? week.filter((w) => w.scheduledDate === today && !logged(w)).length
+    : 0;
   const upcoming = week.filter((w) => w.scheduledDate > today).length;
   const weekBreakdown =
     [
@@ -207,7 +213,7 @@ function TodayForPlan({ plan, today }: { plan: Plan; today: string }) {
       upcoming ? `${upcoming} upcoming` : null,
     ]
       .filter(Boolean)
-      .join(' · ') || 'All logged';
+      .join(' · ') || (logsReady ? 'All logged' : '');
   // Logged sessions without a recorded amount (time, or distance for running) must not read as
   // zero training.
   const untimed = sessionsDone > 0 && completedAmount === 0;
@@ -619,7 +625,8 @@ function TodayForPlan({ plan, today }: { plan: Plan; today: string }) {
                 : theme.colors.border;
               // As the calendar: logged and today solid, upcoming faded, past unlogged hollow.
               // "To log" means no log at all; a skipped session is logged.
-              const hollow = items.length > 0 && d < today && !items.some((w) => logged(w));
+              const hollow =
+                logsReady && items.length > 0 && d < today && !items.some((w) => logged(w));
               return (
                 <View key={d} style={{ flex: 1, alignItems: 'center', gap: 6 }}>
                   <View style={{ flex: 1, justifyContent: 'flex-end', width: '100%' }}>

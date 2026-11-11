@@ -1203,7 +1203,9 @@ function CalendarView({
   dayStatus: (date: string) => DayStatus;
 }) {
   const theme = useTheme();
-  const logs = useLogContext()?.logs;
+  const logContext = useLogContext();
+  // No log marks until the log has loaded: an empty list would mark every past session unlogged.
+  const logs = logContext?.ready ? logContext.logs : undefined;
   // As Today's "Still to log": this week so far, and always the last three days.
   const logWindowStart =
     addDays(today, -3) < startOfWeek(today) ? addDays(today, -3) : startOfWeek(today);
