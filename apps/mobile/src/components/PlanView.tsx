@@ -2,7 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { router, type Href } from 'expo-router';
 import { useMemo, useState, type ReactNode } from 'react';
 import { Pressable, ScrollView, View } from 'react-native';
-import { useCoachWord } from '../data/account';
+import { useAskIcon, useCoachWord } from '../data/account';
 import {
   useDeletePlan,
   useDeletionImpact,
@@ -31,6 +31,7 @@ import {
   formatRange,
   formatShort,
   monthGrid,
+  planName,
   shiftMonth,
   startOfWeek,
   WEEKDAYS_SHORT,
@@ -45,13 +46,15 @@ import { BottomSheet } from './BottomSheet';
 import {
   BlockTimeline,
   CoverageNote,
+  fullyPlanned,
   StatusPill,
   WeekChart,
-  WeekStatsRow,
+  WeekSummaryLine,
   ZoneCards,
   zonesTitle,
 } from './PlanWidgets';
-import { TrainingLogProvider, openTrainingLog } from './TrainingLog';
+import { TrainingLogProvider, openTrainingLog, useLogContext } from './TrainingLog';
+import { alpha, EFFORTS } from '../theme/palette';
 import { ChangeBadge, DayRow, WorkoutChangesContext, type DayStatus } from './WorkoutRow';
 import {
   ActionList,
@@ -142,6 +145,7 @@ export function PlanView({
   const remove = useDeletePlan(plan);
   const askCoach = onAskCoach ?? ((prompt: string) => chat.mutate(prompt));
   const [confirm, setConfirm] = useState<Confirm>(null);
+  const [detailsOpen, setDetailsOpen] = useState(false);
   const progress = planProgress(version?.startDate ?? null, version?.endDate ?? null, today);
   const sports = planSports(brief.data?.brief, workouts.data);
   const goal = brief.data?.brief.goal;
@@ -160,21 +164,13 @@ export function PlanView({
       },
     });
 
+  // Locked is the normal state, shown by a lock in the header card; drafts and archives get a pill.
   const controls = (
     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flex: 1 }}>
-      <StatusPill
-        plan={plan}
-        onPress={
-          plan.archived
-            ? undefined
-            : plan.draft
-              ? reviewAndLock
-              : () => {
-                  lifecycle.reset();
-                  setConfirm('unlock');
-                }
-        }
-      />
+      {plan.archived || plan.draft ? (
+        <StatusPill plan={plan} onPress={plan.archived ? undefined : reviewAndLock} />
+      ) : null}
+      <View style={{ flex: 1 }} />
       {plan.locked ? (
         <PressableScale
           onPress={() => openTrainingLog(plan.id)}
@@ -196,7 +192,6 @@ export function PlanView({
           </Text>
         </PressableScale>
       ) : null}
-      <View style={{ flex: 1 }} />
       {headerRight}
       <IconButton
         icon="ellipsis-horizontal"
@@ -215,13 +210,19 @@ export function PlanView({
     <TrainingLogProvider plan={plan}>
       {/* Title, then the plan's controls below it */}
       {title ? (
-        <View style={{ paddingHorizontal: 20, paddingTop: embedded ? 4 : 12, gap: 12 }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-            {headerLeft}
-            <Text variant="title" numberOfLines={1} style={{ flexShrink: 1 }}>
-              {title}
-            </Text>
-          </View>
+        <View
+          style={{
+            paddingHorizontal: 20,
+            paddingTop: embedded ? 4 : 12,
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 8,
+          }}
+        >
+          {headerLeft}
+          <Text variant="title" numberOfLines={1} style={{ flexShrink: 1 }}>
+            {title}
+          </Text>
           {controls}
         </View>
       ) : (
@@ -256,30 +257,56 @@ export function PlanView({
         </View>
       ) : null}
 
-      {/* Plan hero */}
+      {/* Plan header: name, dates and where you are. The goal and description fold away, so the
+          schedule starts on the first screen. */}
       <View style={{ paddingHorizontal: 20, marginTop: 14 }}>
-        <Card style={{ padding: 18, gap: 16 }}>
-          <View>
-            {goal ? (
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                <Ionicons name="flag" size={14} color={theme.accentText} />
-                <Text variant="label" color="accent" numberOfLines={2} style={{ flex: 1 }}>
-                  {goal}
+        <Card style={{ padding: 14, gap: 10 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 10 }}>
+            <View style={{ flex: 1 }}>
+              <Text variant="heading" style={{ fontSize: 22, lineHeight: 28 }}>
+                {planName(plan.displayName)}
+              </Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 2 }}>
+                {view === 'locked' && !plan.archived ? (
+                  <Ionicons
+                    name="lock-closed"
+                    size={12}
+                    color={theme.colors.textMuted}
+                    accessibilityLabel="Locked"
+                  />
+                ) : null}
+                <Text variant="caption" numeric style={{ flexShrink: 1 }}>
+                  {formatRange(version?.startDate ?? null, version?.endDate ?? null)}
+                  {progress ? ` · ${progress.text}` : ''}
+                  {plan.active ? '' : ' · Inactive'}
                 </Text>
               </View>
+            </View>
+            {goal || version?.description || brief.data || blocks.length ? (
+              <PressableScale
+                onPress={() => setDetailsOpen(!detailsOpen)}
+                accessibilityRole="button"
+                accessibilityLabel={detailsOpen ? 'Hide plan details' : 'Show plan details'}
+                accessibilityState={{ expanded: detailsOpen }}
+                hitSlop={8}
+                style={{
+                  width: 32,
+                  height: 32,
+                  borderRadius: 16,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  backgroundColor: theme.colors.surfaceRaised,
+                }}
+              >
+                <Ionicons
+                  name={detailsOpen ? 'chevron-up' : 'chevron-down'}
+                  size={16}
+                  color={theme.colors.text}
+                />
+              </PressableScale>
             ) : null}
-            <Text
-              variant="heading"
-              style={{ marginTop: goal ? 6 : 0, fontSize: 24, lineHeight: 30 }}
-            >
-              {plan.displayName}
-            </Text>
-            <Text variant="caption" style={{ marginTop: 2 }}>
-              {formatRange(version?.startDate ?? null, version?.endDate ?? null)}
-              {plan.active ? ' · Active' : ' · Inactive'}
-            </Text>
           </View>
-          {blocks.length ? (
+          {detailsOpen && blocks.length ? (
             <BlockTimeline
               blocks={blocks}
               startDate={version?.startDate ?? null}
@@ -287,23 +314,26 @@ export function PlanView({
               today={today}
               races={workouts.data?.filter((workout) => workout.racePriority)}
             />
+          ) : progress ? (
+            <ProgressBar value={progress.value} height={6} />
           ) : null}
-          {progress ? (
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-              <View style={{ flex: 1 }}>
-                <ProgressBar value={progress.value} height={6} />
-              </View>
-              <Text variant="caption" numeric style={{ fontWeight: '700' }}>
-                {progress.text}
+          {detailsOpen && goal ? (
+            <View style={{ flexDirection: 'row', gap: 8 }}>
+              <Ionicons name="flag" size={14} color={theme.accentText} style={{ marginTop: 2 }} />
+              <Text variant="caption" color="text" style={{ flex: 1, fontWeight: '700' }}>
+                {goal}
               </Text>
             </View>
           ) : null}
-          {version?.description ? (
+          {detailsOpen && version?.description ? (
             <Text variant="caption" color="dim">
               {version.description}
             </Text>
           ) : null}
-          {brief.data ? <CoverageNote state={brief.data} /> : null}
+          {/* Coverage needs attention when it has gaps; a fully planned schedule is a detail. */}
+          {brief.data && (detailsOpen || !fullyPlanned(brief.data)) ? (
+            <CoverageNote state={brief.data} />
+          ) : null}
           {brief.error ? (
             <ErrorState message={brief.error.message} onRetry={() => void brief.refetch()} />
           ) : null}
@@ -659,6 +689,7 @@ function PlanActionsSheet({
   onDeleted: () => void;
 }) {
   const coach = useCoachWord();
+  const askIcon = useAskIcon(true);
   const archived = plan.archived;
   const copy = confirm && confirm !== 'menu' && confirm !== 'delete' ? CONFIRM_COPY[confirm] : null;
   return (
@@ -676,7 +707,7 @@ function PlanActionsSheet({
                 ? 'Archive this plan?'
                 : confirm === 'unarchive'
                   ? 'Unarchive this plan?'
-                  : plan.displayName
+                  : planName(plan.displayName)
       }
     >
       {confirm === 'delete' ? (
@@ -719,7 +750,7 @@ function PlanActionsSheet({
                 !archived && {
                   label:
                     coach === 'coach' ? 'Chat about this plan' : 'Ask your agent about this plan',
-                  icon: 'chatbubble-ellipses-outline',
+                  icon: askIcon,
                   onPress: onCoach,
                 },
               !archived && {
@@ -728,7 +759,7 @@ function PlanActionsSheet({
                 onPress: () => onOpen({ pathname: '/plan-details', params: { planId: plan.id } }),
               },
               {
-                label: plan.draft ? 'Brief & pace guides' : 'View brief & pace guides',
+                label: plan.draft ? 'Edit brief' : 'View brief',
                 icon: 'clipboard-outline',
                 onPress: () =>
                   onOpen({
@@ -754,7 +785,7 @@ function PlanActionsSheet({
             actions={[
               !archived &&
                 !plan.draft && {
-                  label: 'Unlock to edit',
+                  label: 'Unlock schedule',
                   icon: 'lock-open-outline',
                   onPress: () => onConfirm('unlock'),
                 },
@@ -781,7 +812,7 @@ function PlanActionsSheet({
               {
                 label: archived ? 'Unarchive plan…' : 'Archive plan…',
                 icon: archived ? 'arrow-undo-outline' : 'archive-outline',
-                tone: archived ? 'default' : 'danger',
+                // Archiving can be undone, so only deletion is red.
                 onPress: () => onConfirm(archived ? 'unarchive' : 'archive'),
               },
               {
@@ -844,8 +875,8 @@ function DeletePlanConfirm({
             Your fitness results stay with you.
           </Text>
           <Text variant="body" color="dim">
-            You can restore it from Recently deleted for {data.restoreDays} days. After that it is
-            permanently deleted.
+            You can restore it from All plans › Deleted for {data.restoreDays} days. After that it
+            is permanently deleted.
           </Text>
         </View>
       ) : null}
@@ -898,7 +929,9 @@ export function Schedule({
   today: string;
   onPlanRest?: () => void;
 }) {
+  const theme = useTheme();
   const coach = useCoachWord();
+  const askIcon = useAskIcon();
   const weeks = useMemo(
     () => summarizeWeeks(workouts, startDate, endDate, coverage),
     [workouts, startDate, endDate, coverage],
@@ -913,6 +946,11 @@ export function Schedule({
   const [selectedDate, setSelectedDate] = useState(today);
   const week = weeks.find((w) => w.number === selectedWeek) ?? weeks[0];
   const blockOf = (range: { startDate: string; endDate: string }) => coveringRange(blocks, range);
+  // Each phase once, in plan order, for the week bars' key.
+  const phases = blocks
+    .slice()
+    .sort((x, y) => x.startDate.localeCompare(y.startDate))
+    .filter((block, i, all) => all.findIndex((b) => b.label === block.label) === i);
   const cutback = (range: { startDate: string; endDate: string }) => isCutback(storedWeeks, range);
   const dayStatus = (date: string): DayStatus =>
     (startDate && date < startDate) || (endDate && date > endDate)
@@ -939,7 +977,7 @@ export function Schedule({
 
   return (
     <View>
-      <View style={{ paddingHorizontal: 20, marginTop: 20 }}>
+      <View style={{ paddingHorizontal: 20, marginTop: 14 }}>
         <Segmented<Mode>
           value={mode}
           onChange={setMode}
@@ -951,7 +989,7 @@ export function Schedule({
       </View>
       {mode === 'weeks' ? (
         <>
-          <View style={{ paddingHorizontal: 20, marginTop: 20 }}>
+          <View style={{ paddingHorizontal: 20, marginTop: 10 }}>
             <WeekChart
               weeks={weeks}
               selected={week.number}
@@ -961,8 +999,49 @@ export function Schedule({
               blockOf={blockOf}
               isCutback={cutback}
             />
+            {/* The bars are coloured by phase; this keys them now the timeline is folded away. */}
+            {phases.length > 1 || weeks.some(cutback) ? (
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', columnGap: 12, marginTop: 6 }}>
+                {phases.map((phase) => (
+                  <View
+                    key={phase.label}
+                    style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}
+                  >
+                    <View
+                      style={{
+                        width: 8,
+                        height: 8,
+                        borderRadius: 2,
+                        // As strong as an upcoming week's bar, so key and bars match.
+                        backgroundColor: alpha(effortTint(theme, phase.effort), 0.75),
+                      }}
+                    />
+                    <Text variant="caption" style={{ fontSize: 12 }}>
+                      {phase.label}
+                    </Text>
+                  </View>
+                ))}
+                {weeks.some(cutback) ? (
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+                    <View
+                      style={{
+                        width: 8,
+                        height: 8,
+                        borderRadius: 2,
+                        borderWidth: 1.5,
+                        borderStyle: 'dashed',
+                        borderColor: theme.colors.textMuted,
+                      }}
+                    />
+                    <Text variant="caption" style={{ fontSize: 12 }}>
+                      Cutback
+                    </Text>
+                  </View>
+                ) : null}
+              </View>
+            ) : null}
           </View>
-          <View style={{ paddingHorizontal: 20, marginTop: 18 }}>
+          <View style={{ paddingHorizontal: 20, marginTop: 12 }}>
             <View
               style={{
                 flexDirection: 'row',
@@ -998,13 +1077,9 @@ export function Schedule({
                 />
               </View>
             </View>
-            {week.sessions ? (
-              <Card style={{ marginTop: 16 }}>
-                <WeekStatsRow week={week} measure={measure} units={units} />
-              </Card>
-            ) : null}
+            {week.sessions ? <WeekSummaryLine week={week} measure={measure} units={units} /> : null}
           </View>
-          <View style={{ marginTop: 18 }}>
+          <View style={{ marginTop: 12 }}>
             {unplannedWeek && !week.sessions ? (
               <EmptyState
                 style={{ marginHorizontal: 20 }}
@@ -1015,7 +1090,7 @@ export function Schedule({
                   onPlanRest ? (
                     <Button
                       label={`Plan it with your ${coach}`}
-                      icon="chatbubble-ellipses"
+                      icon={askIcon}
                       size="md"
                       onPress={onPlanRest}
                     />
@@ -1128,18 +1203,23 @@ function CalendarView({
   dayStatus: (date: string) => DayStatus;
 }) {
   const theme = useTheme();
+  const logContext = useLogContext();
+  // No log marks until the log has loaded: an empty list would mark every past session unlogged.
+  const logs = logContext?.ready ? logContext.logs : undefined;
+  // As Today's "Still to log": this week so far, and always the last three days.
+  const logWindowStart =
+    addDays(today, -3) < startOfWeek(today) ? addDays(today, -3) : startOfWeek(today);
   const grid = useMemo(() => monthGrid(month), [month]);
-  const efforts = [
-    ...new Set(workouts.map((workout) => workoutLook(workout).effort).filter(Boolean)),
-  ] as NonNullable<ReturnType<typeof workoutLook>['effort']>[];
+  const used = new Set(workouts.map((workout) => workoutLook(workout).effort));
+  const efforts = EFFORTS.filter((effort) => used.has(effort));
   return (
-    <View style={{ paddingHorizontal: 20, marginTop: 20 }}>
+    <View style={{ paddingHorizontal: 20, marginTop: 14 }}>
       <View
         style={{
           flexDirection: 'row',
           alignItems: 'center',
           justifyContent: 'space-between',
-          marginBottom: 14,
+          marginBottom: 10,
         }}
       >
         <Text variant="heading">{formatMonth(month)}</Text>
@@ -1177,6 +1257,16 @@ function CalendarView({
             const race = items.some((w) => w.racePriority);
             const color = look ? effortTint(theme, look.effort) : null;
             const status = dayStatus(d);
+            // A past session without a log is a hollow ring, as in Today's week strip.
+            const pastUnlogged =
+              !!logs &&
+              !outside &&
+              d < today &&
+              items.length > 0 &&
+              !items.some((w) => logs.some((l) => l.lineageId === w.lineageId));
+            // Within "Still to log"'s window an unlogged day is a ring; before it, a muted dot.
+            const unlogged = pastUnlogged && d >= logWindowStart;
+            const stale = pastUnlogged && !unlogged;
             return (
               <PressableScale
                 key={d}
@@ -1187,16 +1277,16 @@ function CalendarView({
                 accessibilityLabel={formatLong(d)}
                 style={{
                   flex: 1,
-                  height: 52,
+                  height: 46,
                   alignItems: 'center',
                   justifyContent: 'center',
-                  opacity: outside ? 0.3 : status === 'outside' ? 0.55 : 1,
+                  opacity: outside ? (theme.isDark ? 0.3 : 0.45) : status === 'outside' ? 0.55 : 1,
                 }}
               >
                 <View
                   style={{
                     width: 38,
-                    height: 44,
+                    height: 42,
                     borderRadius: 14,
                     alignItems: 'center',
                     justifyContent: 'center',
@@ -1225,10 +1315,25 @@ function CalendarView({
                   ) : (
                     <View
                       style={{
-                        width: 6,
-                        height: 6,
-                        borderRadius: 3,
-                        backgroundColor: color ? (active ? theme.onAccent : color) : 'transparent',
+                        width: 8,
+                        height: 8,
+                        borderRadius: 4,
+                        // Logged and today's sessions are solid; upcoming ones faded; past ones
+                        // still to log are hollow rings.
+                        backgroundColor:
+                          outside || !color || unlogged
+                            ? 'transparent'
+                            : stale
+                              ? alpha(theme.colors.textMuted, 0.35)
+                              : d > today && !active
+                                ? alpha(color, 0.65)
+                                : color,
+                        borderWidth: unlogged || (active && color) ? 1.5 : 0,
+                        borderColor: active
+                          ? theme.onAccent
+                          : unlogged
+                            ? theme.colors.textDim
+                            : (color ?? 'transparent'),
                       }}
                     />
                   )}
@@ -1264,6 +1369,17 @@ function CalendarView({
             </View>
           ))}
         </View>
+      ) : null}
+      {efforts.length ? (
+        <Text
+          variant="caption"
+          color="muted"
+          style={{ fontSize: 12, marginTop: -14, marginBottom: 20 }}
+        >
+          {logs
+            ? 'Faded: upcoming · Ring: still to log (this week and the last 3 days) · Grey: older, never logged'
+            : 'Faded: upcoming'}
+        </Text>
       ) : null}
       <Text variant="label" style={{ marginBottom: 10 }}>
         {formatLong(selected)}

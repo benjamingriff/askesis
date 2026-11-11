@@ -50,11 +50,37 @@ const formatter = (options: Intl.DateTimeFormatOptions) =>
 const shortFormat = formatter({ day: 'numeric', month: 'short' });
 const shortYearFormat = formatter({ day: 'numeric', month: 'short', year: 'numeric' });
 const longFormat = formatter({ weekday: 'long', day: 'numeric', month: 'long' });
+const dayFormat = formatter({ weekday: 'short', day: 'numeric', month: 'short' });
 const monthFormat = formatter({ month: 'long', year: 'numeric' });
 
 export const formatShort = (date: string) => shortFormat.format(utc(date));
 export const formatShortYear = (date: string) => shortYearFormat.format(utc(date));
 export const formatLong = (date: string) => longFormat.format(utc(date));
+/**
+ * A plan name for headings. A trailing "· 12 weeks" goes, since the date line beside it gives the
+ * length, and any remaining "12 weeks" stays on one line.
+ */
+export const planName = (name: string) =>
+  name.replace(/ · \d+ (weeks?|days?)$/, '').replace(/(\d+) (weeks?|days?)\b/g, '$1\u00a0$2');
+
+/**
+ * Shortens an email for one line, keeping the domain readable. `max` is a target length in UTF-16
+ * code units (default 30), not a strict limit: a long domain or short name can exceed it. Without
+ * a usable `@`, the address is truncated at the end.
+ */
+export function shortEmail(email: string, max = 30) {
+  if (email.length <= max) return email;
+  const at = email.lastIndexOf('@');
+  if (at < 1) return `${email.slice(0, max - 1)}…`;
+  const domain = email.slice(at);
+  const keep = Math.max(4, max - domain.length - 1);
+  // A name part too short to shorten stays whole; the caller truncates the line.
+  if (at <= keep) return email;
+  return `${email.slice(0, keep)}…${domain}`;
+}
+
+/** "Mon 2 Nov": a UTC calendar date for tight rows. Throws RangeError for an invalid date. */
+export const formatDay = (date: string) => dayFormat.format(utc(date)).replace(',', '');
 export const formatMonth = (date: string) => monthFormat.format(utc(date));
 
 export function formatRange(start: string | null, end: string | null): string {

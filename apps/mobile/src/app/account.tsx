@@ -123,10 +123,8 @@ export default function AccountScreen() {
 
       <FormSection title="Email">
         {user?.emailAddresses.map((address) => (
-          <View key={address.id} style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-            <Text variant="body" style={{ flex: 1 }} numberOfLines={1}>
-              {address.emailAddress}
-            </Text>
+          <View key={address.id} style={{ gap: 2 }}>
+            <Text variant="body">{address.emailAddress}</Text>
             {address.id === user.primaryEmailAddressId ? (
               <Text variant="caption" color="muted">
                 Primary
@@ -158,6 +156,7 @@ export default function AccountScreen() {
         <Field
           label="New password"
           hint="At least 8 characters"
+          placeholder="Enter a new password"
           secure
           value={newPassword}
           onChangeText={(value) => {
@@ -165,18 +164,15 @@ export default function AccountScreen() {
             setNewPassword(value);
           }}
         />
-        <ActionList
-          actions={[
-            {
-              label: user?.passwordEnabled ? 'Change password' : 'Set password',
-              icon: 'key-outline',
-              busy: changePassword.isPending,
-              onPress: () => {
-                if (newPassword.length >= 8 && (!user?.passwordEnabled || currentPassword))
-                  changePassword.mutate();
-              },
-            },
-          ]}
+        {/* A button, not a list row: it submits the fields above. */}
+        <Button
+          label={user?.passwordEnabled ? 'Change password' : 'Set password'}
+          icon="key-outline"
+          size="md"
+          variant="secondary"
+          busy={changePassword.isPending}
+          disabled={newPassword.length < 8 || (!!user?.passwordEnabled && !currentPassword)}
+          onPress={() => changePassword.mutate()}
         />
         {passwordSaved ? (
           <Notice tone="accent" icon="checkmark-circle">
@@ -189,15 +185,14 @@ export default function AccountScreen() {
       <ActionList
         actions={[
           !!portal && {
-            label: 'Security & connected accounts',
+            label: 'Security & sign-in',
             icon: 'shield-checkmark-outline',
-            detail: 'Opens Clerk',
+            detail: 'Opens in browser',
             onPress: () => void WebBrowser.openBrowserAsync(portal),
           },
           {
             label: 'Sign out',
             icon: 'log-out-outline',
-            tone: 'danger',
             onPress: () => void signOut(),
           },
         ]}

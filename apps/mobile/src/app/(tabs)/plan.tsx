@@ -75,7 +75,7 @@ export default function PlanScreen() {
               ...(active.length > 1
                 ? [
                     {
-                      label: 'Switch active plan',
+                      label: 'Choose plan for Today',
                       icon: 'swap-vertical' as const,
                       // iOS presents one modal at a time: open after the options sheet closes.
                       onPress: () => setTimeout(() => setSwitching(true), 350),

@@ -20,6 +20,7 @@ export function useOpenPlanChat(plan: { id: string; displayName: string }) {
       if (!coach) {
         askAgent(
           agentPrompt(prefill || REVIEW_PLAN_REQUEST, { id: plan.id, name: plan.displayName }),
+          plan.displayName,
         );
         return null;
       }

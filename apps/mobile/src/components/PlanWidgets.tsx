@@ -1,5 +1,13 @@
 import { Ionicons } from '@expo/vector-icons';
-import { ScrollView, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
+import { useState } from 'react';
+import {
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  View,
+  type StyleProp,
+  type ViewStyle,
+} from 'react-native';
 import { useCoachWord } from '../data/account';
 import {
   currentEntry,
@@ -40,7 +48,7 @@ export function StatusPill({ plan, onPress }: { plan: Plan; onPress?: () => void
       ? ['lock-open-outline', 'Unlocked']
       : plan.draft
         ? ['create-outline', 'Draft']
-        : ['lock-closed', `Locked v${plan.locked?.versionNumber ?? ''}`];
+        : ['lock-closed', 'Locked'];
   const color = plan.archived ? theme.colors.textDim : locked ? theme.locked : theme.accentText;
   return (
     <PressableScale
@@ -80,9 +88,20 @@ export function coverageGaps(state: Pick<BriefState, 'startDate' | 'endDate' | '
   return gaps;
 }
 
+/** Whether the whole plan is prescribed and nothing about its coverage needs attention. */
+export function fullyPlanned(state: BriefState) {
+  return (
+    !!knownCoverage(state) &&
+    !coverageGaps(state).length &&
+    !state.generations?.some((g) => g.status === 'interrupted' || g.status === 'in_progress') &&
+    !state.coverage.some((range) => !range.current)
+  );
+}
+
 /** How far the coach has prescribed versus the whole plan. */
 export function CoverageNote({ state }: { state: BriefState }) {
   const theme = useTheme();
+  const coach = useCoachWord();
   const gaps = coverageGaps(state);
   const interrupted = state.generations?.find((g) => g.status === 'interrupted');
   const generating = state.generations?.find((g) => g.status === 'in_progress');
@@ -96,9 +115,9 @@ export function CoverageNote({ state }: { state: BriefState }) {
         gaps.length
           ? `${gaps.map((gap) => `${formatShort(gap.start)} – ${formatShortYear(gap.end)}`).join(', ')} not planned yet`
           : null,
-        generating ? 'Your coach is generating more of the schedule…' : null,
+        generating ? `Your ${coach} is generating more of the schedule…` : null,
         interrupted
-          ? `Generation stopped before ${formatShort(interrupted.endDate)}. Ask your coach to continue.`
+          ? `Generation stopped before ${formatShort(interrupted.endDate)}. Ask your ${coach} to continue.`
           : null,
         stale ? 'Planning inputs changed — review the affected weeks.' : null,
       ].filter((line): line is string => !!line);
@@ -177,11 +196,13 @@ export function BlockTimeline({
   const focus = current ?? next;
   // Race markers sit above the bar on a short stem, so leave room for them.
   const top = marked.length ? 22 : 6;
+  const end = line.segments.at(-1);
+  const lastBlock = end?.kind === 'block' && end.days >= 5 ? end.block : null;
   return (
     <View>
       <View style={{ paddingTop: top }}>
         <View style={{ flexDirection: 'row', gap: 3 }}>
-          {line.segments.map((segment) => {
+          {line.segments.map((segment, index) => {
             if (segment.kind === 'gap')
               return (
                 <View key={segment.startDate} style={{ flex: segment.days }}>
@@ -200,6 +221,10 @@ export function BlockTimeline({
             const color = effortTint(theme, block.effort);
             const state =
               block.endDate < today ? 'past' : block.startDate > today ? 'future' : 'current';
+            // Bars stay proportional to days (the today and race markers rely on it). The last
+            // block's label is drawn across the whole row, from its right edge (below), so a short
+            // taper isn't cut to "TA…".
+            const last = index === line.segments.length - 1;
             return (
               <View key={block.id} style={{ flex: segment.days, minWidth: 6 }}>
                 <View
@@ -208,7 +233,7 @@ export function BlockTimeline({
                     borderRadius: 4,
                     backgroundColor: alpha(
                       color,
-                      state === 'past' ? 1 : state === 'current' ? 0.6 : 0.25,
+                      state === 'past' ? 1 : state === 'current' ? 0.6 : theme.isDark ? 0.35 : 0.45,
                     ),
                   }}
                 />
@@ -221,12 +246,30 @@ export function BlockTimeline({
                     color: state === 'current' ? color : theme.colors.textMuted,
                   }}
                 >
-                  {segment.days >= 5 ? block.label : ''}
+                  {segment.days >= 5 && !last ? block.label : ' '}
                 </Text>
               </View>
             );
           })}
         </View>
+        {lastBlock ? (
+          <Text
+            variant="label"
+            numberOfLines={1}
+            style={{
+              position: 'absolute',
+              right: 0,
+              top: top + 16,
+              fontSize: 10,
+              color:
+                lastBlock.startDate <= today && today <= lastBlock.endDate
+                  ? effortTint(theme, lastBlock.effort)
+                  : theme.colors.textMuted,
+            }}
+          >
+            {lastBlock.label}
+          </Text>
+        ) : null}
         {marker !== null ? (
           <View
             pointerEvents="none"
@@ -331,14 +374,23 @@ export function WeekChart({
   const amount = (week: WeekSummary) => (measure === 'time' ? week.seconds : week.metres);
   const max = Math.max(...weeks.map(amount), 1);
   const scroll = weeks.length > 16;
+  const barHeight = (week: WeekSummary) =>
+    week.planned ? Math.max(10, (amount(week) / max) * 36) : 16;
+  // Every week shares one height, so bars stay bottom-aligned: the tallest bar plus its week
+  // number (and a race label above it, 20px each with the gap), at least 66.
+  const height = Math.max(
+    66,
+    ...weeks.map((week) => barHeight(week) + 20 + (topRace(week.workouts) ? 20 : 0)),
+  );
   const bars = weeks.map((week) => {
     const active = week.number === selected;
     const block = blockOf(week);
     const race = topRace(week.workouts);
     const past = current !== null && week.number < current;
-    const h = week.planned ? Math.max(10, (amount(week) / max) * 56) : 22;
+    const h = barHeight(week);
     const base = block ? effortTint(theme, block.effort) : theme.accent;
-    const fill = active ? theme.accent : alpha(base, past ? 0.9 : 0.5);
+    // The selected week keeps its phase colour, outlined in the accent, so the phase stays readable.
+    const fill = active ? base : alpha(base, past ? 0.9 : theme.isDark ? 0.6 : 0.65);
     return (
       <PressableScale
         key={week.number}
@@ -351,7 +403,7 @@ export function WeekChart({
         style={{
           flex: scroll ? undefined : 1,
           width: scroll ? 18 : undefined,
-          height: 92,
+          height,
           justifyContent: 'flex-end',
           alignItems: 'center',
           gap: 6,
@@ -369,9 +421,9 @@ export function WeekChart({
               height: h,
               borderRadius: 8,
               backgroundColor: fill,
-              borderWidth: isCutback(week) ? 1.5 : 0,
-              borderStyle: 'dashed',
-              borderColor: theme.colors.bg,
+              borderWidth: active ? 2 : isCutback(week) ? 1.5 : 0,
+              borderStyle: active ? 'solid' : 'dashed',
+              borderColor: active ? theme.colors.text : theme.colors.bg,
             }}
           />
         ) : (
@@ -406,17 +458,14 @@ export function WeekChart({
   if (scroll)
     return (
       <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-        <View style={{ flexDirection: 'row', gap: 5, height: 92, alignItems: 'flex-end' }}>
-          {bars}
-        </View>
+        <View style={{ flexDirection: 'row', gap: 5 }}>{bars}</View>
       </ScrollView>
     );
-  return (
-    <View style={{ flexDirection: 'row', gap: 5, height: 92, alignItems: 'flex-end' }}>{bars}</View>
-  );
+  return <View style={{ flexDirection: 'row', gap: 5 }}>{bars}</View>;
 }
 
-export function WeekStatsRow({
+/** A week's totals in one line under its heading: volume, sessions and how many are hard. */
+export function WeekSummaryLine({
   week,
   measure,
   units,
@@ -428,43 +477,17 @@ export function WeekStatsRow({
   const hard = week.workouts.filter((workout) =>
     /interval|threshold|tempo|vo2|race|speed|sprint|test/i.test(workout.title),
   ).length;
-  const sports = new Set(week.workouts.map((workout) => workout.discipline)).size;
-  const items = [
+  const volume =
     measure === 'time'
-      ? { label: 'Time', value: formatDuration(week.seconds), unit: '' }
-      : {
-          label: 'Distance',
-          value: formatDistance(week.metres, units, false),
-          unit: units,
-        },
-    { label: 'Sessions', value: String(week.sessions), unit: '', sub: `${hard} hard` },
-    measure === 'time'
-      ? { label: 'Sports', value: String(sports), unit: '' }
-      : { label: 'Time', value: formatDuration(week.seconds), unit: '' },
-  ];
+      ? formatDuration(week.seconds)
+      : `${formatDistance(week.metres, units, false)} ${units} · ${formatDuration(week.seconds)}`;
   return (
-    <View style={{ flexDirection: 'row', gap: 8 }}>
-      {items.map((it) => (
-        <View key={it.label} style={{ flex: 1 }}>
-          <Text variant="label">{it.label}</Text>
-          <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 3, marginTop: 3 }}>
-            <Text variant="heading" numeric style={{ fontWeight: '800' }}>
-              {it.value}
-            </Text>
-            {it.unit ? (
-              <Text variant="caption" numeric>
-                {it.unit}
-              </Text>
-            ) : null}
-          </View>
-          {'sub' in it && it.sub ? (
-            <Text variant="caption" color="muted" numeric>
-              {it.sub}
-            </Text>
-          ) : null}
-        </View>
-      ))}
-    </View>
+    <Text variant="caption" color="text" numeric style={{ marginTop: 4, fontWeight: '700' }}>
+      {volume}
+      <Text variant="caption" numeric>
+        {` · ${week.sessions} ${week.sessions === 1 ? 'session' : 'sessions'}${hard ? ` · ${hard} hard` : ''}`}
+      </Text>
+    </Text>
   );
 }
 
@@ -497,8 +520,11 @@ export function CalibrationSource({
 }) {
   const theme = useTheme();
   const { pool } = useSportUnits();
+  const [open, setOpen] = useState(false);
   const estimate = isEstimate(calibration);
   const heading = SOURCE_HEADINGS[calibration.system];
+  // The effective date, evidence and "update them" advice fold away, as they repeat for every
+  // sport. The fold always holds the date, so it is always offered.
   return (
     <View style={[{ marginHorizontal: 20, flexDirection: 'row', gap: 10 }, style]}>
       <Ionicons
@@ -518,18 +544,41 @@ export function CalibrationSource({
         <Text variant="caption" numeric>
           {describeEvidence(calibration, { units, pool })}
           {calibration.observedOn ? ` on ${formatShortYear(calibration.observedOn)}` : ''}
-          {' · applies from '}
-          {formatShortYear(calibration.effectiveFrom)}
         </Text>
-        {calibration.estimateBasis ? (
+        <Pressable
+          onPress={() => setOpen(!open)}
+          accessibilityRole="button"
+          accessibilityState={{ expanded: open }}
+          hitSlop={8}
+          style={{ flexDirection: 'row', alignItems: 'center', gap: 4, alignSelf: 'flex-start' }}
+        >
+          <Text variant="caption" color="accent" style={{ fontWeight: '800' }}>
+            {open
+              ? 'Hide'
+              : estimate
+                ? 'Why an estimate?'
+                : calibration.estimateBasis
+                  ? 'Evidence'
+                  : 'Details'}
+          </Text>
+          <Ionicons
+            name={open ? 'chevron-up' : 'chevron-down'}
+            size={13}
+            color={theme.accentText}
+          />
+        </Pressable>
+        {open && calibration.estimateBasis ? (
           <Text variant="caption" color="muted">
             {calibration.provenance === 'agent_estimate' ? 'Coach estimate: ' : 'Evidence: '}
             {calibration.estimateBasis}
           </Text>
         ) : null}
-        {estimate ? (
-          <Text variant="caption" color="muted">
-            These are estimates. Update them after a test, a race or a few sessions.
+        {open ? (
+          <Text variant="caption" color="muted" numeric>
+            {`Applies from ${formatShortYear(calibration.effectiveFrom)}.`}
+            {estimate
+              ? ' These are estimates. Update them after a test, a race or a few sessions.'
+              : ''}
           </Text>
         ) : null}
       </View>
@@ -614,6 +663,9 @@ export function ZoneCards({
                       </Text>
                       <Text variant="heading" numeric style={{ marginTop: 4 }}>
                         {bare(zone.target, zone.unit)}
+                        <Text variant="caption" numeric>
+                          {` ${suffix(zone.unit)}`}
+                        </Text>
                       </Text>
                       <Text variant="caption" numeric>
                         {bare(zone.minimum, zone.unit)}–{bare(zone.maximum, zone.unit)}{' '}

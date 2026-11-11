@@ -2,6 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { FlatList, RefreshControl, View } from 'react-native';
+import { planProgress } from '../../components/PlanView';
 import { StatusPill } from '../../components/PlanWidgets';
 import {
   Badge,
@@ -19,8 +20,10 @@ import {
 } from '../../components/ui';
 import { useCoachWord } from '../../data/account';
 import { useRestorePlan } from '../../data/plan-actions';
-import { usePlans, type PlanSummary } from '../../data/plan-data';
-import { formatInstantShort, formatRange } from '../../lib/format';
+import { useActivePlans, usePlans, type PlanSummary } from '../../data/plan-data';
+import { formatInstantShort, formatRange, planName } from '../../lib/format';
+import { useLocalToday } from '../../lib/use-local-today';
+import { usePlanSelection } from '../../state/plan-selection';
 import { useTheme } from '../../state/settings';
 
 type Collection = 'library' | 'archive' | 'deleted';
@@ -60,6 +63,10 @@ export default function PlansScreen() {
   const restore = useRestorePlan();
   const plans = usePlans(collection);
   const empty = EMPTY[collection];
+  // The plan Today and the Plan tab follow, chosen as Today chooses it.
+  const { selection } = usePlanSelection();
+  const active = useActivePlans();
+  const shown = (active.data?.find((p) => p.id === selection?.planId) ?? active.data?.[0])?.id;
 
   const undo = (plan: { id: string; name: string }) =>
     restore.mutate(plan.id, {
@@ -84,7 +91,7 @@ export default function PlansScreen() {
           />
         }
       />
-      <View style={{ paddingHorizontal: 20, marginTop: 6, gap: 10 }}>
+      <View style={{ paddingHorizontal: 20, marginTop: 14, gap: 10 }}>
         <Segmented
           value={collection}
           onChange={(next) => {
@@ -94,7 +101,7 @@ export default function PlansScreen() {
           options={[
             { value: 'library', label: 'Library' },
             { value: 'archive', label: 'Archived' },
-            { value: 'deleted', label: 'Recently deleted' },
+            { value: 'deleted', label: 'Deleted' },
           ]}
         />
         {deleted ? (
@@ -103,7 +110,7 @@ export default function PlansScreen() {
             action={restore.isPending ? 'Restoring…' : 'Undo'}
             onAction={restore.isPending ? undefined : () => undo(deleted)}
           >
-            {`Deleted “${deleted.name}”. You can restore it from Recently deleted for 30 days.`}
+            {`Deleted “${deleted.name}”. You can restore it from Deleted for 30 days.`}
           </Notice>
         ) : null}
         {restored ? (
@@ -156,7 +163,7 @@ export default function PlansScreen() {
               onRestore={() => undo({ id: item.id, name: item.displayName })}
             />
           ) : (
-            <PlanCard plan={item} />
+            <PlanCard plan={item} shown={item.id === shown} />
           )
         }
       />
@@ -164,9 +171,11 @@ export default function PlansScreen() {
   );
 }
 
-function PlanCard({ plan }: { plan: PlanSummary }) {
+function PlanCard({ plan, shown }: { plan: PlanSummary; shown: boolean }) {
   const theme = useTheme();
+  const today = useLocalToday();
   const version = plan.locked ?? plan.draft;
+  const progress = planProgress(version?.startDate ?? null, version?.endDate ?? null, today);
   return (
     <PressableScale
       onPress={() => router.push({ pathname: '/plans/[id]', params: { id: plan.id } })}
@@ -176,30 +185,50 @@ function PlanCard({ plan }: { plan: PlanSummary }) {
         padding: 16,
         borderRadius: 22,
         backgroundColor: theme.colors.surface,
-        borderWidth: 1,
-        borderColor: plan.active ? theme.accentBorder : theme.colors.border,
+        borderColor: shown ? theme.accentBorder : theme.colors.border,
+        borderWidth: shown ? 1.5 : 1,
         gap: 10,
       }}
     >
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-        <Text variant="subheading" numberOfLines={1} style={{ flex: 1 }}>
-          {plan.displayName}
+        <Text variant="subheading" numberOfLines={2} style={{ flex: 1 }}>
+          {planName(plan.displayName)}
         </Text>
         <Ionicons name="chevron-forward" size={16} color={theme.colors.textMuted} />
       </View>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-        <StatusPill plan={plan} />
-        <Text
-          variant="caption"
-          color={plan.active ? 'accent' : 'muted'}
-          style={{ fontWeight: '700' }}
-        >
-          {plan.active ? 'Active' : 'Inactive'}
+        {/* Locked is the normal state: a lock by the dates says it. Drafts and archives get a pill. */}
+        {plan.draft || plan.archived ? <StatusPill plan={plan} /> : null}
+        {shown ? (
+          <Badge
+            label="On Today"
+            icon="flash"
+            color={theme.accentText}
+            background={theme.accentSoft}
+            border={theme.accentBorder}
+          />
+        ) : (
+          <Badge
+            label={plan.active ? 'Active' : 'Inactive'}
+            color={theme.colors.textDim}
+            background={theme.colors.surfaceRaised}
+          />
+        )}
+      </View>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+        {plan.locked && !plan.draft && !plan.archived ? (
+          <Ionicons
+            name="lock-closed"
+            size={12}
+            color={theme.colors.textMuted}
+            accessibilityLabel="Locked"
+          />
+        ) : null}
+        <Text variant="caption" numeric style={{ flexShrink: 1 }}>
+          {formatRange(version?.startDate ?? null, version?.endDate ?? null)}
+          {progress ? ` · ${progress.text}` : ''}
         </Text>
       </View>
-      <Text variant="caption">
-        {formatRange(version?.startDate ?? null, version?.endDate ?? null)}
-      </Text>
     </PressableScale>
   );
 }

@@ -10,7 +10,7 @@ import {
   useLeaveGuard,
 } from '../components/forms';
 import { Button, ErrorState, LoadingState, Notice, Screen, Text } from '../components/ui';
-import { useCoachWord, useInAppCoach } from '../data/account';
+import { useAskIcon, useCoachWord, useInAppCoach } from '../data/account';
 import { planVersion, usePlan, useWorkouts } from '../data/plan-data';
 import {
   CHECK_IN_LABELS,
@@ -27,12 +27,27 @@ import { useTheme } from '../state/settings';
 
 type Details = CheckInInput['details'];
 
-function Question({ title, children }: { title: string; children: ReactNode }) {
+function Question({
+  title,
+  hint,
+  children,
+}: {
+  title: string;
+  hint?: string;
+  children: ReactNode;
+}) {
   return (
     <View style={{ gap: 10 }}>
-      <Text variant="subheading" style={{ fontWeight: '700' }}>
-        {title}
-      </Text>
+      <View style={{ gap: 2 }}>
+        <Text variant="subheading" style={{ fontWeight: '700' }}>
+          {title}
+        </Text>
+        {hint ? (
+          <Text variant="caption" color="muted">
+            {hint}
+          </Text>
+        ) : null}
+      </View>
       {children}
     </View>
   );
@@ -83,6 +98,7 @@ export default function CheckInScreen() {
 function CheckInForm({ plan }: { plan: NonNullable<ReturnType<typeof usePlan>['data']> }) {
   const theme = useTheme();
   const coach = useCoachWord();
+  const askIcon = useAskIcon();
   const inAppCoach = useInAppCoach();
   const today = useLocalToday();
   const workouts = useWorkouts(planVersion(plan, 'locked')).data ?? [];
@@ -154,15 +170,17 @@ function CheckInForm({ plan }: { plan: NonNullable<ReturnType<typeof usePlan>['d
       saving={busy}
       footer={
         <Button
-          label={`Ask my ${coach} to adjust`}
-          icon="chatbubble-ellipses"
+          label={coach === 'coach' ? 'Ask your coach to adjust' : 'Prepare request for your agent'}
+          icon={askIcon}
           busy={busy}
           onPress={() => void send()}
         />
       }
     >
       <Text variant="body" color="dim">
-        Tell your {coach} what’s going on. Your plan stays unchanged until you review an amendment.
+        {coach === 'coach'
+          ? 'Tell your coach what’s going on. Your plan stays unchanged until you review an amendment.'
+          : 'Say what’s going on and Waddle prepares a request to paste into your agent. Your plan stays unchanged until you review an amendment.'}
       </Text>
       {error ? (
         <ErrorState message={`${saved ? 'Your check-in is saved. ' : ''}${error.message}`} />
@@ -245,7 +263,7 @@ function CheckInForm({ plan }: { plan: NonNullable<ReturnType<typeof usePlan>['d
       </FormSection>
 
       <FormSection>
-        <Question title="For how long?">
+        <Question title="Adjust training for">
           <Pick
             label="Check-in duration"
             value={duration}
@@ -253,7 +271,7 @@ function CheckInForm({ plan }: { plan: NonNullable<ReturnType<typeof usePlan>['d
               ['3', '3 days'],
               ['7', '1 week'],
               ['14', '2 weeks'],
-              ['unsure', 'Not sure'],
+              ['unsure', 'Unsure'],
             ]}
             onChange={(v) => {
               if (!v) return;
@@ -275,7 +293,7 @@ function CheckInForm({ plan }: { plan: NonNullable<ReturnType<typeof usePlan>['d
             onChange={(v) => v && amend('preference', v)}
           />
         </Question>
-        <Question title="Getting back to it">
+        <Question title="Getting back to it" hint="How fast to build back to your normal training">
           <Pick
             label="Return style"
             value={details.returnStyle}
@@ -294,7 +312,7 @@ function CheckInForm({ plan }: { plan: NonNullable<ReturnType<typeof usePlan>['d
           {affected.map((w) => (
             <View key={w.id} style={{ flexDirection: 'row', gap: 10, alignItems: 'center' }}>
               <View
-                style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: theme.accent }}
+                style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: theme.accentText }}
               />
               <Text variant="caption" color="text" style={{ flex: 1 }}>
                 {formatLong(w.scheduledDate)} · {w.title}
@@ -305,13 +323,17 @@ function CheckInForm({ plan }: { plan: NonNullable<ReturnType<typeof usePlan>['d
       ) : null}
 
       <FormSection>
-        <Field
-          label="Anything else? (optional)"
-          value={details.note ?? ''}
-          multiline
-          maxLength={2000}
-          onChangeText={(value) => amend('note', value || undefined)}
-        />
+        <Question title="Anything else?" hint="Optional">
+          <Field
+            label="Anything else?"
+            hideLabel
+            placeholder="For example, a race you want to protect"
+            value={details.note ?? ''}
+            multiline
+            maxLength={2000}
+            onChangeText={(value) => amend('note', value || undefined)}
+          />
+        </Question>
       </FormSection>
     </FormScreen>
   );

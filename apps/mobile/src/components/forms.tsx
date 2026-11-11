@@ -84,7 +84,7 @@ export function FormScreen({
           accessibilityRole="button"
           style={{ minWidth: 76, paddingHorizontal: 6, paddingVertical: 6 }}
         >
-          <Text variant="subheading" color="dim" style={{ opacity: saving ? 0.4 : 1 }}>
+          <Text variant="subheading" color="text" style={{ opacity: saving ? 0.4 : 1 }}>
             {cancelLabel}
           </Text>
         </Pressable>
@@ -115,6 +115,7 @@ export function FormScreen({
                   variant="subheading"
                   style={{
                     color: enabled ? theme.accentText : theme.colors.textMuted,
+                    opacity: enabled ? 1 : 0.6,
                     fontWeight: '800',
                   }}
                 >
@@ -288,7 +289,8 @@ export function useFieldStyle(focused: boolean, disabled?: boolean) {
     paddingHorizontal: 14,
     backgroundColor: theme.colors.surfaceRaised,
     borderWidth: 1.5,
-    borderColor: focused ? theme.accent : 'transparent',
+    // Selection and focus outlines use the readable accent, which stays visible on light themes.
+    borderColor: focused ? theme.accentText : 'transparent',
     opacity: disabled ? 0.5 : 1,
   } satisfies ViewStyle;
 }
@@ -301,6 +303,7 @@ export function Field({
   onChangeText,
   placeholder,
   multiline,
+  rows = 4,
   keyboardType,
   disabled,
   maxLength,
@@ -323,6 +326,8 @@ export function Field({
   autoCapitalize?: 'none' | 'sentences' | 'words' | 'characters';
   placeholder?: string;
   multiline?: boolean;
+  /** A multiline field's starting height in lines; it grows as text is added. */
+  rows?: number;
   keyboardType?: KeyboardTypeOptions;
   disabled?: boolean;
   maxLength?: number;
@@ -363,7 +368,7 @@ export function Field({
             color: theme.colors.text,
             fontSize: 16,
             paddingVertical: multiline ? 12 : 0,
-            minHeight: multiline ? 96 : 46,
+            minHeight: multiline ? rows * 24 : 46,
             textAlignVertical: multiline ? 'top' : 'center',
             // Web inputs draw their own focus ring.
             ...(Platform.OS === 'web' ? ({ outlineStyle: 'none' } as object) : null),
@@ -422,7 +427,7 @@ export function ChoiceField<T extends string>({
                 borderRadius: 19,
                 backgroundColor: selected ? theme.accentSoft : theme.colors.surfaceRaised,
                 borderWidth: 1.5,
-                borderColor: selected ? theme.accent : 'transparent',
+                borderColor: selected ? theme.accentText : 'transparent',
               }}
             >
               {option.icon ? (
@@ -488,13 +493,13 @@ export function Chips<T extends string>({
             accessibilityLabel={text}
             accessibilityState={{ checked: on, disabled }}
             style={{
-              paddingHorizontal: 14,
+              paddingHorizontal: 12,
               minHeight: 38,
               justifyContent: 'center',
               borderRadius: 19,
               backgroundColor: on ? theme.accentSoft : theme.colors.surfaceRaised,
-              borderWidth: 1.5,
-              borderColor: on ? theme.accent : 'transparent',
+              borderWidth: 2,
+              borderColor: on ? theme.accentText : 'transparent',
             }}
           >
             <Text

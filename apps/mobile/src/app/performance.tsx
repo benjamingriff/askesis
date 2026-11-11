@@ -2,24 +2,29 @@ import { Ionicons } from '@expo/vector-icons';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { RefreshControl, ScrollView, View } from 'react-native';
+import { Pressable, RefreshControl, ScrollView, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BottomSheet } from '../components/BottomSheet';
 import { CalibrationSource } from '../components/PlanWidgets';
-import { compactRange } from '../components/StepList';
 import {
   Badge,
   Button,
   Card,
   ErrorState,
   LoadingState,
-  Pill,
   Screen,
   ScreenHeader,
   Text,
 } from '../components/ui';
-import { currentEntry, usePerformance, type Calibration } from '../data/plan-data';
-import { useAskAgent, useCoachWord } from '../data/account';
+import {
+  currentEntry,
+  planVersion,
+  useActivePlans,
+  useBriefState,
+  usePerformance,
+  type Calibration,
+} from '../data/plan-data';
+import { useAskAgent, useAskIcon, useCoachWord } from '../data/account';
 import { api } from '../lib/api';
 import { agentPrompt } from '../lib/coach';
 import { formatDateTime, formatShortYear } from '../lib/format';
@@ -32,8 +37,11 @@ import {
   SPORT_META,
   SYSTEM_META,
   SYSTEMS,
+  planSports,
+  systemsForSports,
   type System,
 } from '../lib/sports';
+import { usePlanSelection } from '../state/plan-selection';
 import { useSportUnits, useTheme, useUnits } from '../state/settings';
 import { zoneEffort } from '../theme/palette';
 
@@ -45,10 +53,19 @@ import { zoneEffort } from '../theme/palette';
 export default function PerformanceScreen() {
   const theme = useTheme();
   const coach = useCoachWord();
+  const askIcon = useAskIcon(true);
+  const askAgent = useAskAgent();
   const insets = useSafeAreaInsets();
   const performance = usePerformance();
   const units = useUnits();
   const [added, setAdded] = useState<System[]>([]);
+  const { selection } = usePlanSelection();
+  const active = useActivePlans();
+  const todayPlan = active.data?.find((p) => p.id === selection?.planId) ?? active.data?.[0];
+  const todayBrief = useBriefState(
+    todayPlan?.id ?? '',
+    todayPlan ? planVersion(todayPlan, 'locked') : null,
+  );
   const data = performance.data;
   const shown = data
     ? SYSTEMS.filter(
@@ -56,6 +73,9 @@ export default function PerformanceScreen() {
           currentEntry(data, system) || data.usedByPlans.includes(system) || added.includes(system),
       )
     : [];
+  // The sports of the plan Today follows come first.
+  const first = new Set(systemsForSports(planSports(todayBrief.data?.brief, undefined)));
+  shown.sort((a, b) => Number(first.has(b)) - Number(first.has(a)));
   // A new athlete starts with running, the most common first plan.
   const visible = data && !shown.length ? (['run_pace'] as System[]) : shown;
   const hidden = SYSTEMS.filter((system) => !visible.includes(system));
@@ -76,10 +96,6 @@ export default function PerformanceScreen() {
           />
         }
       >
-        <Text variant="body" color="dim">
-          Your training zones belong to you, not to a plan. Every plan uses them from the day they
-          change; earlier workouts keep the zones they had.
-        </Text>
         {performance.isPending ? <LoadingState label="Loading your fitness…" /> : null}
         {performance.error ? (
           <ErrorState
@@ -122,6 +138,27 @@ export default function PerformanceScreen() {
           </Card>
         ) : null}
         {data ? <History entries={data.entries} units={units} /> : null}
+        {/* One way to ask for help with zones, rather than one per sport, after the history. */}
+        {data ? (
+          <Button
+            label={`Ask your ${coach} about my zones`}
+            icon={askIcon}
+            size="md"
+            variant="ghost"
+            onPress={() =>
+              coach === 'agent'
+                ? askAgent(
+                    agentPrompt(
+                      'Help me update my training zones. Read my performance first, then ask me about recent results.',
+                    ),
+                  )
+                : router.push({
+                    pathname: '/chat/[id]',
+                    params: { id: 'new', prefill: 'I have a new result to update my zones: ' },
+                  })
+            }
+          />
+        ) : null}
         {data ? (
           <Text variant="caption" color="muted" style={{ textAlign: 'center' }}>
             Dates follow this device’s timezone ({data.timezone}). Workouts are written as zones, so
@@ -156,27 +193,50 @@ function SystemCard({
   const display = { units, pool };
   const meta = SYSTEM_META[system];
   const coach = useCoachWord();
-  const askAgent = useAskAgent();
+  // Zone values without their unit, which the column headings carry once.
+  const bare = (value: number, unit: string) =>
+    formatZoneValue(value, unit, display).replace(/\/.*$/, '').replace(/ W$/, '');
+  const unitLabel = (unit: string) =>
+    unit === 'watts'
+      ? 'Watts'
+      : unit === 'seconds_per_100_metres'
+        ? `Pace per 100${pool}`
+        : `Pace per ${units}`;
+  // Names and numbers are what people come back for; what each zone is for is a tap away.
+  const [described, setDescribed] = useState(false);
   return (
-    <Card style={{ gap: 14 }}>
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-        <Text variant="heading" style={{ flex: 1 }}>
-          {meta.title}
-        </Text>
-        {entry && isEstimate(entry) ? (
-          <Pill label="Estimate" icon="warning" color={theme.warning} />
+    <Card style={{ gap: 12 }}>
+      <View>
+        <Text variant="heading">{meta.title}</Text>
+        {entry ? (
+          <Text variant="caption" color="muted">
+            {unitLabel(entry.zones[0]?.unit ?? '')}
+          </Text>
         ) : null}
       </View>
       {entry ? (
         <>
-          <View style={{ gap: 10 }}>
+          <View style={{ gap: 8 }}>
+            <View
+              style={{ flexDirection: 'row', alignItems: 'baseline', gap: 10, paddingLeft: 18 }}
+            >
+              <Text variant="label" style={{ flex: 1 }}>
+                Zone
+              </Text>
+              <Text variant="label" style={{ width: RANGE_WIDTH, textAlign: 'right' }}>
+                Range
+              </Text>
+              <Text variant="label" style={{ width: TARGET_WIDTH, textAlign: 'right' }}>
+                Target
+              </Text>
+            </View>
             {Object.keys(meta.zones)
               .map((key) => entry.zones.find((zone) => zone.key === key))
               .filter((zone): zone is NonNullable<typeof zone> => !!zone)
               .map((zone) => (
                 <View
                   key={zone.key}
-                  style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}
+                  style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 12 }}
                 >
                   <View
                     style={{
@@ -187,28 +247,59 @@ function SystemCard({
                     }}
                   />
                   <View style={{ flex: 1 }}>
-                    <Text variant="subheading">
+                    <Text variant="subheading" numberOfLines={1}>
                       {[meta.zones[zone.key]?.short, meta.zones[zone.key]?.label ?? zone.key]
                         .filter((part, i, parts) => part && parts.indexOf(part) === i)
                         .join(' · ')}
                     </Text>
-                    <Text variant="caption" color="muted">
-                      {meta.zones[zone.key]?.description}
-                    </Text>
+                    {described ? (
+                      <Text variant="caption" color="muted">
+                        {meta.zones[zone.key]?.description}
+                      </Text>
+                    ) : null}
                   </View>
-                  <View style={{ alignItems: 'flex-end' }}>
-                    <Text variant="subheading" numeric style={{ fontWeight: '800' }}>
-                      {formatZoneValue(zone.target, zone.unit, display)}
+                  {/* Range then target on one line, so each zone takes one row; the unit is in the
+                      column headings. */}
+                  <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 10 }}>
+                    <Text
+                      variant="caption"
+                      color="dim"
+                      numeric
+                      style={{ width: RANGE_WIDTH, textAlign: 'right' }}
+                    >
+                      {bare(zone.minimum, zone.unit)}–{bare(zone.maximum, zone.unit)}
                     </Text>
-                    <Text variant="caption" numeric>
-                      {compactRange(
-                        formatZoneValue(zone.minimum, zone.unit, display),
-                        formatZoneValue(zone.maximum, zone.unit, display),
-                      )}
+                    <Text
+                      variant="subheading"
+                      numeric
+                      style={{ fontWeight: '800', width: TARGET_WIDTH, textAlign: 'right' }}
+                    >
+                      {bare(zone.target, zone.unit)}
                     </Text>
                   </View>
                 </View>
               ))}
+            <Pressable
+              onPress={() => setDescribed(!described)}
+              accessibilityRole="button"
+              accessibilityState={{ expanded: described }}
+              hitSlop={8}
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: 4,
+                alignSelf: 'flex-start',
+              }}
+            >
+              <Text variant="caption" color="accent" style={{ fontWeight: '800' }}>
+                {described ? 'Hide zone descriptions' : 'What each zone is for'}
+              </Text>
+              <Ionicons
+                name={described ? 'chevron-up' : 'chevron-down'}
+                size={13}
+                color={theme.accentText}
+              />
+            </Pressable>
           </View>
           <CalibrationSource calibration={entry} units={units} style={{ marginHorizontal: 0 }} />
         </>
@@ -217,37 +308,13 @@ function SystemCard({
           {EMPTY[system](coach)}
         </Text>
       )}
-      <View style={{ flexDirection: 'row', gap: 10 }}>
-        <Button
-          label="Add result"
-          icon="speedometer-outline"
-          size="md"
-          style={{ flex: 1 }}
-          onPress={() => router.push({ pathname: '/record-result', params: { system } })}
-        />
-        <Button
-          label={coach === 'coach' ? 'Ask coach' : 'Ask agent'}
-          icon="chatbubble-ellipses-outline"
-          size="md"
-          variant="secondary"
-          style={{ flex: 1 }}
-          onPress={() =>
-            coach === 'agent'
-              ? askAgent(
-                  agentPrompt(
-                    `Help me update my ${meta.title.toLowerCase()}. Read my performance first, then ask me about recent results.`,
-                  ),
-                )
-              : router.push({
-                  pathname: '/chat/[id]',
-                  params: {
-                    id: 'new',
-                    prefill: `I have a new ${SPORT_META[SYSTEM_META[system].sport].noun} result to update my zones: `,
-                  },
-                })
-          }
-        />
-      </View>
+      <Button
+        label="Add result"
+        icon="speedometer-outline"
+        size="md"
+        variant="tonal"
+        onPress={() => router.push({ pathname: '/record-result', params: { system } })}
+      />
     </Card>
   );
 }
@@ -267,6 +334,7 @@ function History({
   const client = useQueryClient();
   const requestKey = useRequestKey();
   const [withdrawing, setWithdrawing] = useState<Calibration | null>(null);
+  const [openId, setOpenId] = useState<string | null>(null);
   const retract = useMutation({
     mutationFn: async (entry: Calibration) => {
       const state = result(
@@ -334,7 +402,32 @@ function History({
               {entry.observedOn ? `${formatShortYear(entry.observedOn)} · ` : ''}
               applies from {formatShortYear(entry.effectiveFrom)}
             </Text>
-            {entry.recordedBy === 'coach' ? (
+            {/* Who recorded it, the estimate's basis and Withdraw fold away, so the history
+                stays a list of results. */}
+            <Pressable
+              onPress={() => setOpenId(openId === entry.id ? null : entry.id)}
+              accessibilityRole="button"
+              accessibilityState={{ expanded: openId === entry.id }}
+              accessibilityLabel={`Details for ${evidence(entry)}`}
+              hitSlop={8}
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: 4,
+                alignSelf: 'flex-start',
+                marginTop: 4,
+              }}
+            >
+              <Text variant="caption" color="accent" style={{ fontWeight: '800' }}>
+                {openId === entry.id ? 'Hide details' : 'Details'}
+              </Text>
+              <Ionicons
+                name={openId === entry.id ? 'chevron-up' : 'chevron-down'}
+                size={13}
+                color={theme.accentText}
+              />
+            </Pressable>
+            {openId !== entry.id ? null : entry.recordedBy === 'coach' ? (
               // Conversations are only shown with the in-app coach.
               <Text
                 variant="caption"
@@ -356,23 +449,26 @@ function History({
                 Recorded {formatDateTime(entry.recordedAt)}
               </Text>
             )}
-            {entry.estimateBasis ? (
+            {openId === entry.id && entry.estimateBasis ? (
               <Text variant="caption" color="muted">
                 {entry.estimateBasis}
               </Text>
             ) : null}
-            {!entry.retractedAt ? (
-              <Button
-                label="Withdraw"
-                icon="arrow-undo"
-                size="sm"
-                variant="ghost"
-                style={{ alignSelf: 'flex-start', marginTop: 6 }}
+            {openId === entry.id && !entry.retractedAt ? (
+              <Pressable
                 onPress={() => {
                   retract.reset();
                   setWithdrawing(entry);
                 }}
-              />
+                accessibilityRole="button"
+                hitSlop={8}
+                style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 6 }}
+              >
+                <Ionicons name="remove-circle-outline" size={14} color={theme.colors.textDim} />
+                <Text variant="caption" color="dim" style={{ fontWeight: '700' }}>
+                  Withdraw
+                </Text>
+              </Pressable>
             ) : null}
           </View>
         ))
@@ -415,3 +511,6 @@ function History({
     </Card>
   );
 }
+
+const RANGE_WIDTH = 76;
+const TARGET_WIDTH = 52;

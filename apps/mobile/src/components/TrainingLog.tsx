@@ -200,9 +200,8 @@ export function LogMark({ status, onAccent }: { status: Status; onAccent?: boole
         justifyContent: 'center',
         backgroundColor:
           status === 'unlogged' ? 'transparent' : alpha(color, onAccent ? 0.2 : 0.16),
-        borderWidth: status === 'unlogged' ? 1 : 0,
-        borderStyle: 'dashed',
-        borderColor: alpha(color, 0.7),
+        borderWidth: status === 'unlogged' ? 1.5 : 0,
+        borderColor: alpha(color, 0.8),
       }}
     >
       {status === 'unlogged' ? null : (
@@ -241,7 +240,11 @@ export function rpeEffort(n: number): Effort {
             : 'max';
 }
 
-/** Session effort, 1–10, coloured by effort; the planned value is outlined. */
+/**
+ * Session effort, 1–10, coloured by effort, in two rows of five so each button is a comfortable
+ * tap. Only the athlete's answer is styled; the planned value is stated in the question's caption,
+ * and one line below says what the numbers mean.
+ */
 export function RpeScale({
   value,
   planned,
@@ -259,65 +262,56 @@ export function RpeScale({
   const theme = useTheme();
   const buzz = useHaptics();
   const target = planned != null ? Math.round(planned) : null;
+  const button = (n: number) => {
+    const color = theme.efforts[rpeEffort(n)];
+    const active = value === n;
+    const isTarget = target === n;
+    return (
+      <Pressable
+        key={n}
+        disabled={disabled}
+        onPress={() => {
+          buzz('select');
+          onChange(n);
+        }}
+        accessibilityRole="radio"
+        accessibilityLabel={`Effort ${n}: ${RPE_WORDS[n - 1]}${isTarget ? `, ${expected ? 'expected' : 'planned'}` : ''}`}
+        accessibilityState={{ selected: active, disabled }}
+        style={{
+          flex: 1,
+          height: 48,
+          borderRadius: 12,
+          alignItems: 'center',
+          justifyContent: 'center',
+          backgroundColor: active
+            ? color
+            : value != null && n < value
+              ? alpha(color, 0.28)
+              : theme.colors.surfaceRaised,
+        }}
+      >
+        <Text
+          variant="subheading"
+          numeric
+          style={{ fontWeight: '800', color: active ? '#0A0A0B' : theme.colors.text }}
+        >
+          {n}
+        </Text>
+      </Pressable>
+    );
+  };
   return (
     <View style={{ gap: 8, opacity: disabled ? 0.5 : 1 }}>
-      <View
-        accessibilityRole="radiogroup"
-        accessibilityLabel="Session effort"
-        style={{ flexDirection: 'row', gap: 4 }}
-      >
-        {Array.from({ length: 10 }, (_, i) => i + 1).map((n) => {
-          const color = theme.efforts[rpeEffort(n)];
-          const active = value === n;
-          const isTarget = target === n;
-          return (
-            <Pressable
-              key={n}
-              disabled={disabled}
-              onPress={() => {
-                buzz('select');
-                onChange(n);
-              }}
-              accessibilityRole="radio"
-              accessibilityLabel={`Effort ${n}: ${RPE_WORDS[n - 1]}`}
-              accessibilityState={{ selected: active, disabled }}
-              style={{
-                flex: 1,
-                height: 40,
-                borderRadius: 10,
-                alignItems: 'center',
-                justifyContent: 'center',
-                backgroundColor: active
-                  ? color
-                  : value != null && n < value
-                    ? alpha(color, 0.28)
-                    : theme.colors.surfaceRaised,
-                borderWidth: isTarget ? 1.5 : 0,
-                borderStyle: expected ? 'dashed' : 'solid',
-                borderColor: isTarget ? color : 'transparent',
-              }}
-            >
-              <Text
-                variant="caption"
-                numeric
-                style={{
-                  fontWeight: '800',
-                  color: active ? '#0A0A0B' : theme.colors.text,
-                }}
-              >
-                {n}
-              </Text>
-            </Pressable>
-          );
-        })}
-      </View>
-      <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-        {['Easy', 'Moderate', 'Hard', 'Max'].map((word) => (
-          <Text key={word} variant="label" style={{ fontSize: 9.5 }}>
-            {word}
-          </Text>
+      <View accessibilityRole="radiogroup" accessibilityLabel="Session effort" style={{ gap: 6 }}>
+        {[1, 6].map((first) => (
+          <View key={first} style={{ flexDirection: 'row', gap: 6 }}>
+            {Array.from({ length: 5 }, (_, i) => button(first + i))}
+          </View>
         ))}
       </View>
+      <Text variant="caption" color="muted" style={{ fontSize: 12 }}>
+        1–3 easy · 4–5 moderate · 6–9 hard · 10 max
+      </Text>
       {value ? (
         <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 8 }}>
           <Text variant="subheading" numeric style={{ fontWeight: '800' }}>
@@ -338,16 +332,21 @@ function StatusButton({
   disabled,
   compact,
   iconOnly,
+  short,
 }: {
   status: LogStatus;
   onPress: () => void;
   disabled?: boolean;
   compact?: boolean;
+  /** Tighter padding, for one-line rows. */
+  short?: boolean;
   /** A round icon button, for rows with little room. */
   iconOnly?: boolean;
 }) {
   const theme = useTheme();
-  const done = status === 'done';
+  // Only the full-size Done is filled; compact rows use a tonal Done so lime marks one action.
+  const done = status === 'done' && !compact;
+  const soft = status === 'done' && compact;
   if (iconOnly)
     return (
       <PressableScale
@@ -358,9 +357,9 @@ function StatusButton({
         accessibilityState={{ disabled: !!disabled }}
         hitSlop={4}
         style={{
-          width: 38,
-          height: 38,
-          borderRadius: 19,
+          width: 36,
+          height: 36,
+          borderRadius: 12,
           alignItems: 'center',
           justifyContent: 'center',
           overflow: 'hidden',
@@ -381,19 +380,20 @@ function StatusButton({
       onPress={disabled ? undefined : onPress}
       haptic={null}
       accessibilityRole="button"
-      accessibilityLabel={LOG_LABELS[status]}
+      accessibilityLabel={status === 'skipped' ? 'Skip' : LOG_LABELS[status]}
       accessibilityState={{ disabled: !!disabled }}
       style={{
         flex: compact ? undefined : 1,
-        height: compact ? 34 : 44,
-        paddingHorizontal: compact ? 14 : 4,
-        borderRadius: compact ? 11 : 14,
+        height: compact ? 36 : 44,
+        paddingHorizontal: short ? 10 : compact ? 14 : 4,
+        borderRadius: compact ? 12 : 14,
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
         gap: 5,
         overflow: 'hidden',
-        backgroundColor: done ? theme.accent : theme.colors.surfaceRaised,
+        // A tint without an outline, so a list of rows to log stays quiet.
+        backgroundColor: done ? theme.accent : soft ? theme.accentSoft : theme.colors.surfaceRaised,
         opacity: disabled ? 0.5 : 1,
       }}
     >
@@ -401,14 +401,29 @@ function StatusButton({
       <Ionicons
         name={STATUS_ICON[status]}
         size={compact ? 14 : 15}
-        color={done ? theme.onAccent : statusColor(theme, status)}
+        color={
+          done
+            ? theme.onAccent
+            : soft
+              ? theme.accentText
+              : compact && status === 'skipped'
+                ? theme.colors.textDim
+                : statusColor(theme, status)
+        }
       />
       <Text
         variant="caption"
         numberOfLines={1}
-        style={{ fontWeight: '800', color: done ? theme.onAccent : theme.colors.text }}
+        style={{
+          fontWeight: '800',
+          color: done
+            ? theme.onAccent
+            : soft && theme.isDark
+              ? theme.accentText
+              : theme.colors.text,
+        }}
       >
-        {LOG_LABELS[status]}
+        {status === 'skipped' ? 'Skip' : LOG_LABELS[status]}
       </Text>
     </PressableScale>
   );
@@ -416,15 +431,18 @@ function StatusButton({
 
 /**
  * Record a due workout in one tap, then correct or rate it. `hero` sits inside Today's workout
- * card, `compact` under a schedule row, `inline` (icons only) beside a one-line summary, and
- * `detail` on the workout screen with the full log.
+ * card, `compact` under a schedule row, `inline` (icons only) or `row` (labelled Done and Skip)
+ * beside a one-line summary, and `detail` on the workout screen with the full log.
  */
 export function WorkoutLogActions({
   workout,
   variant = 'hero',
+  onLogged,
 }: {
   workout: WorkoutSummary;
-  variant?: 'hero' | 'compact' | 'inline' | 'detail';
+  variant?: 'hero' | 'compact' | 'inline' | 'row' | 'detail';
+  /** Called once a one-tap log is saved. */
+  onLogged?: () => void;
 }) {
   const theme = useTheme();
   const coach = useCoachWord();
@@ -437,7 +455,8 @@ export function WorkoutLogActions({
   const save = useSaveLog(workout.planId, workout.lineageId);
   const clear = useClearLog(workout.planId, workout.lineageId);
   const busy = save.isPending || clear.isPending;
-  const compact = variant === 'compact' || variant === 'inline';
+  // On the workout screen a logged session shows a summary; effort is rated in the log form.
+  const compact = variant === 'compact' || variant === 'inline' || variant === 'row';
   if (!context || !context.ready || (!log && workout.scheduledDate > today)) return null;
   if (!log && workout.planVersionId !== context.lockedVersionId)
     return context.writable && !compact ? (
@@ -456,6 +475,7 @@ export function WorkoutLogActions({
       {
         onSuccess: (saved) => {
           buzz('success');
+          onLogged?.();
           if (full) context.edit(workout, saved, status);
         },
       },
@@ -483,6 +503,8 @@ export function WorkoutLogActions({
               status={status}
               compact
               iconOnly={variant === 'inline'}
+              // A one-line row has room for short words only.
+              short={variant === 'row'}
               disabled={busy}
               onPress={() => choose(status)}
             />
@@ -531,20 +553,24 @@ export function WorkoutLogActions({
           <View style={{ flexDirection: 'row', gap: 6 }}>
             <Button
               size="sm"
-              variant="ghost"
+              variant="secondary"
               icon="pencil"
               label="Edit"
               disabled={busy}
               onPress={() => context.edit(workout, log)}
             />
-            <Button
-              size="sm"
-              variant="ghost"
-              icon="arrow-undo"
-              label="Undo"
-              disabled={busy}
-              onPress={() => clear.mutate()}
-            />
+            {/* On the workout screen, removing lives in the log form ("Clear this log"), so the
+                card's one action is Edit. Today's card keeps a quick Undo. */}
+            {variant === 'detail' ? null : (
+              <Button
+                size="sm"
+                variant="ghost"
+                icon="arrow-undo"
+                label="Undo"
+                disabled={busy}
+                onPress={() => clear.mutate()}
+              />
+            )}
           </View>
         ) : null}
       </View>
@@ -562,15 +588,28 @@ export function WorkoutLogActions({
       ) : null}
       {error ? <ErrorState message={error} /> : null}
       <StravaLinkRow workout={workout} writable={context.writable} />
-      {log && log.status !== 'skipped' ? (
+      {variant === 'detail' && log && log.status !== 'skipped' ? (
+        <View style={{ gap: 10, alignItems: 'flex-start' }}>
+          {/* What was done in one line; the planned amounts are in the screen's header. */}
+          <Text variant="caption" numeric>
+            {log.actualDurationSeconds == null
+              ? 'Time not recorded'
+              : formatDuration(log.actualDurationSeconds)}
+            {log.actualDistanceMetres == null ? '' : ` · ${distance(log.actualDistanceMetres)}`}
+            {' · '}
+            {log.rpe != null ? `Effort ${log.rpe}/10` : 'Effort not rated'}
+          </Text>
+        </View>
+      ) : null}
+      {log && log.status !== 'skipped' && variant !== 'detail' ? (
         <View style={{ gap: 10 }}>
           <View>
             <Text variant="caption" color="text" style={{ fontWeight: '700' }}>
               How hard was it overall?
             </Text>
             <Text variant="caption" color="muted">
-              Optional · {log.placeholder ? 'expected' : 'planned'}{' '}
-              {log.plannedRpe == null ? 'effort not set' : `~${log.plannedRpe}/10`}
+              Optional · whole session {log.placeholder ? 'expected' : 'planned'}{' '}
+              {log.plannedRpe == null ? 'effort not set' : `~${Math.round(log.plannedRpe)}/10`}
             </Text>
           </View>
           <RpeScale
@@ -605,35 +644,9 @@ export function WorkoutLogActions({
           ) : null}
         </View>
       ) : null}
-      {variant === 'detail' && log ? (
+      {/* Only when there's something to show: an empty block would add a gap. */}
+      {variant === 'detail' && log && (log.actualSessionType || log.reasons.length || log.note) ? (
         <View style={{ gap: 10 }}>
-          <View
-            style={{
-              flexDirection: 'row',
-              borderRadius: 16,
-              backgroundColor: theme.colors.surfaceRaised,
-              padding: 14,
-              gap: 14,
-            }}
-          >
-            <View style={{ flex: 1 }}>
-              <Text variant="label">Time · planned / actual</Text>
-              <Text variant="subheading" numeric style={{ marginTop: 4, fontWeight: '800' }}>
-                {formatDuration(log.plannedDurationSeconds ?? 0)} /{' '}
-                {log.actualDurationSeconds == null
-                  ? '—'
-                  : formatDuration(log.actualDurationSeconds)}
-              </Text>
-            </View>
-            {log.plannedDistanceMetres == null && log.actualDistanceMetres == null ? null : (
-              <View style={{ flex: 1 }}>
-                <Text variant="label">Distance · planned / actual</Text>
-                <Text variant="subheading" numeric style={{ marginTop: 4, fontWeight: '800' }}>
-                  {distance(log.plannedDistanceMetres)} / {distance(log.actualDistanceMetres)}
-                </Text>
-              </View>
-            )}
-          </View>
           {log.actualSessionType ? (
             <Text variant="caption">
               Turned out to be {KIND_META[log.actualSessionType].label.toLowerCase()}
@@ -676,32 +689,34 @@ export function CheckInButton({ plan }: { plan: Plan }) {
       style={{
         flexDirection: 'row',
         alignItems: 'center',
-        gap: 12,
-        padding: 14,
-        borderRadius: 20,
+        gap: 10,
+        paddingVertical: 10,
+        paddingHorizontal: 14,
+        borderRadius: 18,
         borderWidth: StyleSheet.hairlineWidth,
         borderColor: theme.colors.border,
         backgroundColor: theme.colors.surface,
       }}
     >
+      {/* A compact row, so it doesn't outweigh today's session. */}
       <View
         style={{
-          width: 38,
-          height: 38,
-          borderRadius: 19,
+          width: 30,
+          height: 30,
+          borderRadius: 15,
           backgroundColor: alpha(theme.danger, 0.14),
           alignItems: 'center',
           justifyContent: 'center',
         }}
       >
-        <Ionicons name="pulse" size={18} color={theme.danger} />
+        <Ionicons name="pulse" size={15} color={theme.danger} />
       </View>
-      <View style={{ flex: 1 }}>
-        <Text variant="subheading">Not feeling 100%?</Text>
-        <Text variant="caption">
-          Ill, run down or short on time? Talk through the next few days.
-        </Text>
-      </View>
+      <Text variant="caption" color="text" numberOfLines={1} style={{ flex: 1, fontWeight: '800' }}>
+        Not feeling 100%?
+      </Text>
+      <Text variant="caption" color="muted">
+        Adjust
+      </Text>
       <Ionicons name="chevron-forward" size={18} color={theme.colors.textMuted} />
     </PressableScale>
   );

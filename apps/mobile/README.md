@@ -106,7 +106,8 @@ The app reads `features.inAppCoach` from `GET /api/v1/account` before any signed
 as the web app does ([proposal](../../docs/product/in-app-coach-flag-proposal.md)). When the API
 runs with `IN_APP_COACH=hidden`, the Coach tab and chat screens are removed (old chat links land on
 Today). Every chat entry point opens **Ask your agent** (`src/app/ask-agent.tsx`) instead. That
-screen copies the same prompt as the web app (`src/lib/coach.ts`) and shows it so it can be pasted.
+screen builds the same prompt as the web app (`src/lib/coach.ts`), adds the athlete's question, and
+copies or shares it to paste into their agent.
 Copy says "your agent" (`useCoachWord()` in `src/data/account.ts`). To try it locally, start the
 API with `IN_APP_COACH=hidden pnpm dev`.
 
@@ -116,7 +117,7 @@ The same flows as the web app, with the same wording ([deletion and retention](.
 
 - **Delete plan…** in the plan options sheet lists what goes with the plan
   (`GET /plans/{planId}/deletion-impact`) before `POST /plans/{planId}/delete`. The app then opens
-  All plans with an Undo notice. All plans → **Recently deleted** restores a plan to Archived
+  All plans with an Undo notice. All plans → **Deleted** restores a plan to Archived
   (`POST /plans/{planId}/undelete`) for 30 days.
 - You → **Your data**: **Download my data** fetches `GET /account/export` and offers the JSON file
   through the share sheet (`expo-sharing`; a download on Expo web). **Delete account…** asks for
@@ -132,7 +133,8 @@ The web's feedback, check-in and history dialogs are screens here.
 
 - **Today** marks logged days in the week strip. Today's workout card holds its log: **Done**,
   **Changed it** or **Skipped**, then the effort scale, **Edit**, **Undo** and **Add details**.
-  Sessions from the last three days that still need a log are listed below it. **Not feeling
+  This week's earlier sessions (and always the last three days) that still need a log are listed
+  below it; one logged there stays with **Undo** until Today is reopened. **Not feeling
   100%?** opens the check-in (`check-in.tsx`, `POST /check-ins`). The week card counts done time
   and sessions from `GET /training-log`.
 - Key sessions, tests, races, placeholders, changed or skipped workouts, and an effort far from the
@@ -141,7 +143,7 @@ The web's feedback, check-in and history dialogs are screens here.
   conversation, or hands a prompt to the athlete's agent when the in-app coach is hidden. Chat shows
   the saved feedback above the message.
 - **Plan**: the controls sit below the title, with **Training log** (`training-log.tsx`, including
-  logs from earlier versions). Schedule cards show the log, and past workouts offer a quick log.
+  logs from earlier versions). Schedule cards show the log, and past and today's workouts offer a quick log.
 - **Placeholder sessions** show their expected effort band instead of a prescription and always
   open the form, which asks what the session turned out to be.
 

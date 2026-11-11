@@ -98,10 +98,28 @@ export function useCoachWord(): 'coach' | 'agent' {
   return useInAppCoach() ? 'coach' : 'agent';
 }
 
-/** Hands a prompt to the athlete's own agent: the Ask your agent sheet copies it and shows it. */
+/**
+ * The icon on "ask" actions: a chat bubble for the in-app coach, a paper plane (always outlined,
+ * so every hand-off looks the same) for the athlete's own agent, so nothing suggests a chat
+ * inside the app.
+ */
+export function useAskIcon(outline = false) {
+  const coach = useInAppCoach();
+  if (coach) return outline ? 'chatbubble-ellipses-outline' : 'chatbubble-ellipses';
+  return 'paper-plane-outline';
+}
+
+/**
+ * Opens the Ask your agent screen with a prompt the athlete can add to and copy or share.
+ * `subject` names what it is about, such as the plan, for the screen to show.
+ */
 export function useAskAgent() {
   return useCallback(
-    (prompt: string) => router.push({ pathname: '/ask-agent', params: { prompt } }),
+    (prompt: string, subject?: string) =>
+      router.push({
+        pathname: '/ask-agent',
+        params: subject ? { prompt, subject } : { prompt },
+      }),
     [],
   );
 }

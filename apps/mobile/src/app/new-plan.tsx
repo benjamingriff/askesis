@@ -40,7 +40,10 @@ export default function NewPlanScreen() {
         }
         router.replace({ pathname: '/plans/[id]', params: { id: plan.id } });
         if (!inAppCoach)
-          askAgent(agentPrompt(NEW_PLAN_REQUEST, { id: plan.id, name: plan.displayName }));
+          askAgent(
+            agentPrompt(NEW_PLAN_REQUEST, { id: plan.id, name: plan.displayName }),
+            plan.displayName,
+          );
       });
     },
   });
@@ -56,7 +59,9 @@ export default function NewPlanScreen() {
       onSave={() => create.mutate()}
     >
       <Text variant="body" color="dim">
-        {`Name it and set the dates. Your ${coach} will talk it through with you before writing any workouts.`}
+        {coach === 'coach'
+          ? 'Name it and set the dates. Your coach will talk it through with you before writing any workouts.'
+          : 'Name it and set the dates. Next, Waddle copies a request for your agent to plan it with you.'}
       </Text>
       <FormSection>
         <Field
@@ -84,6 +89,13 @@ export default function NewPlanScreen() {
           />
         </View>
       </FormSection>
+      {!canSave && !create.isPending ? (
+        <Text variant="caption" color="muted">
+          {endDate && startDate && endDate < startDate
+            ? 'The end date must be on or after the start date.'
+            : 'Add a name and both dates to create the plan.'}
+        </Text>
+      ) : null}
       {create.error ? <ErrorState message={create.error.message} /> : null}
     </FormScreen>
   );
