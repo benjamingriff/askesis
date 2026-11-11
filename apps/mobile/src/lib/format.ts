@@ -63,7 +63,11 @@ export const formatLong = (date: string) => longFormat.format(utc(date));
 export const planName = (name: string) =>
   name.replace(/ · \d+ (weeks?|days?)$/, '').replace(/(\d+) (weeks?|days?)\b/g, '$1\u00a0$2');
 
-/** An email for one line: a long name part is shortened so the domain stays readable. */
+/**
+ * Shortens an email for one line, keeping the domain readable. `max` is a target length in UTF-16
+ * code units (default 30), not a strict limit: a long domain or short name can exceed it. Without
+ * a usable `@`, the address is truncated at the end.
+ */
 export function shortEmail(email: string, max = 30) {
   if (email.length <= max) return email;
   const at = email.lastIndexOf('@');
@@ -75,7 +79,7 @@ export function shortEmail(email: string, max = 30) {
   return `${email.slice(0, keep)}…${domain}`;
 }
 
-/** "Mon 2 Nov": a weekday and date for tight rows. */
+/** "Mon 2 Nov": a UTC calendar date for tight rows. Throws RangeError for an invalid date. */
 export const formatDay = (date: string) => dayFormat.format(utc(date)).replace(',', '');
 export const formatMonth = (date: string) => monthFormat.format(utc(date));
 

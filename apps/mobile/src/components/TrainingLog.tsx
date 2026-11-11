@@ -431,7 +431,7 @@ function StatusButton({
 
 /**
  * Record a due workout in one tap, then correct or rate it. `hero` sits inside Today's workout
- * card, `compact` under a schedule row, `inline` (icons only) or `row` (labelled Done, Skip icon)
+ * card, `compact` under a schedule row, `inline` (icons only) or `row` (labelled Done and Skip)
  * beside a one-line summary, and `detail` on the workout screen with the full log.
  */
 export function WorkoutLogActions({

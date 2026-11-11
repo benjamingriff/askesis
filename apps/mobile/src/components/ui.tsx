@@ -500,6 +500,7 @@ export function SectionHeader({
   );
 }
 
+/** Displays a fraction of progress, clamped to the range 0–1. */
 export function ProgressBar({
   value,
   color,

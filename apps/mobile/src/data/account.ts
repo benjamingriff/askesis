@@ -110,8 +110,8 @@ export function useAskIcon(outline = false) {
 }
 
 /**
- * Hands a prompt to the athlete's own agent: the Ask your agent screen adds their question, then
- * copies it. `subject` names what it is about, such as the plan, for the screen to show.
+ * Opens the Ask your agent screen with a prompt the athlete can add to and copy or share.
+ * `subject` names what it is about, such as the plan, for the screen to show.
  */
 export function useAskAgent() {
   return useCallback(
